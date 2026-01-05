@@ -113,7 +113,8 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
                                                         onChange={(time) => dispatch({ type: "UPDATE_CURRENT_TIME", payload: time })}
                                                 />
                                                 {/* Display Remaining Time / Total Duration (Editable) */}
-                                                <div className="text-black flex items-center gap-1">
+                                                <div className="text-black flex items-center gap-[1px]">
+                                                        <span>-</span>
                                                         <EditableDuration
                                                                 value={state.duration}
                                                                 onChange={(newDuration) => dispatch({ type: "UPDATE_DURATION", payload: newDuration })}
