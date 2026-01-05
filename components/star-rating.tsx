@@ -7,7 +7,7 @@ interface StarRatingProps {
 
 export function StarRating({ rating, onChange }: StarRatingProps) {
   return (
-    <div className="flex items-center gap-0.5" style={{ lineHeight: 1 }}>
+    <div className="flex items-center gap-0.5 pl-1" style={{ lineHeight: 1 }}>
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}

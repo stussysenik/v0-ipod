@@ -56,7 +56,7 @@ export function ProgressBar({ currentTime, duration, onSeek }: ProgressBarProps)
     <div className="w-full">
       <div
         ref={progressRef}
-        className="relative w-full h-[10px] bg-white border border-[#999] shadow-inner cursor-pointer overflow-hidden"
+        className="relative w-full h-[10px] bg-white border border-[#999] shadow-inner cursor-pointer overflow-hidden rounded-[2px]"
         onMouseDown={handleMouseDown}
         style={{
           boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
