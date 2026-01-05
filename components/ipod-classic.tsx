@@ -1,8 +1,8 @@
 "use client"
 
 import { useReducer, useRef, useCallback, useState, useEffect } from "react"
-import { Battery, Settings, Box, Maximize, Minimize, Share, Monitor, Smartphone } from "lucide-react"
-import html2canvas from "html2canvas"
+import { Battery, Settings, Box, Share, Monitor, Smartphone, Check, Plus } from "lucide-react"
+import { toPng } from "html-to-image"
 import { StarRating } from "./star-rating"
 import { ProgressBar } from "./progress-bar"
 import { ImageUpload } from "./image-upload"
@@ -21,7 +21,7 @@ const initialState: SongMetadata = {
   album: "Balloonerism",
   artwork: "/placeholder-logo.png",
   duration: 334,
-  currentTime: 122,
+  currentTime: 0,
   rating: 5,
   trackNumber: 2,
   totalTracks: 10,
@@ -73,11 +73,28 @@ export default function IPodClassic() {
   const [bgColor, setBgColor] = useState("#E5E5E5")
   const [showSettings, setShowSettings] = useState(false)
 
+  // 3D Mouse Tracking
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const ipodRef = useRef<HTMLDivElement>(null)
   const captureRef = useRef<HTMLDivElement>(null)
   const wheelRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Mouse Tracking for 3D Effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (viewMode !== '3d') return
+      const { innerWidth, innerHeight } = window
+      const x = (e.clientX - innerWidth / 2) / innerWidth
+      const y = (e.clientY - innerHeight / 2) / innerHeight
+      setMousePos({ x, y })
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [viewMode])
 
   // Scroll Wheel Logic
   useEffect(() => {
@@ -99,8 +116,6 @@ export default function IPodClassic() {
     }
 
     const handleStart = (e: MouseEvent | TouchEvent) => {
-      // Only prevent default if we're not touching a button
-      // But for wheel logic, we usually want to capture valid drags
       isInternalDrag = true
       startAngle = calculateAngle(e)
       lastAngle = startAngle
@@ -108,7 +123,7 @@ export default function IPodClassic() {
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isInternalDrag) return
-      e.preventDefault() // Stop page scroll
+      e.preventDefault()
 
       const currentAngle = calculateAngle(e)
       let delta = currentAngle - lastAngle
@@ -116,7 +131,6 @@ export default function IPodClassic() {
       if (delta > 180) delta -= 360
       if (delta < -180) delta += 360
 
-      // Sensitivity
       if (Math.abs(delta) > 15) {
         const direction = delta > 0 ? 1 : -1
         const seekAmount = 5
@@ -168,30 +182,22 @@ export default function IPodClassic() {
     setIsExporting(true)
     playClick()
 
-    // Wait for state updates and DOM to settle (hiding noise, etc.)
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // Wait for UI to settle
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     try {
-      const scale = 4 // High quality export
-      const canvas = await html2canvas(captureRef.current, {
-        backgroundColor: null,
-        scale: scale,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        onclone: (clonedDoc) => {
-          const element = clonedDoc.querySelector('[data-export-target="true"]') as HTMLElement
-          if (element) {
-            // Ensure shadows are crisp in export
-            element.style.boxShadow = "inset 0 0 20px rgba(0,0,0,0.1), inset 2px 0 5px rgba(255,255,255,0.5), inset -2px 0 5px rgba(0,0,0,0.2), 0 20px 50px rgba(0,0,0,0.3)"
-          }
+      const dataUrl = await toPng(captureRef.current, {
+        cacheBust: true,
+        pixelRatio: 4, // Ultra high quality
+        style: {
+          transform: 'none', // Ensure it exports flat regardless of current view
+          boxShadow: 'none',
         }
       })
 
-      const url = canvas.toDataURL("image/png", 1.0)
       const link = document.createElement("a")
       link.download = `ipod-${state.title.toLowerCase().replace(/\s+/g, '-')}.png`
-      link.href = url
+      link.href = dataUrl
       link.click()
     } catch (error) {
       console.error("Export failed:", error)
@@ -200,9 +206,14 @@ export default function IPodClassic() {
     }
   }, [playClick, state.title])
 
+  // Calculate 3D Rotation based on mouse position
+  const rotateX = viewMode === '3d' ? mousePos.y * -15 : 0
+  const rotateY = viewMode === '3d' ? mousePos.x * 15 : 0
+
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500"
+      ref={containerRef}
+      className="min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500 overflow-hidden"
       style={{ backgroundColor: bgColor }}
     >
 
@@ -210,7 +221,7 @@ export default function IPodClassic() {
       {!isExporting && (
         <div className="fixed top-6 right-6 z-50 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
           {/* Settings / Theme */}
-          <div className="relative">
+          <div className="relative group">
             <IconButton
               icon={<Settings className="w-5 h-5" />}
               label="Theme"
@@ -219,7 +230,7 @@ export default function IPodClassic() {
             />
 
             {showSettings && (
-              <div className="absolute top-0 right-14 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl w-[220px] animate-in slide-in-from-right-2 border border-white/20">
+              <div className="absolute top-0 right-14 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl w-[260px] animate-in slide-in-from-right-2 border border-white/20">
                 <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 px-1">Case Color</h3>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {['#F5F5F7', '#1c1c1e', '#e63946', '#457b9d', '#2a9d8f'].map(c => (
@@ -230,14 +241,16 @@ export default function IPodClassic() {
                       style={{ backgroundColor: c }}
                     />
                   ))}
-                  <input
-                    type="color"
-                    value={skinColor}
-                    onChange={(e) => setSkinColor(e.target.value)}
-                    className="w-8 h-8 rounded-full cursor-pointer overflow-hidden opacity-0 absolute"
-                    id="custom-color"
-                  />
-                  <label htmlFor="custom-color" className="w-8 h-8 rounded-full border-2 border-gray-200 flex items-center justify-center bg-white cursor-pointer hover:bg-gray-50 text-gray-400">+</label>
+                  {/* System Color Picker integrated */}
+                  <div className="relative w-8 h-8 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-blue-500 cursor-pointer overflow-hidden transition-colors">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="color"
+                      value={skinColor}
+                      onChange={(e) => setSkinColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
                 </div>
 
                 <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 px-1">Background</h3>
@@ -245,6 +258,16 @@ export default function IPodClassic() {
                   <button onClick={() => setBgColor("#E5E5E5")} className="w-6 h-6 rounded-full bg-gray-200 border border-gray-300" title="Light" />
                   <button onClick={() => setBgColor("#111111")} className="w-6 h-6 rounded-full bg-neutral-900 border border-gray-600" title="Dark" />
                   <button onClick={() => setBgColor("#e0fbfc")} className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100" title="Mint" />
+                  {/* Background color picker */}
+                  <div className="relative w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
+                    <Plus className="w-3 h-3 text-black" />
+                    <input
+                      type="color"
+                      value={bgColor}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -274,67 +297,76 @@ export default function IPodClassic() {
 
           {/* Export Action */}
           <IconButton
-            icon={<Share className="w-5 h-5" />}
+            icon={isExporting ? <Check className="w-5 h-5" /> : <Share className="w-5 h-5" />}
             label="Export Image"
             onClick={handleExport}
-            className="bg-blue-600 text-white hover:bg-blue-700"
+            className={`text-white transition-colors duration-300 ${isExporting ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-600 hover:bg-blue-700'}`}
           />
         </div>
       )}
 
       {/* Capture Container */}
       <div
-        className={`relative flex items-center justify-center transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] ${viewMode === '3d' ? 'perspective-[1500px]' : ''
-          }`}
+        className="relative flex items-center justify-center"
         style={{
-          perspective: '1500px',
-          transform: viewMode === 'focus' ? 'scale(1.3) translateY(-10%)' : 'scale(1)',
+          perspective: viewMode === '3d' ? '1200px' : 'none',
+          transform: viewMode === 'focus' ? 'scale(1.5)' : 'scale(1)',
+          transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
       >
-        <div ref={captureRef}
-          className={`transition-all duration-1000 transform-style-3d ${isExporting ? 'p-10' : ''}`}
+        <div
+          ref={captureRef}
+          className={`relative transition-transform duration-100 ease-out will-change-transform ${isExporting ? 'p-12' : ''}`}
           style={{
-            transform: viewMode === '3d' ? 'rotateY(-15deg) rotateX(10deg)' : 'rotateY(0) rotateX(0)',
+            transformStyle: 'preserve-3d',
+            transform: viewMode === '3d'
+              ? `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`
+              : 'rotateX(0) rotateY(0)',
           }}
         >
 
-          {/* THE IPOD */}
+          {/* THE IPOD CHASSIS */}
           <div
             ref={ipodRef}
             data-export-target="true"
-            className="relative w-[370px] h-[620px] rounded-[36px] overflow-hidden shrink-0 transition-shadow duration-300"
+            className="relative w-[370px] h-[620px] rounded-[36px] transition-shadow duration-300"
             style={{
               backgroundColor: skinColor,
+              // Dynamic Shadow for 3D realism
               boxShadow: viewMode === '3d'
-                ? `20px 20px 60px rgba(0,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.1)`
-                : `inset 0 0 20px rgba(0,0,0,0.1), inset 2px 0 5px rgba(255,255,255,0.5), inset -2px 0 5px rgba(0,0,0,0.2), 0 25px 50px -12px rgba(0,0,0,0.25)`,
+                ? `${-mousePos.x * 30}px ${-mousePos.y * 30 + 30}px 80px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(0,0,0,0.1)`
+                : `0 30px 60px -15px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.1)`,
+              transformStyle: 'preserve-3d',
             }}
           >
-            {/* Shadow Wrapper for Export Depth (Only visible in flat/export) */}
-            {(viewMode === 'flat' || isExporting) && (
-              <div className="absolute -inset-[50px] z-[-1]"
-                style={{
-                  background: 'radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, transparent 70%)',
-                  opacity: 0.6,
-                  filter: 'blur(30px)',
-                  transform: 'translateY(30px) scale(0.95)'
-                }}
-              />
+            {/* Depth Extrusion (Visual fake side thickness) */}
+            {viewMode === '3d' && (
+              <>
+                <div className="absolute inset-0 rounded-[36px] bg-[#999] translate-z-[-10px]" style={{ transform: 'translateZ(-15px)' }} />
+                {/* Side sheen layers would go here if using true 3D geometry, but CSS box-shadow handles most of it nicely for "Analogue" feel */}
+              </>
             )}
 
-            {/* Side Panels for 3D depth illusion */}
-            <div className={`absolute top-0 right-0 bottom-0 w-[15px] bg-black/10 origin-right transition-opacity duration-500 ${viewMode === '3d' ? 'opacity-100' : 'opacity-0'}`} />
-            <div className={`absolute top-0 bottom-0 left-0 w-[4px] bg-white/20 origin-left transition-opacity duration-500 ${viewMode === '3d' ? 'opacity-100' : 'opacity-0'}`} />
-
-            {/* Chassis Gloss/Noise Texture (Hidden on export) */}
-            <div className={`absolute inset-0 pointer-events-none mix-blend-overlay transition-opacity duration-300 ${isExporting ? 'opacity-0' : 'opacity-15'}`}
-              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+            {/* Dynamic Light Sheen (Analogue 3D effect) */}
+            <div
+              className="absolute inset-0 rounded-[36px] pointer-events-none z-50 mix-blend-soft-light transition-opacity duration-500"
+              style={{
+                opacity: viewMode === '3d' ? 0.6 : 0.1,
+                background: `linear-gradient(${135 + (mousePos.x * 40)}deg, rgba(255,255,255,0.8) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.2) 100%)`
+              }}
             />
 
-            <div className="relative w-full h-full p-6 flex flex-col justify-between">
+            {/* Chassis Content */}
+            <div className="relative w-full h-full p-6 flex flex-col justify-between" style={{ transform: 'translateZ(1px)' }}>
 
               {/* SCREEN AREA */}
-              <div className="w-[322px] h-[240px] bg-black rounded-lg p-[2px] mx-auto shadow-[0_2px_4px_rgba(0,0,0,0.4)] z-10 shrink-0">
+              <div
+                className="w-[322px] h-[240px] bg-black rounded-lg p-[2px] mx-auto shadow-inner z-10 shrink-0 relative group"
+                style={{ transform: 'translateZ(2px)' }} // Slight pop
+              >
+                {/* Screen Glass Reflection */}
+                <div className="absolute inset-0 z-50 pointer-events-none rounded-lg bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-50" />
+
                 <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#555]">
                   {/* STATUS BAR */}
                   <div className="h-[20px] bg-gradient-to-b from-[#EEE] to-[#CCC] border-b border-[#999] flex items-center justify-between px-2">
@@ -344,11 +376,11 @@ export default function IPodClassic() {
                     <Battery className="w-4 h-3 text-black opacity-60" />
                   </div>
 
-                  {/* CONTENT GRID: 153px Height available (approx) */}
+                  {/* CONTENT GRID */}
                   <div className="flex h-[180px]">
-                    {/* LEFT: ARTWORK (Square-ish) */}
+                    {/* LEFT: ARTWORK */}
                     <div className="w-[140px] h-full p-3 flex flex-col justify-start items-center">
-                      <div className="w-[114px] h-[114px] bg-[#EEE] shadow-md border border-[#999] relative group">
+                      <div className="w-[114px] h-[114px] bg-[#EEE] shadow-md border border-[#999] relative group cursor-pointer transition-transform active:scale-95">
                         <ImageUpload
                           currentImage={state.artwork}
                           onImageChange={(artwork) => {
@@ -362,7 +394,7 @@ export default function IPodClassic() {
                       </div>
                     </div>
 
-                    {/* RIGHT: INFO (Text) with Editability */}
+                    {/* RIGHT: INFO (Editable) */}
                     <div className="flex-1 pt-6 pr-2 overflow-hidden flex flex-col items-start text-left z-20">
                       {/* Title */}
                       <div className="w-full mb-1 relative z-20">
@@ -370,7 +402,7 @@ export default function IPodClassic() {
                           <EditableText
                             value={state.title}
                             onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
-                            className="font-bold min-w-[50px]"
+                            className="font-bold min-w-[50px] -ml-1 pl-1"
                           />
                         </div>
                       </div>
@@ -381,7 +413,7 @@ export default function IPodClassic() {
                           <EditableText
                             value={state.artist}
                             onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
-                            className="font-semibold text-[#555]"
+                            className="font-semibold text-[#555] -ml-1 pl-1"
                           />
                         </div>
                       </div>
@@ -392,7 +424,7 @@ export default function IPodClassic() {
                           <EditableText
                             value={state.album}
                             onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
-                            className="font-medium text-[#777]"
+                            className="font-medium text-[#777] -ml-1 pl-1"
                           />
                         </div>
                       </div>
@@ -429,10 +461,13 @@ export default function IPodClassic() {
                         value={state.currentTime}
                         onChange={(time) => dispatch({ type: "UPDATE_CURRENT_TIME", payload: time })}
                       />
-                      {/* Display Remaining Time Properly */}
-                      <div className="text-black">
-                        -{Math.floor((state.duration - state.currentTime) / 60)}:
-                        {Math.floor((state.duration - state.currentTime) % 60).toString().padStart(2, "0")}
+                      {/* Display Remaining Time / Total Duration (Editable) */}
+                      <div className="text-black flex items-center gap-1">
+                        <span className="opacity-50 text-[10px] mr-1">total:</span>
+                        <EditableDuration
+                          value={state.duration}
+                          onChange={(newDuration) => dispatch({ type: "UPDATE_DURATION", payload: newDuration })}
+                        />
                       </div>
                     </div>
                   </div>
@@ -442,7 +477,10 @@ export default function IPodClassic() {
               {/* CONTROL AREA */}
               <div className="flex-1 flex items-center justify-center relative -mt-4">
                 {/* WHEEL CONTAINER */}
-                <div ref={wheelRef} className="relative w-[240px] h-[240px] cursor-grab active:cursor-grabbing touch-none">
+                <div ref={wheelRef}
+                  className="relative w-[240px] h-[240px] cursor-grab active:cursor-grabbing touch-none rounded-full"
+                  style={{ transform: 'translateZ(4px)' }} // Stick out slightly
+                >
                   {/* Wheel Surface - Clean Matte Look */}
                   <div className="absolute inset-0 rounded-full shadow-[0_5px_15px_rgba(0,0,0,0.15),_inset_0_1px_2px_rgba(255,255,255,0.8)] bg-[#FDFDFD]"
                     style={{
