@@ -9,4 +9,3 @@ export interface SongMetadata {
   trackNumber: number
   totalTracks: number
 }
-

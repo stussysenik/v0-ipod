@@ -26,4 +26,3 @@ export const textFadeAnimation: Variants = {
     transition: { duration: 0.2, ease: "easeIn" },
   },
 }
-

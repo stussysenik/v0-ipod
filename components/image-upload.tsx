@@ -52,4 +52,3 @@ export function ImageUpload({ currentImage, onImageChange, className = "" }: Ima
     </>
   )
 }
-

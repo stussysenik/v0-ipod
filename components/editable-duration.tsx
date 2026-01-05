@@ -88,4 +88,3 @@ export function EditableDuration({ value, onChange, className = "" }: EditableDu
     </span>
   )
 }
-

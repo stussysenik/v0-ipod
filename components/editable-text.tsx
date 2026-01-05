@@ -67,4 +67,3 @@ export function EditableText({ value, onChange, className = "" }: EditableTextPr
     </span>
   )
 }
-
