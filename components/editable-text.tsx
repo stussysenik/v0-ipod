@@ -56,13 +56,13 @@ export function EditableText({ value, onChange, className = "" }: EditableTextPr
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className={`w-full bg-transparent border-b border-black focus:outline-none focus:border-gray-600 font-mono ${className}`}
+        className={`w-full bg-white/80 border-b border-black focus:outline-none focus:border-blue-500 rounded px-1 ${className}`}
       />
     )
   }
 
   return (
-    <span onDoubleClick={handleDoubleClick} className={`cursor-text block w-full break-words ${className}`}>
+    <span onDoubleClick={handleDoubleClick} className={`cursor-text block w-full break-words hover:bg-black/5 hover:text-blue-900 rounded px-0.5 -mx-0.5 transition-colors ${className}`}>
       {value}
     </span>
   )

@@ -76,14 +76,14 @@ export function EditableDuration({ value, onChange, className = "" }: EditableDu
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className={`w-12 bg-transparent border-b border-[#043321] focus:outline-none focus:border-[#8a9a80] text-center ${className}`}
+        className={`w-12 bg-white/50 border-b border-black focus:outline-none focus:border-blue-500 text-center rounded ${className}`}
         placeholder="0:00"
       />
     )
   }
 
   return (
-    <span onDoubleClick={handleDoubleClick} className={`cursor-text hover:text-[#8a9a80] ${className}`}>
+    <span onDoubleClick={handleDoubleClick} className={`cursor-text hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors ${className}`}>
       {localValue}
     </span>
   )

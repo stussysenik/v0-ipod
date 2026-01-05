@@ -53,36 +53,24 @@ export function ProgressBar({ currentTime, duration, onSeek }: ProgressBarProps)
   const progress = (currentTime / duration) * 100
 
   return (
-    <div className="space-y-1.5">
+    <div className="w-full">
       <div
         ref={progressRef}
-        className="relative w-full h-1.5 bg-gray-200 rounded-sm cursor-pointer overflow-visible"
+        className="relative w-full h-[10px] bg-white border border-[#999] shadow-inner cursor-pointer overflow-hidden"
         onMouseDown={handleMouseDown}
+        style={{
+          boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)"
+        }}
       >
-        {/* Progress Bar */}
-        <div className="absolute inset-y-0 left-0 bg-black rounded-sm" style={{ width: `${progress}%` }} />
-
-        {/* Playhead */}
+        {/* Progress Bar (Blue Gel style) */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-black rounded-full shadow-sm"
+          className="absolute inset-y-0 left-0"
           style={{
-            left: `${progress}%`,
-            transform: `translate(-50%, -50%)`,
+            width: `${progress}%`,
+            background: "linear-gradient(180deg, #74ACDF 0%, #3584D3 50%, #1766B5 51%, #358BDB 100%)"
           }}
         />
       </div>
-
-      {/* Time Display */}
-      <div className="flex justify-between text-xs font-mono text-gray-600">
-        <span>{formatTime(currentTime)}</span>
-        <span>-{formatTime(duration - currentTime)}</span>
-      </div>
     </div>
   )
-}
-
-function formatTime(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = Math.floor(seconds % 60)
-  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
 }
