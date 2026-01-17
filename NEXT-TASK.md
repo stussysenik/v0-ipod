@@ -1,0 +1,3 @@
+- Work on the 3D part
+- Give it some shading or what does give form to a 2D design
+- How to achieve this using web, webgpu, webassembly technologies?

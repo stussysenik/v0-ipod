@@ -1,8 +1,9 @@
 "use client"
 
 import { useReducer, useRef, useCallback, useState, useEffect } from "react"
-import { Settings, Box, Share, Monitor, Smartphone, Check, Plus } from "lucide-react"
-import { toPng } from "html-to-image"
+import { Settings, Box, Share, Monitor, Smartphone, Check, Plus, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { exportImage, type ExportStatus } from "@/lib/export-utils"
 import { IconButton } from "./icon-button"
 import { ThreeDIpod } from "./three-d-ipod"
 import { IpodScreen } from "./ipod-screen"
@@ -66,7 +67,7 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
 
 export default function IPodClassic() {
   const [state, dispatch] = useReducer(songReducer, initialState)
-  const [isExporting, setIsExporting] = useState(false)
+  const [exportStatus, setExportStatus] = useState<ExportStatus>("idle")
 
   // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<"flat" | "3d" | "focus">("flat")
@@ -105,34 +106,40 @@ export default function IPodClassic() {
   }, [state.currentTime])
 
   const handleExport = useCallback(async () => {
-    // We target a specific wrapper element that includes the background
     if (!exportTargetRef.current) return
-    setIsExporting(true)
+    if (exportStatus !== "idle") return // Prevent double-clicks
+
     playClick()
+    const filename = `ipod-${state.title.toLowerCase().replace(/\s+/g, "-")}.png`
 
-    // Wait for UI to settle/render any export-specific styles
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const result = await exportImage(exportTargetRef.current, {
+      filename,
+      backgroundColor: bgColor,
+      pixelRatio: 4,
+      onStatusChange: setExportStatus,
+    })
 
-    try {
-      const dataUrl = await toPng(exportTargetRef.current, {
-        cacheBust: true,
-        pixelRatio: 4,
-        backgroundColor: bgColor, // Ensure background is captured if the element is transparent
-        style: {
-          transform: 'scale(1)', // Ensure flat
-        }
+    if (result.success) {
+      if (result.method === "share") {
+        toast.success("Shared successfully!", {
+          description: "Use 'Save Image' in the share sheet to save to Photos",
+        })
+      } else {
+        toast.success("Image exported!")
+      }
+    } else {
+      toast.error("Export failed", {
+        description: result.error,
+        action: {
+          label: "Retry",
+          onClick: handleExport,
+        },
       })
-
-      const link = document.createElement("a")
-      link.download = `ipod-${state.title.toLowerCase().replace(/\s+/g, '-')}.png`
-      link.href = dataUrl
-      link.click()
-    } catch (error) {
-      console.error("Export failed:", error)
-    } finally {
-      setIsExporting(false)
     }
-  }, [playClick, state.title, bgColor])
+
+    // Reset to idle after a brief delay to show success state
+    setTimeout(() => setExportStatus("idle"), 1500)
+  }, [playClick, state.title, bgColor, exportStatus])
 
   const screenComponent = (
     <IpodScreen
@@ -157,8 +164,7 @@ export default function IPodClassic() {
     >
 
       {/* Floating Tools UI */}
-      {(!isExporting || true) && (
-        <div className={`fixed top-6 right-6 z-50 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-700 ${isExporting ? 'opacity-0 pointer-events-none' : ''}`}>
+      <div className={`fixed top-6 right-6 z-50 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? 'opacity-0 pointer-events-none' : ''}`}>
           {/* Settings / Theme */}
           <div className="relative group">
             <IconButton
@@ -236,14 +242,35 @@ export default function IPodClassic() {
 
           {/* Export Action */}
           <IconButton
-            icon={isExporting ? <Check className="w-5 h-5" /> : <Share className="w-5 h-5" />}
-            label="Export Image"
+            icon={
+              exportStatus === "success" ? (
+                <Check className="w-5 h-5" />
+              ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Share className="w-5 h-5" />
+              )
+            }
+            label={
+              exportStatus === "preparing"
+                ? "Preparing..."
+                : exportStatus === "sharing"
+                  ? "Sharing..."
+                  : exportStatus === "success"
+                    ? "Done!"
+                    : "Export Image"
+            }
             onClick={handleExport}
             contrast={true}
-            className={`transition-colors duration-300 ${isExporting ? 'bg-green-500 hover:bg-green-600 border-none' : ''}`}
+            className={`transition-colors duration-300 ${
+              exportStatus === "success"
+                ? "bg-green-500 hover:bg-green-600 border-none"
+                : exportStatus === "preparing" || exportStatus === "sharing"
+                  ? "bg-blue-500 hover:bg-blue-600 border-none"
+                  : ""
+            }`}
           />
         </div>
-      )}
 
 
       {/* 3D MODE (R3F) */}
@@ -262,13 +289,13 @@ export default function IPodClassic() {
           transform: viewMode === 'focus' ? 'scale(1.5)' : undefined
         }}
       >
-        <div ref={exportTargetRef} className="p-12 rounded-[50px] transition-colors duration-300" style={{ backgroundColor: isExporting ? bgColor : 'transparent' }}>
+        <div ref={exportTargetRef} className="p-12 rounded-[50px] transition-colors duration-300" style={{ backgroundColor: exportStatus !== "idle" ? bgColor : 'transparent' }}>
           <div
             className="relative w-[370px] h-[620px] rounded-[36px] transition-all duration-300 flex flex-col items-center justify-between p-6"
             style={{
               backgroundColor: skinColor,
               // FAKE PHYSICS DEPTH for 2D/Export
-              boxShadow: isExporting
+              boxShadow: exportStatus !== "idle"
                 // Export shadow: Simulates depth in the flat image
                 ? `20px 20px 60px rgba(0,0,0,0.15), -10px -10px 40px rgba(255,255,255,0.4), inset 0 0 0 2px rgba(0,0,0,0.05)`
                 // Live shadow
@@ -276,7 +303,7 @@ export default function IPodClassic() {
             }}
           >
             {/* Subtle Bevel for "fake 3D" in export */}
-            {isExporting && (
+            {exportStatus !== "idle" && (
               <div className="absolute inset-0 rounded-[36px] border-[4px] border-black/5 pointer-events-none" />
             )}
 
