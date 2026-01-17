@@ -32,6 +32,8 @@ type Action =
   | { type: "UPDATE_CURRENT_TIME"; payload: number }
   | { type: "UPDATE_DURATION"; payload: number }
   | { type: "UPDATE_RATING"; payload: number }
+  | { type: "UPDATE_TRACK_NUMBER"; payload: number }
+  | { type: "UPDATE_TOTAL_TRACKS"; payload: number }
 
 function songReducer(state: SongMetadata, action: Action): SongMetadata {
   switch (action.type) {
@@ -53,6 +55,10 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
       }
     case "UPDATE_RATING":
       return { ...state, rating: action.payload }
+    case "UPDATE_TRACK_NUMBER":
+      return { ...state, trackNumber: Math.max(1, Math.min(action.payload, state.totalTracks)) }
+    case "UPDATE_TOTAL_TRACKS":
+      return { ...state, totalTracks: Math.max(1, action.payload) }
     default:
       return state
   }

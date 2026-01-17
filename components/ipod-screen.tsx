@@ -7,6 +7,7 @@ import { ImageUpload } from "./image-upload"
 import { EditableText } from "./editable-text"
 import { EditableTime } from "./editable-time"
 import { EditableDuration } from "./editable-duration"
+import { EditableTrackNumber } from "./editable-track-number"
 import type { SongMetadata } from "../types/ipod"
 
 interface IpodScreenProps {
@@ -82,7 +83,12 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
 
                                                 {/* Meta */}
                                                 <div className="text-[10px] text-[#888] mb-1">
-                                                        {state.trackNumber} of {state.totalTracks}
+                                                        <EditableTrackNumber
+                                                                trackNumber={state.trackNumber}
+                                                                totalTracks={state.totalTracks}
+                                                                onTrackNumberChange={(num) => dispatch({ type: "UPDATE_TRACK_NUMBER", payload: num })}
+                                                                onTotalTracksChange={(num) => dispatch({ type: "UPDATE_TOTAL_TRACKS", payload: num })}
+                                                        />
                                                 </div>
 
                                                 <div className="scale-75 origin-left -ml-1 relative z-20">
