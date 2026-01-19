@@ -5,7 +5,7 @@ import { Settings, Box, Share, Monitor, Smartphone, Check, Plus, Loader2 } from 
 import { toast } from "sonner"
 import { exportImage, type ExportStatus } from "@/lib/export-utils"
 import { IconButton } from "./icon-button"
-import { ThreeDIpod } from "./three-d-ipod"
+import { ThreeDIpod, type ThreeDIpodHandle } from "./three-d-ipod"
 import { IpodScreen } from "./ipod-screen"
 import { ClickWheel } from "./click-wheel"
 import type { SongMetadata } from "../types/ipod"
@@ -68,6 +68,7 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
 export default function IPodClassic() {
   const [state, dispatch] = useReducer(songReducer, initialState)
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle")
+  const [isSceneReady, setIsSceneReady] = useState(false)
 
   // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<"flat" | "3d" | "focus">("flat")
@@ -80,12 +81,20 @@ export default function IPodClassic() {
   const containerRef = useRef<HTMLDivElement>(null)
   const ipodRef = useRef<HTMLDivElement>(null)
   const exportTargetRef = useRef<HTMLDivElement>(null) // Wrapper for export
+  const threeDIpodRef = useRef<ThreeDIpodHandle>(null) // Ref for 3D export
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Mouse Tracking (Standard Modes)
+  // Reset scene ready state when switching away from 3D mode
   useEffect(() => {
-    // Only used for parallax which we might keep or remove, but keeping straightforward for now
+    if (viewMode !== '3d') {
+      setIsSceneReady(false)
+    }
   }, [viewMode])
+
+  // Handle scene ready callback from ThreeDIpod
+  const handleSceneReady = useCallback(() => {
+    setIsSceneReady(true)
+  }, [])
 
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND)
@@ -106,30 +115,90 @@ export default function IPodClassic() {
   }, [state.currentTime])
 
   const handleExport = useCallback(async () => {
-    if (!exportTargetRef.current) return
     if (exportStatus !== "idle") return // Prevent double-clicks
 
     playClick()
     const filename = `ipod-${state.title.toLowerCase().replace(/\s+/g, "-")}.png`
 
-    const result = await exportImage(exportTargetRef.current, {
-      filename,
-      backgroundColor: bgColor,
-      pixelRatio: 4,
-      onStatusChange: setExportStatus,
-    })
-
-    if (result.success) {
-      if (result.method === "share") {
-        toast.success("Shared successfully!", {
-          description: "Use 'Save Image' in the share sheet to save to Photos",
+    // Handle 3D mode export differently
+    if (viewMode === '3d') {
+      // Check if scene is ready before attempting export
+      if (!isSceneReady || !threeDIpodRef.current) {
+        toast.error("Scene loading...", {
+          description: "Please wait for the 3D scene to fully load before exporting.",
         })
-      } else {
-        toast.success("Image exported!")
+        return
       }
-    } else {
+
+      setExportStatus("preparing")
+
+      try {
+        // Capture high-res render from Three.js (4096x4096 per PDF spec)
+        const blob = await threeDIpodRef.current.captureHighRes(4096, 4096)
+
+        if (blob) {
+          // Download the blob
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement("a")
+          link.download = filename
+          link.href = url
+          link.click()
+          setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+          setExportStatus("success")
+          toast.success("3D render exported!", {
+            description: "High-resolution 4096x4096 PNG saved",
+          })
+        } else {
+          throw new Error("Failed to capture 3D scene")
+        }
+      } catch (error) {
+        setExportStatus("error")
+        toast.error("3D export failed", {
+          description: error instanceof Error ? error.message : "Unknown error",
+          action: {
+            label: "Retry",
+            onClick: handleExport,
+          },
+        })
+      }
+
+      setTimeout(() => setExportStatus("idle"), 1500)
+      return
+    }
+
+    // 2D mode export
+    if (!exportTargetRef.current) return
+
+    try {
+      const result = await exportImage(exportTargetRef.current, {
+        filename,
+        backgroundColor: bgColor,
+        pixelRatio: 4,
+        onStatusChange: setExportStatus,
+      })
+
+      if (result.success) {
+        if (result.method === "share") {
+          toast.success("Shared successfully!", {
+            description: "Use 'Save Image' in the share sheet to save to Photos",
+          })
+        } else {
+          toast.success("Image exported!")
+        }
+      } else {
+        toast.error("Export failed", {
+          description: result.error,
+          action: {
+            label: "Retry",
+            onClick: handleExport,
+          },
+        })
+      }
+    } catch (error) {
+      setExportStatus("error")
       toast.error("Export failed", {
-        description: result.error,
+        description: error instanceof Error ? error.message : "Unknown error",
         action: {
           label: "Retry",
           onClick: handleExport,
@@ -139,7 +208,7 @@ export default function IPodClassic() {
 
     // Reset to idle after a brief delay to show success state
     setTimeout(() => setExportStatus("idle"), 1500)
-  }, [playClick, state.title, bgColor, exportStatus])
+  }, [playClick, state.title, bgColor, exportStatus, viewMode, isSceneReady])
 
   const screenComponent = (
     <IpodScreen
@@ -276,9 +345,11 @@ export default function IPodClassic() {
       {/* 3D MODE (R3F) */}
       {viewMode === '3d' && (
         <ThreeDIpod
+          ref={threeDIpodRef}
           skinColor={skinColor}
           screen={screenComponent}
           wheel={wheelComponent}
+          onReady={handleSceneReady}
         />
       )}
 

@@ -1,14 +1,21 @@
 "use client"
 
-import { useRef, useMemo } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
-import { Html, RoundedBox, Environment, ContactShadows, Float, PerspectiveCamera, useTexture } from "@react-three/drei"
+import { useRef, useMemo, forwardRef, useImperativeHandle, useEffect, useCallback } from "react"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
+import { Html, RoundedBox, Environment, ContactShadows, Float, PerspectiveCamera, Lightformer, MeshTransmissionMaterial } from "@react-three/drei"
 import * as THREE from "three"
+import { PostProcessing } from "./post-processing"
+
+// Export handle for capturing high-res renders
+export interface ThreeDIpodHandle {
+  captureHighRes: (width?: number, height?: number) => Promise<Blob | null>
+}
 
 interface ThreeDIpodProps {
         screen: React.ReactNode
         wheel: React.ReactNode
         skinColor: string
+        onReady?: () => void
 }
 
 function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
@@ -56,27 +63,42 @@ function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
                 wheelHtml: 0.175 + 0.03 + 0.006,
         }
 
-        // Custom gradient texture for brushed aluminum effect
-        const brushedAluminumTexture = useMemo(() => {
+        // Procedural scratch texture for brushed steel back (per PDF spec)
+        const scratchTexture = useMemo(() => {
                 const canvas = document.createElement('canvas')
-                canvas.width = 512
-                canvas.height = 512
+                canvas.width = 1024
+                canvas.height = 1024
                 const ctx = canvas.getContext('2d')!
 
-                // Create vertical brushed metal pattern
-                const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0)
-                for (let i = 0; i < 100; i++) {
-                        const pos = i / 100
-                        const brightness = 0.8 + Math.random() * 0.2
-                        gradient.addColorStop(pos, `rgba(${brightness * 255}, ${brightness * 255}, ${brightness * 255}, 1)`)
+                // Base roughness (0.02 min per PDF)
+                ctx.fillStyle = '#404040'
+                ctx.fillRect(0, 0, 1024, 1024)
+
+                // Add random scratches for realistic imperfections
+                ctx.strokeStyle = '#606060'
+                ctx.lineWidth = 0.5
+                for (let i = 0; i < 200; i++) {
+                        ctx.beginPath()
+                        ctx.moveTo(Math.random() * 1024, Math.random() * 1024)
+                        ctx.lineTo(Math.random() * 1024, Math.random() * 1024)
+                        ctx.stroke()
                 }
-                ctx.fillStyle = gradient
-                ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+                // Add brushed metal directional lines
+                ctx.strokeStyle = '#505050'
+                ctx.lineWidth = 0.3
+                for (let i = 0; i < 300; i++) {
+                        const y = Math.random() * 1024
+                        ctx.beginPath()
+                        ctx.moveTo(0, y)
+                        ctx.lineTo(1024, y + (Math.random() - 0.5) * 20)
+                        ctx.stroke()
+                }
 
                 const texture = new THREE.CanvasTexture(canvas)
                 texture.wrapS = THREE.RepeatWrapping
                 texture.wrapT = THREE.RepeatWrapping
-                texture.repeat.set(4, 1)
+                texture.repeat.set(2, 2)
                 return texture
         }, [])
 
@@ -125,33 +147,35 @@ function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
                 <group ref={meshRef}>
                         <Float speed={2.0} rotationIntensity={0.15} floatIntensity={0.4} floatingRange={[-0.1, 0.1]}>
                                 <group>
-                                        {/* 1. BACK CASE (Anodized Aluminum with Brushed Finish) */}
+                                        {/* 1. BACK CASE (Brushed Steel with Scratch Imperfections - per PDF Section 3) */}
                                         <RoundedBox args={[args.width, args.height, args.depth]} radius={args.radius} smoothness={10}>
                                                 <meshPhysicalMaterial
                                                         color="#e8e8e8"
-                                                        roughness={0.35}
+                                                        roughness={0.15}  // Decreased for mirror-like quality per PDF
                                                         metalness={1.0}
-                                                        roughnessMap={brushedAluminumTexture}
-                                                        // Anisotropic reflection (brushed aluminum)
-                                                        anisotropy={16}
+                                                        roughnessMap={scratchTexture}
+                                                        // Anisotropy per PDF spec (0.7 instead of 16)
+                                                        anisotropy={0.7}
                                                         anisotropyRotation={Math.PI / 2}
-                                                        clearcoat={0.15}
-                                                        clearcoatRoughness={0.3}
-                                                        envMapIntensity={2.0}
-                                                        reflectivity={0.8}
+                                                        clearcoat={0.2}
+                                                        clearcoatRoughness={0.1}
+                                                        envMapIntensity={2.5}  // Increased for zebra striping effect
+                                                        reflectivity={1.0}
                                                 />
                                         </RoundedBox>
 
-                                        {/* 2. FRONT FACE (Polycarbonate/Plastic Shell) */}
+                                        {/* 2. FRONT FACE (Polycarbonate with SSS Effect - per PDF Section 3) */}
                                         <group position={[0, 0, z.frontFaceCenter]}>
                                                 <RoundedBox args={[args.width, args.height, 0.03]} radius={args.radius} smoothness={10}>
                                                         <meshPhysicalMaterial
                                                                 color={skinColor}
                                                                 roughness={0.2}
                                                                 metalness={0.0}
-                                                                clearcoat={0.5}
-                                                                clearcoatRoughness={0.15}
-                                                                envMapIntensity={1.2}
+                                                                clearcoat={1.0}           // Increased from 0.5 per PDF
+                                                                clearcoatRoughness={0.0}  // Decreased from 0.15 per PDF
+                                                                transmission={0.1}        // NEW: milky SSS effect
+                                                                thickness={0.5}           // NEW: for transmission
+                                                                envMapIntensity={1.5}
                                                                 sheen={0.3}
                                                                 sheenRoughness={0.5}
                                                                 sheenColor={new THREE.Color(skinColor).multiplyScalar(1.2)}
@@ -184,24 +208,19 @@ function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
                                                         {screen}
                                                 </Html>
 
-                                                {/* 3c. Screen Glass (Anti-Reflective Coating) */}
+                                                {/* 3c. Screen Glass (MeshTransmissionMaterial for caustics - per PDF Section 3) */}
                                                 <group position={[0, 0, z.screenGlass]}>
                                                         <RoundedBox args={[3.25, 2.45, 0.02]} radius={0.05} smoothness={4}>
-                                                                <meshPhysicalMaterial
-                                                                        color="#ffffff"
-                                                                        transmission={0.95}
+                                                                <MeshTransmissionMaterial
+                                                                        transmission={1}
                                                                         thickness={0.05}
-                                                                        roughness={0.05}
-                                                                        metalness={0.0}
+                                                                        roughness={0}
+                                                                        chromaticAberration={0.03}  // Built-in chromatic aberration for glass
+                                                                        anisotropicBlur={0.1}
                                                                         ior={1.52}
-                                                                        envMapIntensity={1.5}
-                                                                        clearcoat={1.0}
-                                                                        clearcoatRoughness={0.1}
-                                                                        transparent
-                                                                        opacity={1.0}
-                                                                        // Subtle tint for realism
-                                                                        attenuationColor={new THREE.Color(0xf0f5f0)}
-                                                                        attenuationDistance={0.5}
+                                                                        distortion={0}
+                                                                        temporalDistortion={0}
+                                                                        color="#ffffff"
                                                                 />
                                                         </RoundedBox>
                                                 </group>
@@ -262,29 +281,139 @@ function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
         )
 }
 
-export function ThreeDIpod(props: ThreeDIpodProps) {
+// Scene capture component for high-res exports
+function SceneCapture({ onCapture, onReady }: {
+        onCapture: (fn: (w?: number, h?: number) => Promise<Blob | null>) => void
+        onReady?: () => void
+}) {
+        const { gl, scene, camera } = useThree()
+
+        useEffect(() => {
+                const captureHighRes = async (width = 4096, height = 4096): Promise<Blob | null> => {
+                        // Store original size
+                        const originalSize = new THREE.Vector2()
+                        gl.getSize(originalSize)
+
+                        // Create high-resolution render target with MSAA
+                        const renderTarget = new THREE.WebGLRenderTarget(width, height, {
+                                samples: 4,
+                                type: THREE.UnsignedByteType,
+                                format: THREE.RGBAFormat,
+                                minFilter: THREE.LinearFilter,
+                                magFilter: THREE.LinearFilter,
+                        })
+
+                        try {
+                                // Render to the high-res target
+                                gl.setRenderTarget(renderTarget)
+                                gl.render(scene, camera)
+
+                                // Read pixels from the render target
+                                const buffer = new Uint8Array(width * height * 4)
+                                gl.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer)
+
+                                // Restore original render target
+                                gl.setRenderTarget(null)
+
+                                // Convert to PNG blob via canvas
+                                const canvas = document.createElement("canvas")
+                                canvas.width = width
+                                canvas.height = height
+                                const ctx = canvas.getContext("2d")
+
+                                if (!ctx) {
+                                        throw new Error("Failed to get canvas 2D context")
+                                }
+
+                                const imageData = ctx.createImageData(width, height)
+
+                                // Flip Y axis (WebGL renders upside down)
+                                for (let y = 0; y < height; y++) {
+                                        for (let x = 0; x < width; x++) {
+                                                const srcIndex = ((height - y - 1) * width + x) * 4
+                                                const dstIndex = (y * width + x) * 4
+                                                imageData.data[dstIndex] = buffer[srcIndex]
+                                                imageData.data[dstIndex + 1] = buffer[srcIndex + 1]
+                                                imageData.data[dstIndex + 2] = buffer[srcIndex + 2]
+                                                imageData.data[dstIndex + 3] = buffer[srcIndex + 3]
+                                        }
+                                }
+
+                                ctx.putImageData(imageData, 0, 0)
+
+                                // Convert to blob with timeout
+                                return new Promise((resolve, reject) => {
+                                        const timeoutId = setTimeout(() => {
+                                                reject(new Error("Canvas toBlob timed out after 10 seconds"))
+                                        }, 10000)
+
+                                        canvas.toBlob(
+                                                (blob) => {
+                                                        clearTimeout(timeoutId)
+                                                        resolve(blob)
+                                                },
+                                                "image/png",
+                                                1.0
+                                        )
+                                })
+                        } finally {
+                                renderTarget.dispose()
+                        }
+                }
+
+                onCapture(captureHighRes)
+                // Signal that the scene is ready for capture
+                onReady?.()
+        }, [gl, scene, camera, onCapture, onReady])
+
+        return null
+}
+
+// Use a mutable ref to store the capture function
+interface ThreeDIpodInternalProps extends ThreeDIpodProps {
+        captureRef?: React.MutableRefObject<((w?: number, h?: number) => Promise<Blob | null>) | null>
+}
+
+export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, ref) => {
+        const { onReady, ...modelProps } = props
+        const captureRef = useRef<((w?: number, h?: number) => Promise<Blob | null>) | null>(null)
+
+        useImperativeHandle(ref, () => ({
+                captureHighRes: async (width?: number, height?: number) => {
+                        if (captureRef.current) {
+                                return captureRef.current(width, height)
+                        }
+                        return null
+                }
+        }))
+
+        const handleCapture = useCallback((fn: (w?: number, h?: number) => Promise<Blob | null>) => {
+                captureRef.current = fn
+        }, [])
+
         return (
                 <div className="w-full h-full min-h-screen absolute inset-0">
                         <Canvas shadows dpr={[1, 2]} gl={{
                                 antialias: true,
                                 toneMapping: THREE.ACESFilmicToneMapping,
-                                toneMappingExposure: 1.0
+                                toneMappingExposure: 1.0,
+                                preserveDrawingBuffer: true // Required for capture
                         }}>
                                 <PerspectiveCamera makeDefault position={[0, 0, 11]} fov={30} />
 
                                 {/* Ambient base light */}
                                 <ambientLight intensity={0.4} color="#f0f0f5" />
 
-                                {/* Key Light - Main illumination from top-right */}
+                                {/* Key Light - 800 lumens equivalent per PDF Table 4 */}
                                 <spotLight
                                         position={[8, 12, 10]}
                                         angle={0.3}
                                         penumbra={1}
-                                        intensity={250}
+                                        intensity={800}
                                         castShadow
                                         shadow-mapSize={[2048, 2048]}
                                         shadow-bias={-0.0001}
-                                        color="#ffffff"
+                                        color="#FFF5E0"
                                 />
 
                                 {/* Fill Light - Softer from left */}
@@ -292,37 +421,74 @@ export function ThreeDIpod(props: ThreeDIpodProps) {
                                         position={[-10, 5, 8]}
                                         angle={0.5}
                                         penumbra={1}
-                                        intensity={80}
+                                        intensity={200}
                                         color="#e0f0ff"
                                 />
 
-                                {/* Rim Light - Back highlight for depth */}
+                                {/* Rim Light - 1200 lumens per PDF Table 4 */}
                                 <spotLight
                                         position={[0, 2, -8]}
                                         angle={0.6}
                                         penumbra={1}
-                                        intensity={60}
-                                        color="#fff8e0"
+                                        intensity={1200}
+                                        color="#E0F0FF"
+                                />
+
+                                {/* Kicker light for edge highlights per PDF */}
+                                <rectAreaLight
+                                        position={[5, 0, 0]}
+                                        intensity={600}
+                                        width={2}
+                                        height={10}
+                                        color="#FFE0C0"
                                 />
 
                                 {/* Subtle area light for screen illumination */}
                                 <rectAreaLight
-                                        intensity={3}
+                                        intensity={5}
                                         position={[0, 1, 6]}
                                         width={4}
                                         height={3}
                                         color="#c7d0c0"
                                 />
 
-                                {/* HDRI Environment for realistic reflections */}
+                                {/* HDRI Environment with Lightformers for studio look per PDF Section 4.3 */}
                                 <Environment
                                         preset="studio"
-                                        blur={0.6}
+                                        blur={0.4}
                                         background={false}
                                         environmentIntensity={1.2}
-                                />
+                                >
+                                        {/* Top strip light for zebra effect on metal */}
+                                        <Lightformer
+                                                intensity={2}
+                                                position={[0, 10, 0]}
+                                                scale={[20, 0.5, 1]}
+                                                color="white"
+                                        />
+                                        {/* Side softboxes */}
+                                        <Lightformer
+                                                intensity={1.5}
+                                                position={[5, 5, -5]}
+                                                scale={[10, 3, 1]}
+                                                color="white"
+                                        />
+                                        <Lightformer
+                                                intensity={1}
+                                                position={[-5, 3, -5]}
+                                                scale={[10, 3, 1]}
+                                                color="#e0f0ff"
+                                        />
+                                        {/* Bottom fill for subtle reflection */}
+                                        <Lightformer
+                                                intensity={0.5}
+                                                position={[0, -5, 0]}
+                                                scale={[15, 2, 1]}
+                                                color="#f0f0f0"
+                                        />
+                                </Environment>
 
-                                <IpodModel {...props} />
+                                <IpodModel {...modelProps} />
 
                                 {/* Enhanced contact shadows */}
                                 <ContactShadows
@@ -334,7 +500,16 @@ export function ThreeDIpod(props: ThreeDIpodProps) {
                                         color="#000000"
                                         position={[0, -3.5, 0]}
                                 />
+
+                                {/* Post-processing effects per PDF Section 4.4 */}
+                                <PostProcessing />
+
+                                {/* Scene capture for high-res exports */}
+                                <SceneCapture onCapture={handleCapture} onReady={onReady} />
                         </Canvas>
                 </div>
         )
-}
+})
+
+// Display name for debugging
+ThreeDIpod.displayName = "ThreeDIpod"

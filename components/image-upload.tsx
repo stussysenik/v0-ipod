@@ -29,9 +29,14 @@ export function ImageUpload({ currentImage, onImageChange, className = "" }: Ima
     }
   }
 
+  // Only use crossOrigin for external URLs, not for data URLs or local images
+  const isDataUrl = currentImage?.startsWith("data:")
+  const isLocalImage = currentImage?.startsWith("/")
+  const needsCrossOrigin = currentImage && !isDataUrl && !isLocalImage
+
   return (
     <>
-      <div 
+      <div
         onClick={handleClick}
         className={`cursor-pointer ${className}`}
       >
@@ -39,7 +44,7 @@ export function ImageUpload({ currentImage, onImageChange, className = "" }: Ima
           src={currentImage || "/placeholder.svg"}
           alt="Album artwork"
           className="w-full h-full object-cover"
-          crossOrigin="anonymous"
+          {...(needsCrossOrigin ? { crossOrigin: "anonymous" } : {})}
         />
       </div>
       <input

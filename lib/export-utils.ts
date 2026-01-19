@@ -2,6 +2,89 @@ import { toPng, toBlob } from "html-to-image"
 
 export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error"
 
+/**
+ * Convert an image to a base64 data URL
+ */
+async function imageToDataUrl(img: HTMLImageElement): Promise<string> {
+  // If already a data URL, return as-is
+  if (img.src.startsWith("data:")) {
+    return img.src
+  }
+
+  // Create canvas and draw image
+  const canvas = document.createElement("canvas")
+  canvas.width = img.naturalWidth || img.width
+  canvas.height = img.naturalHeight || img.height
+  const ctx = canvas.getContext("2d")
+
+  if (!ctx) {
+    throw new Error("Failed to get canvas context")
+  }
+
+  ctx.drawImage(img, 0, 0)
+
+  // Return as PNG data URL
+  return canvas.toDataURL("image/png")
+}
+
+/**
+ * Wait for an image to fully load
+ */
+function waitForImageLoad(img: HTMLImageElement): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (img.complete && img.naturalWidth > 0) {
+      resolve()
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Image load timeout: ${img.src.substring(0, 100)}`))
+    }, 5000)
+
+    img.onload = () => {
+      clearTimeout(timeoutId)
+      resolve()
+    }
+
+    img.onerror = () => {
+      clearTimeout(timeoutId)
+      reject(new Error(`Image load failed: ${img.src.substring(0, 100)}`))
+    }
+  })
+}
+
+/**
+ * Preload and embed all images in the element as inline data URLs
+ * This ensures html-to-image can capture them correctly
+ */
+async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
+  const images = element.querySelectorAll("img")
+
+  const imagePromises = Array.from(images).map(async (img) => {
+    try {
+      // Wait for image to load
+      await waitForImageLoad(img)
+
+      // Skip if no valid image
+      if (!img.naturalWidth || !img.naturalHeight) {
+        console.warn("Skipping invalid image:", img.src.substring(0, 100))
+        return
+      }
+
+      // Convert to data URL if not already
+      if (!img.src.startsWith("data:")) {
+        const dataUrl = await imageToDataUrl(img)
+        img.src = dataUrl
+      }
+    } catch (error) {
+      console.warn("Failed to preload image:", error)
+      // Don't fail the entire export for one image
+    }
+  })
+
+  await Promise.all(imagePromises)
+}
+
 export interface ExportCapabilities {
   canShare: boolean
   canShareFiles: boolean
@@ -40,7 +123,7 @@ export function detectExportCapabilities(): ExportCapabilities {
 }
 
 /**
- * Capture element to blob with iOS retry logic
+ * Capture element to blob with iOS retry logic and image handling
  */
 export async function captureToBlob(
   element: HTMLElement,
@@ -50,7 +133,7 @@ export async function captureToBlob(
   },
   capabilities: ExportCapabilities
 ): Promise<Blob> {
-  const maxAttempts = capabilities.isIOS ? 2 : 1
+  const maxAttempts = capabilities.isIOS ? 3 : 2
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -58,25 +141,36 @@ export async function captureToBlob(
         cacheBust: true,
         pixelRatio: options.pixelRatio ?? 4,
         backgroundColor: options.backgroundColor,
+        skipFonts: false,
+        includeQueryParams: true,
         style: {
           transform: "scale(1)",
         },
+        // Filter function to ensure images are properly handled
+        filter: (node: Node) => {
+          // Include all nodes except script tags
+          if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
+            return false
+          }
+          return true
+        },
       })
 
-      if (blob) {
+      if (blob && blob.size > 1000) {
+        // Ensure we have a meaningful blob (not just an empty/corrupt image)
         return blob
       }
 
-      // If blob is null and we have more attempts, wait and retry
+      // If blob is null or too small and we have more attempts, wait and retry
       if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 300))
+        await new Promise(resolve => setTimeout(resolve, 300 * attempt))
       }
     } catch (error) {
       if (attempt === maxAttempts) {
         throw error
       }
-      // Wait before retry on iOS
-      await new Promise(resolve => setTimeout(resolve, 300))
+      // Wait before retry with increasing delay
+      await new Promise(resolve => setTimeout(resolve, 300 * attempt))
     }
   }
 
@@ -97,8 +191,16 @@ export async function captureToDataUrl(
     cacheBust: true,
     pixelRatio: options.pixelRatio ?? 4,
     backgroundColor: options.backgroundColor,
+    skipFonts: false,
+    includeQueryParams: true,
     style: {
       transform: "scale(1)",
+    },
+    filter: (node: Node) => {
+      if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
+        return false
+      }
+      return true
     },
   })
 }
@@ -187,6 +289,13 @@ export async function exportImage(
   await new Promise(resolve => setTimeout(resolve, 300))
 
   try {
+    // Pre-load and embed all images as inline data URLs
+    // This ensures html-to-image can capture them correctly
+    await preloadAndEmbedImages(element)
+
+    // Additional wait for images to settle after conversion
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     // Try to capture as blob first (needed for share and blob download)
     let blob: Blob | null = null
     try {
