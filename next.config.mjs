@@ -1,3 +1,5 @@
+import withPWA from '@ducanh2912/next-pwa'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -6,10 +8,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
- 
   eslint: {
     ignoreDuringBuilds: true,
   },
 }
 
-export default nextConfig
+export default withPWA({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+})(nextConfig)
