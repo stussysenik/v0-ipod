@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useMemo, forwardRef, useImperativeHandle, useEffect, useCallback } from "react"
+import React, { useRef, useMemo, forwardRef, useImperativeHandle, useEffect, useCallback } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { Html, RoundedBox, Environment, ContactShadows, Float, PerspectiveCamera, Lightformer, MeshTransmissionMaterial } from "@react-three/drei"
 import * as THREE from "three"
@@ -18,9 +18,24 @@ interface ThreeDIpodProps {
         onReady?: () => void
 }
 
-function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
+interface IpodModelProps extends Omit<ThreeDIpodProps, 'onReady'> {
+        onRegisterReset?: (fn: () => void) => void
+}
+
+function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps) {
         const meshRef = useRef<THREE.Group>(null)
         const screenGroupRef = useRef<THREE.Group>(null)
+
+        // Register reset function for export capture
+        useEffect(() => {
+                if (onRegisterReset) {
+                        onRegisterReset(() => {
+                                if (meshRef.current) {
+                                        meshRef.current.rotation.set(0, 0, 0)
+                                }
+                        })
+                }
+        }, [onRegisterReset])
 
         useFrame((state) => {
                 if (!meshRef.current) return
@@ -282,9 +297,10 @@ function IpodModel({ screen, wheel, skinColor }: ThreeDIpodProps) {
 }
 
 // Scene capture component for high-res exports
-function SceneCapture({ onCapture, onReady }: {
+function SceneCapture({ onCapture, onReady, modelResetRef }: {
         onCapture: (fn: (w?: number, h?: number) => Promise<Blob | null>) => void
         onReady?: () => void
+        modelResetRef?: React.MutableRefObject<(() => void) | null>
 }) {
         const { gl, scene, camera } = useThree()
 
@@ -293,6 +309,11 @@ function SceneCapture({ onCapture, onReady }: {
                         // Store original size
                         const originalSize = new THREE.Vector2()
                         gl.getSize(originalSize)
+
+                        // Reset model rotation to front-facing before capture
+                        if (modelResetRef?.current) {
+                                modelResetRef.current()
+                        }
 
                         // Create high-resolution render target with MSAA
                         const renderTarget = new THREE.WebGLRenderTarget(width, height, {
@@ -377,6 +398,7 @@ interface ThreeDIpodInternalProps extends ThreeDIpodProps {
 export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, ref) => {
         const { onReady, ...modelProps } = props
         const captureRef = useRef<((w?: number, h?: number) => Promise<Blob | null>) | null>(null)
+        const modelResetRef = useRef<(() => void) | null>(null)
 
         useImperativeHandle(ref, () => ({
                 captureHighRes: async (width?: number, height?: number) => {
@@ -389,6 +411,10 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
 
         const handleCapture = useCallback((fn: (w?: number, h?: number) => Promise<Blob | null>) => {
                 captureRef.current = fn
+        }, [])
+
+        const handleRegisterReset = useCallback((fn: () => void) => {
+                modelResetRef.current = fn
         }, [])
 
         return (
@@ -488,7 +514,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
                                         />
                                 </Environment>
 
-                                <IpodModel {...modelProps} />
+                                <IpodModel {...modelProps} onRegisterReset={handleRegisterReset} />
 
                                 {/* Enhanced contact shadows */}
                                 <ContactShadows
@@ -505,7 +531,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
                                 <PostProcessing />
 
                                 {/* Scene capture for high-res exports */}
-                                <SceneCapture onCapture={handleCapture} onReady={onReady} />
+                                <SceneCapture onCapture={handleCapture} onReady={onReady} modelResetRef={modelResetRef} />
                         </Canvas>
                 </div>
         )
