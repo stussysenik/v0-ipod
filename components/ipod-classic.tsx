@@ -327,7 +327,9 @@ export default function IPodClassic() {
                   ? "Sharing..."
                   : exportStatus === "success"
                     ? "Done!"
-                    : "Export Image"
+                    : viewMode === '3d'
+                      ? "Export 3D Render"
+                      : "Export 2D Image"
             }
             onClick={handleExport}
             contrast={true}
@@ -367,15 +369,18 @@ export default function IPodClassic() {
               backgroundColor: skinColor,
               // FAKE PHYSICS DEPTH for 2D/Export
               boxShadow: exportStatus !== "idle"
-                // Export shadow: Simulates depth in the flat image
-                ? `20px 20px 60px rgba(0,0,0,0.15), -10px -10px 40px rgba(255,255,255,0.4), inset 0 0 0 2px rgba(0,0,0,0.05)`
+                // Export shadow: Uniform concentric shadows for floating effect (no directional bias)
+                ? `0 0 80px 10px rgba(0,0,0,0.08), 0 0 40px 5px rgba(0,0,0,0.12), 0 0 15px 2px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.1)`
                 // Live shadow
                 : `0 30px 60px -15px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.05)`,
             }}
           >
             {/* Subtle Bevel for "fake 3D" in export */}
             {exportStatus !== "idle" && (
-              <div className="absolute inset-0 rounded-[36px] border-[4px] border-black/5 pointer-events-none" />
+              <div
+                className="absolute inset-0 rounded-[36px] border-[3px] border-white/10 pointer-events-none"
+                style={{ boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.05)' }}
+              />
             )}
 
             {/* SCREEN AREA */}
