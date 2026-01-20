@@ -40,7 +40,25 @@ A pixel-perfect iPod Classic simulator with editable metadata fields, built with
 
 ---
 
-## Latest Changes (2026-01-17)
+## Latest Changes (2026-01-20)
+
+### Predictable Export with Clear UI Feedback
+- Export button now shows context-aware labels:
+  - "Export 3D Render" when in 3D view mode
+  - "Export 2D Image" when in 2D or Focus view modes
+- 3D exports now reset model to front-facing position before capture
+  - No more unexpected side-angle exports from mouse position
+  - Predictable, professional-looking 3D renders every time
+
+### Technical Implementation
+- Added `IpodModelProps` interface with `onRegisterReset` callback
+- `IpodModel` component registers rotation reset function
+- `SceneCapture` calls reset before high-res render
+- Wired up refs through `ThreeDIpod` parent component
+
+---
+
+## Previous Changes (2026-01-17)
 
 ### Added
 - `EditableTrackNumber` component for inline track number editing

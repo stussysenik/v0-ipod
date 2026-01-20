@@ -11,7 +11,7 @@ A pixel-perfect iPod Classic simulator with fully editable metadata fields, mult
 - **Custom Artwork** - Upload your own album artwork
 - **Multiple View Modes** - 2D flat, 3D perspective, and focus/close-up views
 - **Theme Customization** - Customize iPod case color and background
-- **High-Quality Export** - Export as 4x resolution PNG
+- **Smart Export** - Context-aware export (2D Image / 3D Render) with predictable front-facing 3D captures
 - **E2E Tested** - Playwright test suite for reliability
 
 ## Quick Start
