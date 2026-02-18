@@ -576,7 +576,7 @@ export default function IPodClassic() {
           data-export-shell={isExportCapturing ? "true" : "false"}
           className="p-12"
           style={{
-            backgroundColor: "transparent",
+            backgroundColor: isExportCapturing ? bgColor : "transparent",
           }}
         >
           <div
