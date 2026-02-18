@@ -574,7 +574,7 @@ export default function IPodClassic() {
         <div
           ref={exportTargetRef}
           data-export-shell={isExportCapturing ? "true" : "false"}
-          className="p-12 rounded-[50px] transition-colors duration-300"
+          className="p-12"
           style={{
             backgroundColor: "transparent",
           }}
