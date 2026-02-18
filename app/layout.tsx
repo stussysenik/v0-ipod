@@ -3,14 +3,38 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
+import { BuildVersionBadge } from "@/components/build-version-badge";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
-const deployVersion =
-  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ??
-  process.env.NEXT_PUBLIC_DEPLOY_VERSION ??
-  "dev";
+
+function resolveDeployVersion(): string {
+  const explicitVersion = process.env.NEXT_PUBLIC_DEPLOY_VERSION?.trim();
+  if (explicitVersion) {
+    return explicitVersion;
+  }
+
+  const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+  const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.slice(-6);
+  const deploymentUrlToken = process.env.VERCEL_URL
+    ?.replace(/\.vercel\.app$/i, "")
+    .split("-")
+    .at(-1);
+  const deploymentStamp = deploymentId || deploymentUrlToken;
+
+  const parts = [commit, deploymentStamp].filter(
+    (part): part is string => !!part && part.trim().length > 0,
+  );
+
+  if (parts.length === 0) {
+    return "dev";
+  }
+
+  return parts.join("-");
+}
+
+const deployVersion = resolveDeployVersion();
 
 export const viewport: Viewport = {
   themeColor: "#000000",
@@ -56,6 +80,7 @@ export default function RootLayout({
       <body className={`font-sans antialiased`}>
         <ServiceWorkerCleanup deployVersion={deployVersion} />
         {children}
+        <BuildVersionBadge initialVersion={deployVersion} />
         <Toaster position="bottom-center" richColors />
         <Analytics />
       </body>

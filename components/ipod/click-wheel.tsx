@@ -10,6 +10,7 @@ interface ClickWheelProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  exportMode?: boolean;
 }
 
 export function ClickWheel({
@@ -19,8 +20,15 @@ export function ClickWheel({
   className,
   style,
   disabled = false,
+  exportMode = false,
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
+  const wheelShadow = exportMode
+    ? "0 1px 5px rgba(0,0,0,0.06), inset 0 1px 2px rgba(255,255,255,0.55)"
+    : "0 2px 8px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,0.6)";
+  const centerShadow = exportMode
+    ? "0 1px 4px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.95)"
+    : "0 2px 5px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -94,7 +102,8 @@ export function ClickWheel({
     >
       {/* Wheel Surface - Clean Matte Look */}
       <div
-        className="absolute inset-0 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08),_inset_0_1px_2px_rgba(255,255,255,0.6)] bg-[#F5F5F5]"
+        className="absolute inset-0 rounded-full bg-[#F5F5F5]"
+        style={{ boxShadow: wheelShadow }}
       >
         {/* Button Labels */}
         <div className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold text-[#CCC] tracking-widest uppercase pointer-events-none font-sans">
@@ -117,9 +126,10 @@ export function ClickWheel({
 
       {/* Center Button */}
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] rounded-full bg-linear-to-b from-white to-[#F0F0F0] shadow-[0_2px_5px_rgba(0,0,0,0.1),_inset_0_1px_1px_rgba(255,255,255,1)] transition-transform z-20 border border-[#EBEBEB] ${
+        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] rounded-full bg-linear-to-b from-white to-[#F0F0F0] transition-transform z-20 border border-[#EBEBEB] ${
           disabled ? "cursor-default" : "active:scale-95 cursor-pointer"
         }`}
+        style={{ boxShadow: centerShadow }}
         onClick={(e) => {
           e.stopPropagation();
           if (disabled) return;

@@ -131,6 +131,7 @@ export default function IPodClassic() {
   const [showSettings, setShowSettings] = useState(false);
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
+  const [isExportCapturing, setIsExportCapturing] = useState(false);
   const isFlatView = viewMode === "flat";
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -230,6 +231,8 @@ export default function IPodClassic() {
 
     if (!exportTargetRef.current) return;
 
+    setIsExportCapturing(true);
+
     try {
       console.info("[export] starting flat export", { filename });
       const result = await exportImage(exportTargetRef.current, {
@@ -267,9 +270,10 @@ export default function IPodClassic() {
           onClick: () => handleExportRef.current?.(),
         },
       });
+    } finally {
+      setIsExportCapturing(false);
+      setTimeout(() => setExportStatus("idle"), 1500);
     }
-
-    setTimeout(() => setExportStatus("idle"), 1500);
   }, [playClick, state.title, bgColor, exportStatus, isFlatView]);
 
   useEffect(() => {
@@ -286,7 +290,12 @@ export default function IPodClassic() {
   );
 
   const wheelComponent = (
-    <ClickWheel playClick={playClick} onSeek={handleSeek} disabled={!isFlatView} />
+    <ClickWheel
+      playClick={playClick}
+      onSeek={handleSeek}
+      disabled={!isFlatView}
+      exportMode={isExportCapturing}
+    />
   );
 
   const saveCustomColor = useCallback((target: "case" | "bg", rawColor: string) => {
@@ -564,6 +573,7 @@ export default function IPodClassic() {
       >
         <div
           ref={exportTargetRef}
+          data-export-shell={isExportCapturing ? "true" : "false"}
           className="p-12 rounded-[50px] transition-colors duration-300"
           style={{
             backgroundColor: "transparent",
@@ -573,9 +583,9 @@ export default function IPodClassic() {
             className="relative w-[370px] h-[620px] rounded-[36px] transition-all duration-300 flex flex-col items-center justify-between p-6"
             style={{
               backgroundColor: skinColor,
-              // Keep export visuals identical to the visible on-screen state (WYSIWYG).
-              boxShadow:
-                "0 36px 62px -24px rgba(0,0,0,0.32), 0 14px 24px -16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)",
+              boxShadow: isExportCapturing
+                ? "0 20px 36px -20px rgba(0,0,0,0.20), 0 9px 16px -12px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.05)"
+                : "0 30px 54px -24px rgba(0,0,0,0.26), 0 14px 24px -16px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)",
             }}
           >
             {/* SCREEN AREA */}

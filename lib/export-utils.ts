@@ -2,6 +2,67 @@ import { toPng, toBlob } from "html-to-image";
 
 export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error";
 
+const EXPORT_ATTRIBUTE = "data-exporting";
+const MAX_EXPORT_SETTLE_DELAY_MS = 900;
+
+const waitForMs = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
+
+const waitForNextPaint = () =>
+  new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+
+function parseCssTimeToMs(value: string): number {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  if (trimmed.endsWith("ms")) return Number.parseFloat(trimmed) || 0;
+  if (trimmed.endsWith("s")) return (Number.parseFloat(trimmed) || 0) * 1000;
+  return Number.parseFloat(trimmed) || 0;
+}
+
+function longestTimelineMs(durations: string[], delays: string[]): number {
+  if (durations.length === 0) {
+    return 0;
+  }
+
+  let maxMs = 0;
+  const count = Math.max(durations.length, delays.length || 1);
+  for (let i = 0; i < count; i += 1) {
+    const duration = parseCssTimeToMs(durations[i % durations.length] ?? "0ms");
+    const delay = parseCssTimeToMs(delays[i % (delays.length || 1)] ?? "0ms");
+    maxMs = Math.max(maxMs, duration + delay);
+  }
+  return maxMs;
+}
+
+function getMaxVisualSettleDelayMs(element: HTMLElement): number {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  const nodes: HTMLElement[] = [element, ...Array.from(element.querySelectorAll("*"))];
+  let maxMs = 0;
+
+  for (const node of nodes) {
+    const style = window.getComputedStyle(node);
+    const transitionMs = longestTimelineMs(
+      style.transitionDuration.split(","),
+      style.transitionDelay.split(","),
+    );
+    const animationMs = longestTimelineMs(
+      style.animationDuration.split(","),
+      style.animationDelay.split(","),
+    );
+    maxMs = Math.max(maxMs, transitionMs, animationMs);
+    if (maxMs >= MAX_EXPORT_SETTLE_DELAY_MS) {
+      return MAX_EXPORT_SETTLE_DELAY_MS;
+    }
+  }
+
+  return Math.min(maxMs, MAX_EXPORT_SETTLE_DELAY_MS);
+}
+
 /**
  * Convert an image to a base64 data URL
  */
@@ -101,7 +162,8 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   clone.style.height = `${height}px`;
   clone.style.maxWidth = "none";
   clone.style.maxHeight = "none";
-  clone.style.overflow = "hidden";
+  clone.style.overflow = "visible";
+  clone.setAttribute(EXPORT_ATTRIBUTE, "true");
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
   const freezeStyle = document.createElement("style");
@@ -638,6 +700,8 @@ export async function exportImage(
   const preparedPopup =
     capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
   let keepPreparedPopupOpen = false;
+  const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
+  element.setAttribute(EXPORT_ATTRIBUTE, "true");
 
   onStatusChange?.("preparing");
 
@@ -648,10 +712,13 @@ export async function exportImage(
   }
   window.getSelection?.()?.removeAllRanges();
 
-  // Snapshot after the next paint to capture exactly what the user sees now.
-  await new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-  );
+  // Snapshot after paint + transition settle so exports don't capture in-between states.
+  await waitForNextPaint();
+  const settleDelayMs = getMaxVisualSettleDelayMs(element);
+  if (settleDelayMs > 0) {
+    await waitForMs(settleDelayMs + 34);
+    await waitForNextPaint();
+  }
 
   let exportNode: HTMLElement | null = null;
   const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
@@ -666,70 +733,83 @@ export async function exportImage(
   };
 
   try {
-    // Try a live capture first so the export matches exactly what is rendered.
+    // Prefer detached capture first for deterministic export-safe output.
     let blob: Blob | null = null;
     try {
-      blob = await captureToBlob(element, { backgroundColor, pixelRatio }, capabilities);
+      const detachedNode = await ensureDetachedExportNode();
+      blob = await captureToBlob(
+        detachedNode,
+        { backgroundColor, pixelRatio },
+        capabilities,
+      );
       if (blob && (await isLikelyBlankCapture(blob))) {
-        console.warn("Live-element capture looked blank, trying detached clone");
+        console.warn("Detached capture looked blank, trying live element");
         blob = null;
       }
     } catch (error) {
-      console.warn("Live blob capture failed, trying detached clone:", error);
+      console.warn("Detached blob capture failed, trying live element:", error);
     }
 
-    // Fallback to a detached clone if live capture failed/blank.
+    // Fallback to live element capture if detached capture failed.
     if (!blob) {
       try {
-        const detachedNode = await ensureDetachedExportNode();
-        blob = await captureToBlob(
-          detachedNode,
-          { backgroundColor, pixelRatio },
-          capabilities,
-        );
-      } catch (error) {
-        console.warn("Detached blob capture failed, will try renderer fallback:", error);
-      }
-    }
-
-    // If detached clone looks blank, one final retry from the live element.
-    if (blob && (await isLikelyBlankCapture(blob))) {
-      console.warn("Detached capture looked blank, retrying live-element capture");
-      try {
-        const liveBlob = await captureToBlob(
-          element,
-          { backgroundColor, pixelRatio },
-          capabilities,
-        );
-        if (await isLikelyBlankCapture(liveBlob)) {
-          console.warn("Live-element capture retry also looked blank");
+        blob = await captureToBlob(element, { backgroundColor, pixelRatio }, capabilities);
+        if (blob && (await isLikelyBlankCapture(blob))) {
+          console.warn("Live-element capture looked blank");
           blob = null;
-        } else {
-          blob = liveBlob;
         }
-      } catch (retryError) {
-        console.warn(
-          "Live-element capture retry failed after detached clone:",
-          retryError,
-        );
-        blob = null;
+      } catch (error) {
+        console.warn("Live blob capture failed, will try renderer fallback:", error);
       }
     }
 
     // Renderer fallback: html2canvas is slower, but more compatible on some iOS/WebKit paths.
     if (!blob) {
       try {
+        const detachedNode = await ensureDetachedExportNode();
+        blob = await captureToBlobWithHtml2Canvas(detachedNode, {
+          backgroundColor,
+          pixelRatio: Math.min(pixelRatio ?? 4, 3),
+        });
+        if (blob && (await isLikelyBlankCapture(blob))) {
+          console.warn("Detached html2canvas fallback looked blank");
+          blob = null;
+        }
+      } catch (error) {
+        console.warn("Detached html2canvas fallback failed:", error);
+      }
+    }
+
+    if (!blob) {
+      try {
         blob = await captureToBlobWithHtml2Canvas(element, {
           backgroundColor,
           pixelRatio: Math.min(pixelRatio ?? 4, 3),
         });
-
         if (blob && (await isLikelyBlankCapture(blob))) {
-          console.warn("Fallback capture also looked blank");
+          console.warn("Live html2canvas fallback looked blank");
           blob = null;
         }
       } catch (error) {
-        console.warn("html2canvas fallback failed:", error);
+        console.warn("Live html2canvas fallback failed:", error);
+      }
+    }
+
+    // Final retry from detached node with slightly lower pixel ratio for fragile browsers.
+    if (!blob) {
+      try {
+        const detachedNode = await ensureDetachedExportNode();
+        blob = await captureToBlob(
+          detachedNode,
+          { backgroundColor, pixelRatio: Math.min(pixelRatio ?? 4, 2.5) },
+          capabilities,
+        );
+        if (blob && (await isLikelyBlankCapture(blob))) {
+          console.warn("Low-ratio detached retry looked blank");
+          blob = null;
+        }
+      } catch (error) {
+        console.warn("Low-ratio detached retry failed:", error);
       }
     }
 
@@ -841,5 +921,10 @@ export async function exportImage(
       preparedPopup.close();
     }
     exportNode?.remove();
+    if (existingExportAttribute === null) {
+      element.removeAttribute(EXPORT_ATTRIBUTE);
+    } else {
+      element.setAttribute(EXPORT_ATTRIBUTE, existingExportAttribute);
+    }
   }
 }

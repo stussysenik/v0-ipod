@@ -6,6 +6,30 @@ interface ServiceWorkerCleanupProps {
   deployVersion?: string;
 }
 
+interface NextDataWindow extends Window {
+  __NEXT_DATA__?: {
+    buildId?: string;
+  };
+}
+
+function resolveDeployVersion(explicitDeployVersion?: string): string {
+  if (explicitDeployVersion && explicitDeployVersion !== "dev") {
+    return explicitDeployVersion;
+  }
+
+  if (typeof window === "undefined") {
+    return explicitDeployVersion ?? "dev";
+  }
+
+  const nextData = window as NextDataWindow;
+  const runtimeBuildId = nextData.__NEXT_DATA__?.buildId;
+  if (runtimeBuildId) {
+    return runtimeBuildId;
+  }
+
+  return explicitDeployVersion ?? "dev";
+}
+
 export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProps) {
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -18,15 +42,15 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
       let versionChanged = false;
       let hadRegistrations = false;
       let hadCaches = false;
+      const effectiveDeployVersion = resolveDeployVersion(deployVersion);
 
-      if (deployVersion) {
-        try {
-          const storageKey = "ipodSnapshotDeployVersion";
-          const previousVersion = localStorage.getItem(storageKey);
-          versionChanged = !!previousVersion && previousVersion !== deployVersion;
-          localStorage.setItem(storageKey, deployVersion);
-        } catch {}
-      }
+      try {
+        const storageKey = "ipodSnapshotDeployVersion";
+        const previousVersion = localStorage.getItem(storageKey);
+        versionChanged =
+          !!previousVersion && previousVersion !== effectiveDeployVersion;
+        localStorage.setItem(storageKey, effectiveDeployVersion);
+      } catch {}
 
       try {
         if ("serviceWorker" in navigator) {
@@ -55,12 +79,21 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
       }
 
       if (!cancelled && (hadRegistrations || hadCaches || versionChanged)) {
-        const reloadFlag = deployVersion
-          ? `ipodSnapshotCacheResetDone:${deployVersion}`
-          : "ipodSnapshotCacheResetDone";
+        const reloadFlag = `ipodSnapshotCacheResetDone:${effectiveDeployVersion}`;
         if (!sessionStorage.getItem(reloadFlag)) {
           sessionStorage.setItem(reloadFlag, "1");
-          window.location.reload();
+          const nextUrl = new URL(window.location.href);
+          nextUrl.searchParams.set("__v", effectiveDeployVersion);
+          window.location.replace(nextUrl.toString());
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        const cleanUrl = new URL(window.location.href);
+        if (cleanUrl.searchParams.has("__v")) {
+          cleanUrl.searchParams.delete("__v");
+          window.history.replaceState(null, "", cleanUrl.toString());
         }
       }
     };
