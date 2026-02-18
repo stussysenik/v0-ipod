@@ -7,6 +7,10 @@ import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const deployVersion =
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ??
+  process.env.NEXT_PUBLIC_DEPLOY_VERSION ??
+  "dev";
 
 export const viewport: Viewport = {
   themeColor: "#000000",
@@ -19,6 +23,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "iPod Snapshot",
   description: "iPod Snapshot - Classic simulator and export studio",
+  manifest: `/manifest.webmanifest?v=${deployVersion}`,
   generator: "v0.app",
   appleWebApp: {
     capable: true,
@@ -28,16 +33,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon.svg",
+        url: `/icon.svg?v=${deployVersion}`,
         type: "image/svg+xml",
       },
       {
-        url: "/icon-192x192.png",
+        url: `/icon-192x192.png?v=${deployVersion}`,
         sizes: "192x192",
         type: "image/png",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: `/apple-icon.png?v=${deployVersion}`,
   },
 };
 
@@ -49,7 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        <ServiceWorkerCleanup />
+        <ServiceWorkerCleanup deployVersion={deployVersion} />
         {children}
         <Toaster position="bottom-center" richColors />
         <Analytics />

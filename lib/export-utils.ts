@@ -129,6 +129,18 @@ export interface ExportResult {
  * Trigger a browser download in a way that's compatible across browsers.
  */
 function triggerDownloadLink(href: string, filename: string): boolean {
+  return triggerDownloadLinkWithOptions(href, filename, true);
+}
+
+function triggerDownloadLinkWithOptions(
+  href: string,
+  filename: string,
+  allowSyntheticClick: boolean,
+): boolean {
+  if (!allowSyntheticClick) {
+    return false;
+  }
+
   try {
     const link = document.createElement("a");
     link.download = filename;
@@ -143,6 +155,22 @@ function triggerDownloadLink(href: string, filename: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+function openPreparedPopupWindow(): Window | null {
+  try {
+    const popup = window.open("", "_blank");
+    if (popup && popup.document) {
+      popup.document.title = "Preparing export...";
+      popup.document.body.style.margin = "0";
+      popup.document.body.style.fontFamily = "system-ui, sans-serif";
+      popup.document.body.style.padding = "16px";
+      popup.document.body.textContent = "Preparing image...";
+    }
+    return popup;
+  } catch {
+    return null;
   }
 }
 
@@ -288,15 +316,38 @@ export async function shareImageFile(
  * Download image using blob URL (desktop browsers)
  */
 export function downloadImageBlob(blob: Blob, filename: string): boolean {
+  return downloadImageBlobWithOptions(blob, filename, {
+    allowSyntheticClick: true,
+  });
+}
+
+function downloadImageBlobWithOptions(
+  blob: Blob,
+  filename: string,
+  options: {
+    allowSyntheticClick: boolean;
+    popupWindow?: Window | null;
+  },
+): boolean {
   let url: string | null = null;
   try {
     url = URL.createObjectURL(blob);
-    const downloaded = triggerDownloadLink(url, filename);
+    const downloaded = triggerDownloadLinkWithOptions(
+      url,
+      filename,
+      options.allowSyntheticClick,
+    );
     let opened = false;
 
     // Fallback: some mobile browsers ignore synthetic clicks.
     if (!downloaded) {
-      opened = !!window.open(url, "_blank", "noopener,noreferrer");
+      if (options.popupWindow && !options.popupWindow.closed) {
+        options.popupWindow.location.href = url;
+        options.popupWindow.focus();
+        opened = true;
+      } else {
+        opened = !!window.open(url, "_blank");
+      }
     }
 
     // Safari can fail if blob URL is revoked too quickly.
@@ -322,11 +373,34 @@ export function downloadImageDataUrl(
   dataUrl: string,
   filename: string,
 ): boolean {
+  return downloadImageDataUrlWithOptions(dataUrl, filename, {
+    allowSyntheticClick: true,
+  });
+}
+
+function downloadImageDataUrlWithOptions(
+  dataUrl: string,
+  filename: string,
+  options: {
+    allowSyntheticClick: boolean;
+    popupWindow?: Window | null;
+  },
+): boolean {
   try {
-    const downloaded = triggerDownloadLink(dataUrl, filename);
+    const downloaded = triggerDownloadLinkWithOptions(
+      dataUrl,
+      filename,
+      options.allowSyntheticClick,
+    );
     let opened = false;
     if (!downloaded) {
-      opened = !!window.open(dataUrl, "_blank", "noopener,noreferrer");
+      if (options.popupWindow && !options.popupWindow.closed) {
+        options.popupWindow.location.href = dataUrl;
+        options.popupWindow.focus();
+        opened = true;
+      } else {
+        opened = !!window.open(dataUrl, "_blank");
+      }
     }
     return downloaded || opened;
   } catch {
@@ -354,6 +428,9 @@ export async function exportImage(
 ): Promise<ExportResult> {
   const { filename, backgroundColor, pixelRatio, onStatusChange } = options;
   const capabilities = detectExportCapabilities();
+  const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
+  const preparedPopup = useSyntheticDownload ? null : openPreparedPopupWindow();
+  let keepPreparedPopupOpen = false;
 
   onStatusChange?.("preparing");
 
@@ -388,6 +465,9 @@ export async function exportImage(
       try {
         const shared = await shareImageFile(blob, filename);
         if (shared) {
+          if (preparedPopup && !preparedPopup.closed) {
+            preparedPopup.close();
+          }
           onStatusChange?.("success");
           return { success: true, method: "share" };
         }
@@ -398,8 +478,12 @@ export async function exportImage(
 
     // Method 2: Blob URL download (desktop)
     if (blob) {
-      const downloaded = downloadImageBlob(blob, filename);
+      const downloaded = downloadImageBlobWithOptions(blob, filename, {
+        allowSyntheticClick: useSyntheticDownload,
+        popupWindow: preparedPopup,
+      });
       if (downloaded) {
+        keepPreparedPopupOpen = !useSyntheticDownload;
         onStatusChange?.("success");
         return { success: true, method: "download" };
       }
@@ -411,8 +495,12 @@ export async function exportImage(
         backgroundColor,
         pixelRatio,
       });
-      const downloaded = downloadImageDataUrl(dataUrl, filename);
+      const downloaded = downloadImageDataUrlWithOptions(dataUrl, filename, {
+        allowSyntheticClick: useSyntheticDownload,
+        popupWindow: preparedPopup,
+      });
       if (downloaded) {
+        keepPreparedPopupOpen = !useSyntheticDownload;
         onStatusChange?.("success");
         return { success: true, method: "dataurl" };
       }
@@ -436,6 +524,9 @@ export async function exportImage(
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   } finally {
+    if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
+      preparedPopup.close();
+    }
     exportNode.remove();
   }
 }

@@ -2,32 +2,52 @@
 
 import { useEffect } from "react";
 
-export function ServiceWorkerCleanup() {
+interface ServiceWorkerCleanupProps {
+  deployVersion?: string;
+}
+
+export function ServiceWorkerCleanup({
+  deployVersion,
+}: ServiceWorkerCleanupProps) {
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    if (typeof window === "undefined") {
       return;
     }
 
     let cancelled = false;
 
     const cleanup = async () => {
+      let versionChanged = false;
       let hadRegistrations = false;
       let hadCaches = false;
 
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        hadRegistrations = registrations.length > 0;
+      if (deployVersion) {
+        try {
+          const storageKey = "ipodSnapshotDeployVersion";
+          const previousVersion = localStorage.getItem(storageKey);
+          versionChanged =
+            !!previousVersion && previousVersion !== deployVersion;
+          localStorage.setItem(storageKey, deployVersion);
+        } catch {}
+      }
 
-        await Promise.all(
-          registrations.map(async (registration) => {
-            try {
-              await registration.update();
-            } catch {}
-            try {
-              await registration.unregister();
-            } catch {}
-          }),
-        );
+      try {
+        if ("serviceWorker" in navigator) {
+          const registrations =
+            await navigator.serviceWorker.getRegistrations();
+          hadRegistrations = registrations.length > 0;
+
+          await Promise.all(
+            registrations.map(async (registration) => {
+              try {
+                await registration.update();
+              } catch {}
+              try {
+                await registration.unregister();
+              } catch {}
+            }),
+          );
+        }
       } catch {}
 
       if ("caches" in window) {
@@ -38,8 +58,10 @@ export function ServiceWorkerCleanup() {
         } catch {}
       }
 
-      if (!cancelled && (hadRegistrations || hadCaches)) {
-        const reloadFlag = "ipodSnapshotCacheResetDone";
+      if (!cancelled && (hadRegistrations || hadCaches || versionChanged)) {
+        const reloadFlag = deployVersion
+          ? `ipodSnapshotCacheResetDone:${deployVersion}`
+          : "ipodSnapshotCacheResetDone";
         if (!sessionStorage.getItem(reloadFlag)) {
           sessionStorage.setItem(reloadFlag, "1");
           window.location.reload();
@@ -52,7 +74,7 @@ export function ServiceWorkerCleanup() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [deployVersion]);
 
   return null;
 }
