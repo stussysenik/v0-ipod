@@ -588,33 +588,18 @@ export default function IPodClassic() {
           ref={exportTargetRef}
           className="p-12 rounded-[50px] transition-colors duration-300"
           style={{
-            backgroundColor: exportStatus !== "idle" ? bgColor : "transparent",
+            backgroundColor: "transparent",
           }}
         >
           <div
             className="relative w-[370px] h-[620px] rounded-[36px] transition-all duration-300 flex flex-col items-center justify-between p-6"
             style={{
               backgroundColor: skinColor,
-              // FAKE PHYSICS DEPTH for 2D/Export
+              // Keep export visuals identical to the visible on-screen state (WYSIWYG).
               boxShadow:
-                exportStatus !== "idle"
-                  ? // Export shadow: studio-style with downward weight and soft side diffusion.
-                    `0 54px 84px -38px rgba(0,0,0,0.38), 0 24px 40px -28px rgba(0,0,0,0.24), 28px 0 46px -34px rgba(0,0,0,0.14), -14px 0 24px -20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.18)`
-                  : // Live shadow: lighter while editing to keep UI contrast.
-                    `0 36px 62px -24px rgba(0,0,0,0.32), 0 14px 24px -16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)`,
+                "0 36px 62px -24px rgba(0,0,0,0.32), 0 14px 24px -16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)",
             }}
           >
-            {/* Subtle Bevel for "fake 3D" in export */}
-            {exportStatus !== "idle" && (
-              <div
-                className="absolute inset-0 rounded-[36px] border-[3px] border-white/10 pointer-events-none"
-                style={{
-                  boxShadow:
-                    "inset 0 2px 5px rgba(255,255,255,0.18), inset 0 -4px 10px rgba(0,0,0,0.09)",
-                }}
-              />
-            )}
-
             {/* SCREEN AREA */}
             <div className="w-full">{screenComponent}</div>
 

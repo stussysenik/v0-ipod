@@ -108,6 +108,17 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   clone.style.maxHeight = "none";
   clone.style.overflow = "hidden";
 
+  // Freeze animations/transitions to avoid capturing in-between visual states.
+  const freezeStyle = document.createElement("style");
+  freezeStyle.textContent = `
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+      caret-color: transparent !important;
+    }
+  `;
+  clone.appendChild(freezeStyle);
+
   document.body.appendChild(clone);
   return clone;
 }
@@ -574,8 +585,10 @@ export async function exportImage(
 
   onStatusChange?.("preparing");
 
-  // Wait for UI to settle
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  // Snapshot after the next paint to capture exactly what the user sees now.
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
 
   const exportNode = createDetachedExportNode(element);
 
