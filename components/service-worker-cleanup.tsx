@@ -6,9 +6,7 @@ interface ServiceWorkerCleanupProps {
   deployVersion?: string;
 }
 
-export function ServiceWorkerCleanup({
-  deployVersion,
-}: ServiceWorkerCleanupProps) {
+export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProps) {
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -25,16 +23,14 @@ export function ServiceWorkerCleanup({
         try {
           const storageKey = "ipodSnapshotDeployVersion";
           const previousVersion = localStorage.getItem(storageKey);
-          versionChanged =
-            !!previousVersion && previousVersion !== deployVersion;
+          versionChanged = !!previousVersion && previousVersion !== deployVersion;
           localStorage.setItem(storageKey, deployVersion);
         } catch {}
       }
 
       try {
         if ("serviceWorker" in navigator) {
-          const registrations =
-            await navigator.serviceWorker.getRegistrations();
+          const registrations = await navigator.serviceWorker.getRegistrations();
           hadRegistrations = registrations.length > 0;
 
           await Promise.all(

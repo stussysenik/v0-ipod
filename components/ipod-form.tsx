@@ -1,45 +1,45 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { StarRating } from "./star-rating"
-import type { SongMetadata } from "../types/ipod"
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { StarRating } from "./star-rating";
+import type { SongMetadata } from "../types/ipod";
 
 interface iPodFormProps {
-  song: SongMetadata
-  onChange: (song: SongMetadata) => void
+  song: SongMetadata;
+  onChange: (song: SongMetadata) => void;
 }
 
 export function iPodForm({ song, onChange }: iPodFormProps) {
-  const [dragActive, setDragActive] = useState(false)
+  const [dragActive, setDragActive] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
+      setDragActive(true);
     } else if (e.type === "dragleave") {
-      setDragActive(false)
+      setDragActive(false);
     }
-  }
+  };
 
   const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0]
+      const file = e.dataTransfer.files[0];
       if (file.type.startsWith("image/")) {
-        const reader = new FileReader()
+        const reader = new FileReader();
         reader.onload = (e) => {
-          onChange({ ...song, artwork: e.target?.result as string })
-        }
-        reader.readAsDataURL(file)
+          onChange({ ...song, artwork: e.target?.result as string });
+        };
+        reader.readAsDataURL(file);
       }
     }
-  }
+  };
 
   return (
     <div className="space-y-4 w-full max-w-sm">
@@ -138,5 +138,5 @@ export function iPodForm({ song, onChange }: iPodFormProps) {
         />
       </div>
     </div>
-  )
+  );
 }
