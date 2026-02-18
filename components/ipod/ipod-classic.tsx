@@ -345,11 +345,17 @@ export default function IPodClassic() {
       dispatch={dispatch}
       playClick={playClick}
       isEditable={isFlatView && !isExportCapturing}
+      exportSafe={isExportCapturing}
     />
   );
 
   const wheelComponent = (
-    <ClickWheel playClick={playClick} onSeek={handleSeek} disabled={!isFlatView} />
+    <ClickWheel
+      playClick={playClick}
+      onSeek={handleSeek}
+      disabled={!isFlatView}
+      exportSafe={isExportCapturing}
+    />
   );
 
   const saveCustomColor = useCallback((target: "case" | "bg", rawColor: string) => {
@@ -447,6 +453,9 @@ export default function IPodClassic() {
 
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
+  const shellShadow = isExportCapturing
+    ? "0 22px 34px -20px rgba(0,0,0,0.36), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
+    : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
   return (
     <div
@@ -737,8 +746,7 @@ export default function IPodClassic() {
                 className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
                 style={{
                   backgroundColor: skinColor,
-                  boxShadow:
-                    "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                  boxShadow: shellShadow,
                 }}
               >
                 {/* SCREEN AREA */}

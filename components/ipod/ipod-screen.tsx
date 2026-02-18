@@ -15,6 +15,7 @@ interface IpodScreenProps {
   dispatch: React.Dispatch<{ type: string; payload: string | number }>;
   playClick: () => void;
   isEditable?: boolean;
+  exportSafe?: boolean;
 }
 
 export function IpodScreen({
@@ -22,8 +23,15 @@ export function IpodScreen({
   dispatch,
   playClick,
   isEditable = true,
+  exportSafe = false,
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
+  const screenShadow = exportSafe
+    ? "0 2px 0 rgba(0,0,0,0.82), 0 1px 3px rgba(0,0,0,0.22)"
+    : "0 3px 0 rgba(0,0,0,0.84), 0 1px 5px rgba(0,0,0,0.32)";
+  const artworkShadow = exportSafe
+    ? "0 3px 8px -6px rgba(0,0,0,0.35)"
+    : "0 6px 12px -8px rgba(0,0,0,0.42)";
 
   const setCurrentTime = useCallback(
     (currentTime: number, preserveRemaining = false) => {
@@ -53,7 +61,10 @@ export function IpodScreen({
   );
 
   return (
-    <div className="w-[322px] h-[240px] bg-black rounded-[10px] p-[2px] mx-auto z-10 shrink-0 relative shadow-[0_3px_0_rgba(0,0,0,0.84),0_1px_5px_rgba(0,0,0,0.32)]">
+    <div
+      className="w-[322px] h-[240px] bg-black rounded-[10px] p-[2px] mx-auto z-10 shrink-0 relative"
+      style={{ boxShadow: screenShadow }}
+    >
       <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#525252]">
         {/* STATUS BAR */}
         <div className="h-[20px] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD] border-b border-[#9B9B9B] flex items-center justify-between px-2">
@@ -67,7 +78,10 @@ export function IpodScreen({
         <div className="flex h-[180px]">
           {/* LEFT: ARTWORK */}
           <div className="w-[140px] h-full p-3 flex flex-col justify-start items-center">
-            <div className="w-[114px] h-[114px] bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98] shadow-[0_6px_12px_-8px_rgba(0,0,0,0.42)]">
+            <div
+              className="w-[114px] h-[114px] bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98]"
+              style={{ boxShadow: artworkShadow }}
+            >
               <ImageUpload
                 currentImage={state.artwork}
                 onImageChange={(artwork) => {

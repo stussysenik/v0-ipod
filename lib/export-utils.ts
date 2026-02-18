@@ -154,7 +154,9 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
 
   clone.setAttribute("aria-hidden", "true");
   clone.style.position = "fixed";
-  clone.style.left = "-99999px";
+  // Keep the clone off-screen without extreme coordinates that can trigger
+  // shadow/compositing artifacts on mobile WebKit captures.
+  clone.style.left = "-4096px";
   clone.style.top = "0";
   clone.style.margin = "0";
   clone.style.pointerEvents = "none";
@@ -165,6 +167,7 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   clone.style.overflow = "visible";
   clone.style.transform = "none";
   clone.style.transformOrigin = "top left";
+  clone.style.isolation = "isolate";
   clone.setAttribute(EXPORT_ATTRIBUTE, "true");
 
   // Freeze animations/transitions to avoid capturing in-between visual states.

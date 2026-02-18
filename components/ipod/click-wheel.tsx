@@ -10,6 +10,7 @@ interface ClickWheelProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  exportSafe?: boolean;
 }
 
 export function ClickWheel({
@@ -19,12 +20,15 @@ export function ClickWheel({
   className,
   style,
   disabled = false,
+  exportSafe = false,
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
-  const wheelShadow =
-    "0 22px 30px -24px rgba(0,0,0,0.46), 0 8px 16px -18px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
-  const centerShadow =
-    "0 10px 14px -12px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
+  const wheelShadow = exportSafe
+    ? "0 12px 20px -14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
+    : "0 22px 30px -24px rgba(0,0,0,0.46), 0 8px 16px -18px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
+  const centerShadow = exportSafe
+    ? "0 6px 12px -10px rgba(0,0,0,0.42), 0 1px 4px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)"
+    : "0 10px 14px -12px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -114,7 +118,7 @@ export function ClickWheel({
           style={{
             background:
               "conic-gradient(from 225deg, rgba(0,0,0,0.05), rgba(255,255,255,0.1), rgba(0,0,0,0.02), rgba(255,255,255,0.08), rgba(0,0,0,0.05))",
-            mixBlendMode: "soft-light",
+            mixBlendMode: exportSafe ? "normal" : "soft-light",
             opacity: 0.45,
           }}
         />
