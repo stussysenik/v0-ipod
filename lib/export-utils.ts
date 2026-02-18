@@ -615,7 +615,7 @@ function downloadImageDataUrlWithOptions(
  * Main export orchestrator - handles all platforms with fallback chain
  *
  * Fallback Chain:
- * 1. Web Share API with File (iOS/Android) → native share sheet
+ * 1. Web Share API with File (all platforms) → native share sheet
  * 2. Blob URL download (Desktop) → direct download
  * 3. Data URL download (Legacy) → old method
  * 4. Manual instructions (Ultimate fallback)
@@ -733,8 +733,8 @@ export async function exportImage(
       }
     }
 
-    // Method 1: Web Share API (mobile - triggers native share sheet)
-    if (blob && capabilities.canShareFiles && capabilities.isMobile) {
+    // Method 1: Web Share API (triggers native share sheet on all platforms)
+    if (blob && capabilities.canShareFiles) {
       onStatusChange?.("sharing");
       try {
         const shared = await shareImageFile(blob, filename);

@@ -94,10 +94,7 @@ export function ClickWheel({
     >
       {/* Wheel Surface - Clean Matte Look */}
       <div
-        className="absolute inset-0 rounded-full shadow-[0_5px_15px_rgba(0,0,0,0.15),_inset_0_1px_2px_rgba(255,255,255,0.8)] bg-[#FDFDFD]"
-        style={{
-          background: "radial-gradient(circle at 30% 30%, #FFFFFF 0%, #F0F0F0 100%)",
-        }}
+        className="absolute inset-0 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08),_inset_0_1px_2px_rgba(255,255,255,0.6)] bg-[#F5F5F5]"
       >
         {/* Button Labels */}
         <div className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold text-[#CCC] tracking-widest uppercase pointer-events-none font-sans">
