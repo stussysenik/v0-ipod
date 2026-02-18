@@ -1,135 +1,47 @@
 # Project Progress
 
-## iPod Classic Simulator
+## Status (2026-02-18)
 
-A pixel-perfect iPod Classic simulator with editable metadata fields, built with Next.js and React.
+This pass focused on interaction reliability and mobile usability. 3D visual polish is intentionally deferred.
 
----
+## Completed In This Pass
 
-## Completed Features
+- Stabilized interaction flow for core non-3D experience:
+  - Theme panel interactions
+  - View mode switching
+  - Export button lifecycle
+  - Metadata editing and progress behavior
+- Hardened mobile usability:
+  - Tap-to-edit for text/time fields
+  - Pointer-based seek bar interactions
+  - Reliable label-based artwork upload trigger
+- Improved color picker usability:
+  - Picker invocation kept inside user gesture path
+  - Theme panel hides while picking so sampling area is unobstructed
+  - Custom colors persist in local storage recents
+- Standardized test runtime config:
+  - Playwright port-aware base URL
+  - `reuseExistingServer: true` for local stability
+- Repository cleanup work:
+  - Continued migration to a single `ipod-classic` component path
+  - Branding alignment to **iPod Snapshot** in metadata/manifest/docs
 
-### Core UI
-- [x] iPod Classic body with realistic styling and shadows
-- [x] LCD screen with status bar, artwork display, and metadata
-- [x] Click wheel with interactive controls
-- [x] 2D flat view mode
-- [x] 3D view mode (React Three Fiber)
-- [x] Focus/close-up view mode
+## Verification
 
-### Editable Fields
-- [x] **Title** - Click to edit song title
-- [x] **Artist** - Click to edit artist name
-- [x] **Album** - Click to edit album name
-- [x] **Artwork** - Click to upload custom artwork
-- [x] **Rating** - Interactive star rating (1-5)
-- [x] **Current Time** - Editable playback position
-- [x] **Duration** - Editable total song length
-- [x] **Track Number** - Click "X of Y" to edit current track
-- [x] **Total Tracks** - Click "X of Y" to edit total tracks
-
-### Customization
-- [x] Case color picker (presets + custom color)
-- [x] Background color picker (presets + custom color)
-- [x] High-quality PNG export (4x resolution)
-
-### Testing Infrastructure
-- [x] Playwright E2E testing setup
-- [x] 7 passing tests for EditableTrackNumber component
-- [x] Playwright MCP server configured
-- [x] Chrome DevTools MCP server configured
-
----
-
-## Latest Changes (2026-01-20)
-
-### Predictable Export with Clear UI Feedback
-- Export button now shows context-aware labels:
-  - "Export 3D Render" when in 3D view mode
-  - "Export 2D Image" when in 2D or Focus view modes
-- 3D exports now reset model to front-facing position before capture
-  - No more unexpected side-angle exports from mouse position
-  - Predictable, professional-looking 3D renders every time
-
-### Technical Implementation
-- Added `IpodModelProps` interface with `onRegisterReset` callback
-- `IpodModel` component registers rotation reset function
-- `SceneCapture` calls reset before high-res render
-- Wired up refs through `ThreeDIpod` parent component
-
----
-
-## Previous Changes (2026-01-17)
-
-### Added
-- `EditableTrackNumber` component for inline track number editing
-- `UPDATE_TRACK_NUMBER` and `UPDATE_TOTAL_TRACKS` reducer actions
-- Playwright test suite with 7 E2E tests
-- `playwright.config.ts` configuration
-- MCP server integrations for browser automation
-
-### Test Coverage
-| Test | Status |
-|------|--------|
-| displays initial track number format | ✅ Pass |
-| track number becomes editable on click | ✅ Pass |
-| saves new track number on Enter | ✅ Pass |
-| reverts on Escape | ✅ Pass |
-| validates track number cannot exceed total | ✅ Pass |
-| total tracks is also editable | ✅ Pass |
-| saves on blur | ✅ Pass |
-
----
-
-## File Structure
-
-```
-v0-ipod/
-├── app/                    # Next.js app directory
-├── components/
-│   ├── ipod-classic.tsx    # Main iPod component with state management
-│   ├── ipod-screen.tsx     # LCD screen with all editable fields
-│   ├── click-wheel.tsx     # Interactive click wheel
-│   ├── three-d-ipod.tsx    # 3D view implementation
-│   ├── editable-text.tsx   # Reusable inline text editor
-│   ├── editable-time.tsx   # Time input component
-│   ├── editable-duration.tsx # Duration input component
-│   ├── editable-track-number.tsx # Track number editor
-│   ├── star-rating.tsx     # Interactive star rating
-│   ├── progress-bar.tsx    # Seekable progress bar
-│   └── image-upload.tsx    # Artwork upload handler
-├── tests/
-│   └── editable-track-number.spec.ts # E2E tests
-├── playwright.config.ts    # Playwright configuration
-└── types/
-    └── ipod.ts             # TypeScript interfaces
-```
-
----
-
-## Running Tests
+Automated:
 
 ```bash
-# Run all E2E tests
-npx playwright test
-
-# Run tests with UI
-npx playwright test --ui
-
-# View test report
-npx playwright show-report
+npx playwright test tests/editable-track-number.spec.ts tests/interactions.spec.ts tests/mobile-usability.spec.ts --reporter=line
 ```
 
----
+Result: `15 passed`.
 
-## Development
+Manual (Chrome DevTools):
+- CSS and JS chunks load from `:4000`
+- Console shows no runtime errors in interaction flow
+- Network shows successful app/chunk/css requests
 
-```bash
-# Install dependencies
-npm install
+## Remaining / Deferred
 
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-```
+- 3D realism/material tuning and render polish
+- Optional GitHub repository rename from `v0-ipod` to `ipod-snapshot`

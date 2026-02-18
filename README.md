@@ -1,43 +1,43 @@
-# iPod Classic Simulator
+# iPod Snapshot
 
-A pixel-perfect iPod Classic simulator with fully editable metadata fields, multiple view modes, and customizable styling.
+A mobile-first iPod Classic snapshot studio with editable metadata, album art upload, color theming, and export.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/senik/v0-i-pod-project-bx8feebd81r)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/d04n2vTS1DZ)
+## Current Scope
+
+- Flat/focus experience and metadata editing are fully supported.
+- Mobile interaction reliability (tap to edit, touch seek, uploader, export, color picker) is prioritized.
+- 3D realism iteration is deferred to a later pass.
 
 ## Features
 
-- **Editable Metadata** - Click any field to edit: title, artist, album, track number, duration, and rating
-- **Custom Artwork** - Upload your own album artwork
-- **Multiple View Modes** - 2D flat, 3D perspective, and focus/close-up views
-- **Theme Customization** - Customize iPod case color and background
-- **Smart Export** - Context-aware export (2D Image / 3D Render) with predictable front-facing 3D captures
-- **E2E Tested** - Playwright test suite for reliability
+- Editable title, artist, album, rating, and track numbers
+- Editable elapsed/remaining time with proportional progress behavior
+- Album artwork upload from local files
+- Theme panel with iPod-inspired case presets + background presets
+- Native custom color picker (case/background) with recent-color persistence in `localStorage`
+- 2D export flow with blob + fallback download paths
 
-## Quick Start
+## Run Locally
 
 ```bash
 npm install
 npm run dev
+# http://localhost:4000
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
-
-## Testing
+## Test
 
 ```bash
-npx playwright test        # Run tests
-npx playwright show-report # View report
+npx playwright test tests/editable-track-number.spec.ts tests/interactions.spec.ts tests/mobile-usability.spec.ts --reporter=line
 ```
 
-## Live Demo
+## Troubleshooting
 
-**[https://vercel.com/senik/v0-i-pod-project-bx8feebd81r](https://vercel.com/senik/v0-i-pod-project-bx8feebd81r)**
+- If UI appears unstyled, verify you are on the active dev port (`http://localhost:4000`) and reload.
+- If a previous session cached stale assets, hard refresh once and retry.
+- If export does not save immediately on some browsers, retry once from the export button (fallback chain is enabled).
 
-## Progress
+## Naming
 
-See [PROGRESS.md](./PROGRESS.md) for detailed development progress and changelog.
-
----
-
-*Built with Next.js, React, Tailwind CSS, and React Three Fiber*
+- App branding metadata and manifest are set to **iPod Snapshot**.
+- Repository remote can be renamed later on GitHub to `ipod-snapshot` without code changes.
