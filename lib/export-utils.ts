@@ -1,11 +1,6 @@
 import { toPng, toBlob } from "html-to-image";
 
-export type ExportStatus =
-  | "idle"
-  | "preparing"
-  | "sharing"
-  | "success"
-  | "error";
+export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error";
 
 /**
  * Convert an image to a base64 data URL
@@ -140,8 +135,8 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
   const sampleCanvas = document.createElement("canvas");
-  sampleCanvas.width = 64;
-  sampleCanvas.height = 64;
+  sampleCanvas.width = 96;
+  sampleCanvas.height = 96;
   const sampleCtx = sampleCanvas.getContext("2d");
   if (!sampleCtx) {
     throw new Error("Failed to get sample canvas context");
@@ -150,13 +145,7 @@ async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
   if ("createImageBitmap" in window) {
     const bitmap = await createImageBitmap(blob);
     try {
-      sampleCtx.drawImage(
-        bitmap,
-        0,
-        0,
-        sampleCanvas.width,
-        sampleCanvas.height,
-      );
+      sampleCtx.drawImage(bitmap, 0, 0, sampleCanvas.width, sampleCanvas.height);
     } finally {
       bitmap.close();
     }
@@ -166,8 +155,7 @@ async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
         image.onload = () => resolve(image);
-        image.onerror = () =>
-          reject(new Error("Failed to decode exported blob"));
+        image.onerror = () => reject(new Error("Failed to decode exported blob"));
         image.src = url;
       });
       sampleCtx.drawImage(img, 0, 0, sampleCanvas.width, sampleCanvas.height);
@@ -179,25 +167,39 @@ async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
   return sampleCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
 }
 
-async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
-  try {
-    const imageData = await decodeBlobToImageData(blob);
-    const pixels = imageData.data;
+interface BlankMetrics {
+  opaquePixels: number;
+  spread: number;
+  lumaVariance: number;
+  edgeStrength: number;
+}
 
-    let opaquePixels = 0;
-    let minR = 255;
-    let minG = 255;
-    let minB = 255;
-    let maxR = 0;
-    let maxG = 0;
-    let maxB = 0;
-    const bins = new Map<number, number>();
+function computeBlankMetrics(
+  imageData: ImageData,
+  startX: number,
+  endX: number,
+  startY: number,
+  endY: number,
+): BlankMetrics {
+  const { data, width } = imageData;
+  let opaquePixels = 0;
+  let minR = 255;
+  let minG = 255;
+  let minB = 255;
+  let maxR = 0;
+  let maxG = 0;
+  let maxB = 0;
+  let sumLuma = 0;
+  let sumSqLuma = 0;
+  let edgeAccumulator = 0;
 
-    for (let i = 0; i < pixels.length; i += 4) {
-      const r = pixels[i];
-      const g = pixels[i + 1];
-      const b = pixels[i + 2];
-      const a = pixels[i + 3];
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = startX; x < endX; x += 1) {
+      const i = (y * width + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
 
       if (a < 10) {
         continue;
@@ -211,27 +213,73 @@ async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
       if (g > maxG) maxG = g;
       if (b > maxB) maxB = b;
 
-      // Quantize to 4-bit channels to measure dominant color.
-      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-      bins.set(key, (bins.get(key) ?? 0) + 1);
-    }
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      sumLuma += luma;
+      sumSqLuma += luma * luma;
 
-    if (opaquePixels < 200) {
+      if (x > startX) {
+        const left = i - 4;
+        const leftLuma =
+          0.2126 * data[left] + 0.7152 * data[left + 1] + 0.0722 * data[left + 2];
+        edgeAccumulator += Math.abs(luma - leftLuma);
+      }
+      if (y > startY) {
+        const up = i - width * 4;
+        const upLuma = 0.2126 * data[up] + 0.7152 * data[up + 1] + 0.0722 * data[up + 2];
+        edgeAccumulator += Math.abs(luma - upLuma);
+      }
+    }
+  }
+
+  if (opaquePixels === 0) {
+    return {
+      opaquePixels: 0,
+      spread: 0,
+      lumaVariance: 0,
+      edgeStrength: 0,
+    };
+  }
+
+  const meanLuma = sumLuma / opaquePixels;
+  const lumaVariance = Math.max(sumSqLuma / opaquePixels - meanLuma * meanLuma, 0);
+  const spread = maxR - minR + (maxG - minG) + (maxB - minB);
+  const edgeStrength = edgeAccumulator / (opaquePixels * 255 * 2);
+
+  return {
+    opaquePixels,
+    spread,
+    lumaVariance,
+    edgeStrength,
+  };
+}
+
+async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
+  try {
+    const imageData = await decodeBlobToImageData(blob);
+    const { width, height } = imageData;
+
+    const full = computeBlankMetrics(imageData, 0, width, 0, height);
+    const insetX = Math.floor(width * 0.18);
+    const insetY = Math.floor(height * 0.18);
+    const center = computeBlankMetrics(
+      imageData,
+      insetX,
+      width - insetX,
+      insetY,
+      height - insetY,
+    );
+
+    if (full.opaquePixels < 64 || center.opaquePixels < 36) {
       return true;
     }
 
-    let dominantCount = 0;
-    bins.forEach((count) => {
-      if (count > dominantCount) {
-        dominantCount = count;
-      }
-    });
-    const dominantRatio = dominantCount / opaquePixels;
+    // Keep this strict so we only reject truly empty/monochrome captures.
+    const fullFlat =
+      full.spread < 6 && full.lumaVariance < 2 && full.edgeStrength < 0.002;
+    const centerFlat =
+      center.spread < 8 && center.lumaVariance < 3 && center.edgeStrength < 0.003;
 
-    const spread = maxR - minR + (maxG - minG) + (maxB - minB);
-
-    // Large single-color dominance + very low color spread indicates blank render.
-    return dominantRatio > 0.985 || spread < 24;
+    return fullFlat && centerFlat;
   } catch {
     // If we can't inspect, don't block export.
     return false;
@@ -249,6 +297,11 @@ export interface ExportResult {
   success: boolean;
   method: "share" | "download" | "dataurl" | "manual";
   error?: string;
+}
+
+interface DownloadAttemptResult {
+  success: boolean;
+  usedPopup: boolean;
 }
 
 function triggerDownloadLinkWithOptions(
@@ -301,10 +354,9 @@ export function detectExportCapabilities(): ExportCapabilities {
   const isIOS =
     /iPad|iPhone|iPod/.test(userAgent) &&
     !(window as unknown as { MSStream?: unknown }).MSStream;
-  const isMobile =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      userAgent,
-    );
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    userAgent,
+  );
 
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
   // Check if navigator.canShare exists and supports files
@@ -440,10 +492,7 @@ export async function captureToDataUrl(
 /**
  * Share image file using Web Share API (iOS/Android native share sheet)
  */
-export async function shareImageFile(
-  blob: Blob,
-  filename: string,
-): Promise<boolean> {
+export async function shareImageFile(blob: Blob, filename: string): Promise<boolean> {
   const file = new File([blob], filename, { type: "image/png" });
 
   // iOS ONLY supports files-only share - no title or text!
@@ -469,7 +518,7 @@ export async function shareImageFile(
 export function downloadImageBlob(blob: Blob, filename: string): boolean {
   return downloadImageBlobWithOptions(blob, filename, {
     allowSyntheticClick: true,
-  });
+  }).success;
 }
 
 function downloadImageBlobWithOptions(
@@ -479,7 +528,7 @@ function downloadImageBlobWithOptions(
     allowSyntheticClick: boolean;
     popupWindow?: Window | null;
   },
-): boolean {
+): DownloadAttemptResult {
   let url: string | null = null;
   try {
     url = URL.createObjectURL(blob);
@@ -508,25 +557,25 @@ function downloadImageBlobWithOptions(
       }
     }, 4000);
 
-    return downloaded || opened;
+    return {
+      success: downloaded || opened,
+      usedPopup: opened,
+    };
   } catch {
     if (url) {
       URL.revokeObjectURL(url);
     }
-    return false;
+    return { success: false, usedPopup: false };
   }
 }
 
 /**
  * Download image using data URL (legacy fallback)
  */
-export function downloadImageDataUrl(
-  dataUrl: string,
-  filename: string,
-): boolean {
+export function downloadImageDataUrl(dataUrl: string, filename: string): boolean {
   return downloadImageDataUrlWithOptions(dataUrl, filename, {
     allowSyntheticClick: true,
-  });
+  }).success;
 }
 
 function downloadImageDataUrlWithOptions(
@@ -536,7 +585,7 @@ function downloadImageDataUrlWithOptions(
     allowSyntheticClick: boolean;
     popupWindow?: Window | null;
   },
-): boolean {
+): DownloadAttemptResult {
   try {
     const downloaded = triggerDownloadLinkWithOptions(
       dataUrl,
@@ -553,9 +602,12 @@ function downloadImageDataUrlWithOptions(
         opened = !!window.open(dataUrl, "_blank");
       }
     }
-    return downloaded || opened;
+    return {
+      success: downloaded || opened,
+      usedPopup: opened,
+    };
   } catch {
-    return false;
+    return { success: false, usedPopup: false };
   }
 }
 
@@ -580,40 +632,85 @@ export async function exportImage(
   const { filename, backgroundColor, pixelRatio, onStatusChange } = options;
   const capabilities = detectExportCapabilities();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-  const preparedPopup = useSyntheticDownload ? null : openPreparedPopupWindow();
+  // Only open a fallback popup on mobile where synthetic clicks may be blocked.
+  const preparedPopup = capabilities.isMobile ? openPreparedPopupWindow() : null;
   let keepPreparedPopupOpen = false;
 
   onStatusChange?.("preparing");
+
+  // Blur active inline editors so caret/focus artifacts don't leak into capture.
+  const activeElement = document.activeElement;
+  if (activeElement instanceof HTMLElement && element.contains(activeElement)) {
+    activeElement.blur();
+  }
+  window.getSelection?.()?.removeAllRanges();
 
   // Snapshot after the next paint to capture exactly what the user sees now.
   await new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
   );
 
-  const exportNode = createDetachedExportNode(element);
+  let exportNode: HTMLElement | null = null;
+  const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
+    if (!exportNode) {
+      exportNode = createDetachedExportNode(element);
+      // Pre-load and embed all images as inline data URLs.
+      await preloadAndEmbedImages(exportNode);
+      // Additional wait for images to settle after conversion.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return exportNode;
+  };
 
   try {
-    // Pre-load and embed all images as inline data URLs
-    // This ensures html-to-image can capture them correctly
-    await preloadAndEmbedImages(exportNode);
-
-    // Additional wait for images to settle after conversion
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Try to capture as blob first (needed for share and blob download)
+    // Try a live capture first so the export matches exactly what is rendered.
     let blob: Blob | null = null;
     try {
-      blob = await captureToBlob(
-        exportNode,
-        { backgroundColor, pixelRatio },
-        capabilities,
-      );
+      blob = await captureToBlob(element, { backgroundColor, pixelRatio }, capabilities);
       if (blob && (await isLikelyBlankCapture(blob))) {
-        console.warn("Primary capture looked blank, trying fallback renderer");
+        console.warn("Live-element capture looked blank, trying detached clone");
         blob = null;
       }
     } catch (error) {
-      console.warn("Blob capture failed, will try data URL fallback:", error);
+      console.warn("Live blob capture failed, trying detached clone:", error);
+    }
+
+    // Fallback to a detached clone if live capture failed/blank.
+    if (!blob) {
+      try {
+        const detachedNode = await ensureDetachedExportNode();
+        blob = await captureToBlob(
+          detachedNode,
+          { backgroundColor, pixelRatio },
+          capabilities,
+        );
+      } catch (error) {
+        console.warn("Detached blob capture failed, will try renderer fallback:", error);
+      }
+    }
+
+    // If detached clone looks blank, one final retry from the live element.
+    if (blob && (await isLikelyBlankCapture(blob))) {
+      console.warn("Detached capture looked blank, retrying live-element capture");
+      try {
+        const liveBlob = await captureToBlob(
+          element,
+          { backgroundColor, pixelRatio },
+          capabilities,
+        );
+        if (await isLikelyBlankCapture(liveBlob)) {
+          console.warn("Live-element capture retry also looked blank");
+          blob = null;
+        } else {
+          blob = liveBlob;
+        }
+      } catch (retryError) {
+        console.warn(
+          "Live-element capture retry failed after detached clone:",
+          retryError,
+        );
+        blob = null;
+      }
     }
 
     // Renderer fallback: html2canvas is slower, but more compatible on some iOS/WebKit paths.
@@ -621,7 +718,7 @@ export async function exportImage(
       try {
         blob = await captureToBlobWithHtml2Canvas(element, {
           backgroundColor,
-          pixelRatio: capabilities.isIOS ? 2 : Math.min(pixelRatio ?? 4, 3),
+          pixelRatio: Math.min(pixelRatio ?? 4, 3),
         });
 
         if (blob && (await isLikelyBlankCapture(blob))) {
@@ -652,12 +749,12 @@ export async function exportImage(
 
     // Method 2: Blob URL download (desktop)
     if (blob) {
-      const downloaded = downloadImageBlobWithOptions(blob, filename, {
+      const downloadResult = downloadImageBlobWithOptions(blob, filename, {
         allowSyntheticClick: useSyntheticDownload,
         popupWindow: preparedPopup,
       });
-      if (downloaded) {
-        keepPreparedPopupOpen = !useSyntheticDownload;
+      if (downloadResult.success) {
+        keepPreparedPopupOpen = downloadResult.usedPopup;
         onStatusChange?.("success");
         return { success: true, method: "download" };
       }
@@ -665,7 +762,8 @@ export async function exportImage(
 
     // Method 3: Data URL download (legacy fallback)
     try {
-      const dataUrl = await captureToDataUrl(exportNode, {
+      const dataUrlNode = exportNode ?? element;
+      const dataUrl = await captureToDataUrl(dataUrlNode, {
         backgroundColor,
         pixelRatio,
       });
@@ -673,12 +771,12 @@ export async function exportImage(
       if (await isLikelyBlankCapture(dataUrlBlob)) {
         throw new Error("Data URL fallback looked blank");
       }
-      const downloaded = downloadImageDataUrlWithOptions(dataUrl, filename, {
+      const downloadResult = downloadImageDataUrlWithOptions(dataUrl, filename, {
         allowSyntheticClick: useSyntheticDownload,
         popupWindow: preparedPopup,
       });
-      if (downloaded) {
-        keepPreparedPopupOpen = !useSyntheticDownload;
+      if (downloadResult.success) {
+        keepPreparedPopupOpen = downloadResult.usedPopup;
         onStatusChange?.("success");
         return { success: true, method: "dataurl" };
       }
@@ -705,6 +803,6 @@ export async function exportImage(
     if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
       preparedPopup.close();
     }
-    exportNode.remove();
+    exportNode?.remove();
   }
 }
