@@ -12,17 +12,14 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  exportImage,
-  downloadImageBlob,
-  type ExportStatus,
-} from "@/lib/export-utils";
+import { exportImage, type ExportStatus } from "@/lib/export-utils";
+import { loadMetadata, saveMetadata } from "@/lib/storage";
 import placeholderLogo from "@/public/placeholder-logo.png";
-import { IconButton } from "./icon-button";
-import { ThreeDIpod, type ThreeDIpodHandle } from "./three-d-ipod";
+import { IconButton } from "@/components/ui/icon-button";
+import { ThreeDIpod } from "@/components/three/three-d-ipod";
 import { IpodScreen } from "./ipod-screen";
 import { ClickWheel } from "./click-wheel";
-import type { SongMetadata } from "../types/ipod";
+import type { SongMetadata } from "@/types/ipod";
 
 // Base64 click sound
 const CLICK_SOUND =
@@ -70,7 +67,8 @@ type Action =
   | { type: "UPDATE_DURATION"; payload: number }
   | { type: "UPDATE_RATING"; payload: number }
   | { type: "UPDATE_TRACK_NUMBER"; payload: number }
-  | { type: "UPDATE_TOTAL_TRACKS"; payload: number };
+  | { type: "UPDATE_TOTAL_TRACKS"; payload: number }
+  | { type: "RESTORE_ALL"; payload: SongMetadata };
 
 function songReducer(state: SongMetadata, action: Action): SongMetadata {
   switch (action.type) {
@@ -102,6 +100,8 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
       };
     case "UPDATE_TOTAL_TRACKS":
       return { ...state, totalTracks: Math.max(1, action.payload) };
+    case "RESTORE_ALL":
+      return action.payload;
     default:
       return state;
   }
@@ -109,8 +109,18 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
 
 export default function IPodClassic() {
   const [state, dispatch] = useReducer(songReducer, initialState);
+  const hasRestoredRef = useRef(false);
+
+  // Hydration-safe: restore persisted metadata after mount
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+    const saved = loadMetadata();
+    if (saved) {
+      dispatch({ type: "RESTORE_ALL", payload: { ...initialState, ...saved } });
+    }
+  }, []);
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
-  const [isSceneReady, setIsSceneReady] = useState(false);
 
   // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<"flat" | "3d" | "focus">("flat");
@@ -121,30 +131,32 @@ export default function IPodClassic() {
   const [showSettings, setShowSettings] = useState(false);
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
+  const isFlatView = viewMode === "flat";
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const ipodRef = useRef<HTMLDivElement>(null);
   const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
-  const threeDIpodRef = useRef<ThreeDIpodHandle>(null); // Ref for 3D export
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const caseColorInputRef = useRef<HTMLInputElement>(null);
   const bgColorInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset scene ready state when switching away from 3D mode
-  useEffect(() => {
-    if (viewMode !== "3d") {
-      setIsSceneReady(false);
-    }
-  }, [viewMode]);
-
-  // Handle scene ready callback from ThreeDIpod
-  const handleSceneReady = useCallback(() => {
-    setIsSceneReady(true);
-  }, []);
-
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND);
   }, []);
+
+  // Persist song metadata on every change (skip until restored)
+  useEffect(() => {
+    if (!hasRestoredRef.current) return;
+    saveMetadata(state);
+  }, [state]);
+
+  useEffect(() => {
+    if (isFlatView) return;
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+    window.getSelection?.()?.removeAllRanges();
+  }, [isFlatView]);
 
   useEffect(() => {
     try {
@@ -164,10 +176,7 @@ export default function IPodClassic() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        CASE_CUSTOM_COLORS_KEY,
-        JSON.stringify(savedCaseColors),
-      );
+      localStorage.setItem(CASE_CUSTOM_COLORS_KEY, JSON.stringify(savedCaseColors));
     } catch {
       // Ignore storage failures
     }
@@ -198,73 +207,43 @@ export default function IPodClassic() {
     [state.currentTime],
   );
 
+  const handleExportRef = useRef<() => void>();
+
   const handleExport = useCallback(async () => {
-    if (exportStatus !== "idle") return; // Prevent double-clicks
-
-    playClick();
-    const filename = `ipod-${state.title.toLowerCase().replace(/\s+/g, "-")}.png`;
-
-    // Handle 3D mode export differently
-    if (viewMode === "3d") {
-      // Check if scene is ready before attempting export
-      if (!isSceneReady || !threeDIpodRef.current) {
-        toast.error("Scene loading...", {
-          description:
-            "Please wait for the 3D scene to fully load before exporting.",
-        });
-        return;
-      }
-
-      setExportStatus("preparing");
-
-      try {
-        // Capture high-res render from Three.js (4096x4096 per PDF spec)
-        const blob = await threeDIpodRef.current.captureHighRes(4096, 4096);
-
-        if (blob) {
-          const downloaded = downloadImageBlob(blob, filename);
-          if (!downloaded) {
-            throw new Error("Browser blocked the file download");
-          }
-
-          setExportStatus("success");
-          toast.success("3D render exported!", {
-            description: "High-resolution 4096x4096 PNG saved",
-          });
-        } else {
-          throw new Error("Failed to capture 3D scene");
-        }
-      } catch (error) {
-        setExportStatus("error");
-        toast.error("3D export failed", {
-          description: error instanceof Error ? error.message : "Unknown error",
-          action: {
-            label: "Retry",
-            onClick: handleExport,
-          },
-        });
-      }
-
-      setTimeout(() => setExportStatus("idle"), 1500);
+    if (exportStatus !== "idle") return;
+    if (!isFlatView) {
+      playClick();
+      toast.error("Export is only available in Flat View", {
+        description: "Switch to Flat View to export the editable 2D layout.",
+      });
       return;
     }
 
-    // 2D mode export
+    playClick();
+    const slug =
+      state.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "snapshot";
+    const filename = `ipod-${slug}.png`;
+
     if (!exportTargetRef.current) return;
 
     try {
+      console.info("[export] starting flat export", { filename });
       const result = await exportImage(exportTargetRef.current, {
         filename,
         backgroundColor: bgColor,
         pixelRatio: 4,
         onStatusChange: setExportStatus,
       });
+      console.info("[export] finished", result);
 
       if (result.success) {
         if (result.method === "share") {
           toast.success("Shared successfully!", {
-            description:
-              "Use 'Save Image' in the share sheet to save to Photos",
+            description: "Use 'Save Image' in the share sheet to save to Photos",
           });
         } else {
           toast.success("Image exported!");
@@ -274,63 +253,63 @@ export default function IPodClassic() {
           description: result.error,
           action: {
             label: "Retry",
-            onClick: handleExport,
+            onClick: () => handleExportRef.current?.(),
           },
         });
       }
     } catch (error) {
+      console.error("[export] flat export threw", error);
       setExportStatus("error");
       toast.error("Export failed", {
         description: error instanceof Error ? error.message : "Unknown error",
         action: {
           label: "Retry",
-          onClick: handleExport,
+          onClick: () => handleExportRef.current?.(),
         },
       });
     }
 
-    // Reset to idle after a brief delay to show success state
     setTimeout(() => setExportStatus("idle"), 1500);
-  }, [playClick, state.title, bgColor, exportStatus, viewMode, isSceneReady]);
+  }, [playClick, state.title, bgColor, exportStatus, isFlatView]);
+
+  useEffect(() => {
+    handleExportRef.current = handleExport;
+  }, [handleExport]);
 
   const screenComponent = (
-    <IpodScreen state={state} dispatch={dispatch} playClick={playClick} />
+    <IpodScreen
+      state={state}
+      dispatch={dispatch}
+      playClick={playClick}
+      isEditable={isFlatView}
+    />
   );
 
   const wheelComponent = (
-    <ClickWheel playClick={playClick} onSeek={handleSeek} />
+    <ClickWheel playClick={playClick} onSeek={handleSeek} disabled={!isFlatView} />
   );
 
-  const saveCustomColor = useCallback(
-    (target: "case" | "bg", rawColor: string) => {
-      const color = rawColor.toUpperCase();
-      if (target === "case") {
-        setSavedCaseColors((prev) =>
-          [color, ...prev.filter((c) => c !== color)].slice(
-            0,
-            MAX_CUSTOM_COLORS,
-          ),
-        );
-        return;
-      }
-      setSavedBgColors((prev) =>
+  const saveCustomColor = useCallback((target: "case" | "bg", rawColor: string) => {
+    const color = rawColor.toUpperCase();
+    if (target === "case") {
+      setSavedCaseColors((prev) =>
         [color, ...prev.filter((c) => c !== color)].slice(0, MAX_CUSTOM_COLORS),
       );
-    },
-    [],
-  );
+      return;
+    }
+    setSavedBgColors((prev) =>
+      [color, ...prev.filter((c) => c !== color)].slice(0, MAX_CUSTOM_COLORS),
+    );
+  }, []);
 
   const openSystemColorPicker = useCallback((target: "case" | "bg") => {
-    const input =
-      target === "case" ? caseColorInputRef.current : bgColorInputRef.current;
+    const input = target === "case" ? caseColorInputRef.current : bgColorInputRef.current;
     if (!input) return;
 
     // Keep picker invocation in the same user gesture for mobile browsers.
     try {
       if ("showPicker" in input) {
-        (
-          input as HTMLInputElement & { showPicker?: () => void }
-        ).showPicker?.();
+        (input as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
       } else {
         input.click();
       }
@@ -549,31 +528,30 @@ export default function IPodClassic() {
                 ? "Sharing..."
                 : exportStatus === "success"
                   ? "Done!"
-                  : viewMode === "3d"
-                    ? "Export 3D Render"
+                  : !isFlatView
+                    ? "Flat View Only"
                     : "Export 2D Image"
           }
           onClick={handleExport}
           data-testid="export-button"
           contrast={true}
+          disabled={!isFlatView || exportStatus !== "idle"}
           className={`transition-colors duration-300 ${
             exportStatus === "success"
               ? "bg-green-500 hover:bg-green-600 border-none"
               : exportStatus === "preparing" || exportStatus === "sharing"
                 ? "bg-blue-500 hover:bg-blue-600 border-none"
                 : ""
-          }`}
+          } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
         />
       </div>
 
       {/* 3D MODE (R3F) */}
       {viewMode === "3d" && (
         <ThreeDIpod
-          ref={threeDIpodRef}
           skinColor={skinColor}
           screen={screenComponent}
           wheel={wheelComponent}
-          onReady={handleSceneReady}
         />
       )}
 
