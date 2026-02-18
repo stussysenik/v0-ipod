@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useId, useRef } from "react";
+import placeholderLogo from "@/public/placeholder-logo.png";
 
 interface ImageUploadProps {
   currentImage: string;
@@ -50,7 +51,7 @@ export function ImageUpload({
         className={`cursor-pointer touch-manipulation ${className}`}
       >
         <img
-          src={currentImage || "/placeholder.svg"}
+          src={currentImage || placeholderLogo.src}
           alt="Album artwork"
           data-testid="artwork-image"
           className="w-full h-full object-cover"

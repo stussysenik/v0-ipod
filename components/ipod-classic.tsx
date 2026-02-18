@@ -17,6 +17,7 @@ import {
   downloadImageBlob,
   type ExportStatus,
 } from "@/lib/export-utils";
+import placeholderLogo from "@/public/placeholder-logo.png";
 import { IconButton } from "./icon-button";
 import { ThreeDIpod, type ThreeDIpodHandle } from "./three-d-ipod";
 import { IpodScreen } from "./ipod-screen";
@@ -52,7 +53,7 @@ const initialState: SongMetadata = {
   title: "Have A Destination?",
   artist: "Mac Miller",
   album: "Balloonerism",
-  artwork: "/placeholder-logo.png",
+  artwork: placeholderLogo.src,
   duration: 334,
   currentTime: 0,
   rating: 5,

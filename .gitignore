@@ -37,6 +37,7 @@ next-env.d.ts
 /public/sw.js.map
 /public/workbox-*.js
 /public/workbox-*.js.map
+!/public/sw.js
 
 # local test assets
 IMG_5875.PNG

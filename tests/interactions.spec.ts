@@ -33,9 +33,6 @@ test.describe("Core interactions remain usable", () => {
     await fileInput.setInputFiles(fixtureImage);
 
     const artwork = page.getByTestId("artwork-image");
-    await expect(artwork).not.toHaveAttribute("src", "/placeholder-logo.png", {
-      timeout: 15000,
-    });
     await expect(artwork).toHaveAttribute("src", /data:image\//, {
       timeout: 15000,
     });

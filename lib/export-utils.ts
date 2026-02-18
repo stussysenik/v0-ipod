@@ -90,6 +90,28 @@ async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
   await Promise.all(imagePromises);
 }
 
+function createDetachedExportNode(element: HTMLElement): HTMLElement {
+  const rect = element.getBoundingClientRect();
+  const width = Math.ceil(rect.width || element.offsetWidth || 1);
+  const height = Math.ceil(rect.height || element.offsetHeight || 1);
+  const clone = element.cloneNode(true) as HTMLElement;
+
+  clone.setAttribute("aria-hidden", "true");
+  clone.style.position = "fixed";
+  clone.style.left = "-99999px";
+  clone.style.top = "0";
+  clone.style.margin = "0";
+  clone.style.pointerEvents = "none";
+  clone.style.width = `${width}px`;
+  clone.style.height = `${height}px`;
+  clone.style.maxWidth = "none";
+  clone.style.maxHeight = "none";
+  clone.style.overflow = "hidden";
+
+  document.body.appendChild(clone);
+  return clone;
+}
+
 export interface ExportCapabilities {
   canShare: boolean;
   canShareFiles: boolean;
@@ -338,10 +360,12 @@ export async function exportImage(
   // Wait for UI to settle
   await new Promise((resolve) => setTimeout(resolve, 300));
 
+  const exportNode = createDetachedExportNode(element);
+
   try {
     // Pre-load and embed all images as inline data URLs
     // This ensures html-to-image can capture them correctly
-    await preloadAndEmbedImages(element);
+    await preloadAndEmbedImages(exportNode);
 
     // Additional wait for images to settle after conversion
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -350,7 +374,7 @@ export async function exportImage(
     let blob: Blob | null = null;
     try {
       blob = await captureToBlob(
-        element,
+        exportNode,
         { backgroundColor, pixelRatio },
         capabilities,
       );
@@ -383,7 +407,7 @@ export async function exportImage(
 
     // Method 3: Data URL download (legacy fallback)
     try {
-      const dataUrl = await captureToDataUrl(element, {
+      const dataUrl = await captureToDataUrl(exportNode, {
         backgroundColor,
         pixelRatio,
       });
@@ -411,5 +435,7 @@ export async function exportImage(
       method: "manual",
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
+  } finally {
+    exportNode.remove();
   }
 }
