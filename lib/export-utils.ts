@@ -112,6 +112,121 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   return clone;
 }
 
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, data] = dataUrl.split(",");
+  const mime =
+    meta.match(/^data:(.*?);base64$/)?.[1] ??
+    meta.match(/^data:(.*?);/)?.[1] ??
+    "image/png";
+
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
+async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
+  const sampleCanvas = document.createElement("canvas");
+  sampleCanvas.width = 64;
+  sampleCanvas.height = 64;
+  const sampleCtx = sampleCanvas.getContext("2d");
+  if (!sampleCtx) {
+    throw new Error("Failed to get sample canvas context");
+  }
+
+  if ("createImageBitmap" in window) {
+    const bitmap = await createImageBitmap(blob);
+    try {
+      sampleCtx.drawImage(
+        bitmap,
+        0,
+        0,
+        sampleCanvas.width,
+        sampleCanvas.height,
+      );
+    } finally {
+      bitmap.close();
+    }
+  } else {
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () =>
+          reject(new Error("Failed to decode exported blob"));
+        image.src = url;
+      });
+      sampleCtx.drawImage(img, 0, 0, sampleCanvas.width, sampleCanvas.height);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  return sampleCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
+}
+
+async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
+  try {
+    const imageData = await decodeBlobToImageData(blob);
+    const pixels = imageData.data;
+
+    let opaquePixels = 0;
+    let minR = 255;
+    let minG = 255;
+    let minB = 255;
+    let maxR = 0;
+    let maxG = 0;
+    let maxB = 0;
+    const bins = new Map<number, number>();
+
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i];
+      const g = pixels[i + 1];
+      const b = pixels[i + 2];
+      const a = pixels[i + 3];
+
+      if (a < 10) {
+        continue;
+      }
+
+      opaquePixels += 1;
+      if (r < minR) minR = r;
+      if (g < minG) minG = g;
+      if (b < minB) minB = b;
+      if (r > maxR) maxR = r;
+      if (g > maxG) maxG = g;
+      if (b > maxB) maxB = b;
+
+      // Quantize to 4-bit channels to measure dominant color.
+      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+      bins.set(key, (bins.get(key) ?? 0) + 1);
+    }
+
+    if (opaquePixels < 200) {
+      return true;
+    }
+
+    let dominantCount = 0;
+    bins.forEach((count) => {
+      if (count > dominantCount) {
+        dominantCount = count;
+      }
+    });
+    const dominantRatio = dominantCount / opaquePixels;
+
+    const spread = maxR - minR + (maxG - minG) + (maxB - minB);
+
+    // Large single-color dominance + very low color spread indicates blank render.
+    return dominantRatio > 0.985 || spread < 24;
+  } catch {
+    // If we can't inspect, don't block export.
+    return false;
+  }
+}
+
 export interface ExportCapabilities {
   canShare: boolean;
   canShareFiles: boolean;
@@ -123,13 +238,6 @@ export interface ExportResult {
   success: boolean;
   method: "share" | "download" | "dataurl" | "manual";
   error?: string;
-}
-
-/**
- * Trigger a browser download in a way that's compatible across browsers.
- */
-function triggerDownloadLink(href: string, filename: string): boolean {
-  return triggerDownloadLinkWithOptions(href, filename, true);
 }
 
 function triggerDownloadLinkWithOptions(
@@ -256,6 +364,38 @@ export async function captureToBlob(
   }
 
   throw new Error("Failed to capture image after retries");
+}
+
+/**
+ * Secondary capture fallback for browsers where html-to-image can flatten to a solid color.
+ */
+async function captureToBlobWithHtml2Canvas(
+  element: HTMLElement,
+  options: {
+    backgroundColor?: string;
+    pixelRatio?: number;
+  },
+): Promise<Blob> {
+  const { default: html2canvas } = await import("html2canvas");
+  const canvas = await html2canvas(element, {
+    backgroundColor: options.backgroundColor ?? null,
+    scale: Math.min(Math.max(options.pixelRatio ?? 2, 1), 2.5),
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    // Better compatibility on Safari/WebKit.
+    foreignObjectRendering: false,
+  });
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/png", 1);
+  });
+
+  if (!blob || blob.size <= 1000) {
+    throw new Error("html2canvas fallback produced invalid blob");
+  }
+
+  return blob;
 }
 
 /**
@@ -455,8 +595,29 @@ export async function exportImage(
         { backgroundColor, pixelRatio },
         capabilities,
       );
+      if (blob && (await isLikelyBlankCapture(blob))) {
+        console.warn("Primary capture looked blank, trying fallback renderer");
+        blob = null;
+      }
     } catch (error) {
       console.warn("Blob capture failed, will try data URL fallback:", error);
+    }
+
+    // Renderer fallback: html2canvas is slower, but more compatible on some iOS/WebKit paths.
+    if (!blob) {
+      try {
+        blob = await captureToBlobWithHtml2Canvas(element, {
+          backgroundColor,
+          pixelRatio: capabilities.isIOS ? 2 : Math.min(pixelRatio ?? 4, 3),
+        });
+
+        if (blob && (await isLikelyBlankCapture(blob))) {
+          console.warn("Fallback capture also looked blank");
+          blob = null;
+        }
+      } catch (error) {
+        console.warn("html2canvas fallback failed:", error);
+      }
     }
 
     // Method 1: Web Share API (mobile - triggers native share sheet)
@@ -495,6 +656,10 @@ export async function exportImage(
         backgroundColor,
         pixelRatio,
       });
+      const dataUrlBlob = dataUrlToBlob(dataUrl);
+      if (await isLikelyBlankCapture(dataUrlBlob)) {
+        throw new Error("Data URL fallback looked blank");
+      }
       const downloaded = downloadImageDataUrlWithOptions(dataUrl, filename, {
         allowSyntheticClick: useSyntheticDownload,
         popupWindow: preparedPopup,
