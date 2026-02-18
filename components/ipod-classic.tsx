@@ -1,17 +1,52 @@
-"use client"
+"use client";
 
-import { useReducer, useRef, useCallback, useState, useEffect } from "react"
-import { Settings, Box, Share, Monitor, Smartphone, Check, Plus, Loader2 } from "lucide-react"
-import { toast } from "sonner"
-import { exportImage, type ExportStatus } from "@/lib/export-utils"
-import { IconButton } from "./icon-button"
-import { ThreeDIpod, type ThreeDIpodHandle } from "./three-d-ipod"
-import { IpodScreen } from "./ipod-screen"
-import { ClickWheel } from "./click-wheel"
-import type { SongMetadata } from "../types/ipod"
+import { useReducer, useRef, useCallback, useState, useEffect } from "react";
+import {
+  Settings,
+  Box,
+  Share,
+  Monitor,
+  Smartphone,
+  Check,
+  Plus,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  exportImage,
+  downloadImageBlob,
+  type ExportStatus,
+} from "@/lib/export-utils";
+import { IconButton } from "./icon-button";
+import { ThreeDIpod, type ThreeDIpodHandle } from "./three-d-ipod";
+import { IpodScreen } from "./ipod-screen";
+import { ClickWheel } from "./click-wheel";
+import type { SongMetadata } from "../types/ipod";
 
 // Base64 click sound
-const CLICK_SOUND = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//oeBAAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBBEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBCEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBDEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBEIAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r////////////////////////////////////////////////////////////////"
+const CLICK_SOUND =
+  "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//oeBAAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBBEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBCEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBDEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBEIAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r////////////////////////////////////////////////////////////////";
+
+const CASE_COLOR_PRESETS = [
+  { label: "White (5G)", value: "#F5F5F7" },
+  { label: "Black (5G/Classic)", value: "#1B1B1F" },
+  { label: "Silver (Classic)", value: "#D9DADC" },
+  { label: "U2 Black/Red", value: "#19191D" },
+  { label: "Mini Blue", value: "#7A90B8" },
+  { label: "Mini Green", value: "#9AAE8E" },
+  { label: "Mini Pink", value: "#C7A2AC" },
+  { label: "Product Red", value: "#B33A3A" },
+];
+
+const BG_COLOR_PRESETS = [
+  { label: "Studio Warm", value: "#E5E5E5" },
+  { label: "Concrete", value: "#D4D6D8" },
+  { label: "Slate", value: "#A9AFB6" },
+];
+
+const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
+const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
+const MAX_CUSTOM_COLORS = 6;
 
 const initialState: SongMetadata = {
   title: "Have A Destination?",
@@ -23,7 +58,7 @@ const initialState: SongMetadata = {
   rating: 5,
   trackNumber: 2,
   totalTracks: 10,
-}
+};
 
 type Action =
   | { type: "UPDATE_TITLE"; payload: string }
@@ -34,141 +69,187 @@ type Action =
   | { type: "UPDATE_DURATION"; payload: number }
   | { type: "UPDATE_RATING"; payload: number }
   | { type: "UPDATE_TRACK_NUMBER"; payload: number }
-  | { type: "UPDATE_TOTAL_TRACKS"; payload: number }
+  | { type: "UPDATE_TOTAL_TRACKS"; payload: number };
 
 function songReducer(state: SongMetadata, action: Action): SongMetadata {
   switch (action.type) {
     case "UPDATE_TITLE":
-      return { ...state, title: action.payload }
+      return { ...state, title: action.payload };
     case "UPDATE_ARTIST":
-      return { ...state, artist: action.payload }
+      return { ...state, artist: action.payload };
     case "UPDATE_ALBUM":
-      return { ...state, album: action.payload }
+      return { ...state, album: action.payload };
     case "UPDATE_ARTWORK":
-      return { ...state, artwork: action.payload }
+      return { ...state, artwork: action.payload };
     case "UPDATE_CURRENT_TIME":
-      return { ...state, currentTime: Math.max(0, Math.min(action.payload, state.duration)) }
+      return {
+        ...state,
+        currentTime: Math.max(0, Math.min(action.payload, state.duration)),
+      };
     case "UPDATE_DURATION":
       return {
         ...state,
         duration: action.payload,
         currentTime: Math.min(state.currentTime, action.payload),
-      }
+      };
     case "UPDATE_RATING":
-      return { ...state, rating: action.payload }
+      return { ...state, rating: action.payload };
     case "UPDATE_TRACK_NUMBER":
-      return { ...state, trackNumber: Math.max(1, Math.min(action.payload, state.totalTracks)) }
+      return {
+        ...state,
+        trackNumber: Math.max(1, Math.min(action.payload, state.totalTracks)),
+      };
     case "UPDATE_TOTAL_TRACKS":
-      return { ...state, totalTracks: Math.max(1, action.payload) }
+      return { ...state, totalTracks: Math.max(1, action.payload) };
     default:
-      return state
+      return state;
   }
 }
 
 export default function IPodClassic() {
-  const [state, dispatch] = useReducer(songReducer, initialState)
-  const [exportStatus, setExportStatus] = useState<ExportStatus>("idle")
-  const [isSceneReady, setIsSceneReady] = useState(false)
+  const [state, dispatch] = useReducer(songReducer, initialState);
+  const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
+  const [isSceneReady, setIsSceneReady] = useState(false);
 
   // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
-  const [viewMode, setViewMode] = useState<"flat" | "3d" | "focus">("flat")
+  const [viewMode, setViewMode] = useState<"flat" | "3d" | "focus">("flat");
 
   // Customization State
-  const [skinColor, setSkinColor] = useState("#F5F5F7")
-  const [bgColor, setBgColor] = useState("#E5E5E5")
-  const [showSettings, setShowSettings] = useState(false)
+  const [skinColor, setSkinColor] = useState(CASE_COLOR_PRESETS[0].value);
+  const [bgColor, setBgColor] = useState(BG_COLOR_PRESETS[0].value);
+  const [showSettings, setShowSettings] = useState(false);
+  const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
+  const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const ipodRef = useRef<HTMLDivElement>(null)
-  const exportTargetRef = useRef<HTMLDivElement>(null) // Wrapper for export
-  const threeDIpodRef = useRef<ThreeDIpodHandle>(null) // Ref for 3D export
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const ipodRef = useRef<HTMLDivElement>(null);
+  const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
+  const threeDIpodRef = useRef<ThreeDIpodHandle>(null); // Ref for 3D export
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const caseColorInputRef = useRef<HTMLInputElement>(null);
+  const bgColorInputRef = useRef<HTMLInputElement>(null);
 
   // Reset scene ready state when switching away from 3D mode
   useEffect(() => {
-    if (viewMode !== '3d') {
-      setIsSceneReady(false)
+    if (viewMode !== "3d") {
+      setIsSceneReady(false);
     }
-  }, [viewMode])
+  }, [viewMode]);
 
   // Handle scene ready callback from ThreeDIpod
   const handleSceneReady = useCallback(() => {
-    setIsSceneReady(true)
-  }, [])
+    setIsSceneReady(true);
+  }, []);
 
   useEffect(() => {
-    audioRef.current = new Audio(CLICK_SOUND)
-  }, [])
+    audioRef.current = new Audio(CLICK_SOUND);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const storedCase = localStorage.getItem(CASE_CUSTOM_COLORS_KEY);
+      const storedBg = localStorage.getItem(BG_CUSTOM_COLORS_KEY);
+      if (storedCase) {
+        setSavedCaseColors(JSON.parse(storedCase));
+      }
+      if (storedBg) {
+        setSavedBgColors(JSON.parse(storedBg));
+      }
+    } catch {
+      setSavedCaseColors([]);
+      setSavedBgColors([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        CASE_CUSTOM_COLORS_KEY,
+        JSON.stringify(savedCaseColors),
+      );
+    } catch {
+      // Ignore storage failures
+    }
+  }, [savedCaseColors]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(BG_CUSTOM_COLORS_KEY, JSON.stringify(savedBgColors));
+    } catch {
+      // Ignore storage failures
+    }
+  }, [savedBgColors]);
 
   const playClick = useCallback(() => {
     if (audioRef.current) {
-      audioRef.current.currentTime = 0
-      audioRef.current.play().catch(() => { })
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
     }
-  }, [])
+  }, []);
 
-  const handleSeek = useCallback((direction: number) => {
-    dispatch({
-      type: "UPDATE_CURRENT_TIME",
-      payload: state.currentTime + (direction * 5)
-    })
-  }, [state.currentTime])
+  const handleSeek = useCallback(
+    (direction: number) => {
+      dispatch({
+        type: "UPDATE_CURRENT_TIME",
+        payload: state.currentTime + direction * 5,
+      });
+    },
+    [state.currentTime],
+  );
 
   const handleExport = useCallback(async () => {
-    if (exportStatus !== "idle") return // Prevent double-clicks
+    if (exportStatus !== "idle") return; // Prevent double-clicks
 
-    playClick()
-    const filename = `ipod-${state.title.toLowerCase().replace(/\s+/g, "-")}.png`
+    playClick();
+    const filename = `ipod-${state.title.toLowerCase().replace(/\s+/g, "-")}.png`;
 
     // Handle 3D mode export differently
-    if (viewMode === '3d') {
+    if (viewMode === "3d") {
       // Check if scene is ready before attempting export
       if (!isSceneReady || !threeDIpodRef.current) {
         toast.error("Scene loading...", {
-          description: "Please wait for the 3D scene to fully load before exporting.",
-        })
-        return
+          description:
+            "Please wait for the 3D scene to fully load before exporting.",
+        });
+        return;
       }
 
-      setExportStatus("preparing")
+      setExportStatus("preparing");
 
       try {
         // Capture high-res render from Three.js (4096x4096 per PDF spec)
-        const blob = await threeDIpodRef.current.captureHighRes(4096, 4096)
+        const blob = await threeDIpodRef.current.captureHighRes(4096, 4096);
 
         if (blob) {
-          // Download the blob
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement("a")
-          link.download = filename
-          link.href = url
-          link.click()
-          setTimeout(() => URL.revokeObjectURL(url), 1000)
+          const downloaded = downloadImageBlob(blob, filename);
+          if (!downloaded) {
+            throw new Error("Browser blocked the file download");
+          }
 
-          setExportStatus("success")
+          setExportStatus("success");
           toast.success("3D render exported!", {
             description: "High-resolution 4096x4096 PNG saved",
-          })
+          });
         } else {
-          throw new Error("Failed to capture 3D scene")
+          throw new Error("Failed to capture 3D scene");
         }
       } catch (error) {
-        setExportStatus("error")
+        setExportStatus("error");
         toast.error("3D export failed", {
           description: error instanceof Error ? error.message : "Unknown error",
           action: {
             label: "Retry",
             onClick: handleExport,
           },
-        })
+        });
       }
 
-      setTimeout(() => setExportStatus("idle"), 1500)
-      return
+      setTimeout(() => setExportStatus("idle"), 1500);
+      return;
     }
 
     // 2D mode export
-    if (!exportTargetRef.current) return
+    if (!exportTargetRef.current) return;
 
     try {
       const result = await exportImage(exportTargetRef.current, {
@@ -176,15 +257,16 @@ export default function IPodClassic() {
         backgroundColor: bgColor,
         pixelRatio: 4,
         onStatusChange: setExportStatus,
-      })
+      });
 
       if (result.success) {
         if (result.method === "share") {
           toast.success("Shared successfully!", {
-            description: "Use 'Save Image' in the share sheet to save to Photos",
-          })
+            description:
+              "Use 'Save Image' in the share sheet to save to Photos",
+          });
         } else {
-          toast.success("Image exported!")
+          toast.success("Image exported!");
         }
       } else {
         toast.error("Export failed", {
@@ -193,37 +275,71 @@ export default function IPodClassic() {
             label: "Retry",
             onClick: handleExport,
           },
-        })
+        });
       }
     } catch (error) {
-      setExportStatus("error")
+      setExportStatus("error");
       toast.error("Export failed", {
         description: error instanceof Error ? error.message : "Unknown error",
         action: {
           label: "Retry",
           onClick: handleExport,
         },
-      })
+      });
     }
 
     // Reset to idle after a brief delay to show success state
-    setTimeout(() => setExportStatus("idle"), 1500)
-  }, [playClick, state.title, bgColor, exportStatus, viewMode, isSceneReady])
+    setTimeout(() => setExportStatus("idle"), 1500);
+  }, [playClick, state.title, bgColor, exportStatus, viewMode, isSceneReady]);
 
   const screenComponent = (
-    <IpodScreen
-      state={state}
-      dispatch={dispatch}
-      playClick={playClick}
-    />
-  )
+    <IpodScreen state={state} dispatch={dispatch} playClick={playClick} />
+  );
 
   const wheelComponent = (
-    <ClickWheel
-      playClick={playClick}
-      onSeek={handleSeek}
-    />
-  )
+    <ClickWheel playClick={playClick} onSeek={handleSeek} />
+  );
+
+  const saveCustomColor = useCallback(
+    (target: "case" | "bg", rawColor: string) => {
+      const color = rawColor.toUpperCase();
+      if (target === "case") {
+        setSavedCaseColors((prev) =>
+          [color, ...prev.filter((c) => c !== color)].slice(
+            0,
+            MAX_CUSTOM_COLORS,
+          ),
+        );
+        return;
+      }
+      setSavedBgColors((prev) =>
+        [color, ...prev.filter((c) => c !== color)].slice(0, MAX_CUSTOM_COLORS),
+      );
+    },
+    [],
+  );
+
+  const openSystemColorPicker = useCallback((target: "case" | "bg") => {
+    const input =
+      target === "case" ? caseColorInputRef.current : bgColorInputRef.current;
+    if (!input) return;
+
+    // Keep picker invocation in the same user gesture for mobile browsers.
+    try {
+      if ("showPicker" in input) {
+        (
+          input as HTMLInputElement & { showPicker?: () => void }
+        ).showPicker?.();
+      } else {
+        input.click();
+      }
+    } catch {
+      input.click();
+    }
+
+    // Hide panel so users can sample colors from anywhere on-screen.
+    setShowSettings(false);
+  }, []);
 
   return (
     <div
@@ -231,121 +347,226 @@ export default function IPodClassic() {
       className="min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500 overflow-hidden"
       style={{ backgroundColor: bgColor }}
     >
+      {/* Persistent color inputs so native picker stays alive even when UI hides */}
+      <input
+        ref={caseColorInputRef}
+        type="color"
+        data-testid="case-color-input"
+        value={skinColor}
+        onChange={(e) => {
+          setSkinColor(e.target.value);
+          saveCustomColor("case", e.target.value);
+          setShowSettings(false);
+        }}
+        className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <input
+        ref={bgColorInputRef}
+        type="color"
+        data-testid="bg-color-input"
+        value={bgColor}
+        onChange={(e) => {
+          setBgColor(e.target.value);
+          saveCustomColor("bg", e.target.value);
+          setShowSettings(false);
+        }}
+        className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
 
       {/* Floating Tools UI */}
-      <div className={`fixed top-6 right-6 z-50 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? 'opacity-0 pointer-events-none' : ''}`}>
-          {/* Settings / Theme */}
-          <div className="relative group">
-            <IconButton
-              icon={<Settings className="w-5 h-5" />}
-              label="Theme"
-              onClick={() => setShowSettings(!showSettings)}
-              isActive={showSettings}
-            />
+      <div
+        className={`fixed top-6 right-6 z-50 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+      >
+        {/* Settings / Theme */}
+        <div className="relative group">
+          <IconButton
+            icon={<Settings className="w-5 h-5" />}
+            label="Theme"
+            data-testid="theme-button"
+            onClick={() => setShowSettings(!showSettings)}
+            isActive={showSettings}
+          />
 
-            {showSettings && (
-              <div className="absolute top-0 right-14 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl w-[260px] animate-in slide-in-from-right-2 border border-white/20">
-                <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 px-1">Case Color</h3>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {['#F5F5F7', '#1c1c1e', '#e63946', '#457b9d', '#2a9d8f'].map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setSkinColor(c)}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${skinColor === c ? 'border-blue-500 scale-110' : 'border-transparent'}`}
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                  {/* System Color Picker integrated */}
-                  <div className="relative w-8 h-8 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-blue-500 cursor-pointer overflow-hidden transition-colors">
-                    <Plus className="w-4 h-4 text-gray-400" />
-                    <input
-                      type="color"
-                      value={skinColor}
-                      onChange={(e) => setSkinColor(e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    />
-                  </div>
-                </div>
-
-                <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 px-1">Background</h3>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setBgColor("#E5E5E5")} className="w-6 h-6 rounded-full bg-gray-200 border border-gray-300" title="Light" />
-                  <button onClick={() => setBgColor("#111111")} className="w-6 h-6 rounded-full bg-neutral-900 border border-gray-600" title="Dark" />
-                  <button onClick={() => setBgColor("#e0fbfc")} className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100" title="Mint" />
-                  {/* Background color picker */}
-                  <div className="relative w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                    <Plus className="w-3 h-3 text-black" />
-                    <input
-                      type="color"
-                      value={bgColor}
-                      onChange={(e) => setBgColor(e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    />
-                  </div>
+          {showSettings && (
+            <div
+              data-testid="theme-panel"
+              className="absolute top-0 right-14 max-sm:right-0 max-sm:top-14 bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] animate-in slide-in-from-right-2 border border-[#D5D7DA]"
+            >
+              <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                Case Color
+              </h3>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {CASE_COLOR_PRESETS.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => setSkinColor(c.value)}
+                    title={c.label}
+                    className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                      skinColor === c.value
+                        ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                        : "border-[#B5BBC3]"
+                    }`}
+                    style={{ backgroundColor: c.value }}
+                  />
+                ))}
+                {/* System Color Picker integrated */}
+                <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
+                  <Plus className="w-4 h-4 text-[#4B5563]" />
+                  <button
+                    type="button"
+                    onClick={() => openSystemColorPicker("case")}
+                    data-testid="custom-case-color-button"
+                    className="absolute inset-0 bg-transparent"
+                    title="Custom case color"
+                    aria-label="Open custom case color picker"
+                  />
                 </div>
               </div>
-            )}
-          </div>
+              {savedCaseColors.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                    Recent Custom
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {savedCaseColors.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setSkinColor(color)}
+                        title={`Custom ${color}`}
+                        className={`w-6 h-6 rounded-full border ${
+                          skinColor === color
+                            ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                            : "border-[#B5BBC3]"
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {/* View Modes */}
-          <div className="flex flex-col gap-2 p-2 bg-black/5 backdrop-blur-sm rounded-full">
-            <IconButton
-              icon={<Smartphone className="w-5 h-5" />}
-              label="Flat View"
-              isActive={viewMode === 'flat'}
-              onClick={() => setViewMode('flat')}
-            />
-            <IconButton
-              icon={<Box className="w-5 h-5" />}
-              label="3D Experience"
-              isActive={viewMode === '3d'}
-              onClick={() => setViewMode('3d')}
-            />
-            <IconButton
-              icon={<Monitor className="w-5 h-5" />}
-              label="Focus Mode"
-              isActive={viewMode === 'focus'}
-              onClick={() => setViewMode('focus')}
-            />
-          </div>
+              <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                Background
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {BG_COLOR_PRESETS.map((bg) => (
+                  <button
+                    key={bg.value}
+                    onClick={() => setBgColor(bg.value)}
+                    title={bg.label}
+                    className={`w-6 h-6 rounded-full border ${
+                      bgColor === bg.value
+                        ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                        : "border-[#B5BBC3]"
+                    }`}
+                    style={{ backgroundColor: bg.value }}
+                  />
+                ))}
+                {/* Background color picker */}
+                <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
+                  <Plus className="w-3 h-3 text-[#1F2937]" />
+                  <button
+                    type="button"
+                    onClick={() => openSystemColorPicker("bg")}
+                    data-testid="custom-bg-color-button"
+                    className="absolute inset-0 bg-transparent"
+                    title="Custom background color"
+                    aria-label="Open custom background color picker"
+                  />
+                </div>
+              </div>
+              {savedBgColors.length > 0 && (
+                <div className="mt-3">
+                  <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                    Recent Custom
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {savedBgColors.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setBgColor(color)}
+                        title={`Custom ${color}`}
+                        className={`w-6 h-6 rounded-full border ${
+                          bgColor === color
+                            ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                            : "border-[#B5BBC3]"
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-          {/* Export Action */}
+        {/* View Modes */}
+        <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
           <IconButton
-            icon={
-              exportStatus === "success" ? (
-                <Check className="w-5 h-5" />
-              ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Share className="w-5 h-5" />
-              )
-            }
-            label={
-              exportStatus === "preparing"
-                ? "Preparing..."
-                : exportStatus === "sharing"
-                  ? "Sharing..."
-                  : exportStatus === "success"
-                    ? "Done!"
-                    : viewMode === '3d'
-                      ? "Export 3D Render"
-                      : "Export 2D Image"
-            }
-            onClick={handleExport}
-            contrast={true}
-            className={`transition-colors duration-300 ${
-              exportStatus === "success"
-                ? "bg-green-500 hover:bg-green-600 border-none"
-                : exportStatus === "preparing" || exportStatus === "sharing"
-                  ? "bg-blue-500 hover:bg-blue-600 border-none"
-                  : ""
-            }`}
+            icon={<Smartphone className="w-5 h-5" />}
+            label="Flat View"
+            data-testid="flat-view-button"
+            isActive={viewMode === "flat"}
+            onClick={() => setViewMode("flat")}
+          />
+          <IconButton
+            icon={<Box className="w-5 h-5" />}
+            label="3D Experience"
+            data-testid="three-d-view-button"
+            isActive={viewMode === "3d"}
+            onClick={() => setViewMode("3d")}
+          />
+          <IconButton
+            icon={<Monitor className="w-5 h-5" />}
+            label="Focus Mode"
+            data-testid="focus-view-button"
+            isActive={viewMode === "focus"}
+            onClick={() => setViewMode("focus")}
           />
         </div>
 
+        {/* Export Action */}
+        <IconButton
+          icon={
+            exportStatus === "success" ? (
+              <Check className="w-5 h-5" />
+            ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Share className="w-5 h-5" />
+            )
+          }
+          label={
+            exportStatus === "preparing"
+              ? "Preparing..."
+              : exportStatus === "sharing"
+                ? "Sharing..."
+                : exportStatus === "success"
+                  ? "Done!"
+                  : viewMode === "3d"
+                    ? "Export 3D Render"
+                    : "Export 2D Image"
+          }
+          onClick={handleExport}
+          data-testid="export-button"
+          contrast={true}
+          className={`transition-colors duration-300 ${
+            exportStatus === "success"
+              ? "bg-green-500 hover:bg-green-600 border-none"
+              : exportStatus === "preparing" || exportStatus === "sharing"
+                ? "bg-blue-500 hover:bg-blue-600 border-none"
+                : ""
+          }`}
+        />
+      </div>
 
       {/* 3D MODE (R3F) */}
-      {viewMode === '3d' && (
+      {viewMode === "3d" && (
         <ThreeDIpod
           ref={threeDIpodRef}
           skinColor={skinColor}
@@ -357,36 +578,44 @@ export default function IPodClassic() {
 
       {/* 2D / EXPORT MODE */}
       <div
-        className={`relative transition-all duration-700 ${viewMode !== '3d' ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none absolute'}`}
+        className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none absolute"}`}
         style={{
-          transform: viewMode === 'focus' ? 'scale(1.5)' : undefined
+          transform: viewMode === "focus" ? "scale(1.5)" : undefined,
         }}
       >
-        <div ref={exportTargetRef} className="p-12 rounded-[50px] transition-colors duration-300" style={{ backgroundColor: exportStatus !== "idle" ? bgColor : 'transparent' }}>
+        <div
+          ref={exportTargetRef}
+          className="p-12 rounded-[50px] transition-colors duration-300"
+          style={{
+            backgroundColor: exportStatus !== "idle" ? bgColor : "transparent",
+          }}
+        >
           <div
             className="relative w-[370px] h-[620px] rounded-[36px] transition-all duration-300 flex flex-col items-center justify-between p-6"
             style={{
               backgroundColor: skinColor,
               // FAKE PHYSICS DEPTH for 2D/Export
-              boxShadow: exportStatus !== "idle"
-                // Export shadow: Uniform concentric shadows for floating effect (no directional bias)
-                ? `0 0 80px 10px rgba(0,0,0,0.08), 0 0 40px 5px rgba(0,0,0,0.12), 0 0 15px 2px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.1)`
-                // Live shadow
-                : `0 30px 60px -15px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(0,0,0,0.05)`,
+              boxShadow:
+                exportStatus !== "idle"
+                  ? // Export shadow: studio-style with downward weight and soft side diffusion.
+                    `0 54px 84px -38px rgba(0,0,0,0.38), 0 24px 40px -28px rgba(0,0,0,0.24), 28px 0 46px -34px rgba(0,0,0,0.14), -14px 0 24px -20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.18)`
+                  : // Live shadow: lighter while editing to keep UI contrast.
+                    `0 36px 62px -24px rgba(0,0,0,0.32), 0 14px 24px -16px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)`,
             }}
           >
             {/* Subtle Bevel for "fake 3D" in export */}
             {exportStatus !== "idle" && (
               <div
                 className="absolute inset-0 rounded-[36px] border-[3px] border-white/10 pointer-events-none"
-                style={{ boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.05)' }}
+                style={{
+                  boxShadow:
+                    "inset 0 2px 5px rgba(255,255,255,0.18), inset 0 -4px 10px rgba(0,0,0,0.09)",
+                }}
               />
             )}
 
             {/* SCREEN AREA */}
-            <div className="w-full">
-              {screenComponent}
-            </div>
+            <div className="w-full">{screenComponent}</div>
 
             {/* CONTROL AREA */}
             <div className="flex-1 flex items-center justify-center relative -mt-4">
@@ -395,7 +624,6 @@ export default function IPodClassic() {
           </div>
         </div>
       </div>
-
     </div>
-  )
+  );
 }

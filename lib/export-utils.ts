@@ -1,6 +1,11 @@
-import { toPng, toBlob } from "html-to-image"
+import { toPng, toBlob } from "html-to-image";
 
-export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error"
+export type ExportStatus =
+  | "idle"
+  | "preparing"
+  | "sharing"
+  | "success"
+  | "error";
 
 /**
  * Convert an image to a base64 data URL
@@ -8,23 +13,23 @@ export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error
 async function imageToDataUrl(img: HTMLImageElement): Promise<string> {
   // If already a data URL, return as-is
   if (img.src.startsWith("data:")) {
-    return img.src
+    return img.src;
   }
 
   // Create canvas and draw image
-  const canvas = document.createElement("canvas")
-  canvas.width = img.naturalWidth || img.width
-  canvas.height = img.naturalHeight || img.height
-  const ctx = canvas.getContext("2d")
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext("2d");
 
   if (!ctx) {
-    throw new Error("Failed to get canvas context")
+    throw new Error("Failed to get canvas context");
   }
 
-  ctx.drawImage(img, 0, 0)
+  ctx.drawImage(img, 0, 0);
 
   // Return as PNG data URL
-  return canvas.toDataURL("image/png")
+  return canvas.toDataURL("image/png");
 }
 
 /**
@@ -33,24 +38,24 @@ async function imageToDataUrl(img: HTMLImageElement): Promise<string> {
 function waitForImageLoad(img: HTMLImageElement): Promise<void> {
   return new Promise((resolve, reject) => {
     if (img.complete && img.naturalWidth > 0) {
-      resolve()
-      return
+      resolve();
+      return;
     }
 
     const timeoutId = setTimeout(() => {
-      reject(new Error(`Image load timeout: ${img.src.substring(0, 100)}`))
-    }, 5000)
+      reject(new Error(`Image load timeout: ${img.src.substring(0, 100)}`));
+    }, 5000);
 
     img.onload = () => {
-      clearTimeout(timeoutId)
-      resolve()
-    }
+      clearTimeout(timeoutId);
+      resolve();
+    };
 
     img.onerror = () => {
-      clearTimeout(timeoutId)
-      reject(new Error(`Image load failed: ${img.src.substring(0, 100)}`))
-    }
-  })
+      clearTimeout(timeoutId);
+      reject(new Error(`Image load failed: ${img.src.substring(0, 100)}`));
+    };
+  });
 }
 
 /**
@@ -58,68 +63,94 @@ function waitForImageLoad(img: HTMLImageElement): Promise<void> {
  * This ensures html-to-image can capture them correctly
  */
 async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
-  const images = element.querySelectorAll("img")
+  const images = element.querySelectorAll("img");
 
   const imagePromises = Array.from(images).map(async (img) => {
     try {
       // Wait for image to load
-      await waitForImageLoad(img)
+      await waitForImageLoad(img);
 
       // Skip if no valid image
       if (!img.naturalWidth || !img.naturalHeight) {
-        console.warn("Skipping invalid image:", img.src.substring(0, 100))
-        return
+        console.warn("Skipping invalid image:", img.src.substring(0, 100));
+        return;
       }
 
       // Convert to data URL if not already
       if (!img.src.startsWith("data:")) {
-        const dataUrl = await imageToDataUrl(img)
-        img.src = dataUrl
+        const dataUrl = await imageToDataUrl(img);
+        img.src = dataUrl;
       }
     } catch (error) {
-      console.warn("Failed to preload image:", error)
+      console.warn("Failed to preload image:", error);
       // Don't fail the entire export for one image
     }
-  })
+  });
 
-  await Promise.all(imagePromises)
+  await Promise.all(imagePromises);
 }
 
 export interface ExportCapabilities {
-  canShare: boolean
-  canShareFiles: boolean
-  isIOS: boolean
-  isMobile: boolean
+  canShare: boolean;
+  canShareFiles: boolean;
+  isIOS: boolean;
+  isMobile: boolean;
 }
 
 export interface ExportResult {
-  success: boolean
-  method: "share" | "download" | "dataurl" | "manual"
-  error?: string
+  success: boolean;
+  method: "share" | "download" | "dataurl" | "manual";
+  error?: string;
+}
+
+/**
+ * Trigger a browser download in a way that's compatible across browsers.
+ */
+function triggerDownloadLink(href: string, filename: string): boolean {
+  try {
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = href;
+    link.rel = "noopener noreferrer";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    requestAnimationFrame(() => {
+      link.remove();
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Detect platform capabilities for export
  */
 export function detectExportCapabilities(): ExportCapabilities {
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : ""
-  const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS =
+    /iPad|iPhone|iPod/.test(userAgent) &&
+    !(window as unknown as { MSStream?: unknown }).MSStream;
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      userAgent,
+    );
 
-  const canShare = typeof navigator !== "undefined" && !!navigator.share
+  const canShare = typeof navigator !== "undefined" && !!navigator.share;
   // Check if navigator.canShare exists and supports files
-  let canShareFiles = false
+  let canShareFiles = false;
   if (typeof navigator !== "undefined" && navigator.canShare) {
     try {
       // Test with a dummy file to see if files are supported
-      const testFile = new File(["test"], "test.png", { type: "image/png" })
-      canShareFiles = navigator.canShare({ files: [testFile] })
+      const testFile = new File(["test"], "test.png", { type: "image/png" });
+      canShareFiles = navigator.canShare({ files: [testFile] });
     } catch {
-      canShareFiles = false
+      canShareFiles = false;
     }
   }
 
-  return { canShare, canShareFiles, isIOS, isMobile }
+  return { canShare, canShareFiles, isIOS, isMobile };
 }
 
 /**
@@ -128,12 +159,12 @@ export function detectExportCapabilities(): ExportCapabilities {
 export async function captureToBlob(
   element: HTMLElement,
   options: {
-    backgroundColor?: string
-    pixelRatio?: number
+    backgroundColor?: string;
+    pixelRatio?: number;
   },
-  capabilities: ExportCapabilities
+  capabilities: ExportCapabilities,
 ): Promise<Blob> {
-  const maxAttempts = capabilities.isIOS ? 3 : 2
+  const maxAttempts = capabilities.isIOS ? 3 : 2;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -150,31 +181,31 @@ export async function captureToBlob(
         filter: (node: Node) => {
           // Include all nodes except script tags
           if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
-            return false
+            return false;
           }
-          return true
+          return true;
         },
-      })
+      });
 
       if (blob && blob.size > 1000) {
         // Ensure we have a meaningful blob (not just an empty/corrupt image)
-        return blob
+        return blob;
       }
 
       // If blob is null or too small and we have more attempts, wait and retry
       if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 300 * attempt))
+        await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
       }
     } catch (error) {
       if (attempt === maxAttempts) {
-        throw error
+        throw error;
       }
       // Wait before retry with increasing delay
-      await new Promise(resolve => setTimeout(resolve, 300 * attempt))
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
     }
   }
 
-  throw new Error("Failed to capture image after retries")
+  throw new Error("Failed to capture image after retries");
 }
 
 /**
@@ -183,9 +214,9 @@ export async function captureToBlob(
 export async function captureToDataUrl(
   element: HTMLElement,
   options: {
-    backgroundColor?: string
-    pixelRatio?: number
-  }
+    backgroundColor?: string;
+    pixelRatio?: number;
+  },
 ): Promise<string> {
   return toPng(element, {
     cacheBust: true,
@@ -198,33 +229,36 @@ export async function captureToDataUrl(
     },
     filter: (node: Node) => {
       if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
-        return false
+        return false;
       }
-      return true
+      return true;
     },
-  })
+  });
 }
 
 /**
  * Share image file using Web Share API (iOS/Android native share sheet)
  */
-export async function shareImageFile(blob: Blob, filename: string): Promise<boolean> {
-  const file = new File([blob], filename, { type: "image/png" })
+export async function shareImageFile(
+  blob: Blob,
+  filename: string,
+): Promise<boolean> {
+  const file = new File([blob], filename, { type: "image/png" });
 
   // iOS ONLY supports files-only share - no title or text!
   // Adding title or text will cause the share to fail on iOS Safari
-  const shareData: ShareData = { files: [file] }
+  const shareData: ShareData = { files: [file] };
 
   try {
-    await navigator.share(shareData)
-    return true
+    await navigator.share(shareData);
+    return true;
   } catch (error) {
     // User cancelled share or share failed
     if (error instanceof Error && error.name === "AbortError") {
       // User cancelled - this is still a "success" in that we tried
-      return true
+      return true;
     }
-    throw error
+    throw error;
   }
 }
 
@@ -232,33 +266,49 @@ export async function shareImageFile(blob: Blob, filename: string): Promise<bool
  * Download image using blob URL (desktop browsers)
  */
 export function downloadImageBlob(blob: Blob, filename: string): boolean {
+  let url: string | null = null;
   try {
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.download = filename
-    link.href = url
-    link.click()
+    url = URL.createObjectURL(blob);
+    const downloaded = triggerDownloadLink(url, filename);
+    let opened = false;
 
-    // Clean up blob URL after a delay
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    return true
+    // Fallback: some mobile browsers ignore synthetic clicks.
+    if (!downloaded) {
+      opened = !!window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    // Safari can fail if blob URL is revoked too quickly.
+    setTimeout(() => {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }, 4000);
+
+    return downloaded || opened;
   } catch {
-    return false
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+    return false;
   }
 }
 
 /**
  * Download image using data URL (legacy fallback)
  */
-export function downloadImageDataUrl(dataUrl: string, filename: string): boolean {
+export function downloadImageDataUrl(
+  dataUrl: string,
+  filename: string,
+): boolean {
   try {
-    const link = document.createElement("a")
-    link.download = filename
-    link.href = dataUrl
-    link.click()
-    return true
+    const downloaded = triggerDownloadLink(dataUrl, filename);
+    let opened = false;
+    if (!downloaded) {
+      opened = !!window.open(dataUrl, "_blank", "noopener,noreferrer");
+    }
+    return downloaded || opened;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -274,85 +324,92 @@ export function downloadImageDataUrl(dataUrl: string, filename: string): boolean
 export async function exportImage(
   element: HTMLElement,
   options: {
-    filename: string
-    backgroundColor?: string
-    pixelRatio?: number
-    onStatusChange?: (status: ExportStatus) => void
-  }
+    filename: string;
+    backgroundColor?: string;
+    pixelRatio?: number;
+    onStatusChange?: (status: ExportStatus) => void;
+  },
 ): Promise<ExportResult> {
-  const { filename, backgroundColor, pixelRatio, onStatusChange } = options
-  const capabilities = detectExportCapabilities()
+  const { filename, backgroundColor, pixelRatio, onStatusChange } = options;
+  const capabilities = detectExportCapabilities();
 
-  onStatusChange?.("preparing")
+  onStatusChange?.("preparing");
 
   // Wait for UI to settle
-  await new Promise(resolve => setTimeout(resolve, 300))
+  await new Promise((resolve) => setTimeout(resolve, 300));
 
   try {
     // Pre-load and embed all images as inline data URLs
     // This ensures html-to-image can capture them correctly
-    await preloadAndEmbedImages(element)
+    await preloadAndEmbedImages(element);
 
     // Additional wait for images to settle after conversion
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Try to capture as blob first (needed for share and blob download)
-    let blob: Blob | null = null
+    let blob: Blob | null = null;
     try {
-      blob = await captureToBlob(element, { backgroundColor, pixelRatio }, capabilities)
+      blob = await captureToBlob(
+        element,
+        { backgroundColor, pixelRatio },
+        capabilities,
+      );
     } catch (error) {
-      console.warn("Blob capture failed, will try data URL fallback:", error)
+      console.warn("Blob capture failed, will try data URL fallback:", error);
     }
 
     // Method 1: Web Share API (mobile - triggers native share sheet)
     if (blob && capabilities.canShareFiles && capabilities.isMobile) {
-      onStatusChange?.("sharing")
+      onStatusChange?.("sharing");
       try {
-        const shared = await shareImageFile(blob, filename)
+        const shared = await shareImageFile(blob, filename);
         if (shared) {
-          onStatusChange?.("success")
-          return { success: true, method: "share" }
+          onStatusChange?.("success");
+          return { success: true, method: "share" };
         }
       } catch (error) {
-        console.warn("Share failed, trying download fallback:", error)
+        console.warn("Share failed, trying download fallback:", error);
       }
     }
 
     // Method 2: Blob URL download (desktop)
     if (blob) {
-      const downloaded = downloadImageBlob(blob, filename)
+      const downloaded = downloadImageBlob(blob, filename);
       if (downloaded) {
-        onStatusChange?.("success")
-        return { success: true, method: "download" }
+        onStatusChange?.("success");
+        return { success: true, method: "download" };
       }
     }
 
     // Method 3: Data URL download (legacy fallback)
     try {
-      const dataUrl = await captureToDataUrl(element, { backgroundColor, pixelRatio })
-      const downloaded = downloadImageDataUrl(dataUrl, filename)
+      const dataUrl = await captureToDataUrl(element, {
+        backgroundColor,
+        pixelRatio,
+      });
+      const downloaded = downloadImageDataUrl(dataUrl, filename);
       if (downloaded) {
-        onStatusChange?.("success")
-        return { success: true, method: "dataurl" }
+        onStatusChange?.("success");
+        return { success: true, method: "dataurl" };
       }
     } catch (error) {
-      console.error("Data URL fallback failed:", error)
+      console.error("Data URL fallback failed:", error);
     }
 
     // Method 4: Manual instructions (ultimate fallback)
-    onStatusChange?.("error")
+    onStatusChange?.("error");
     return {
       success: false,
       method: "manual",
       error: "Export failed. Try taking a screenshot manually.",
-    }
+    };
   } catch (error) {
-    console.error("Export failed:", error)
-    onStatusChange?.("error")
+    console.error("Export failed:", error);
+    onStatusChange?.("error");
     return {
       success: false,
       method: "manual",
       error: error instanceof Error ? error.message : "Unknown error occurred",
-    }
+    };
   }
 }

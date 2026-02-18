@@ -1,35 +1,40 @@
-"use client"
+"use client";
 
-import { EffectComposer, ChromaticAberration, Noise, Vignette } from "@react-three/postprocessing"
-import { BlendFunction } from "postprocessing"
-import { Vector2 } from "three"
+import {
+  EffectComposer,
+  ChromaticAberration,
+  Noise,
+  Vignette,
+} from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
+import { Vector2 } from "three";
 
 interface PostProcessingProps {
-  exportMode?: boolean
-  enabled?: boolean
+  exportMode?: boolean;
+  enabled?: boolean;
 }
 
-export function PostProcessing({ exportMode = false, enabled = true }: PostProcessingProps) {
-  if (!enabled) return null
+export function PostProcessing({
+  exportMode = false,
+  enabled = true,
+}: PostProcessingProps) {
+  if (!enabled) return null;
 
   return (
     <EffectComposer>
-      {/* Chromatic aberration - subtle RGB separation at edges */}
+      {/* Keep aberration nearly imperceptible to avoid synthetic RGB fringing */}
       <ChromaticAberration
-        offset={new Vector2(0.002, 0.002)}
+        offset={new Vector2(0.00035, 0.00035)}
         radialModulation
-        modulationOffset={0.5}
+        modulationOffset={0.2}
       />
-      {/* Film grain - 2-3% noise per PDF spec */}
+      {/* Keep grain almost invisible for clean industrial renders */}
       <Noise
-        opacity={exportMode ? 0.03 : 0.02}
+        opacity={exportMode ? 0.01 : 0.008}
         blendFunction={BlendFunction.OVERLAY}
       />
-      {/* Vignette for depth */}
-      <Vignette
-        offset={0.1}
-        darkness={exportMode ? 0.4 : 0.3}
-      />
+      {/* Softer vignette for gentle edge falloff */}
+      <Vignette offset={0.2} darkness={exportMode ? 0.18 : 0.14} />
     </EffectComposer>
-  )
+  );
 }

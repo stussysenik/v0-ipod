@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface EditableTimeProps {
-  value: number
-  onChange: (seconds: number) => void
-  className?: string
-  disabled?: boolean
-  isRemaining?: boolean
+  value: number;
+  onChange: (seconds: number) => void;
+  className?: string;
+  disabled?: boolean;
+  isRemaining?: boolean;
 }
 
 export function EditableTime({
@@ -19,65 +19,75 @@ export function EditableTime({
   isRemaining = false,
 }: EditableTimeProps) {
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = Math.floor(seconds % 60)
-    return `${isRemaining ? "-" : ""}${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
-  }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${isRemaining ? "-" : ""}${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
 
-  const [isEditing, setIsEditing] = useState(false)
-  const [localValue, setLocalValue] = useState(formatTime(Math.abs(value)))
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isEditing, setIsEditing] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [localValue, setLocalValue] = useState(formatTime(Math.abs(value)));
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLocalValue(formatTime(Math.abs(value)))
-  }, [value])
+    setLocalValue(formatTime(Math.abs(value)));
+  }, [value]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [isEditing])
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsTouchDevice(
+        window.matchMedia("(pointer: coarse)").matches ||
+          navigator.maxTouchPoints > 0,
+      );
+    }
+  }, []);
 
   const parseTime = (timeStr: string): number => {
-    const cleanStr = timeStr.replace("-", "")
-    const [minutes, seconds] = cleanStr.split(":").map(Number)
-    if (isNaN(minutes) || isNaN(seconds)) return value
-    const totalSeconds = minutes * 60 + seconds
-    return isRemaining ? -totalSeconds : totalSeconds
-  }
+    const cleanStr = timeStr.replace("-", "");
+    const [minutes, seconds] = cleanStr.split(":").map(Number);
+    if (isNaN(minutes) || isNaN(seconds)) return value;
+    const totalSeconds = minutes * 60 + seconds;
+    return Math.max(0, totalSeconds);
+  };
 
   const handleDoubleClick = () => {
     if (!disabled) {
-      setIsEditing(true)
+      setIsEditing(true);
     }
-  }
+  };
 
   const handleBlur = () => {
-    setIsEditing(false)
-    const newSeconds = parseTime(localValue)
-    if (newSeconds !== 0) {
-      onChange(newSeconds)
+    setIsEditing(false);
+    const newSeconds = parseTime(localValue);
+    if (Number.isFinite(newSeconds) && newSeconds >= 0) {
+      onChange(newSeconds);
     } else {
-      setLocalValue(formatTime(Math.abs(value)))
+      setLocalValue(formatTime(Math.abs(value)));
     }
-  }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleBlur()
+      handleBlur();
     } else if (e.key === "Escape") {
-      setIsEditing(false)
-      setLocalValue(formatTime(Math.abs(value)))
+      setIsEditing(false);
+      setLocalValue(formatTime(Math.abs(value)));
     }
-  }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
+    const value = e.target.value;
     if (/^-?\d*:?\d*$/.test(value)) {
-      setLocalValue(value)
+      setLocalValue(value);
     }
-  }
+  };
 
   if (isEditing) {
     return (
@@ -91,15 +101,16 @@ export function EditableTime({
         className={`w-12 bg-white/50 border-b border-black focus:outline-none focus:border-blue-500 text-center rounded ${className}`}
         placeholder="0:00"
       />
-    )
+    );
   }
 
   return (
     <span
       onDoubleClick={handleDoubleClick}
+      onClick={isTouchDevice ? handleDoubleClick : undefined}
       className={`cursor-text ${disabled ? "" : "hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors"} ${className}`}
     >
       {localValue}
     </span>
-  )
+  );
 }
