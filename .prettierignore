@@ -1,0 +1,6 @@
+node_modules
+.next
+public
+bun.lockb
+package-lock.json
+*.md
