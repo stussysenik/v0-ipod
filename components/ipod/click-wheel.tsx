@@ -10,7 +10,6 @@ interface ClickWheelProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
-  exportMode?: boolean;
 }
 
 export function ClickWheel({
@@ -20,15 +19,12 @@ export function ClickWheel({
   className,
   style,
   disabled = false,
-  exportMode = false,
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
-  const wheelShadow = exportMode
-    ? "0 1px 5px rgba(0,0,0,0.06), inset 0 1px 2px rgba(255,255,255,0.55)"
-    : "0 2px 8px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,0.6)";
-  const centerShadow = exportMode
-    ? "0 1px 4px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.95)"
-    : "0 2px 5px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1)";
+  const wheelShadow =
+    "0 2px 8px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,0.6)";
+  const centerShadow =
+    "0 2px 5px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1)";
 
   useEffect(() => {
     const wheel = wheelRef.current;

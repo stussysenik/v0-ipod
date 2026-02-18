@@ -294,7 +294,6 @@ export default function IPodClassic() {
       playClick={playClick}
       onSeek={handleSeek}
       disabled={!isFlatView}
-      exportMode={isExportCapturing}
     />
   );
 
@@ -583,9 +582,8 @@ export default function IPodClassic() {
             className="relative w-[370px] h-[620px] rounded-[36px] transition-all duration-300 flex flex-col items-center justify-between p-6"
             style={{
               backgroundColor: skinColor,
-              boxShadow: isExportCapturing
-                ? "0 20px 36px -20px rgba(0,0,0,0.20), 0 9px 16px -12px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.05)"
-                : "0 30px 54px -24px rgba(0,0,0,0.26), 0 14px 24px -16px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)",
+              boxShadow:
+                "0 30px 54px -24px rgba(0,0,0,0.26), 0 14px 24px -16px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)",
             }}
           >
             {/* SCREEN AREA */}
