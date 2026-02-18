@@ -632,8 +632,11 @@ export async function exportImage(
   const { filename, backgroundColor, pixelRatio, onStatusChange } = options;
   const capabilities = detectExportCapabilities();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-  // Only open a fallback popup on mobile where synthetic clicks may be blocked.
-  const preparedPopup = capabilities.isMobile ? openPreparedPopupWindow() : null;
+  // Only open a fallback popup on non-iOS mobile (e.g. Android) where synthetic
+  // clicks may be blocked. iOS uses Web Share API natively; opening a popup on
+  // iOS Safari creates a stuck about:blank tab.
+  const preparedPopup =
+    capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
   let keepPreparedPopupOpen = false;
 
   onStatusChange?.("preparing");
@@ -747,7 +750,7 @@ export async function exportImage(
       }
     }
 
-    // Method 2: Blob URL download (desktop)
+    // Method 2: Blob URL download (desktop / non-iOS mobile)
     if (blob) {
       const downloadResult = downloadImageBlobWithOptions(blob, filename, {
         allowSyntheticClick: useSyntheticDownload,
@@ -784,7 +787,41 @@ export async function exportImage(
       console.error("Data URL fallback failed:", error);
     }
 
-    // Method 4: Manual instructions (ultimate fallback)
+    // Method 4: iOS long-press fallback — show the image in a full-screen
+    // overlay so the user can long-press → "Save Image".
+    if (capabilities.isIOS && blob) {
+      try {
+        const url = URL.createObjectURL(blob);
+        const overlay = document.createElement("div");
+        overlay.style.cssText =
+          "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);" +
+          "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
+          "padding:16px;-webkit-tap-highlight-color:transparent";
+        overlay.innerHTML =
+          `<p style="color:#fff;font:600 15px/1.4 system-ui;margin:0 0 12px;text-align:center">` +
+          `Long-press the image and tap <b>Save Image</b></p>` +
+          `<img src="${url}" style="max-width:100%;max-height:75vh;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.5)" alt="Export">` +
+          `<button style="margin-top:16px;padding:10px 28px;border:none;border-radius:20px;` +
+          `background:#fff;color:#000;font:600 15px system-ui;cursor:pointer">Close</button>`;
+        overlay.querySelector("button")!.addEventListener("click", () => {
+          overlay.remove();
+          URL.revokeObjectURL(url);
+        });
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) {
+            overlay.remove();
+            URL.revokeObjectURL(url);
+          }
+        });
+        document.body.appendChild(overlay);
+        onStatusChange?.("success");
+        return { success: true, method: "dataurl" };
+      } catch (error) {
+        console.warn("iOS inline image fallback failed:", error);
+      }
+    }
+
+    // Method 5: Manual instructions (ultimate fallback)
     onStatusChange?.("error");
     return {
       success: false,
