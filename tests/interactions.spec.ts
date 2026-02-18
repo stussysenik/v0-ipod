@@ -18,14 +18,10 @@ test.describe("Core interactions remain usable", () => {
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
     await page.getByTestId("three-d-view-button").click();
-    await expect(
-      page.getByRole("button", { name: "Export 3D Render" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
 
     await page.getByTestId("flat-view-button").click();
-    await expect(
-      page.getByRole("button", { name: "Export 2D Image" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
   });
 
   test("image upload updates artwork preview", async ({ page }) => {
@@ -38,9 +34,7 @@ test.describe("Core interactions remain usable", () => {
     });
   });
 
-  test("custom color picker flow saves case colors to localStorage", async ({
-    page,
-  }) => {
+  test("custom color picker flow saves case colors to localStorage", async ({ page }) => {
     const caseColorInput = page.getByTestId("case-color-input");
     await caseColorInput.evaluate((el) => {
       const input = el as HTMLInputElement;
@@ -55,16 +49,63 @@ test.describe("Core interactions remain usable", () => {
 
     await expect
       .poll(async () =>
-        page.evaluate(
-          () => localStorage.getItem("ipodSnapshotCaseCustomColors") || "",
-        ),
+        page.evaluate(() => localStorage.getItem("ipodSnapshotCaseCustomColors") || ""),
       )
       .toContain("#123ABC");
   });
 
-  test("remaining-first timing keeps progress proportionate", async ({
+  test("load snapshot applies test image/data and persists after reload", async ({
     page,
   }) => {
+    await page.getByTestId("theme-button").click();
+    await page.getByTestId("load-song-snapshot-button").click();
+
+    await expect(page.getByText("Have A Destination?")).toBeVisible();
+    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+      "src",
+      /mac-miller-test\.jpg/,
+    );
+    await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
+
+    await page.reload();
+    await expect(page.getByText("Have A Destination?")).toBeVisible();
+    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+      "src",
+      /mac-miller-test\.jpg/,
+    );
+    await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
+  });
+
+  test("save snapshot stores edited data and load restores it", async ({ page }) => {
+    await page.getByText("Have A Destination?").dblclick();
+    const titleInput = page.locator('input[type="text"]').first();
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill("Snapshot QA");
+    await titleInput.press("Enter");
+    await expect(page.getByText("Snapshot QA")).toBeVisible();
+
+    await page.getByTestId("theme-button").click();
+    await page.getByTestId("save-song-snapshot-button").click();
+    await page.getByTestId("theme-button").click();
+
+    await page.getByText("Snapshot QA").dblclick();
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill("Temp Value");
+    await titleInput.press("Enter");
+    await expect(page.getByText("Temp Value")).toBeVisible();
+
+    await page.getByTestId("theme-button").click();
+    await page.getByTestId("load-song-snapshot-button").click();
+    await expect(page.getByText("Snapshot QA")).toBeVisible();
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => localStorage.getItem("ipodSnapshotSongSnapshot") ?? ""),
+      )
+      .toContain("Snapshot QA");
+  });
+
+  test("remaining-first timing keeps progress proportionate", async ({ page }) => {
     const remaining = page.getByTestId("remaining-time").locator("span");
     await remaining.dblclick();
     const remainingInput = page
@@ -78,9 +119,7 @@ test.describe("Core interactions remain usable", () => {
 
     const elapsed = page.getByTestId("elapsed-time").locator("span");
     await elapsed.dblclick();
-    const elapsedInput = page
-      .getByTestId("elapsed-time")
-      .locator('input[type="text"]');
+    const elapsedInput = page.getByTestId("elapsed-time").locator('input[type="text"]');
     await expect(elapsedInput).toBeVisible();
     await elapsedInput.fill("0:30");
     await elapsedInput.press("Enter");

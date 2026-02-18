@@ -148,8 +148,8 @@ async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
 
 function createDetachedExportNode(element: HTMLElement): HTMLElement {
   const rect = element.getBoundingClientRect();
-  const width = Math.ceil(rect.width || element.offsetWidth || 1);
-  const height = Math.ceil(rect.height || element.offsetHeight || 1);
+  const width = Math.ceil(element.offsetWidth || rect.width || 1);
+  const height = Math.ceil(element.offsetHeight || rect.height || 1);
   const clone = element.cloneNode(true) as HTMLElement;
 
   clone.setAttribute("aria-hidden", "true");
@@ -163,6 +163,8 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   clone.style.maxWidth = "none";
   clone.style.maxHeight = "none";
   clone.style.overflow = "visible";
+  clone.style.transform = "none";
+  clone.style.transformOrigin = "top left";
   clone.setAttribute(EXPORT_ATTRIBUTE, "true");
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
@@ -565,10 +567,9 @@ export async function shareImageFile(blob: Blob, filename: string): Promise<bool
     await navigator.share(shareData);
     return true;
   } catch (error) {
-    // User cancelled share or share failed
+    // If share was cancelled, allow download fallback.
     if (error instanceof Error && error.name === "AbortError") {
-      // User cancelled - this is still a "success" in that we tried
-      return true;
+      return false;
     }
     throw error;
   }
@@ -677,7 +678,7 @@ function downloadImageDataUrlWithOptions(
  * Main export orchestrator - handles all platforms with fallback chain
  *
  * Fallback Chain:
- * 1. Web Share API with File (all platforms) → native share sheet
+ * 1. Web Share API with File (mobile) → native share sheet
  * 2. Blob URL download (Desktop) → direct download
  * 3. Data URL download (Legacy) → old method
  * 4. Manual instructions (Ultimate fallback)
@@ -753,7 +754,11 @@ export async function exportImage(
     // Fallback to live element capture if detached capture failed.
     if (!blob) {
       try {
-        blob = await captureToBlob(element, { backgroundColor, pixelRatio }, capabilities);
+        blob = await captureToBlob(
+          element,
+          { backgroundColor, pixelRatio },
+          capabilities,
+        );
         if (blob && (await isLikelyBlankCapture(blob))) {
           console.warn("Live-element capture looked blank");
           blob = null;
@@ -795,13 +800,13 @@ export async function exportImage(
       }
     }
 
-    // Final retry from detached node with slightly lower pixel ratio for fragile browsers.
+    // Final retry from detached node with a conservative-but-sharp ratio.
     if (!blob) {
       try {
         const detachedNode = await ensureDetachedExportNode();
         blob = await captureToBlob(
           detachedNode,
-          { backgroundColor, pixelRatio: Math.min(pixelRatio ?? 4, 2.5) },
+          { backgroundColor, pixelRatio: Math.min(pixelRatio ?? 4, 3) },
           capabilities,
         );
         if (blob && (await isLikelyBlankCapture(blob))) {
@@ -814,7 +819,7 @@ export async function exportImage(
     }
 
     // Method 1: Web Share API (triggers native share sheet on all platforms)
-    if (blob && capabilities.canShareFiles) {
+    if (blob && capabilities.canShareFiles && capabilities.isMobile) {
       onStatusChange?.("sharing");
       try {
         const shared = await shareImageFile(blob, filename);

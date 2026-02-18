@@ -27,10 +27,7 @@ export function EditableTime({
     [isRemaining],
   );
 
-  const displayValue = useMemo(
-    () => formatTime(Math.abs(value)),
-    [formatTime, value],
-  );
+  const displayValue = useMemo(() => formatTime(Math.abs(value)), [formatTime, value]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(displayValue);
@@ -38,16 +35,13 @@ export function EditableTime({
 
   const isTouchDevice = useMemo(() => {
     if (typeof window === "undefined") return false;
-    return (
-      window.matchMedia("(pointer: coarse)").matches ||
-      navigator.maxTouchPoints > 0
-    );
+    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
   }, []);
 
-  // Sync local value when not editing and prop changes
-  if (!isEditing && localValue !== displayValue) {
+  useEffect(() => {
+    if (isEditing) return;
     setLocalValue(displayValue);
-  }
+  }, [displayValue, isEditing]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

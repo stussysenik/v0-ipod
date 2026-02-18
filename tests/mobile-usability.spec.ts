@@ -20,14 +20,10 @@ test.describe("Mobile usability", () => {
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
     await page.getByTestId("three-d-view-button").tap();
-    await expect(
-      page.getByRole("button", { name: "Export 3D Render" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
 
     await page.getByTestId("flat-view-button").tap();
-    await expect(
-      page.getByRole("button", { name: "Export 2D Image" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
   });
 
   test("mobile upload opens immediate file path and updates artwork", async ({
@@ -57,5 +53,20 @@ test.describe("Mobile usability", () => {
 
     await page.touchscreen.tap(box.x + box.width * 0.7, box.y + box.height / 2);
     await expect(page.getByTestId("elapsed-time")).not.toContainText("0:00");
+  });
+
+  test("mobile load snapshot applies persisted artwork data", async ({ page }) => {
+    await page.getByTestId("theme-button").tap();
+    await page.getByTestId("load-song-snapshot-button").tap();
+    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+      "src",
+      /mac-miller-test\.jpg/,
+    );
+
+    await page.reload();
+    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+      "src",
+      /mac-miller-test\.jpg/,
+    );
   });
 });

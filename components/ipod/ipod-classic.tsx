@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useRef, useCallback, useState, useEffect } from "react";
+import { useReducer, useRef, useCallback, useState, useEffect, useMemo } from "react";
 import {
   Settings,
   Box,
@@ -13,7 +13,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportImage, type ExportStatus } from "@/lib/export-utils";
-import { loadMetadata, saveMetadata } from "@/lib/storage";
+import {
+  loadMetadata,
+  saveMetadata,
+  loadUiState,
+  saveUiState,
+  type IpodViewMode,
+  loadSongSnapshot,
+  saveSongSnapshot,
+  type SongSnapshot,
+} from "@/lib/storage";
+import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
 import placeholderLogo from "@/public/placeholder-logo.png";
 import { IconButton } from "@/components/ui/icon-button";
 import { ThreeDIpod } from "@/components/three/three-d-ipod";
@@ -45,6 +55,11 @@ const BG_COLOR_PRESETS = [
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
 const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
 const MAX_CUSTOM_COLORS = 6;
+const SHELL_WIDTH = 370;
+const SHELL_HEIGHT = 620;
+const SHELL_PADDING = 48;
+const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
+const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 
 const initialState: SongMetadata = {
   title: "Have A Destination?",
@@ -110,6 +125,7 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
 export default function IPodClassic() {
   const [state, dispatch] = useReducer(songReducer, initialState);
   const hasRestoredRef = useRef(false);
+  const hasRestoredUiRef = useRef(false);
 
   // Hydration-safe: restore persisted metadata after mount
   useEffect(() => {
@@ -123,7 +139,7 @@ export default function IPodClassic() {
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
 
   // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
-  const [viewMode, setViewMode] = useState<"flat" | "3d" | "focus">("flat");
+  const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
 
   // Customization State
   const [skinColor, setSkinColor] = useState(CASE_COLOR_PRESETS[0].value);
@@ -132,6 +148,7 @@ export default function IPodClassic() {
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
   const [isExportCapturing, setIsExportCapturing] = useState(false);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const isFlatView = viewMode === "flat";
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -144,11 +161,50 @@ export default function IPodClassic() {
     audioRef.current = new Audio(CLICK_SOUND);
   }, []);
 
+  useEffect(() => {
+    const readViewport = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    readViewport();
+    window.addEventListener("resize", readViewport, { passive: true });
+    window.addEventListener("orientationchange", readViewport, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", readViewport);
+      window.removeEventListener("orientationchange", readViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (hasRestoredUiRef.current) return;
+    hasRestoredUiRef.current = true;
+    const savedUi = loadUiState();
+    if (!savedUi) return;
+    if (savedUi.skinColor) {
+      setSkinColor(savedUi.skinColor);
+    }
+    if (savedUi.bgColor) {
+      setBgColor(savedUi.bgColor);
+    }
+    if (savedUi.viewMode) {
+      setViewMode(savedUi.viewMode);
+    }
+  }, []);
+
   // Persist song metadata on every change (skip until restored)
   useEffect(() => {
     if (!hasRestoredRef.current) return;
     saveMetadata(state);
   }, [state]);
+
+  useEffect(() => {
+    if (!hasRestoredUiRef.current) return;
+    saveUiState({ skinColor, bgColor, viewMode });
+  }, [skinColor, bgColor, viewMode]);
 
   useEffect(() => {
     if (isFlatView) return;
@@ -234,6 +290,9 @@ export default function IPodClassic() {
     setIsExportCapturing(true);
 
     try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
       console.info("[export] starting flat export", { filename });
       const result = await exportImage(exportTargetRef.current, {
         filename,
@@ -285,16 +344,12 @@ export default function IPodClassic() {
       state={state}
       dispatch={dispatch}
       playClick={playClick}
-      isEditable={isFlatView}
+      isEditable={isFlatView && !isExportCapturing}
     />
   );
 
   const wheelComponent = (
-    <ClickWheel
-      playClick={playClick}
-      onSeek={handleSeek}
-      disabled={!isFlatView}
-    />
+    <ClickWheel playClick={playClick} onSeek={handleSeek} disabled={!isFlatView} />
   );
 
   const saveCustomColor = useCallback((target: "case" | "bg", rawColor: string) => {
@@ -329,10 +384,74 @@ export default function IPodClassic() {
     setShowSettings(false);
   }, []);
 
+  const applySongSnapshot = useCallback((snapshot: SongSnapshot) => {
+    dispatch({ type: "RESTORE_ALL", payload: snapshot.metadata });
+    setSkinColor(snapshot.ui.skinColor);
+    setBgColor(snapshot.ui.bgColor);
+    setViewMode(snapshot.ui.viewMode);
+    setShowSettings(false);
+  }, []);
+
+  const handleSaveSnapshot = useCallback(() => {
+    playClick();
+    saveSongSnapshot({
+      metadata: state,
+      ui: { skinColor, bgColor, viewMode },
+    });
+    toast.success("Snapshot saved", {
+      description: "You can load this exact state from the snapshot panel.",
+    });
+  }, [playClick, state, skinColor, bgColor, viewMode]);
+
+  const handleLoadSnapshot = useCallback(() => {
+    playClick();
+    const persisted = loadSongSnapshot();
+    if (persisted) {
+      applySongSnapshot(persisted);
+      toast.success("Snapshot loaded");
+      return;
+    }
+
+    applySongSnapshot(TEST_SONG_SNAPSHOT);
+    saveSongSnapshot(TEST_SONG_SNAPSHOT);
+    toast.success("Loaded test snapshot", {
+      description: "Sample data and artwork were applied and saved.",
+    });
+  }, [applySongSnapshot, playClick]);
+
+  const previewScale = useMemo(() => {
+    if (isExportCapturing || viewportSize.width === 0 || viewportSize.height === 0) {
+      return 1;
+    }
+
+    const toolbarReserve = viewportSize.width >= 768 ? 112 : 24;
+    const availableWidth = Math.max(viewportSize.width - toolbarReserve, 260);
+    const availableHeight = Math.max(viewportSize.height - 24, 320);
+    const fitScale = Math.min(
+      availableWidth / PREVIEW_FRAME_WIDTH,
+      availableHeight / PREVIEW_FRAME_HEIGHT,
+      1,
+    );
+
+    if (viewMode === "focus") {
+      const maxScale = Math.min(
+        availableWidth / PREVIEW_FRAME_WIDTH,
+        availableHeight / PREVIEW_FRAME_HEIGHT,
+        1.28,
+      );
+      return Math.min(maxScale, fitScale * 1.3);
+    }
+
+    return fitScale;
+  }, [isExportCapturing, viewportSize.width, viewportSize.height, viewMode]);
+
+  const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
+  const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
+
   return (
     <div
       ref={containerRef}
-      className="min-h-screen flex flex-col items-center justify-center p-4 transition-colors duration-500 overflow-hidden"
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-4 py-6 sm:p-6 transition-colors duration-500 overflow-hidden"
       style={{ backgroundColor: bgColor }}
     >
       {/* Persistent color inputs so native picker stays alive even when UI hides */}
@@ -489,6 +608,30 @@ export default function IPodClassic() {
                   </div>
                 </div>
               )}
+
+              <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
+                <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                  Snapshot
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    data-testid="load-song-snapshot-button"
+                    onClick={handleLoadSnapshot}
+                    className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                  >
+                    Load Snapshot
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="save-song-snapshot-button"
+                    onClick={handleSaveSnapshot}
+                    className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                  >
+                    Save Snapshot
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -565,33 +708,47 @@ export default function IPodClassic() {
 
       {/* 2D / EXPORT MODE */}
       <div
-        className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none absolute"}`}
-        style={{
-          transform: viewMode === "focus" ? "scale(1.5)" : undefined,
-        }}
+        className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
       >
         <div
-          ref={exportTargetRef}
-          data-export-shell={isExportCapturing ? "true" : "false"}
-          className="p-12"
+          className="relative"
           style={{
-            backgroundColor: isExportCapturing ? bgColor : "transparent",
+            width: `${scaledFrameWidth}px`,
+            height: `${scaledFrameHeight}px`,
           }}
         >
           <div
-            className="relative w-[370px] h-[620px] rounded-[36px] transition-all duration-300 flex flex-col items-center justify-between p-6"
+            className="origin-top-left"
             style={{
-              backgroundColor: skinColor,
-              boxShadow:
-                "0 30px 54px -24px rgba(0,0,0,0.26), 0 14px 24px -16px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.07)",
+              width: `${PREVIEW_FRAME_WIDTH}px`,
+              height: `${PREVIEW_FRAME_HEIGHT}px`,
+              transform: `scale(${previewScale})`,
             }}
           >
-            {/* SCREEN AREA */}
-            <div className="w-full">{screenComponent}</div>
+            <div
+              ref={exportTargetRef}
+              data-export-shell={isExportCapturing ? "true" : "false"}
+              className="p-12"
+              style={{
+                backgroundColor: isExportCapturing ? bgColor : "transparent",
+              }}
+            >
+              <div
+                className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
+                style={{
+                  backgroundColor: skinColor,
+                  boxShadow:
+                    "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)",
+                }}
+              >
+                {/* SCREEN AREA */}
+                <div className="w-full">{screenComponent}</div>
 
-            {/* CONTROL AREA */}
-            <div className="flex-1 flex items-center justify-center relative -mt-4">
-              {wheelComponent}
+                {/* CONTROL AREA */}
+                <div className="flex-1 flex items-center justify-center relative -mt-4">
+                  {wheelComponent}
+                </div>
+              </div>
             </div>
           </div>
         </div>

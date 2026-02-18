@@ -53,11 +53,11 @@ export function IpodScreen({
   );
 
   return (
-    <div className="w-[322px] h-[240px] bg-black rounded-lg p-[2px] mx-auto shadow-inner z-10 shrink-0 relative group">
-      <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#555]">
+    <div className="w-[322px] h-[240px] bg-black rounded-[10px] p-[2px] mx-auto z-10 shrink-0 relative shadow-[0_3px_0_rgba(0,0,0,0.84),0_1px_5px_rgba(0,0,0,0.32)]">
+      <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#525252]">
         {/* STATUS BAR */}
-        <div className="h-[20px] bg-gradient-to-b from-[#EEE] to-[#CCC] border-b border-[#999] flex items-center justify-between px-2">
-          <div className="flex items-center gap-1 text-[10px] font-bold text-black/80">
+        <div className="h-[20px] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD] border-b border-[#9B9B9B] flex items-center justify-between px-2">
+          <div className="flex items-center gap-1 text-[10px] font-bold tracking-tight text-black/80">
             <span className="text-blue-600">▶</span> Now Playing
           </div>
           <Battery className="w-4 h-3 text-black opacity-60" />
@@ -67,7 +67,7 @@ export function IpodScreen({
         <div className="flex h-[180px]">
           {/* LEFT: ARTWORK */}
           <div className="w-[140px] h-full p-3 flex flex-col justify-start items-center">
-            <div className="w-[114px] h-[114px] bg-[#EEE] shadow-md border border-[#999] relative group cursor-pointer transition-transform active:scale-95">
+            <div className="w-[114px] h-[114px] bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98] shadow-[0_6px_12px_-8px_rgba(0,0,0,0.42)]">
               <ImageUpload
                 currentImage={state.artwork}
                 onImageChange={(artwork) => {
@@ -78,8 +78,6 @@ export function IpodScreen({
                 disabled={!isEditable}
                 className="w-full h-full object-cover"
               />
-              {/* Reflection */}
-              <div className="absolute -bottom-[20%] left-0 right-0 h-[20%] bg-gradient-to-b from-white/30 to-transparent transform scale-y-[-1] opacity-30 pointer-events-none" />
             </div>
           </div>
 
@@ -87,7 +85,7 @@ export function IpodScreen({
           <div className="flex-1 pt-6 pr-2 overflow-hidden flex flex-col items-start text-left z-20">
             {/* Title */}
             <div className="w-full mb-1 relative z-20">
-              <div className="text-[14px] font-bold text-black leading-tight">
+              <div className="text-[14px] font-bold text-black tracking-[0.01em] leading-tight">
                 <EditableText
                   value={state.title}
                   onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
@@ -99,7 +97,7 @@ export function IpodScreen({
 
             {/* Artist */}
             <div className="w-full mb-1 relative z-20">
-              <div className="text-[12px] font-semibold text-[#555] leading-tight">
+              <div className="text-[12px] font-semibold text-[#595959] leading-tight">
                 <EditableText
                   value={state.artist}
                   onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
@@ -111,7 +109,7 @@ export function IpodScreen({
 
             {/* Album */}
             <div className="w-full mb-3 relative z-20">
-              <div className="text-[12px] font-medium text-[#777] leading-tight">
+              <div className="text-[12px] font-medium text-[#757575] leading-tight">
                 <EditableText
                   value={state.album}
                   onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
@@ -122,7 +120,7 @@ export function IpodScreen({
             </div>
 
             {/* Meta */}
-            <div className="text-[10px] text-[#888] mb-1">
+            <div className="text-[10px] text-[#868686] mb-1">
               <EditableTrackNumber
                 trackNumber={state.trackNumber}
                 totalTracks={state.totalTracks}
@@ -163,7 +161,7 @@ export function IpodScreen({
             }}
             disabled={!isEditable}
           />
-          <div className="flex justify-between items-center mt-0.5 text-[11px] font-semibold text-black font-mono">
+          <div className="flex justify-between items-center mt-0.5 text-[11px] font-semibold tracking-tight text-black font-mono">
             <div data-testid="elapsed-time">
               <EditableTime
                 value={state.currentTime}

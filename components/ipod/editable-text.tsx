@@ -22,16 +22,13 @@ export function EditableText({
 
   const isTouchDevice = useMemo(() => {
     if (typeof window === "undefined") return false;
-    return (
-      window.matchMedia("(pointer: coarse)").matches ||
-      navigator.maxTouchPoints > 0
-    );
+    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
   }, []);
 
-  // Sync local value when not editing and prop changes
-  if (!isEditing && localValue !== value) {
+  useEffect(() => {
+    if (isEditing) return;
     setLocalValue(value);
-  }
+  }, [value, isEditing]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -89,9 +86,7 @@ export function EditableText({
       onDoubleClick={handleDoubleClick}
       onClick={isTouchDevice ? handleDoubleClick : undefined}
       className={`block w-full break-words rounded px-0.5 -mx-0.5 transition-colors ${
-        disabled
-          ? "cursor-default"
-          : "cursor-text hover:bg-black/5 hover:text-blue-900"
+        disabled ? "cursor-default" : "cursor-text hover:bg-black/5 hover:text-blue-900"
       } ${className}`}
     >
       {value}

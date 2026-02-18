@@ -22,9 +22,9 @@ export function ClickWheel({
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelShadow =
-    "0 2px 8px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,0.6)";
+    "0 22px 30px -24px rgba(0,0,0,0.46), 0 8px 16px -18px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
   const centerShadow =
-    "0 2px 5px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,1)";
+    "0 10px 14px -12px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -98,31 +98,54 @@ export function ClickWheel({
     >
       {/* Wheel Surface - Clean Matte Look */}
       <div
-        className="absolute inset-0 rounded-full bg-[#F5F5F5]"
+        className="absolute inset-0 rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#F0F0F0]"
         style={{ boxShadow: wheelShadow }}
       >
+        {/* Subtle analog sheen and bevel */}
+        <div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 32% 24%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.24) 34%, rgba(0,0,0,0.04) 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-[1px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "conic-gradient(from 225deg, rgba(0,0,0,0.05), rgba(255,255,255,0.1), rgba(0,0,0,0.02), rgba(255,255,255,0.08), rgba(0,0,0,0.05))",
+            mixBlendMode: "soft-light",
+            opacity: 0.45,
+          }}
+        />
+        <div className="absolute inset-[3px] rounded-full border border-white/65 pointer-events-none" />
+        <div className="absolute inset-[31%] rounded-full border border-black/[0.045] pointer-events-none" />
+
         {/* Button Labels */}
-        <div className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold text-[#CCC] tracking-widest uppercase pointer-events-none font-sans">
+        <div className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold text-[#C7C7C7] tracking-widest uppercase pointer-events-none font-sans">
           Menu
         </div>
 
         {/* Play/Pause Button - Adjusted SVG to fix overlap */}
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 text-[#CCC] pointer-events-none flex gap-1 items-center">
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 text-[#C7C7C7] pointer-events-none flex gap-1 items-center">
           <Play className="w-4 h-4 fill-current" />
           <Pause className="w-4 h-4 fill-current" />
         </div>
 
-        <div className="absolute left-[12%] top-1/2 -translate-y-1/2 text-[#CCC] pointer-events-none">
+        <div className="absolute left-[12%] top-1/2 -translate-y-1/2 text-[#C7C7C7] pointer-events-none">
           <SkipBack className="w-5 h-5 fill-current" />
         </div>
-        <div className="absolute right-[12%] top-1/2 -translate-y-1/2 text-[#CCC] pointer-events-none">
+        <div className="absolute right-[12%] top-1/2 -translate-y-1/2 text-[#C7C7C7] pointer-events-none">
           <SkipForward className="w-5 h-5 fill-current" />
         </div>
       </div>
 
+      {/* Center halo ring */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[96px] h-[96px] rounded-full border border-black/[0.05] pointer-events-none" />
+
       {/* Center Button */}
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] rounded-full bg-linear-to-b from-white to-[#F0F0F0] transition-transform z-20 border border-[#EBEBEB] ${
+        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#ECECEC] transition-transform z-20 border border-[#E6E6E6] ${
           disabled ? "cursor-default" : "active:scale-95 cursor-pointer"
         }`}
         style={{ boxShadow: centerShadow }}
@@ -132,7 +155,17 @@ export function ClickWheel({
           playClick();
           onCenterClick && onCenterClick();
         }}
-      />
+      >
+        <div
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0) 44%)",
+            boxShadow:
+              "inset 2px 2px 4px rgba(255,255,255,0.75), inset -2px -2px 4px rgba(0,0,0,0.035)",
+          }}
+        />
+      </div>
     </div>
   );
 }
