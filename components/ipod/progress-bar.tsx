@@ -7,12 +7,14 @@ interface ProgressBarProps {
   currentTime: number;
   duration: number;
   onSeek: (time: number) => void;
+  disabled?: boolean;
 }
 
 export function ProgressBar({
   currentTime,
   duration,
   onSeek,
+  disabled = false,
 }: ProgressBarProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [activePointerId, setActivePointerId] = useState<number | null>(null);
@@ -31,6 +33,7 @@ export function ProgressBar({
   );
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
     setIsDragging(true);
     setActivePointerId(e.pointerId);
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -38,11 +41,13 @@ export function ProgressBar({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
     if (!isDragging || activePointerId !== e.pointerId) return;
     handleDrag(e.clientX);
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
     if (activePointerId !== e.pointerId) return;
     setIsDragging(false);
     setActivePointerId(null);
@@ -50,6 +55,7 @@ export function ProgressBar({
   };
 
   const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
     if (activePointerId !== e.pointerId) return;
     setIsDragging(false);
     setActivePointerId(null);
@@ -57,17 +63,16 @@ export function ProgressBar({
   };
 
   const safeDuration = Math.max(duration, 1);
-  const progress = Math.min(
-    Math.max((currentTime / safeDuration) * 100, 0),
-    100,
-  );
+  const progress = Math.min(Math.max((currentTime / safeDuration) * 100, 0), 100);
 
   return (
     <div className="w-full">
       <div
         ref={progressRef}
         data-testid="progress-track"
-        className="relative w-full h-[10px] bg-white border border-[#999] shadow-inner cursor-pointer overflow-hidden rounded-[2px]"
+        className={`relative w-full h-[10px] bg-white border border-[#999] shadow-inner overflow-hidden rounded-[2px] ${
+          disabled ? "cursor-default" : "cursor-pointer"
+        }`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

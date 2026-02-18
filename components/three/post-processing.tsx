@@ -29,10 +29,7 @@ export function PostProcessing({
         modulationOffset={0.2}
       />
       {/* Keep grain almost invisible for clean industrial renders */}
-      <Noise
-        opacity={exportMode ? 0.01 : 0.008}
-        blendFunction={BlendFunction.OVERLAY}
-      />
+      <Noise opacity={exportMode ? 0.01 : 0.008} blendFunction={BlendFunction.OVERLAY} />
       {/* Softer vignette for gentle edge falloff */}
       <Vignette offset={0.2} darkness={exportMode ? 0.18 : 0.14} />
     </EffectComposer>

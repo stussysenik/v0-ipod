@@ -7,17 +7,20 @@ interface ImageUploadProps {
   currentImage: string;
   onImageChange: (image: string) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function ImageUpload({
   currentImage,
   onImageChange,
   className = "",
+  disabled = false,
 }: ImageUploadProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -41,14 +44,15 @@ export function ImageUpload({
       <label
         htmlFor={inputId}
         role="button"
-        tabIndex={0}
+        tabIndex={disabled ? -1 : 0}
         onKeyDown={(e) => {
+          if (disabled) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             inputRef.current?.click();
           }
         }}
-        className={`cursor-pointer touch-manipulation ${className}`}
+        className={`${disabled ? "cursor-default" : "cursor-pointer"} touch-manipulation ${className}`}
       >
         <img
           src={currentImage || placeholderLogo.src}
@@ -64,6 +68,7 @@ export function ImageUpload({
         type="file"
         accept="image/*"
         onChange={handleChange}
+        disabled={disabled}
         data-testid="artwork-input"
         aria-hidden="true"
         tabIndex={-1}

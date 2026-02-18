@@ -38,12 +38,7 @@ interface IpodModelProps extends Omit<ThreeDIpodProps, "onReady"> {
   onRegisterReset?: (fn: () => void) => void;
 }
 
-function IpodModel({
-  screen,
-  wheel,
-  skinColor,
-  onRegisterReset,
-}: IpodModelProps) {
+function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps) {
   const meshRef = useRef<THREE.Group>(null);
   const screenGroupRef = useRef<THREE.Group>(null);
 
@@ -268,11 +263,7 @@ function IpodModel({
 
             {/* 3c. Screen glass tuned for subtle realism and minimal artifacts */}
             <group position={[0, 0, z.screenGlass]}>
-              <RoundedBox
-                args={[3.25, 2.45, 0.02]}
-                radius={0.05}
-                smoothness={4}
-              >
+              <RoundedBox args={[3.25, 2.45, 0.02]} radius={0.05} smoothness={4}>
                 <MeshTransmissionMaterial
                   transmission={0.97}
                   thickness={0.025}
@@ -353,10 +344,7 @@ function SceneCapture({
   const { gl, scene, camera } = useThree();
 
   useEffect(() => {
-    const captureHighRes = async (
-      width = 4096,
-      height = 4096,
-    ): Promise<Blob | null> => {
+    const captureHighRes = async (width = 4096, height = 4096): Promise<Blob | null> => {
       // Store original size
       const originalSize = new THREE.Vector2();
       gl.getSize(originalSize);
@@ -448,162 +436,160 @@ interface ThreeDIpodInternalProps extends ThreeDIpodProps {
   >;
 }
 
-export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
-  (props, ref) => {
-    const { onReady, ...modelProps } = props;
-    const captureRef = useRef<
-      ((w?: number, h?: number) => Promise<Blob | null>) | null
-    >(null);
-    const modelResetRef = useRef<(() => void) | null>(null);
+export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, ref) => {
+  const { onReady, ...modelProps } = props;
+  const captureRef = useRef<((w?: number, h?: number) => Promise<Blob | null>) | null>(
+    null,
+  );
+  const modelResetRef = useRef<(() => void) | null>(null);
 
-    useImperativeHandle(ref, () => ({
-      captureHighRes: async (width?: number, height?: number) => {
-        if (captureRef.current) {
-          return captureRef.current(width, height);
-        }
-        return null;
-      },
-    }));
+  useImperativeHandle(ref, () => ({
+    captureHighRes: async (width?: number, height?: number) => {
+      if (captureRef.current) {
+        return captureRef.current(width, height);
+      }
+      return null;
+    },
+  }));
 
-    const handleCapture = useCallback(
-      (fn: (w?: number, h?: number) => Promise<Blob | null>) => {
-        captureRef.current = fn;
-      },
-      [],
-    );
+  const handleCapture = useCallback(
+    (fn: (w?: number, h?: number) => Promise<Blob | null>) => {
+      captureRef.current = fn;
+    },
+    [],
+  );
 
-    const handleRegisterReset = useCallback((fn: () => void) => {
-      modelResetRef.current = fn;
-    }, []);
+  const handleRegisterReset = useCallback((fn: () => void) => {
+    modelResetRef.current = fn;
+  }, []);
 
-    return (
-      <div className="w-full h-full min-h-screen absolute inset-0">
-        <Canvas
-          shadows
-          dpr={[1, 2]}
-          gl={{
-            antialias: true,
-            toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.0,
-            preserveDrawingBuffer: true, // Required for capture
-          }}
+  return (
+    <div className="w-full h-full min-h-screen absolute inset-0">
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        gl={{
+          antialias: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.0,
+          preserveDrawingBuffer: true, // Required for capture
+        }}
+      >
+        <PerspectiveCamera makeDefault position={[0, 0, 11]} fov={30} />
+
+        {/* Ambient base light */}
+        <ambientLight intensity={0.3} color="#eef1f5" />
+
+        {/* Key Light - 800 lumens equivalent per PDF Table 4 */}
+        <spotLight
+          position={[8, 12, 10]}
+          angle={0.3}
+          penumbra={1}
+          intensity={560}
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-bias={-0.0001}
+          color="#FFF5E0"
+        />
+
+        {/* Fill Light - Softer from left */}
+        <spotLight
+          position={[-10, 5, 8]}
+          angle={0.5}
+          penumbra={1}
+          intensity={150}
+          color="#e0f0ff"
+        />
+
+        {/* Rim Light - 1200 lumens per PDF Table 4 */}
+        <spotLight
+          position={[0, 2, -8]}
+          angle={0.6}
+          penumbra={1}
+          intensity={430}
+          color="#E0F0FF"
+        />
+
+        {/* Kicker light for edge highlights per PDF */}
+        <rectAreaLight
+          position={[5, 0, 0]}
+          intensity={180}
+          width={2}
+          height={10}
+          color="#FFE0C0"
+        />
+
+        {/* Subtle area light for screen illumination */}
+        <rectAreaLight
+          intensity={2.8}
+          position={[0, 1, 6]}
+          width={4}
+          height={3}
+          color="#c7d0c0"
+        />
+
+        {/* HDRI Environment with Lightformers for studio look per PDF Section 4.3 */}
+        <Environment
+          preset="studio"
+          blur={0.5}
+          background={false}
+          environmentIntensity={0.72}
         >
-          <PerspectiveCamera makeDefault position={[0, 0, 11]} fov={30} />
-
-          {/* Ambient base light */}
-          <ambientLight intensity={0.3} color="#eef1f5" />
-
-          {/* Key Light - 800 lumens equivalent per PDF Table 4 */}
-          <spotLight
-            position={[8, 12, 10]}
-            angle={0.3}
-            penumbra={1}
-            intensity={560}
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-            shadow-bias={-0.0001}
-            color="#FFF5E0"
+          {/* Top strip light for zebra effect on metal */}
+          <Lightformer
+            intensity={1.2}
+            position={[0, 10, 0]}
+            scale={[20, 0.5, 1]}
+            color="white"
           />
-
-          {/* Fill Light - Softer from left */}
-          <spotLight
-            position={[-10, 5, 8]}
-            angle={0.5}
-            penumbra={1}
-            intensity={150}
+          {/* Side softboxes */}
+          <Lightformer
+            intensity={0.9}
+            position={[5, 5, -5]}
+            scale={[10, 3, 1]}
+            color="white"
+          />
+          <Lightformer
+            intensity={0.7}
+            position={[-5, 3, -5]}
+            scale={[10, 3, 1]}
             color="#e0f0ff"
           />
-
-          {/* Rim Light - 1200 lumens per PDF Table 4 */}
-          <spotLight
-            position={[0, 2, -8]}
-            angle={0.6}
-            penumbra={1}
-            intensity={430}
-            color="#E0F0FF"
+          {/* Bottom fill for subtle reflection */}
+          <Lightformer
+            intensity={0.3}
+            position={[0, -5, 0]}
+            scale={[15, 2, 1]}
+            color="#f0f0f0"
           />
+        </Environment>
 
-          {/* Kicker light for edge highlights per PDF */}
-          <rectAreaLight
-            position={[5, 0, 0]}
-            intensity={180}
-            width={2}
-            height={10}
-            color="#FFE0C0"
-          />
+        <IpodModel {...modelProps} onRegisterReset={handleRegisterReset} />
 
-          {/* Subtle area light for screen illumination */}
-          <rectAreaLight
-            intensity={2.8}
-            position={[0, 1, 6]}
-            width={4}
-            height={3}
-            color="#c7d0c0"
-          />
+        {/* Enhanced contact shadows */}
+        <ContactShadows
+          resolution={2048}
+          scale={20}
+          blur={1.65}
+          opacity={0.42}
+          far={10}
+          color="#000000"
+          position={[0, -3.5, 0]}
+        />
 
-          {/* HDRI Environment with Lightformers for studio look per PDF Section 4.3 */}
-          <Environment
-            preset="studio"
-            blur={0.5}
-            background={false}
-            environmentIntensity={0.72}
-          >
-            {/* Top strip light for zebra effect on metal */}
-            <Lightformer
-              intensity={1.2}
-              position={[0, 10, 0]}
-              scale={[20, 0.5, 1]}
-              color="white"
-            />
-            {/* Side softboxes */}
-            <Lightformer
-              intensity={0.9}
-              position={[5, 5, -5]}
-              scale={[10, 3, 1]}
-              color="white"
-            />
-            <Lightformer
-              intensity={0.7}
-              position={[-5, 3, -5]}
-              scale={[10, 3, 1]}
-              color="#e0f0ff"
-            />
-            {/* Bottom fill for subtle reflection */}
-            <Lightformer
-              intensity={0.3}
-              position={[0, -5, 0]}
-              scale={[15, 2, 1]}
-              color="#f0f0f0"
-            />
-          </Environment>
+        {/* Post-processing effects per PDF Section 4.4 */}
+        <PostProcessing />
 
-          <IpodModel {...modelProps} onRegisterReset={handleRegisterReset} />
-
-          {/* Enhanced contact shadows */}
-          <ContactShadows
-            resolution={2048}
-            scale={20}
-            blur={1.65}
-            opacity={0.42}
-            far={10}
-            color="#000000"
-            position={[0, -3.5, 0]}
-          />
-
-          {/* Post-processing effects per PDF Section 4.4 */}
-          <PostProcessing />
-
-          {/* Scene capture for high-res exports */}
-          <SceneCapture
-            onCapture={handleCapture}
-            onReady={onReady}
-            modelResetRef={modelResetRef}
-          />
-        </Canvas>
-      </div>
-    );
-  },
-);
+        {/* Scene capture for high-res exports */}
+        <SceneCapture
+          onCapture={handleCapture}
+          onReady={onReady}
+          modelResetRef={modelResetRef}
+        />
+      </Canvas>
+    </div>
+  );
+});
 
 // Display name for debugging
 ThreeDIpod.displayName = "ThreeDIpod";

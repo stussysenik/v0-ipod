@@ -1,37 +1,35 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 
-interface EditableTimeProps {
+interface EditableDurationProps {
   value: number;
   onChange: (seconds: number) => void;
   className?: string;
-  disabled?: boolean;
-  isRemaining?: boolean;
 }
 
-export function EditableTime({
+export function EditableDuration({
   value,
   onChange,
   className = "",
-  disabled = false,
-  isRemaining = false,
-}: EditableTimeProps) {
-  const formatTime = (seconds: number) => {
+}: EditableDurationProps) {
+  const formatTime = useCallback((seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-    return `${isRemaining ? "-" : ""}${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  }, []);
+
+  const displayValue = useMemo(() => formatTime(value), [formatTime, value]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const [localValue, setLocalValue] = useState(formatTime(Math.abs(value)));
+  const [localValue, setLocalValue] = useState(displayValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setLocalValue(formatTime(Math.abs(value)));
-  }, [value]);
+  // Sync local value when not editing and prop changes
+  if (!isEditing && localValue !== displayValue) {
+    setLocalValue(displayValue);
+  }
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -40,36 +38,23 @@ export function EditableTime({
     }
   }, [isEditing]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsTouchDevice(
-        window.matchMedia("(pointer: coarse)").matches ||
-          navigator.maxTouchPoints > 0,
-      );
-    }
-  }, []);
-
   const parseTime = (timeStr: string): number => {
-    const cleanStr = timeStr.replace("-", "");
-    const [minutes, seconds] = cleanStr.split(":").map(Number);
+    const [minutes, seconds] = timeStr.split(":").map(Number);
     if (isNaN(minutes) || isNaN(seconds)) return value;
-    const totalSeconds = minutes * 60 + seconds;
-    return Math.max(0, totalSeconds);
+    return minutes * 60 + seconds;
   };
 
   const handleDoubleClick = () => {
-    if (!disabled) {
-      setIsEditing(true);
-    }
+    setIsEditing(true);
   };
 
   const handleBlur = () => {
     setIsEditing(false);
     const newSeconds = parseTime(localValue);
-    if (Number.isFinite(newSeconds) && newSeconds >= 0) {
+    if (newSeconds > 0) {
       onChange(newSeconds);
     } else {
-      setLocalValue(formatTime(Math.abs(value)));
+      setLocalValue(displayValue);
     }
   };
 
@@ -78,14 +63,14 @@ export function EditableTime({
       handleBlur();
     } else if (e.key === "Escape") {
       setIsEditing(false);
-      setLocalValue(formatTime(Math.abs(value)));
+      setLocalValue(displayValue);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (/^-?\d*:?\d*$/.test(value)) {
-      setLocalValue(value);
+    const val = e.target.value;
+    if (/^\d*:?\d*$/.test(val)) {
+      setLocalValue(val);
     }
   };
 
@@ -107,10 +92,9 @@ export function EditableTime({
   return (
     <span
       onDoubleClick={handleDoubleClick}
-      onClick={isTouchDevice ? handleDoubleClick : undefined}
-      className={`cursor-text ${disabled ? "" : "hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors"} ${className}`}
+      className={`cursor-text hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors ${className}`}
     >
-      {localValue}
+      {displayValue}
     </span>
   );
 }

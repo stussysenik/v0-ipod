@@ -8,6 +8,7 @@ interface EditableTrackNumberProps {
   onTrackNumberChange: (trackNumber: number) => void;
   onTotalTracksChange: (totalTracks: number) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function EditableTrackNumber({
@@ -16,6 +17,7 @@ export function EditableTrackNumber({
   onTrackNumberChange,
   onTotalTracksChange,
   className = "",
+  disabled = false,
 }: EditableTrackNumberProps) {
   const [isEditingTrack, setIsEditingTrack] = useState(false);
   const [isEditingTotal, setIsEditingTotal] = useState(false);
@@ -46,6 +48,14 @@ export function EditableTrackNumber({
       totalInputRef.current.select();
     }
   }, [isEditingTotal]);
+
+  useEffect(() => {
+    if (!disabled) return;
+    setIsEditingTrack(false);
+    setIsEditingTotal(false);
+    setTrackValue(trackNumber.toString());
+    setTotalValue(totalTracks.toString());
+  }, [disabled, trackNumber, totalTracks]);
 
   const handleTrackBlur = () => {
     const num = parseInt(trackValue, 10);
@@ -104,8 +114,12 @@ export function EditableTrackNumber({
         />
       ) : (
         <span
-          onClick={() => setIsEditingTrack(true)}
-          className="cursor-pointer hover:bg-black/5 rounded px-0.5 transition-colors"
+          onClick={() => {
+            if (!disabled) {
+              setIsEditingTrack(true);
+            }
+          }}
+          className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
           data-testid="track-number-value"
         >
           {trackNumber}
@@ -126,8 +140,12 @@ export function EditableTrackNumber({
         />
       ) : (
         <span
-          onClick={() => setIsEditingTotal(true)}
-          className="cursor-pointer hover:bg-black/5 rounded px-0.5 transition-colors"
+          onClick={() => {
+            if (!disabled) {
+              setIsEditingTotal(true);
+            }
+          }}
+          className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
           data-testid="total-tracks-value"
         >
           {totalTracks}

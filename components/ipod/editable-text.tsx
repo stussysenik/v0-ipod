@@ -1,27 +1,37 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface EditableTextProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function EditableText({
   value,
   onChange,
   className = "",
+  disabled = false,
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const isTouchDevice = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      window.matchMedia("(pointer: coarse)").matches ||
+      navigator.maxTouchPoints > 0
+    );
+  }, []);
+
+  // Sync local value when not editing and prop changes
+  if (!isEditing && localValue !== value) {
     setLocalValue(value);
-  }, [value]);
+  }
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -31,15 +41,14 @@ export function EditableText({
   }, [isEditing]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsTouchDevice(
-        window.matchMedia("(pointer: coarse)").matches ||
-          navigator.maxTouchPoints > 0,
-      );
+    if (disabled && isEditing) {
+      setIsEditing(false);
+      setLocalValue(value);
     }
-  }, []);
+  }, [disabled, isEditing, value]);
 
   const handleDoubleClick = () => {
+    if (disabled) return;
     setIsEditing(true);
   };
 
@@ -79,7 +88,11 @@ export function EditableText({
     <span
       onDoubleClick={handleDoubleClick}
       onClick={isTouchDevice ? handleDoubleClick : undefined}
-      className={`cursor-text block w-full break-words hover:bg-black/5 hover:text-blue-900 rounded px-0.5 -mx-0.5 transition-colors ${className}`}
+      className={`block w-full break-words rounded px-0.5 -mx-0.5 transition-colors ${
+        disabled
+          ? "cursor-default"
+          : "cursor-text hover:bg-black/5 hover:text-blue-900"
+      } ${className}`}
     >
       {value}
     </span>

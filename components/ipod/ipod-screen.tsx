@@ -8,15 +8,21 @@ import { ImageUpload } from "./image-upload";
 import { EditableText } from "./editable-text";
 import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
-import type { SongMetadata } from "../types/ipod";
+import type { SongMetadata } from "@/types/ipod";
 
 interface IpodScreenProps {
   state: SongMetadata;
-  dispatch: any;
+  dispatch: React.Dispatch<{ type: string; payload: string | number }>;
   playClick: () => void;
+  isEditable?: boolean;
 }
 
-export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
+export function IpodScreen({
+  state,
+  dispatch,
+  playClick,
+  isEditable = true,
+}: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
 
   const setCurrentTime = useCallback(
@@ -65,9 +71,11 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
               <ImageUpload
                 currentImage={state.artwork}
                 onImageChange={(artwork) => {
+                  if (!isEditable) return;
                   dispatch({ type: "UPDATE_ARTWORK", payload: artwork });
                   playClick();
                 }}
+                disabled={!isEditable}
                 className="w-full h-full object-cover"
               />
               {/* Reflection */}
@@ -82,9 +90,8 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
               <div className="text-[14px] font-bold text-black leading-tight">
                 <EditableText
                   value={state.title}
-                  onChange={(val) =>
-                    dispatch({ type: "UPDATE_TITLE", payload: val })
-                  }
+                  onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
+                  disabled={!isEditable}
                   className="font-bold min-w-[50px] -ml-1 pl-1"
                 />
               </div>
@@ -95,9 +102,8 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
               <div className="text-[12px] font-semibold text-[#555] leading-tight">
                 <EditableText
                   value={state.artist}
-                  onChange={(val) =>
-                    dispatch({ type: "UPDATE_ARTIST", payload: val })
-                  }
+                  onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
+                  disabled={!isEditable}
                   className="font-semibold text-[#555] -ml-1 pl-1"
                 />
               </div>
@@ -108,9 +114,8 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
               <div className="text-[12px] font-medium text-[#777] leading-tight">
                 <EditableText
                   value={state.album}
-                  onChange={(val) =>
-                    dispatch({ type: "UPDATE_ALBUM", payload: val })
-                  }
+                  onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
+                  disabled={!isEditable}
                   className="font-medium text-[#777] -ml-1 pl-1"
                 />
               </div>
@@ -127,6 +132,7 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
                 onTotalTracksChange={(num) =>
                   dispatch({ type: "UPDATE_TOTAL_TRACKS", payload: num })
                 }
+                disabled={!isEditable}
               />
             </div>
 
@@ -134,9 +140,11 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
               <StarRating
                 rating={state.rating}
                 onChange={(rating) => {
+                  if (!isEditable) return;
                   dispatch({ type: "UPDATE_RATING", payload: rating });
                   playClick();
                 }}
+                disabled={!isEditable}
               />
             </div>
           </div>
@@ -148,18 +156,22 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
             currentTime={state.currentTime}
             duration={state.duration}
             onSeek={(currentTime) => {
+              if (!isEditable) return;
               remainingAnchorRef.current = null;
               setCurrentTime(currentTime, false);
               playClick();
             }}
+            disabled={!isEditable}
           />
           <div className="flex justify-between items-center mt-0.5 text-[11px] font-semibold text-black font-mono">
             <div data-testid="elapsed-time">
               <EditableTime
                 value={state.currentTime}
                 onChange={(time) => {
+                  if (!isEditable) return;
                   setCurrentTime(time, true);
                 }}
+                disabled={!isEditable}
               />
             </div>
             {/* Remaining Time (Editable) */}
@@ -171,8 +183,10 @@ export function IpodScreen({ state, dispatch, playClick }: IpodScreenProps) {
                 value={Math.max(state.duration - state.currentTime, 0)}
                 isRemaining
                 onChange={(remaining) => {
+                  if (!isEditable) return;
                   setRemainingTime(remaining);
                 }}
+                disabled={!isEditable}
               />
             </div>
           </div>
