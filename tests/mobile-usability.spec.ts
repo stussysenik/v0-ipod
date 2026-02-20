@@ -19,7 +19,14 @@ test.describe("Mobile usability", () => {
     await page.getByTestId("theme-button").tap();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
+    await page.touchscreen.tap(24, 120);
+    await expect(page.getByTestId("theme-panel")).toBeHidden();
+
+    await page.getByTestId("theme-button").tap();
+    await expect(page.getByTestId("theme-panel")).toBeVisible();
+
     await page.getByTestId("three-d-view-button").tap();
+    await expect(page.getByTestId("theme-panel")).toBeHidden();
     await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
 
     await page.getByTestId("flat-view-button").tap();

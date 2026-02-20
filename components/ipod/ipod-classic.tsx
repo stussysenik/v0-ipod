@@ -151,6 +151,7 @@ export default function IPodClassic() {
   const [isExportCapturing, setIsExportCapturing] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [softNotice, setSoftNotice] = useState<string | null>(null);
+  const [editorResetKey, setEditorResetKey] = useState(0);
   const isFlatView = viewMode === "flat";
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -159,6 +160,7 @@ export default function IPodClassic() {
   const caseColorInputRef = useRef<HTMLInputElement>(null);
   const bgColorInputRef = useRef<HTMLInputElement>(null);
   const softNoticeTimerRef = useRef<number | null>(null);
+  const toolsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND);
@@ -219,6 +221,31 @@ export default function IPodClassic() {
   }, [isFlatView]);
 
   useEffect(() => {
+    if (!showSettings) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (toolsRef.current?.contains(target)) return;
+      setShowSettings(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowSettings(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showSettings]);
+
+  useEffect(() => {
     try {
       const storedCase = localStorage.getItem(CASE_CUSTOM_COLORS_KEY);
       const storedBg = localStorage.getItem(BG_CUSTOM_COLORS_KEY);
@@ -257,24 +284,50 @@ export default function IPodClassic() {
     }
   }, []);
 
-  const showSoftNotice = useCallback((message: string) => {
-    setSoftNotice(message);
+  const clearSoftNotice = useCallback(() => {
     if (softNoticeTimerRef.current !== null) {
       window.clearTimeout(softNoticeTimerRef.current);
-    }
-    softNoticeTimerRef.current = window.setTimeout(() => {
-      setSoftNotice(null);
       softNoticeTimerRef.current = null;
-    }, 1700);
+    }
+    setSoftNotice(null);
   }, []);
+
+  const showSoftNotice = useCallback(
+    (message: string) => {
+      clearSoftNotice();
+      setSoftNotice(message);
+      softNoticeTimerRef.current = window.setTimeout(() => {
+        setSoftNotice(null);
+        softNoticeTimerRef.current = null;
+      }, 1700);
+    },
+    [clearSoftNotice],
+  );
+
+  const resetInteractionChrome = useCallback(
+    (options?: {
+      closeSettings?: boolean;
+      closeEditor?: boolean;
+      clearNotice?: boolean;
+    }) => {
+      if (options?.closeSettings) {
+        setShowSettings(false);
+      }
+      if (options?.clearNotice) {
+        clearSoftNotice();
+      }
+      if (options?.closeEditor) {
+        setEditorResetKey((prev) => prev + 1);
+      }
+    },
+    [clearSoftNotice],
+  );
 
   useEffect(() => {
     return () => {
-      if (softNoticeTimerRef.current !== null) {
-        window.clearTimeout(softNoticeTimerRef.current);
-      }
+      clearSoftNotice();
     };
-  }, []);
+  }, [clearSoftNotice]);
 
   const handleSeek = useCallback(
     (direction: number) => {
@@ -290,6 +343,11 @@ export default function IPodClassic() {
 
   const handleExport = useCallback(async () => {
     if (exportStatus !== "idle") return;
+    resetInteractionChrome({
+      closeSettings: true,
+      closeEditor: true,
+      clearNotice: true,
+    });
     if (!isFlatView) {
       playClick();
       showSoftNotice("Switch to Flat View to export");
@@ -351,7 +409,15 @@ export default function IPodClassic() {
       setIsExportCapturing(false);
       setTimeout(() => setExportStatus("idle"), 1500);
     }
-  }, [playClick, state.title, bgColor, exportStatus, isFlatView, showSoftNotice]);
+  }, [
+    playClick,
+    state.title,
+    bgColor,
+    exportStatus,
+    isFlatView,
+    showSoftNotice,
+    resetInteractionChrome,
+  ]);
 
   useEffect(() => {
     handleExportRef.current = handleExport;
@@ -417,15 +483,25 @@ export default function IPodClassic() {
   }, []);
 
   const handleSaveSnapshot = useCallback(() => {
+    resetInteractionChrome({ closeSettings: true, closeEditor: true, clearNotice: true });
     playClick();
     saveSongSnapshot({
       metadata: state,
       ui: { skinColor, bgColor, viewMode },
     });
     showSoftNotice("Snapshot saved");
-  }, [playClick, state, skinColor, bgColor, viewMode, showSoftNotice]);
+  }, [
+    playClick,
+    state,
+    skinColor,
+    bgColor,
+    viewMode,
+    showSoftNotice,
+    resetInteractionChrome,
+  ]);
 
   const handleLoadSnapshot = useCallback(() => {
+    resetInteractionChrome({ closeSettings: true, closeEditor: true, clearNotice: true });
     playClick();
     const persisted = loadSongSnapshot();
     if (persisted) {
@@ -437,7 +513,24 @@ export default function IPodClassic() {
     applySongSnapshot(TEST_SONG_SNAPSHOT);
     saveSongSnapshot(TEST_SONG_SNAPSHOT);
     showSoftNotice("Loaded sample snapshot");
-  }, [applySongSnapshot, playClick, showSoftNotice]);
+  }, [applySongSnapshot, playClick, showSoftNotice, resetInteractionChrome]);
+
+  const handleViewModeChange = useCallback(
+    (nextMode: IpodViewMode) => {
+      resetInteractionChrome({
+        closeSettings: true,
+        closeEditor: true,
+        clearNotice: true,
+      });
+      setViewMode(nextMode);
+    },
+    [resetInteractionChrome],
+  );
+
+  const handleToggleSettings = useCallback(() => {
+    clearSoftNotice();
+    setShowSettings((prev) => !prev);
+  }, [clearSoftNotice]);
 
   const previewScale = useMemo(() => {
     if (isExportCapturing || viewportSize.width === 0 || viewportSize.height === 0) {
@@ -472,7 +565,7 @@ export default function IPodClassic() {
     : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
   return (
-    <FixedEditorProvider>
+    <FixedEditorProvider resetKey={editorResetKey}>
       <div
         ref={containerRef}
         className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-4 py-6 sm:p-6 transition-colors duration-500 overflow-hidden"
@@ -510,6 +603,7 @@ export default function IPodClassic() {
 
         {/* Floating Tools UI */}
         <div
+          ref={toolsRef}
           className={`fixed top-6 right-6 z-50 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
         >
           {/* Settings / Theme */}
@@ -518,7 +612,7 @@ export default function IPodClassic() {
               icon={<Settings className="w-5 h-5" />}
               label="Theme"
               data-testid="theme-button"
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={handleToggleSettings}
               isActive={showSettings}
             />
 
@@ -667,21 +761,21 @@ export default function IPodClassic() {
               label="Flat View"
               data-testid="flat-view-button"
               isActive={viewMode === "flat"}
-              onClick={() => setViewMode("flat")}
+              onClick={() => handleViewModeChange("flat")}
             />
             <IconButton
               icon={<Box className="w-5 h-5" />}
               label="3D Experience"
               data-testid="three-d-view-button"
               isActive={viewMode === "3d"}
-              onClick={() => setViewMode("3d")}
+              onClick={() => handleViewModeChange("3d")}
             />
             <IconButton
               icon={<Monitor className="w-5 h-5" />}
               label="Focus Mode"
               data-testid="focus-view-button"
               isActive={viewMode === "focus"}
-              onClick={() => setViewMode("focus")}
+              onClick={() => handleViewModeChange("focus")}
             />
           </div>
 

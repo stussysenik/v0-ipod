@@ -40,7 +40,13 @@ function detectCoarsePointer(): boolean {
   );
 }
 
-export function FixedEditorProvider({ children }: { children: React.ReactNode }) {
+export function FixedEditorProvider({
+  children,
+  resetKey = 0,
+}: {
+  children: React.ReactNode;
+  resetKey?: number;
+}) {
   const [request, setRequest] = useState<FixedEditorRequest | null>(null);
   const [draftValue, setDraftValue] = useState("");
   const [isTouchEditingPreferred, setIsTouchEditingPreferred] = useState(false);
@@ -73,6 +79,10 @@ export function FixedEditorProvider({ children }: { children: React.ReactNode })
       window.clearTimeout(focusTimer);
     };
   }, [request]);
+
+  useEffect(() => {
+    setRequest(null);
+  }, [resetKey]);
 
   const closeEditor = useCallback(() => {
     setRequest(null);
@@ -118,6 +128,8 @@ export function FixedEditorProvider({ children }: { children: React.ReactNode })
               </div>
               <input
                 ref={inputRef}
+                id="fixed-editor-input"
+                name="fixed-editor-input"
                 value={draftValue}
                 inputMode={request.inputMode}
                 pattern={request.pattern}

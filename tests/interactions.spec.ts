@@ -24,6 +24,24 @@ test.describe("Core interactions remain usable", () => {
     await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
   });
 
+  test("interaction chrome resets to a clean state", async ({ page }) => {
+    await page.getByTestId("theme-button").click();
+    await expect(page.getByTestId("theme-panel")).toBeVisible();
+
+    await page.getByText("Have A Destination?").click();
+    await expect(page.getByTestId("theme-panel")).toBeHidden();
+
+    await page.getByTestId("theme-button").click();
+    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("theme-panel")).toBeHidden();
+
+    await page.getByTestId("theme-button").click();
+    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await page.getByTestId("three-d-view-button").click();
+    await expect(page.getByTestId("theme-panel")).toBeHidden();
+  });
+
   test("image upload updates artwork preview", async ({ page }) => {
     const fileInput = page.getByTestId("artwork-input");
     await fileInput.setInputFiles(fixtureImage);
