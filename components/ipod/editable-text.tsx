@@ -1,13 +1,15 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useFixedEditor } from "./fixed-editor";
 
 interface EditableTextProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
   disabled?: boolean;
+  editLabel?: string;
 }
 
 export function EditableText({
@@ -15,15 +17,12 @@ export function EditableText({
   onChange,
   className = "",
   disabled = false,
+  editLabel = "Edit text",
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const isTouchDevice = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
-  }, []);
+  const { isTouchEditingPreferred, openEditor } = useFixedEditor();
 
   useEffect(() => {
     if (isEditing) return;
@@ -44,9 +43,20 @@ export function EditableText({
     }
   }, [disabled, isEditing, value]);
 
-  const handleDoubleClick = () => {
+  const handleDesktopActivate = () => {
     if (disabled) return;
     setIsEditing(true);
+  };
+
+  const handleTouchActivate = () => {
+    if (disabled) return;
+    openEditor({
+      title: editLabel,
+      value,
+      placeholder: "Type text",
+      inputMode: "text",
+      onCommit: (nextValue) => onChange(nextValue),
+    });
   };
 
   const handleBlur = () => {
@@ -83,8 +93,8 @@ export function EditableText({
 
   return (
     <span
-      onDoubleClick={handleDoubleClick}
-      onClick={isTouchDevice ? handleDoubleClick : undefined}
+      onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
+      onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
       className={`block w-full break-words rounded px-0.5 -mx-0.5 transition-colors ${
         disabled ? "cursor-default" : "cursor-text hover:bg-black/5 hover:text-blue-900"
       } ${className}`}

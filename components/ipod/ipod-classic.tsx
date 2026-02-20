@@ -27,6 +27,7 @@ import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
 import placeholderLogo from "@/public/placeholder-logo.png";
 import { IconButton } from "@/components/ui/icon-button";
 import { ThreeDIpod } from "@/components/three/three-d-ipod";
+import { FixedEditorProvider } from "./fixed-editor";
 import { IpodScreen } from "./ipod-screen";
 import { ClickWheel } from "./click-wheel";
 import type { SongMetadata } from "@/types/ipod";
@@ -149,6 +150,7 @@ export default function IPodClassic() {
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
   const [isExportCapturing, setIsExportCapturing] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [softNotice, setSoftNotice] = useState<string | null>(null);
   const isFlatView = viewMode === "flat";
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,6 +158,7 @@ export default function IPodClassic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const caseColorInputRef = useRef<HTMLInputElement>(null);
   const bgColorInputRef = useRef<HTMLInputElement>(null);
+  const softNoticeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND);
@@ -254,6 +257,25 @@ export default function IPodClassic() {
     }
   }, []);
 
+  const showSoftNotice = useCallback((message: string) => {
+    setSoftNotice(message);
+    if (softNoticeTimerRef.current !== null) {
+      window.clearTimeout(softNoticeTimerRef.current);
+    }
+    softNoticeTimerRef.current = window.setTimeout(() => {
+      setSoftNotice(null);
+      softNoticeTimerRef.current = null;
+    }, 1700);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (softNoticeTimerRef.current !== null) {
+        window.clearTimeout(softNoticeTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleSeek = useCallback(
     (direction: number) => {
       dispatch({
@@ -270,9 +292,7 @@ export default function IPodClassic() {
     if (exportStatus !== "idle") return;
     if (!isFlatView) {
       playClick();
-      toast.error("Export is only available in Flat View", {
-        description: "Switch to Flat View to export the editable 2D layout.",
-      });
+      showSoftNotice("Switch to Flat View to export");
       return;
     }
 
@@ -304,11 +324,9 @@ export default function IPodClassic() {
 
       if (result.success) {
         if (result.method === "share") {
-          toast.success("Shared successfully!", {
-            description: "Use 'Save Image' in the share sheet to save to Photos",
-          });
+          showSoftNotice("Shared. Use Save Image in your share sheet.");
         } else {
-          toast.success("Image exported!");
+          showSoftNotice("Image exported");
         }
       } else {
         toast.error("Export failed", {
@@ -333,7 +351,7 @@ export default function IPodClassic() {
       setIsExportCapturing(false);
       setTimeout(() => setExportStatus("idle"), 1500);
     }
-  }, [playClick, state.title, bgColor, exportStatus, isFlatView]);
+  }, [playClick, state.title, bgColor, exportStatus, isFlatView, showSoftNotice]);
 
   useEffect(() => {
     handleExportRef.current = handleExport;
@@ -404,26 +422,22 @@ export default function IPodClassic() {
       metadata: state,
       ui: { skinColor, bgColor, viewMode },
     });
-    toast.success("Snapshot saved", {
-      description: "You can load this exact state from the snapshot panel.",
-    });
-  }, [playClick, state, skinColor, bgColor, viewMode]);
+    showSoftNotice("Snapshot saved");
+  }, [playClick, state, skinColor, bgColor, viewMode, showSoftNotice]);
 
   const handleLoadSnapshot = useCallback(() => {
     playClick();
     const persisted = loadSongSnapshot();
     if (persisted) {
       applySongSnapshot(persisted);
-      toast.success("Snapshot loaded");
+      showSoftNotice("Snapshot loaded");
       return;
     }
 
     applySongSnapshot(TEST_SONG_SNAPSHOT);
     saveSongSnapshot(TEST_SONG_SNAPSHOT);
-    toast.success("Loaded test snapshot", {
-      description: "Sample data and artwork were applied and saved.",
-    });
-  }, [applySongSnapshot, playClick]);
+    showSoftNotice("Loaded sample snapshot");
+  }, [applySongSnapshot, playClick, showSoftNotice]);
 
   const previewScale = useMemo(() => {
     if (isExportCapturing || viewportSize.width === 0 || viewportSize.height === 0) {
@@ -454,313 +468,322 @@ export default function IPodClassic() {
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
   const shellShadow = isExportCapturing
-    ? "0 22px 34px -20px rgba(0,0,0,0.36), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
+    ? "0 10px 18px -16px rgba(0,0,0,0.24), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
     : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
   return (
-    <div
-      ref={containerRef}
-      className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-4 py-6 sm:p-6 transition-colors duration-500 overflow-hidden"
-      style={{ backgroundColor: bgColor }}
-    >
-      {/* Persistent color inputs so native picker stays alive even when UI hides */}
-      <input
-        ref={caseColorInputRef}
-        type="color"
-        data-testid="case-color-input"
-        value={skinColor}
-        onChange={(e) => {
-          setSkinColor(e.target.value);
-          saveCustomColor("case", e.target.value);
-          setShowSettings(false);
-        }}
-        className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-      <input
-        ref={bgColorInputRef}
-        type="color"
-        data-testid="bg-color-input"
-        value={bgColor}
-        onChange={(e) => {
-          setBgColor(e.target.value);
-          saveCustomColor("bg", e.target.value);
-          setShowSettings(false);
-        }}
-        className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-
-      {/* Floating Tools UI */}
+    <FixedEditorProvider>
       <div
-        className={`fixed top-6 right-6 z-50 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+        ref={containerRef}
+        className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-4 py-6 sm:p-6 transition-colors duration-500 overflow-hidden"
+        style={{ backgroundColor: bgColor }}
       >
-        {/* Settings / Theme */}
-        <div className="relative group">
-          <IconButton
-            icon={<Settings className="w-5 h-5" />}
-            label="Theme"
-            data-testid="theme-button"
-            onClick={() => setShowSettings(!showSettings)}
-            isActive={showSettings}
-          />
-
-          {showSettings && (
-            <div
-              data-testid="theme-panel"
-              className="absolute top-0 right-14 max-sm:right-0 max-sm:top-14 bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] animate-in slide-in-from-right-2 border border-[#D5D7DA]"
-            >
-              <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-                Case Color
-              </h3>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {CASE_COLOR_PRESETS.map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={() => setSkinColor(c.value)}
-                    title={c.label}
-                    className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-                      skinColor === c.value
-                        ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-                        : "border-[#B5BBC3]"
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-                {/* System Color Picker integrated */}
-                <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
-                  <Plus className="w-4 h-4 text-[#4B5563]" />
-                  <button
-                    type="button"
-                    onClick={() => openSystemColorPicker("case")}
-                    data-testid="custom-case-color-button"
-                    className="absolute inset-0 bg-transparent"
-                    title="Custom case color"
-                    aria-label="Open custom case color picker"
-                  />
-                </div>
-              </div>
-              {savedCaseColors.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                    Recent Custom
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {savedCaseColors.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setSkinColor(color)}
-                        title={`Custom ${color}`}
-                        className={`w-6 h-6 rounded-full border ${
-                          skinColor === color
-                            ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                            : "border-[#B5BBC3]"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-                Background
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {BG_COLOR_PRESETS.map((bg) => (
-                  <button
-                    key={bg.value}
-                    onClick={() => setBgColor(bg.value)}
-                    title={bg.label}
-                    className={`w-6 h-6 rounded-full border ${
-                      bgColor === bg.value
-                        ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                        : "border-[#B5BBC3]"
-                    }`}
-                    style={{ backgroundColor: bg.value }}
-                  />
-                ))}
-                {/* Background color picker */}
-                <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                  <Plus className="w-3 h-3 text-[#1F2937]" />
-                  <button
-                    type="button"
-                    onClick={() => openSystemColorPicker("bg")}
-                    data-testid="custom-bg-color-button"
-                    className="absolute inset-0 bg-transparent"
-                    title="Custom background color"
-                    aria-label="Open custom background color picker"
-                  />
-                </div>
-              </div>
-              {savedBgColors.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                    Recent Custom
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {savedBgColors.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setBgColor(color)}
-                        title={`Custom ${color}`}
-                        className={`w-6 h-6 rounded-full border ${
-                          bgColor === color
-                            ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                            : "border-[#B5BBC3]"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
-                <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                  Snapshot
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    data-testid="load-song-snapshot-button"
-                    onClick={handleLoadSnapshot}
-                    className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-                  >
-                    Load Snapshot
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="save-song-snapshot-button"
-                    onClick={handleSaveSnapshot}
-                    className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-                  >
-                    Save Snapshot
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* View Modes */}
-        <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
-          <IconButton
-            icon={<Smartphone className="w-5 h-5" />}
-            label="Flat View"
-            data-testid="flat-view-button"
-            isActive={viewMode === "flat"}
-            onClick={() => setViewMode("flat")}
-          />
-          <IconButton
-            icon={<Box className="w-5 h-5" />}
-            label="3D Experience"
-            data-testid="three-d-view-button"
-            isActive={viewMode === "3d"}
-            onClick={() => setViewMode("3d")}
-          />
-          <IconButton
-            icon={<Monitor className="w-5 h-5" />}
-            label="Focus Mode"
-            data-testid="focus-view-button"
-            isActive={viewMode === "focus"}
-            onClick={() => setViewMode("focus")}
-          />
-        </div>
-
-        {/* Export Action */}
-        <IconButton
-          icon={
-            exportStatus === "success" ? (
-              <Check className="w-5 h-5" />
-            ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Share className="w-5 h-5" />
-            )
-          }
-          label={
-            exportStatus === "preparing"
-              ? "Preparing..."
-              : exportStatus === "sharing"
-                ? "Sharing..."
-                : exportStatus === "success"
-                  ? "Done!"
-                  : !isFlatView
-                    ? "Flat View Only"
-                    : "Export 2D Image"
-          }
-          onClick={handleExport}
-          data-testid="export-button"
-          contrast={true}
-          disabled={!isFlatView || exportStatus !== "idle"}
-          className={`transition-colors duration-300 ${
-            exportStatus === "success"
-              ? "bg-green-500 hover:bg-green-600 border-none"
-              : exportStatus === "preparing" || exportStatus === "sharing"
-                ? "bg-blue-500 hover:bg-blue-600 border-none"
-                : ""
-          } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-        />
-      </div>
-
-      {/* 3D MODE (R3F) */}
-      {viewMode === "3d" && (
-        <ThreeDIpod
-          skinColor={skinColor}
-          screen={screenComponent}
-          wheel={wheelComponent}
-        />
-      )}
-
-      {/* 2D / EXPORT MODE */}
-      <div
-        className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
-      >
-        <div
-          className="relative"
-          style={{
-            width: `${scaledFrameWidth}px`,
-            height: `${scaledFrameHeight}px`,
+        {/* Persistent color inputs so native picker stays alive even when UI hides */}
+        <input
+          ref={caseColorInputRef}
+          type="color"
+          data-testid="case-color-input"
+          value={skinColor}
+          onChange={(e) => {
+            setSkinColor(e.target.value);
+            saveCustomColor("case", e.target.value);
+            setShowSettings(false);
           }}
+          className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+        <input
+          ref={bgColorInputRef}
+          type="color"
+          data-testid="bg-color-input"
+          value={bgColor}
+          onChange={(e) => {
+            setBgColor(e.target.value);
+            saveCustomColor("bg", e.target.value);
+            setShowSettings(false);
+          }}
+          className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+
+        {/* Floating Tools UI */}
+        <div
+          className={`fixed top-6 right-6 z-50 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+        >
+          {/* Settings / Theme */}
+          <div className="relative group">
+            <IconButton
+              icon={<Settings className="w-5 h-5" />}
+              label="Theme"
+              data-testid="theme-button"
+              onClick={() => setShowSettings(!showSettings)}
+              isActive={showSettings}
+            />
+
+            {showSettings && (
+              <div
+                data-testid="theme-panel"
+                className="absolute top-0 right-14 max-sm:right-0 max-sm:top-14 bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] animate-in slide-in-from-right-2 border border-[#D5D7DA]"
+              >
+                <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                  Case Color
+                </h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {CASE_COLOR_PRESETS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => setSkinColor(c.value)}
+                      title={c.label}
+                      className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                        skinColor === c.value
+                          ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                          : "border-[#B5BBC3]"
+                      }`}
+                      style={{ backgroundColor: c.value }}
+                    />
+                  ))}
+                  {/* System Color Picker integrated */}
+                  <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
+                    <Plus className="w-4 h-4 text-[#4B5563]" />
+                    <button
+                      type="button"
+                      onClick={() => openSystemColorPicker("case")}
+                      data-testid="custom-case-color-button"
+                      className="absolute inset-0 bg-transparent"
+                      title="Custom case color"
+                      aria-label="Open custom case color picker"
+                    />
+                  </div>
+                </div>
+                {savedCaseColors.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      Recent Custom
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {savedCaseColors.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setSkinColor(color)}
+                          title={`Custom ${color}`}
+                          className={`w-6 h-6 rounded-full border ${
+                            skinColor === color
+                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                              : "border-[#B5BBC3]"
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                  Background
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {BG_COLOR_PRESETS.map((bg) => (
+                    <button
+                      key={bg.value}
+                      onClick={() => setBgColor(bg.value)}
+                      title={bg.label}
+                      className={`w-6 h-6 rounded-full border ${
+                        bgColor === bg.value
+                          ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                          : "border-[#B5BBC3]"
+                      }`}
+                      style={{ backgroundColor: bg.value }}
+                    />
+                  ))}
+                  {/* Background color picker */}
+                  <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
+                    <Plus className="w-3 h-3 text-[#1F2937]" />
+                    <button
+                      type="button"
+                      onClick={() => openSystemColorPicker("bg")}
+                      data-testid="custom-bg-color-button"
+                      className="absolute inset-0 bg-transparent"
+                      title="Custom background color"
+                      aria-label="Open custom background color picker"
+                    />
+                  </div>
+                </div>
+                {savedBgColors.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      Recent Custom
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {savedBgColors.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setBgColor(color)}
+                          title={`Custom ${color}`}
+                          className={`w-6 h-6 rounded-full border ${
+                            bgColor === color
+                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                              : "border-[#B5BBC3]"
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
+                  <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                    Snapshot
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-testid="load-song-snapshot-button"
+                      onClick={handleLoadSnapshot}
+                      className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                    >
+                      Load Snapshot
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="save-song-snapshot-button"
+                      onClick={handleSaveSnapshot}
+                      className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                    >
+                      Save Snapshot
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* View Modes */}
+          <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
+            <IconButton
+              icon={<Smartphone className="w-5 h-5" />}
+              label="Flat View"
+              data-testid="flat-view-button"
+              isActive={viewMode === "flat"}
+              onClick={() => setViewMode("flat")}
+            />
+            <IconButton
+              icon={<Box className="w-5 h-5" />}
+              label="3D Experience"
+              data-testid="three-d-view-button"
+              isActive={viewMode === "3d"}
+              onClick={() => setViewMode("3d")}
+            />
+            <IconButton
+              icon={<Monitor className="w-5 h-5" />}
+              label="Focus Mode"
+              data-testid="focus-view-button"
+              isActive={viewMode === "focus"}
+              onClick={() => setViewMode("focus")}
+            />
+          </div>
+
+          {/* Export Action */}
+          <IconButton
+            icon={
+              exportStatus === "success" ? (
+                <Check className="w-5 h-5" />
+              ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Share className="w-5 h-5" />
+              )
+            }
+            label={
+              exportStatus === "preparing"
+                ? "Preparing..."
+                : exportStatus === "sharing"
+                  ? "Sharing..."
+                  : exportStatus === "success"
+                    ? "Done!"
+                    : !isFlatView
+                      ? "Flat View Only"
+                      : "Export 2D Image"
+            }
+            onClick={handleExport}
+            data-testid="export-button"
+            contrast={true}
+            disabled={!isFlatView || exportStatus !== "idle"}
+            className={`transition-colors duration-300 ${
+              exportStatus === "success"
+                ? "bg-green-500 hover:bg-green-600 border-none"
+                : exportStatus === "preparing" || exportStatus === "sharing"
+                  ? "bg-blue-500 hover:bg-blue-600 border-none"
+                  : ""
+            } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
+          />
+        </div>
+
+        {softNotice && exportStatus === "idle" && (
+          <div className="fixed right-6 bottom-6 z-50 rounded-full border border-black/10 bg-white/72 px-3 py-1 text-[11px] font-medium text-black/65 shadow-[0_8px_18px_rgba(0,0,0,0.1)] backdrop-blur-sm">
+            {softNotice}
+          </div>
+        )}
+
+        {/* 3D MODE (R3F) */}
+        {viewMode === "3d" && (
+          <ThreeDIpod
+            skinColor={skinColor}
+            screen={screenComponent}
+            wheel={wheelComponent}
+          />
+        )}
+
+        {/* 2D / EXPORT MODE */}
+        <div
+          className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
         >
           <div
-            className="origin-top-left"
+            className="relative"
             style={{
-              width: `${PREVIEW_FRAME_WIDTH}px`,
-              height: `${PREVIEW_FRAME_HEIGHT}px`,
-              transform: `scale(${previewScale})`,
+              width: `${scaledFrameWidth}px`,
+              height: `${scaledFrameHeight}px`,
             }}
           >
             <div
-              ref={exportTargetRef}
-              data-export-shell={isExportCapturing ? "true" : "false"}
-              className="p-12"
+              className="origin-top-left"
               style={{
-                backgroundColor: isExportCapturing ? bgColor : "transparent",
+                width: `${PREVIEW_FRAME_WIDTH}px`,
+                height: `${PREVIEW_FRAME_HEIGHT}px`,
+                transform: `scale(${previewScale})`,
               }}
             >
               <div
-                className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
+                ref={exportTargetRef}
+                data-export-shell={isExportCapturing ? "true" : "false"}
+                className="p-12"
                 style={{
-                  backgroundColor: skinColor,
-                  boxShadow: shellShadow,
+                  backgroundColor: isExportCapturing ? bgColor : "transparent",
                 }}
               >
-                {/* SCREEN AREA */}
-                <div className="w-full">{screenComponent}</div>
+                <div
+                  className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
+                  style={{
+                    backgroundColor: skinColor,
+                    boxShadow: shellShadow,
+                  }}
+                  data-export-layer="shell"
+                >
+                  {/* SCREEN AREA */}
+                  <div className="w-full">{screenComponent}</div>
 
-                {/* CONTROL AREA */}
-                <div className="flex-1 flex items-center justify-center relative -mt-4">
-                  {wheelComponent}
+                  {/* CONTROL AREA */}
+                  <div className="flex-1 flex items-center justify-center relative -mt-4">
+                    {wheelComponent}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </FixedEditorProvider>
   );
 }

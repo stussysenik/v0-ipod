@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useFixedEditor } from "./fixed-editor";
 
 interface EditableTimeProps {
   value: number;
@@ -9,6 +10,7 @@ interface EditableTimeProps {
   className?: string;
   disabled?: boolean;
   isRemaining?: boolean;
+  editLabel?: string;
 }
 
 export function EditableTime({
@@ -17,6 +19,7 @@ export function EditableTime({
   className = "",
   disabled = false,
   isRemaining = false,
+  editLabel = "Edit time",
 }: EditableTimeProps) {
   const formatTime = useCallback(
     (seconds: number) => {
@@ -32,11 +35,7 @@ export function EditableTime({
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(displayValue);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const isTouchDevice = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
-  }, []);
+  const { isTouchEditingPreferred, openEditor } = useFixedEditor();
 
   useEffect(() => {
     if (isEditing) return;
@@ -58,10 +57,27 @@ export function EditableTime({
     return Math.max(0, totalSeconds);
   };
 
-  const handleDoubleClick = () => {
+  const handleDesktopActivate = () => {
     if (!disabled) {
       setIsEditing(true);
     }
+  };
+
+  const handleTouchActivate = () => {
+    if (disabled) return;
+    openEditor({
+      title: editLabel,
+      value: displayValue,
+      placeholder: "0:00",
+      inputMode: "numeric",
+      pattern: "[-0-9:]*",
+      onCommit: (nextValue) => {
+        const newSeconds = parseTime(nextValue);
+        if (Number.isFinite(newSeconds) && newSeconds >= 0) {
+          onChange(newSeconds);
+        }
+      },
+    });
   };
 
   const handleBlur = () => {
@@ -107,8 +123,8 @@ export function EditableTime({
 
   return (
     <span
-      onDoubleClick={handleDoubleClick}
-      onClick={isTouchDevice ? handleDoubleClick : undefined}
+      onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
+      onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
       className={`cursor-text ${disabled ? "" : "hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors"} ${className}`}
     >
       {displayValue}

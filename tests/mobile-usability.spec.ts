@@ -41,10 +41,10 @@ test.describe("Mobile usability", () => {
 
   test("single tap edit and touch seek work", async ({ page }) => {
     await page.getByText("Have A Destination?").tap();
-    const input = page.locator('input[type="text"]').first();
+    const input = page.getByTestId("fixed-editor-input");
     await expect(input).toBeVisible();
     await input.fill("Mobile Edit");
-    await input.press("Enter");
+    await page.getByTestId("fixed-editor-done").tap();
     await expect(page.getByText("Mobile Edit")).toBeVisible();
 
     const track = page.getByTestId("progress-track");

@@ -4,6 +4,13 @@ export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error
 
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
+const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-sanitized-v1";
+
+interface NextDataWindow extends Window {
+  __NEXT_DATA__?: {
+    buildId?: string;
+  };
+}
 
 const waitForMs = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
@@ -154,10 +161,11 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
 
   clone.setAttribute("aria-hidden", "true");
   clone.style.position = "fixed";
-  // Keep the clone off-screen without extreme coordinates that can trigger
-  // shadow/compositing artifacts on mobile WebKit captures.
-  clone.style.left = "-4096px";
+  // Keep clone at viewport origin with negative stacking order so detached
+  // capture avoids off-screen shadow clipping artifacts in some renderers.
+  clone.style.left = "0";
   clone.style.top = "0";
+  clone.style.zIndex = "-2147483647";
   clone.style.margin = "0";
   clone.style.pointerEvents = "none";
   clone.style.width = `${width}px`;
@@ -169,6 +177,7 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   clone.style.transformOrigin = "top left";
   clone.style.isolation = "isolate";
   clone.setAttribute(EXPORT_ATTRIBUTE, "true");
+  sanitizeDetachedCloneForCapture(clone);
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
   const freezeStyle = document.createElement("style");
@@ -185,6 +194,55 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   return clone;
 }
 
+function sanitizeDetachedCloneForCapture(clone: HTMLElement): void {
+  const shell = clone.querySelector<HTMLElement>('[data-export-layer="shell"]');
+  if (shell) {
+    shell.style.boxShadow =
+      "0 10px 16px -14px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+  }
+
+  const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
+  if (screen) {
+    screen.style.boxShadow = "0 2px 0 rgba(0,0,0,0.82), 0 1px 2px rgba(0,0,0,0.18)";
+  }
+
+  const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
+  if (artwork) {
+    artwork.style.boxShadow = "0 2px 6px -5px rgba(0,0,0,0.26)";
+  }
+
+  const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
+  if (wheel) {
+    wheel.style.boxShadow =
+      "0 8px 12px -12px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)";
+  }
+
+  const wheelCenter = clone.querySelector<HTMLElement>(
+    '[data-export-layer="wheel-center"]',
+  );
+  if (wheelCenter) {
+    wheelCenter.style.boxShadow =
+      "0 4px 8px -10px rgba(0,0,0,0.36), 0 1px 2px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)";
+  }
+
+  const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
+  layeredNodes.forEach((node) => {
+    node.style.filter = "none";
+  });
+}
+
+function resolveRuntimeBuildContext() {
+  if (typeof window === "undefined") {
+    return { deployVersion: "server", buildId: "server" };
+  }
+
+  const nextData = window as NextDataWindow;
+  const buildId = nextData.__NEXT_DATA__?.buildId ?? "unknown";
+  const deployVersion =
+    document.documentElement.getAttribute("data-deploy-version") ?? "unknown";
+  return { deployVersion, buildId };
+}
+
 function dataUrlToBlob(dataUrl: string): Blob {
   const [meta, data] = dataUrl.split(",");
   const mime =
@@ -198,6 +256,27 @@ function dataUrlToBlob(dataUrl: string): Blob {
     bytes[i] = binary.charCodeAt(i);
   }
   return new Blob([bytes], { type: mime });
+}
+
+async function summarizeBlob(
+  blob: Blob,
+): Promise<{ blobSize: number; blobDigest: string }> {
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const digestBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+    const digestHex = Array.from(new Uint8Array(digestBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return {
+      blobSize: blob.size,
+      blobDigest: digestHex,
+    };
+  } catch {
+    return {
+      blobSize: blob.size,
+      blobDigest: "unavailable",
+    };
+  }
 }
 
 async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
@@ -363,6 +442,9 @@ export interface ExportCapabilities {
 export interface ExportResult {
   success: boolean;
   method: "share" | "download" | "dataurl" | "manual";
+  capturePath?: string;
+  blobSize?: number;
+  blobDigest?: string;
   error?: string;
 }
 
@@ -697,6 +779,7 @@ export async function exportImage(
 ): Promise<ExportResult> {
   const { filename, backgroundColor, pixelRatio, onStatusChange } = options;
   const capabilities = detectExportCapabilities();
+  const runtimeBuildContext = resolveRuntimeBuildContext();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
   // Only open a fallback popup on non-iOS mobile (e.g. Android) where synthetic
   // clicks may be blocked. iOS uses Web Share API natively; opening a popup on
@@ -706,6 +789,14 @@ export async function exportImage(
   let keepPreparedPopupOpen = false;
   const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
   element.setAttribute(EXPORT_ATTRIBUTE, "true");
+  let capturePath = "none";
+
+  console.info("[export:diagnostics] start", {
+    filename,
+    pipelineVersion: EXPORT_PIPELINE_VERSION,
+    capabilities,
+    ...runtimeBuildContext,
+  });
 
   onStatusChange?.("preparing");
 
@@ -749,6 +840,8 @@ export async function exportImage(
       if (blob && (await isLikelyBlankCapture(blob))) {
         console.warn("Detached capture looked blank, trying live element");
         blob = null;
+      } else if (blob) {
+        capturePath = "detached-html-to-image";
       }
     } catch (error) {
       console.warn("Detached blob capture failed, trying live element:", error);
@@ -765,6 +858,8 @@ export async function exportImage(
         if (blob && (await isLikelyBlankCapture(blob))) {
           console.warn("Live-element capture looked blank");
           blob = null;
+        } else if (blob) {
+          capturePath = "live-html-to-image";
         }
       } catch (error) {
         console.warn("Live blob capture failed, will try renderer fallback:", error);
@@ -782,6 +877,8 @@ export async function exportImage(
         if (blob && (await isLikelyBlankCapture(blob))) {
           console.warn("Detached html2canvas fallback looked blank");
           blob = null;
+        } else if (blob) {
+          capturePath = "detached-html2canvas";
         }
       } catch (error) {
         console.warn("Detached html2canvas fallback failed:", error);
@@ -797,6 +894,8 @@ export async function exportImage(
         if (blob && (await isLikelyBlankCapture(blob))) {
           console.warn("Live html2canvas fallback looked blank");
           blob = null;
+        } else if (blob) {
+          capturePath = "live-html2canvas";
         }
       } catch (error) {
         console.warn("Live html2canvas fallback failed:", error);
@@ -815,6 +914,8 @@ export async function exportImage(
         if (blob && (await isLikelyBlankCapture(blob))) {
           console.warn("Low-ratio detached retry looked blank");
           blob = null;
+        } else if (blob) {
+          capturePath = "detached-html-to-image-low-ratio";
         }
       } catch (error) {
         console.warn("Low-ratio detached retry failed:", error);
@@ -827,11 +928,25 @@ export async function exportImage(
       try {
         const shared = await shareImageFile(blob, filename);
         if (shared) {
+          const blobSummary = await summarizeBlob(blob);
           if (preparedPopup && !preparedPopup.closed) {
             preparedPopup.close();
           }
+          console.info("[export:diagnostics] success", {
+            filename,
+            method: "share",
+            capturePath,
+            ...blobSummary,
+            pipelineVersion: EXPORT_PIPELINE_VERSION,
+            ...runtimeBuildContext,
+          });
           onStatusChange?.("success");
-          return { success: true, method: "share" };
+          return {
+            success: true,
+            method: "share",
+            capturePath,
+            ...blobSummary,
+          };
         }
       } catch (error) {
         console.warn("Share failed, trying download fallback:", error);
@@ -845,9 +960,23 @@ export async function exportImage(
         popupWindow: preparedPopup,
       });
       if (downloadResult.success) {
+        const blobSummary = await summarizeBlob(blob);
         keepPreparedPopupOpen = downloadResult.usedPopup;
+        console.info("[export:diagnostics] success", {
+          filename,
+          method: "download",
+          capturePath,
+          ...blobSummary,
+          pipelineVersion: EXPORT_PIPELINE_VERSION,
+          ...runtimeBuildContext,
+        });
         onStatusChange?.("success");
-        return { success: true, method: "download" };
+        return {
+          success: true,
+          method: "download",
+          capturePath,
+          ...blobSummary,
+        };
       }
     }
 
@@ -867,9 +996,23 @@ export async function exportImage(
         popupWindow: preparedPopup,
       });
       if (downloadResult.success) {
+        const blobSummary = await summarizeBlob(dataUrlBlob);
         keepPreparedPopupOpen = downloadResult.usedPopup;
+        console.info("[export:diagnostics] success", {
+          filename,
+          method: "dataurl",
+          capturePath: capturePath === "none" ? "data-url" : capturePath,
+          ...blobSummary,
+          pipelineVersion: EXPORT_PIPELINE_VERSION,
+          ...runtimeBuildContext,
+        });
         onStatusChange?.("success");
-        return { success: true, method: "dataurl" };
+        return {
+          success: true,
+          method: "dataurl",
+          capturePath: capturePath === "none" ? "data-url" : capturePath,
+          ...blobSummary,
+        };
       }
     } catch (error) {
       console.error("Data URL fallback failed:", error);
@@ -879,6 +1022,7 @@ export async function exportImage(
     // overlay so the user can long-press → "Save Image".
     if (capabilities.isIOS && blob) {
       try {
+        const blobSummary = await summarizeBlob(blob);
         const url = URL.createObjectURL(blob);
         const overlay = document.createElement("div");
         overlay.style.cssText =
@@ -902,8 +1046,21 @@ export async function exportImage(
           }
         });
         document.body.appendChild(overlay);
+        console.info("[export:diagnostics] success", {
+          filename,
+          method: "dataurl",
+          capturePath: capturePath === "none" ? "ios-inline-overlay" : capturePath,
+          ...blobSummary,
+          pipelineVersion: EXPORT_PIPELINE_VERSION,
+          ...runtimeBuildContext,
+        });
         onStatusChange?.("success");
-        return { success: true, method: "dataurl" };
+        return {
+          success: true,
+          method: "dataurl",
+          capturePath: capturePath === "none" ? "ios-inline-overlay" : capturePath,
+          ...blobSummary,
+        };
       } catch (error) {
         console.warn("iOS inline image fallback failed:", error);
       }
@@ -911,17 +1068,35 @@ export async function exportImage(
 
     // Method 5: Manual instructions (ultimate fallback)
     onStatusChange?.("error");
+    console.error("[export:diagnostics] failure", {
+      filename,
+      method: "manual",
+      capturePath,
+      pipelineVersion: EXPORT_PIPELINE_VERSION,
+      ...runtimeBuildContext,
+      error: "Export failed. Try taking a screenshot manually.",
+    });
     return {
       success: false,
       method: "manual",
+      capturePath,
       error: "Export failed. Try taking a screenshot manually.",
     };
   } catch (error) {
     console.error("Export failed:", error);
+    console.error("[export:diagnostics] failure", {
+      filename,
+      method: "manual",
+      capturePath,
+      pipelineVersion: EXPORT_PIPELINE_VERSION,
+      ...runtimeBuildContext,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    });
     onStatusChange?.("error");
     return {
       success: false,
       method: "manual",
+      capturePath,
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
   } finally {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useFixedEditor } from "./fixed-editor";
 
 interface EditableTrackNumberProps {
   trackNumber: number;
@@ -26,6 +27,7 @@ export function EditableTrackNumber({
 
   const trackInputRef = useRef<HTMLInputElement>(null);
   const totalInputRef = useRef<HTMLInputElement>(null);
+  const { isTouchEditingPreferred, openEditor } = useFixedEditor();
 
   useEffect(() => {
     setTrackValue(trackNumber.toString());
@@ -95,6 +97,38 @@ export function EditableTrackNumber({
     }
   };
 
+  const openTouchTrackEditor = () => {
+    if (disabled) return;
+    openEditor({
+      title: "Edit track number",
+      value: trackNumber.toString(),
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      onCommit: (nextValue) => {
+        const num = parseInt(nextValue, 10);
+        if (!isNaN(num) && num >= 1 && num <= totalTracks) {
+          onTrackNumberChange(num);
+        }
+      },
+    });
+  };
+
+  const openTouchTotalEditor = () => {
+    if (disabled) return;
+    openEditor({
+      title: "Edit total tracks",
+      value: totalTracks.toString(),
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      onCommit: (nextValue) => {
+        const num = parseInt(nextValue, 10);
+        if (!isNaN(num) && num >= 1 && num >= trackNumber) {
+          onTotalTracksChange(num);
+        }
+      },
+    });
+  };
+
   return (
     <div
       className={`flex items-center gap-1 ${className}`}
@@ -114,11 +148,16 @@ export function EditableTrackNumber({
         />
       ) : (
         <span
-          onClick={() => {
-            if (!disabled) {
-              setIsEditingTrack(true);
-            }
-          }}
+          onClick={
+            isTouchEditingPreferred
+              ? undefined
+              : () => {
+                  if (!disabled) {
+                    setIsEditingTrack(true);
+                  }
+                }
+          }
+          onPointerUp={isTouchEditingPreferred ? openTouchTrackEditor : undefined}
           className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
           data-testid="track-number-value"
         >
@@ -140,11 +179,16 @@ export function EditableTrackNumber({
         />
       ) : (
         <span
-          onClick={() => {
-            if (!disabled) {
-              setIsEditingTotal(true);
-            }
-          }}
+          onClick={
+            isTouchEditingPreferred
+              ? undefined
+              : () => {
+                  if (!disabled) {
+                    setIsEditingTotal(true);
+                  }
+                }
+          }
+          onPointerUp={isTouchEditingPreferred ? openTouchTotalEditor : undefined}
           className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
           data-testid="total-tracks-value"
         >

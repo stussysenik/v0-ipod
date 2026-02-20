@@ -24,42 +24,41 @@ export function ClickWheel({
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelShadow = exportSafe
-    ? "0 12px 20px -14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
+    ? "0 8px 12px -12px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
     : "0 22px 30px -24px rgba(0,0,0,0.46), 0 8px 16px -18px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
   const centerShadow = exportSafe
-    ? "0 6px 12px -10px rgba(0,0,0,0.42), 0 1px 4px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)"
+    ? "0 4px 8px -10px rgba(0,0,0,0.38), 0 1px 2px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)"
     : "0 10px 14px -12px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
     if (!wheel || disabled) return;
 
-    let isInternalDrag = false;
-    let startAngle = 0;
+    let activePointerId: number | null = null;
     let lastAngle = 0;
 
-    const calculateAngle = (e: MouseEvent | TouchEvent) => {
+    const calculateAngle = (clientX: number, clientY: number) => {
       const rect = wheel.getBoundingClientRect();
       const center = {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       };
-      const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
       return Math.atan2(clientY - center.y, clientX - center.x) * (180 / Math.PI);
     };
 
-    const handleStart = (e: MouseEvent | TouchEvent) => {
-      isInternalDrag = true;
-      startAngle = calculateAngle(e);
-      lastAngle = startAngle;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      activePointerId = event.pointerId;
+      lastAngle = calculateAngle(event.clientX, event.clientY);
+      wheel.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
     };
 
-    const handleMove = (e: MouseEvent | TouchEvent) => {
-      if (!isInternalDrag) return;
-      e.preventDefault();
+    const handlePointerMove = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) return;
+      event.preventDefault();
 
-      const currentAngle = calculateAngle(e);
+      const currentAngle = calculateAngle(event.clientX, event.clientY);
       let delta = currentAngle - lastAngle;
 
       if (delta > 180) delta -= 360;
@@ -73,24 +72,24 @@ export function ClickWheel({
       }
     };
 
-    const handleEnd = () => {
-      isInternalDrag = false;
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) return;
+      activePointerId = null;
+      wheel.releasePointerCapture?.(event.pointerId);
     };
 
-    wheel.addEventListener("mousedown", handleStart);
-    wheel.addEventListener("touchstart", handleStart, { passive: false });
-    window.addEventListener("mousemove", handleMove, { passive: false });
-    window.addEventListener("touchmove", handleMove, { passive: false });
-    window.addEventListener("mouseup", handleEnd);
-    window.addEventListener("touchend", handleEnd);
+    wheel.addEventListener("pointerdown", handlePointerDown, { passive: false });
+    wheel.addEventListener("pointermove", handlePointerMove, { passive: false });
+    wheel.addEventListener("pointerup", handlePointerEnd);
+    wheel.addEventListener("pointercancel", handlePointerEnd);
+    wheel.addEventListener("lostpointercapture", handlePointerEnd);
 
     return () => {
-      wheel.removeEventListener("mousedown", handleStart);
-      wheel.removeEventListener("touchstart", handleStart);
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("touchmove", handleMove);
-      window.removeEventListener("mouseup", handleEnd);
-      window.removeEventListener("touchend", handleEnd);
+      wheel.removeEventListener("pointerdown", handlePointerDown);
+      wheel.removeEventListener("pointermove", handlePointerMove);
+      wheel.removeEventListener("pointerup", handlePointerEnd);
+      wheel.removeEventListener("pointercancel", handlePointerEnd);
+      wheel.removeEventListener("lostpointercapture", handlePointerEnd);
     };
   }, [onSeek, playClick, disabled]);
 
@@ -104,6 +103,7 @@ export function ClickWheel({
       <div
         className="absolute inset-0 rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#F0F0F0]"
         style={{ boxShadow: wheelShadow }}
+        data-export-layer="wheel"
       >
         {/* Subtle analog sheen and bevel */}
         <div
@@ -153,6 +153,7 @@ export function ClickWheel({
           disabled ? "cursor-default" : "active:scale-95 cursor-pointer"
         }`}
         style={{ boxShadow: centerShadow }}
+        data-export-layer="wheel-center"
         onClick={(e) => {
           e.stopPropagation();
           if (disabled) return;

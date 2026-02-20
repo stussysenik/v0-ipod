@@ -64,6 +64,7 @@ export function IpodScreen({
     <div
       className="w-[322px] h-[240px] bg-black rounded-[10px] p-[2px] mx-auto z-10 shrink-0 relative"
       style={{ boxShadow: screenShadow }}
+      data-export-layer="screen"
     >
       <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#525252]">
         {/* STATUS BAR */}
@@ -81,6 +82,7 @@ export function IpodScreen({
             <div
               className="w-[114px] h-[114px] bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98]"
               style={{ boxShadow: artworkShadow }}
+              data-export-layer="artwork"
             >
               <ImageUpload
                 currentImage={state.artwork}
@@ -105,6 +107,7 @@ export function IpodScreen({
                   onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
                   disabled={!isEditable}
                   className="font-bold min-w-[50px] -ml-1 pl-1"
+                  editLabel="Edit title"
                 />
               </div>
             </div>
@@ -117,6 +120,7 @@ export function IpodScreen({
                   onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
                   disabled={!isEditable}
                   className="font-semibold text-[#555] -ml-1 pl-1"
+                  editLabel="Edit artist"
                 />
               </div>
             </div>
@@ -129,6 +133,7 @@ export function IpodScreen({
                   onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
                   disabled={!isEditable}
                   className="font-medium text-[#777] -ml-1 pl-1"
+                  editLabel="Edit album"
                 />
               </div>
             </div>
@@ -184,6 +189,7 @@ export function IpodScreen({
                   setCurrentTime(time, true);
                 }}
                 disabled={!isEditable}
+                editLabel="Edit elapsed time"
               />
             </div>
             {/* Remaining Time (Editable) */}
@@ -199,6 +205,7 @@ export function IpodScreen({
                   setRemainingTime(remaining);
                 }}
                 disabled={!isEditable}
+                editLabel="Edit remaining time"
               />
             </div>
           </div>

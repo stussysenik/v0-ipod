@@ -17,8 +17,7 @@ function resolveDeployVersion(): string {
 
   const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
   const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.slice(-6);
-  const deploymentUrlToken = process.env.VERCEL_URL
-    ?.replace(/\.vercel\.app$/i, "")
+  const deploymentUrlToken = process.env.VERCEL_URL?.replace(/\.vercel\.app$/i, "")
     .split("-")
     .at(-1);
   const deploymentStamp = deploymentId || deploymentUrlToken;
@@ -76,12 +75,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-deploy-version={deployVersion}>
       <body className={`font-sans antialiased`}>
         <ServiceWorkerCleanup deployVersion={deployVersion} />
         {children}
         <BuildVersionBadge initialVersion={deployVersion} />
-        <Toaster position="bottom-center" richColors />
+        <Toaster
+          position="bottom-center"
+          richColors={false}
+          closeButton={false}
+          visibleToasts={2}
+          duration={2200}
+          toastOptions={{
+            style: {
+              border: "1px solid rgba(0,0,0,0.14)",
+              background: "rgba(247,247,245,0.94)",
+              color: "rgba(0,0,0,0.82)",
+              boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
+              backdropFilter: "blur(8px)",
+            },
+          }}
+        />
         <Analytics />
       </body>
     </html>
