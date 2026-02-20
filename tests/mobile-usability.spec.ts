@@ -35,9 +35,8 @@ test.describe("Mobile usability", () => {
     await expect(page.getByTestId("theme-panel")).toBeHidden();
     await expect(page.getByTestId("toolbox-panel")).toBeHidden();
     await page.getByTestId("toolbox-toggle-button").tap();
-    await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
-
     await expect(page.getByTestId("toolbox-panel")).toBeVisible();
+    await expect(page.getByTestId("export-button")).toContainText("Flat View Only");
     await page.getByTestId("flat-view-button").tap();
     await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
   });

@@ -19,6 +19,8 @@ import {
   saveMetadata,
   loadUiState,
   saveUiState,
+  loadExportCounter,
+  saveExportCounter,
   type IpodViewMode,
   loadSongSnapshot,
   saveSongSnapshot,
@@ -39,19 +41,29 @@ const CLICK_SOUND =
 
 const CASE_COLOR_PRESETS = [
   { label: "White (5G)", value: "#F5F5F7" },
+  { label: "Pearl Gray", value: "#E4E4E6" },
   { label: "Black (5G/Classic)", value: "#1B1B1F" },
+  { label: "Graphite", value: "#2A2C31" },
+  { label: "Charcoal", value: "#3B3D44" },
   { label: "Silver (Classic)", value: "#D9DADC" },
+  { label: "Brushed Steel", value: "#C7C9CD" },
+  { label: "Gunmetal", value: "#535861" },
   { label: "U2 Black/Red", value: "#19191D" },
-  { label: "Mini Blue", value: "#7A90B8" },
-  { label: "Mini Green", value: "#9AAE8E" },
-  { label: "Mini Pink", value: "#C7A2AC" },
-  { label: "Product Red", value: "#B33A3A" },
+  { label: "Slate Blue", value: "#7A90B8" },
+  { label: "Fog Green", value: "#9AAE8E" },
+  { label: "Muted Rose", value: "#BFA5AD" },
+  { label: "Oxide Red", value: "#8D4A4A" },
 ];
 
 const BG_COLOR_PRESETS = [
   { label: "Studio Warm", value: "#E5E5E5" },
+  { label: "Cloud Gray", value: "#DBDCDD" },
   { label: "Concrete", value: "#D4D6D8" },
+  { label: "Lo-Fi Silver", value: "#CACDD1" },
   { label: "Slate", value: "#A9AFB6" },
+  { label: "Ash Blue", value: "#98A1AA" },
+  { label: "Darkroom Gray", value: "#7F8791" },
+  { label: "Night Graphite", value: "#5F6772" },
 ];
 
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
@@ -62,6 +74,7 @@ const SHELL_HEIGHT = 620;
 const SHELL_PADDING = 48;
 const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
 const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
+const EXPORT_COUNTER_PAD = 4;
 
 const initialState: SongMetadata = {
   title: "Have A Destination?",
@@ -153,6 +166,7 @@ export default function IPodClassic() {
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [softNotice, setSoftNotice] = useState<string | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
+  const [exportCounter, setExportCounter] = useState(0);
   const [isToolboxOpen, setIsToolboxOpen] = useState(true);
   const isFlatView = viewMode === "flat";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
@@ -202,6 +216,10 @@ export default function IPodClassic() {
     if (savedUi.viewMode) {
       setViewMode(savedUi.viewMode);
     }
+  }, []);
+
+  useEffect(() => {
+    setExportCounter(loadExportCounter());
   }, []);
 
   // Persist song metadata on every change (skip until restored)
@@ -358,6 +376,12 @@ export default function IPodClassic() {
     [state.currentTime],
   );
 
+  const formatExportId = useCallback(
+    (counter: number) =>
+      String(Math.max(0, Math.floor(counter))).padStart(EXPORT_COUNTER_PAD, "0"),
+    [],
+  );
+
   const handleExportRef = useRef<() => void>();
 
   const handleExport = useCallback(async () => {
@@ -375,13 +399,15 @@ export default function IPodClassic() {
     }
 
     playClick();
+    const exportId = exportCounter;
+    const exportTag = formatExportId(exportId);
     const slug =
       state.title
         .toLowerCase()
         .trim()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "") || "snapshot";
-    const filename = `ipod-${slug}.png`;
+    const filename = `ipod-${exportTag}-${slug}.png`;
 
     if (!exportTargetRef.current) return;
 
@@ -396,15 +422,19 @@ export default function IPodClassic() {
         filename,
         backgroundColor: bgColor,
         pixelRatio: 4,
+        constrainedFrame: true,
         onStatusChange: setExportStatus,
       });
       console.info("[export] finished", result);
 
       if (result.success) {
+        const nextCounter = exportId + 1;
+        setExportCounter(nextCounter);
+        saveExportCounter(nextCounter);
         if (result.method === "share") {
-          showSoftNotice("Shared. Use Save Image in your share sheet.");
+          showSoftNotice(`Shared #${exportTag}`);
         } else {
-          showSoftNotice("Image exported");
+          showSoftNotice(`Exported #${exportTag}`);
         }
       } else {
         toast.error("Export failed", {
@@ -433,6 +463,8 @@ export default function IPodClassic() {
     playClick,
     state.title,
     bgColor,
+    exportCounter,
+    formatExportId,
     exportStatus,
     isFlatView,
     showSoftNotice,
@@ -610,7 +642,7 @@ export default function IPodClassic() {
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
   const shellShadow = isExportCapturing
-    ? "0 10px 18px -16px rgba(0,0,0,0.24), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
+    ? "inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
     : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
   const toolboxDockClass = isCompactToolbox
     ? "fixed right-4 bottom-6"

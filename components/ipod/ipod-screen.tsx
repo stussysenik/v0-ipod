@@ -27,11 +27,9 @@ export function IpodScreen({
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
   const screenShadow = exportSafe
-    ? "0 2px 0 rgba(0,0,0,0.82), 0 1px 3px rgba(0,0,0,0.22)"
+    ? "none"
     : "0 3px 0 rgba(0,0,0,0.84), 0 1px 5px rgba(0,0,0,0.32)";
-  const artworkShadow = exportSafe
-    ? "0 3px 8px -6px rgba(0,0,0,0.35)"
-    : "0 6px 12px -8px rgba(0,0,0,0.42)";
+  const artworkShadow = exportSafe ? "none" : "0 6px 12px -8px rgba(0,0,0,0.42)";
 
   const setCurrentTime = useCallback(
     (currentTime: number, preserveRemaining = false) => {

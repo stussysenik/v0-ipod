@@ -150,6 +150,20 @@ test.describe("Core interactions remain usable", () => {
     );
   });
 
+  test("export filenames use incremental ids", async ({ page }) => {
+    const firstDownload = page.waitForEvent("download");
+    await page.getByTestId("export-button").click();
+    const first = await firstDownload;
+    expect(first.suggestedFilename()).toMatch(/^ipod-0000-/);
+
+    await expect(page.getByTestId("export-button")).toBeEnabled({ timeout: 10000 });
+
+    const secondDownload = page.waitForEvent("download");
+    await page.getByTestId("export-button").click();
+    const second = await secondDownload;
+    expect(second.suggestedFilename()).toMatch(/^ipod-0001-/);
+  });
+
   test("export does not leave controls blocked", async ({ page }) => {
     await page.getByTestId("export-button").click();
 

@@ -4,7 +4,7 @@ export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error
 
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
-const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-sanitized-v1";
+const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v2";
 
 interface NextDataWindow extends Window {
   __NEXT_DATA__?: {
@@ -153,7 +153,13 @@ async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
   await Promise.all(imagePromises);
 }
 
-function createDetachedExportNode(element: HTMLElement): HTMLElement {
+function createDetachedExportNode(
+  element: HTMLElement,
+  options?: {
+    constrainedFrame?: boolean;
+  },
+): HTMLElement {
+  const constrainedFrame = options?.constrainedFrame ?? false;
   const rect = element.getBoundingClientRect();
   const width = Math.ceil(element.offsetWidth || rect.width || 1);
   const height = Math.ceil(element.offsetHeight || rect.height || 1);
@@ -172,12 +178,12 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   clone.style.height = `${height}px`;
   clone.style.maxWidth = "none";
   clone.style.maxHeight = "none";
-  clone.style.overflow = "visible";
+  clone.style.overflow = constrainedFrame ? "hidden" : "visible";
   clone.style.transform = "none";
   clone.style.transformOrigin = "top left";
   clone.style.isolation = "isolate";
   clone.setAttribute(EXPORT_ATTRIBUTE, "true");
-  sanitizeDetachedCloneForCapture(clone);
+  sanitizeDetachedCloneForCapture(clone, { constrainedFrame });
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
   const freezeStyle = document.createElement("style");
@@ -187,6 +193,24 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
       transition: none !important;
       caret-color: transparent !important;
     }
+    [data-export-layer] {
+      filter: none !important;
+    }
+    [data-export-layer="shell"] {
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08) !important;
+    }
+    [data-export-layer="screen"] {
+      box-shadow: none !important;
+    }
+    [data-export-layer="artwork"] {
+      box-shadow: none !important;
+    }
+    [data-export-layer="wheel"] {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05) !important;
+    }
+    [data-export-layer="wheel-center"] {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
+    }
   `;
   clone.appendChild(freezeStyle);
 
@@ -194,35 +218,48 @@ function createDetachedExportNode(element: HTMLElement): HTMLElement {
   return clone;
 }
 
-function sanitizeDetachedCloneForCapture(clone: HTMLElement): void {
+function sanitizeDetachedCloneForCapture(
+  clone: HTMLElement,
+  options?: {
+    constrainedFrame?: boolean;
+  },
+): void {
+  const constrainedFrame = options?.constrainedFrame ?? false;
   const shell = clone.querySelector<HTMLElement>('[data-export-layer="shell"]');
   if (shell) {
-    shell.style.boxShadow =
-      "0 10px 16px -14px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+    shell.style.boxShadow = constrainedFrame
+      ? "inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
+      : "0 10px 16px -14px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
   }
 
   const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
   if (screen) {
-    screen.style.boxShadow = "0 2px 0 rgba(0,0,0,0.82), 0 1px 2px rgba(0,0,0,0.18)";
+    screen.style.boxShadow = constrainedFrame
+      ? "none"
+      : "0 2px 0 rgba(0,0,0,0.82), 0 1px 2px rgba(0,0,0,0.18)";
   }
 
   const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
   if (artwork) {
-    artwork.style.boxShadow = "0 2px 6px -5px rgba(0,0,0,0.26)";
+    artwork.style.boxShadow = constrainedFrame
+      ? "none"
+      : "0 2px 6px -5px rgba(0,0,0,0.26)";
   }
 
   const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
   if (wheel) {
-    wheel.style.boxShadow =
-      "0 8px 12px -12px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)";
+    wheel.style.boxShadow = constrainedFrame
+      ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
+      : "0 8px 12px -12px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)";
   }
 
   const wheelCenter = clone.querySelector<HTMLElement>(
     '[data-export-layer="wheel-center"]',
   );
   if (wheelCenter) {
-    wheelCenter.style.boxShadow =
-      "0 4px 8px -10px rgba(0,0,0,0.36), 0 1px 2px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)";
+    wheelCenter.style.boxShadow = constrainedFrame
+      ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
+      : "0 4px 8px -10px rgba(0,0,0,0.36), 0 1px 2px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)";
   }
 
   const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
@@ -774,10 +811,17 @@ export async function exportImage(
     filename: string;
     backgroundColor?: string;
     pixelRatio?: number;
+    constrainedFrame?: boolean;
     onStatusChange?: (status: ExportStatus) => void;
   },
 ): Promise<ExportResult> {
-  const { filename, backgroundColor, pixelRatio, onStatusChange } = options;
+  const {
+    filename,
+    backgroundColor,
+    pixelRatio,
+    constrainedFrame = false,
+    onStatusChange,
+  } = options;
   const capabilities = detectExportCapabilities();
   const runtimeBuildContext = resolveRuntimeBuildContext();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
@@ -794,6 +838,7 @@ export async function exportImage(
   console.info("[export:diagnostics] start", {
     filename,
     pipelineVersion: EXPORT_PIPELINE_VERSION,
+    constrainedFrame,
     capabilities,
     ...runtimeBuildContext,
   });
@@ -818,7 +863,7 @@ export async function exportImage(
   let exportNode: HTMLElement | null = null;
   const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
     if (!exportNode) {
-      exportNode = createDetachedExportNode(element);
+      exportNode = createDetachedExportNode(element, { constrainedFrame });
       // Pre-load and embed all images as inline data URLs.
       await preloadAndEmbedImages(exportNode);
       // Additional wait for images to settle after conversion.
@@ -848,7 +893,7 @@ export async function exportImage(
     }
 
     // Fallback to live element capture if detached capture failed.
-    if (!blob) {
+    if (!blob && !constrainedFrame) {
       try {
         blob = await captureToBlob(
           element,
@@ -885,7 +930,7 @@ export async function exportImage(
       }
     }
 
-    if (!blob) {
+    if (!blob && !constrainedFrame) {
       try {
         blob = await captureToBlobWithHtml2Canvas(element, {
           backgroundColor,

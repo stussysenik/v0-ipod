@@ -3,6 +3,7 @@ import type { SongMetadata } from "@/types/ipod";
 const METADATA_STORAGE_KEY = "ipodSnapshotMetadata";
 const UI_STORAGE_KEY = "ipodSnapshotUiState";
 const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
+const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 export type IpodViewMode = "flat" | "3d" | "focus";
@@ -120,6 +121,29 @@ export function loadSongSnapshot(): SongSnapshot | null {
 export function saveSongSnapshot(snapshot: SongSnapshot): void {
   try {
     localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Ignore quota errors
+  }
+}
+
+export function loadExportCounter(): number {
+  try {
+    const raw = localStorage.getItem(EXPORT_COUNTER_STORAGE_KEY);
+    if (!raw) return 0;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return 0;
+    }
+    return parsed;
+  } catch {
+    return 0;
+  }
+}
+
+export function saveExportCounter(nextCounter: number): void {
+  try {
+    const safe = Math.max(0, Math.floor(nextCounter));
+    localStorage.setItem(EXPORT_COUNTER_STORAGE_KEY, String(safe));
   } catch {
     // Ignore quota errors
   }
