@@ -10,6 +10,7 @@ import {
   Check,
   Plus,
   Loader2,
+  Menu,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportImage, type ExportStatus } from "@/lib/export-utils";
@@ -152,7 +153,10 @@ export default function IPodClassic() {
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [softNotice, setSoftNotice] = useState<string | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
+  const [isToolboxOpen, setIsToolboxOpen] = useState(true);
   const isFlatView = viewMode === "flat";
+  const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
+  const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
@@ -221,18 +225,24 @@ export default function IPodClassic() {
   }, [isFlatView]);
 
   useEffect(() => {
-    if (!showSettings) return;
+    if (!showSettings && !isToolboxVisible) return;
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (toolsRef.current?.contains(target)) return;
       setShowSettings(false);
+      if (isCompactToolbox) {
+        setIsToolboxOpen(false);
+      }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowSettings(false);
+        if (isCompactToolbox) {
+          setIsToolboxOpen(false);
+        }
       }
     };
 
@@ -243,7 +253,12 @@ export default function IPodClassic() {
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showSettings]);
+  }, [showSettings, isCompactToolbox, isToolboxVisible]);
+
+  useEffect(() => {
+    if (viewportSize.width === 0) return;
+    setIsToolboxOpen(!isCompactToolbox);
+  }, [viewportSize.width, isCompactToolbox]);
 
   useEffect(() => {
     try {
@@ -308,6 +323,7 @@ export default function IPodClassic() {
     (options?: {
       closeSettings?: boolean;
       closeEditor?: boolean;
+      closeToolbox?: boolean;
       clearNotice?: boolean;
     }) => {
       if (options?.closeSettings) {
@@ -319,8 +335,11 @@ export default function IPodClassic() {
       if (options?.closeEditor) {
         setEditorResetKey((prev) => prev + 1);
       }
+      if (options?.closeToolbox && isCompactToolbox) {
+        setIsToolboxOpen(false);
+      }
     },
-    [clearSoftNotice],
+    [clearSoftNotice, isCompactToolbox],
   );
 
   useEffect(() => {
@@ -346,6 +365,7 @@ export default function IPodClassic() {
     resetInteractionChrome({
       closeSettings: true,
       closeEditor: true,
+      closeToolbox: true,
       clearNotice: true,
     });
     if (!isFlatView) {
@@ -455,24 +475,31 @@ export default function IPodClassic() {
     );
   }, []);
 
-  const openSystemColorPicker = useCallback((target: "case" | "bg") => {
-    const input = target === "case" ? caseColorInputRef.current : bgColorInputRef.current;
-    if (!input) return;
+  const openSystemColorPicker = useCallback(
+    (target: "case" | "bg") => {
+      const input =
+        target === "case" ? caseColorInputRef.current : bgColorInputRef.current;
+      if (!input) return;
 
-    // Keep picker invocation in the same user gesture for mobile browsers.
-    try {
-      if ("showPicker" in input) {
-        (input as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
-      } else {
+      // Keep picker invocation in the same user gesture for mobile browsers.
+      try {
+        if ("showPicker" in input) {
+          (input as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+        } else {
+          input.click();
+        }
+      } catch {
         input.click();
       }
-    } catch {
-      input.click();
-    }
 
-    // Hide panel so users can sample colors from anywhere on-screen.
-    setShowSettings(false);
-  }, []);
+      // Hide panel so users can sample colors from anywhere on-screen.
+      setShowSettings(false);
+      if (isCompactToolbox) {
+        setIsToolboxOpen(false);
+      }
+    },
+    [isCompactToolbox],
+  );
 
   const applySongSnapshot = useCallback((snapshot: SongSnapshot) => {
     dispatch({ type: "RESTORE_ALL", payload: snapshot.metadata });
@@ -483,7 +510,12 @@ export default function IPodClassic() {
   }, []);
 
   const handleSaveSnapshot = useCallback(() => {
-    resetInteractionChrome({ closeSettings: true, closeEditor: true, clearNotice: true });
+    resetInteractionChrome({
+      closeSettings: true,
+      closeEditor: true,
+      closeToolbox: true,
+      clearNotice: true,
+    });
     playClick();
     saveSongSnapshot({
       metadata: state,
@@ -501,7 +533,12 @@ export default function IPodClassic() {
   ]);
 
   const handleLoadSnapshot = useCallback(() => {
-    resetInteractionChrome({ closeSettings: true, closeEditor: true, clearNotice: true });
+    resetInteractionChrome({
+      closeSettings: true,
+      closeEditor: true,
+      closeToolbox: true,
+      clearNotice: true,
+    });
     playClick();
     const persisted = loadSongSnapshot();
     if (persisted) {
@@ -520,12 +557,24 @@ export default function IPodClassic() {
       resetInteractionChrome({
         closeSettings: true,
         closeEditor: true,
+        closeToolbox: true,
         clearNotice: true,
       });
       setViewMode(nextMode);
     },
     [resetInteractionChrome],
   );
+
+  const handleToggleToolbox = useCallback(() => {
+    clearSoftNotice();
+    setIsToolboxOpen((prev) => {
+      const next = !prev;
+      if (!next) {
+        setShowSettings(false);
+      }
+      return next;
+    });
+  }, [clearSoftNotice]);
 
   const handleToggleSettings = useCallback(() => {
     clearSoftNotice();
@@ -563,6 +612,12 @@ export default function IPodClassic() {
   const shellShadow = isExportCapturing
     ? "0 10px 18px -16px rgba(0,0,0,0.24), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
     : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+  const toolboxDockClass = isCompactToolbox
+    ? "fixed right-4 bottom-6"
+    : "fixed top-6 right-6";
+  const toolboxPanelClass = isCompactToolbox
+    ? `absolute right-0 bottom-14 flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/88 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-all duration-300 ${isToolboxVisible ? "opacity-100 translate-y-0 visible pointer-events-auto" : "opacity-0 translate-y-2 invisible pointer-events-none"}`
+    : "flex flex-col gap-3";
 
   return (
     <FixedEditorProvider resetKey={editorResetKey}>
@@ -604,215 +659,228 @@ export default function IPodClassic() {
         {/* Floating Tools UI */}
         <div
           ref={toolsRef}
-          className={`fixed top-6 right-6 z-50 flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+          className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
         >
-          {/* Settings / Theme */}
-          <div className="relative group">
+          {isCompactToolbox && (
             <IconButton
-              icon={<Settings className="w-5 h-5" />}
-              label="Theme"
-              data-testid="theme-button"
-              onClick={handleToggleSettings}
-              isActive={showSettings}
+              icon={<Menu className="w-5 h-5" />}
+              label={isToolboxVisible ? "Hide Toolbox" : "Toolbox"}
+              data-testid="toolbox-toggle-button"
+              onClick={handleToggleToolbox}
+              isActive={isToolboxVisible}
+              className="w-12 h-12 border border-[#D0D4DA] bg-[#F2F2F0]/95 text-black shadow-[0_14px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm"
             />
+          )}
 
-            {showSettings && (
-              <div
-                data-testid="theme-panel"
-                className="absolute top-0 right-14 max-sm:right-0 max-sm:top-14 bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] animate-in slide-in-from-right-2 border border-[#D5D7DA]"
-              >
-                <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-                  Case Color
-                </h3>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {CASE_COLOR_PRESETS.map((c) => (
-                    <button
-                      key={c.value}
-                      onClick={() => setSkinColor(c.value)}
-                      title={c.label}
-                      className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-                        skinColor === c.value
-                          ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-                          : "border-[#B5BBC3]"
-                      }`}
-                      style={{ backgroundColor: c.value }}
-                    />
-                  ))}
-                  {/* System Color Picker integrated */}
-                  <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
-                    <Plus className="w-4 h-4 text-[#4B5563]" />
-                    <button
-                      type="button"
-                      onClick={() => openSystemColorPicker("case")}
-                      data-testid="custom-case-color-button"
-                      className="absolute inset-0 bg-transparent"
-                      title="Custom case color"
-                      aria-label="Open custom case color picker"
-                    />
-                  </div>
-                </div>
-                {savedCaseColors.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Recent Custom
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {savedCaseColors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setSkinColor(color)}
-                          title={`Custom ${color}`}
-                          className={`w-6 h-6 rounded-full border ${
-                            skinColor === color
-                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
+          <div data-testid="toolbox-panel" className={toolboxPanelClass}>
+            {/* Settings / Theme */}
+            <div className="relative group">
+              <IconButton
+                icon={<Settings className="w-5 h-5" />}
+                label="Theme"
+                data-testid="theme-button"
+                onClick={handleToggleSettings}
+                isActive={showSettings}
+              />
+
+              {showSettings && (
+                <div
+                  data-testid="theme-panel"
+                  className="absolute top-0 right-14 max-sm:right-0 max-sm:bottom-14 max-sm:top-auto bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] animate-in slide-in-from-right-2 border border-[#D5D7DA]"
+                >
+                  <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                    Case Color
+                  </h3>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {CASE_COLOR_PRESETS.map((c) => (
+                      <button
+                        key={c.value}
+                        onClick={() => setSkinColor(c.value)}
+                        title={c.label}
+                        className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                          skinColor === c.value
+                            ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                            : "border-[#B5BBC3]"
+                        }`}
+                        style={{ backgroundColor: c.value }}
+                      />
+                    ))}
+                    {/* System Color Picker integrated */}
+                    <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
+                      <Plus className="w-4 h-4 text-[#4B5563]" />
+                      <button
+                        type="button"
+                        onClick={() => openSystemColorPicker("case")}
+                        data-testid="custom-case-color-button"
+                        className="absolute inset-0 bg-transparent"
+                        title="Custom case color"
+                        aria-label="Open custom case color picker"
+                      />
                     </div>
                   </div>
-                )}
+                  {savedCaseColors.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                        Recent Custom
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {savedCaseColors.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setSkinColor(color)}
+                            title={`Custom ${color}`}
+                            className={`w-6 h-6 rounded-full border ${
+                              skinColor === color
+                                ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                                : "border-[#B5BBC3]"
+                            }`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-                  Background
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {BG_COLOR_PRESETS.map((bg) => (
-                    <button
-                      key={bg.value}
-                      onClick={() => setBgColor(bg.value)}
-                      title={bg.label}
-                      className={`w-6 h-6 rounded-full border ${
-                        bgColor === bg.value
-                          ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                          : "border-[#B5BBC3]"
-                      }`}
-                      style={{ backgroundColor: bg.value }}
-                    />
-                  ))}
-                  {/* Background color picker */}
-                  <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                    <Plus className="w-3 h-3 text-[#1F2937]" />
-                    <button
-                      type="button"
-                      onClick={() => openSystemColorPicker("bg")}
-                      data-testid="custom-bg-color-button"
-                      className="absolute inset-0 bg-transparent"
-                      title="Custom background color"
-                      aria-label="Open custom background color picker"
-                    />
-                  </div>
-                </div>
-                {savedBgColors.length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Recent Custom
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {savedBgColors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setBgColor(color)}
-                          title={`Custom ${color}`}
-                          className={`w-6 h-6 rounded-full border ${
-                            bgColor === color
-                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
+                  <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                    Background
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {BG_COLOR_PRESETS.map((bg) => (
+                      <button
+                        key={bg.value}
+                        onClick={() => setBgColor(bg.value)}
+                        title={bg.label}
+                        className={`w-6 h-6 rounded-full border ${
+                          bgColor === bg.value
+                            ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                            : "border-[#B5BBC3]"
+                        }`}
+                        style={{ backgroundColor: bg.value }}
+                      />
+                    ))}
+                    {/* Background color picker */}
+                    <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
+                      <Plus className="w-3 h-3 text-[#1F2937]" />
+                      <button
+                        type="button"
+                        onClick={() => openSystemColorPicker("bg")}
+                        data-testid="custom-bg-color-button"
+                        className="absolute inset-0 bg-transparent"
+                        title="Custom background color"
+                        aria-label="Open custom background color picker"
+                      />
                     </div>
                   </div>
-                )}
+                  {savedBgColors.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                        Recent Custom
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {savedBgColors.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => setBgColor(color)}
+                            title={`Custom ${color}`}
+                            className={`w-6 h-6 rounded-full border ${
+                              bgColor === color
+                                ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                                : "border-[#B5BBC3]"
+                            }`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
-                  <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                    Snapshot
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      data-testid="load-song-snapshot-button"
-                      onClick={handleLoadSnapshot}
-                      className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-                    >
-                      Load Snapshot
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="save-song-snapshot-button"
-                      onClick={handleSaveSnapshot}
-                      className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-                    >
-                      Save Snapshot
-                    </button>
+                  <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
+                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      Snapshot
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        data-testid="load-song-snapshot-button"
+                        onClick={handleLoadSnapshot}
+                        className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                      >
+                        Load Snapshot
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="save-song-snapshot-button"
+                        onClick={handleSaveSnapshot}
+                        className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                      >
+                        Save Snapshot
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* View Modes */}
-          <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
+            {/* View Modes */}
+            <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
+              <IconButton
+                icon={<Smartphone className="w-5 h-5" />}
+                label="Flat View"
+                data-testid="flat-view-button"
+                isActive={viewMode === "flat"}
+                onClick={() => handleViewModeChange("flat")}
+              />
+              <IconButton
+                icon={<Box className="w-5 h-5" />}
+                label="3D Experience"
+                data-testid="three-d-view-button"
+                isActive={viewMode === "3d"}
+                onClick={() => handleViewModeChange("3d")}
+              />
+              <IconButton
+                icon={<Monitor className="w-5 h-5" />}
+                label="Focus Mode"
+                data-testid="focus-view-button"
+                isActive={viewMode === "focus"}
+                onClick={() => handleViewModeChange("focus")}
+              />
+            </div>
+
+            {/* Export Action */}
             <IconButton
-              icon={<Smartphone className="w-5 h-5" />}
-              label="Flat View"
-              data-testid="flat-view-button"
-              isActive={viewMode === "flat"}
-              onClick={() => handleViewModeChange("flat")}
-            />
-            <IconButton
-              icon={<Box className="w-5 h-5" />}
-              label="3D Experience"
-              data-testid="three-d-view-button"
-              isActive={viewMode === "3d"}
-              onClick={() => handleViewModeChange("3d")}
-            />
-            <IconButton
-              icon={<Monitor className="w-5 h-5" />}
-              label="Focus Mode"
-              data-testid="focus-view-button"
-              isActive={viewMode === "focus"}
-              onClick={() => handleViewModeChange("focus")}
+              icon={
+                exportStatus === "success" ? (
+                  <Check className="w-5 h-5" />
+                ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Share className="w-5 h-5" />
+                )
+              }
+              label={
+                exportStatus === "preparing"
+                  ? "Preparing..."
+                  : exportStatus === "sharing"
+                    ? "Sharing..."
+                    : exportStatus === "success"
+                      ? "Done!"
+                      : !isFlatView
+                        ? "Flat View Only"
+                        : "Export 2D Image"
+              }
+              onClick={handleExport}
+              data-testid="export-button"
+              contrast={true}
+              disabled={!isFlatView || exportStatus !== "idle"}
+              className={`transition-colors duration-300 ${
+                exportStatus === "success"
+                  ? "bg-green-500 hover:bg-green-600 border-none"
+                  : exportStatus === "preparing" || exportStatus === "sharing"
+                    ? "bg-blue-500 hover:bg-blue-600 border-none"
+                    : ""
+              } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
             />
           </div>
-
-          {/* Export Action */}
-          <IconButton
-            icon={
-              exportStatus === "success" ? (
-                <Check className="w-5 h-5" />
-              ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Share className="w-5 h-5" />
-              )
-            }
-            label={
-              exportStatus === "preparing"
-                ? "Preparing..."
-                : exportStatus === "sharing"
-                  ? "Sharing..."
-                  : exportStatus === "success"
-                    ? "Done!"
-                    : !isFlatView
-                      ? "Flat View Only"
-                      : "Export 2D Image"
-            }
-            onClick={handleExport}
-            data-testid="export-button"
-            contrast={true}
-            disabled={!isFlatView || exportStatus !== "idle"}
-            className={`transition-colors duration-300 ${
-              exportStatus === "success"
-                ? "bg-green-500 hover:bg-green-600 border-none"
-                : exportStatus === "preparing" || exportStatus === "sharing"
-                  ? "bg-blue-500 hover:bg-blue-600 border-none"
-                  : ""
-            } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-          />
         </div>
 
         {softNotice && exportStatus === "idle" && (

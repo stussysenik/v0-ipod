@@ -12,23 +12,32 @@ test.use({
 test.describe("Mobile usability", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByTestId("theme-button")).toBeVisible();
+    await expect(page.getByTestId("toolbox-toggle-button")).toBeVisible();
+    await expect(page.getByTestId("toolbox-panel")).toBeHidden();
   });
 
   test("tap interactions stay usable on mobile", async ({ page }) => {
+    await page.getByTestId("toolbox-toggle-button").tap();
+    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
     await page.getByTestId("theme-button").tap();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
     await page.touchscreen.tap(24, 120);
     await expect(page.getByTestId("theme-panel")).toBeHidden();
+    await expect(page.getByTestId("toolbox-panel")).toBeHidden();
 
+    await page.getByTestId("toolbox-toggle-button").tap();
+    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
     await page.getByTestId("theme-button").tap();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
     await page.getByTestId("three-d-view-button").tap();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
+    await expect(page.getByTestId("toolbox-panel")).toBeHidden();
+    await page.getByTestId("toolbox-toggle-button").tap();
     await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
 
+    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
     await page.getByTestId("flat-view-button").tap();
     await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
   });
@@ -63,6 +72,8 @@ test.describe("Mobile usability", () => {
   });
 
   test("mobile load snapshot applies persisted artwork data", async ({ page }) => {
+    await page.getByTestId("toolbox-toggle-button").tap();
+    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
     await page.getByTestId("theme-button").tap();
     await page.getByTestId("load-song-snapshot-button").tap();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
