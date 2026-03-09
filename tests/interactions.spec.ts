@@ -53,7 +53,8 @@ test.describe("Core interactions remain usable", () => {
   });
 
   test("custom color picker flow saves case colors to localStorage", async ({ page }) => {
-    const caseColorInput = page.getByTestId("case-color-input");
+    await page.getByTestId("theme-button").click();
+    const caseColorInput = page.getByTestId("custom-case-color-button");
     await caseColorInput.evaluate((el) => {
       const input = el as HTMLInputElement;
       const setter = Object.getOwnPropertyDescriptor(

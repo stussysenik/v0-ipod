@@ -43,7 +43,7 @@ function isViewMode(value: unknown): value is IpodViewMode {
   return value === "flat" || value === "3d" || value === "focus";
 }
 
-function isHexColor(value: unknown): value is string {
+export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_PATTERN.test(value);
 }
 

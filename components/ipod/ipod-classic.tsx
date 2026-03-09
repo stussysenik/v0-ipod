@@ -11,6 +11,7 @@ import {
   Plus,
   Loader2,
   Menu,
+  Pipette,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportImage, type ExportStatus } from "@/lib/export-utils";
@@ -33,6 +34,7 @@ import { ThreeDIpod } from "@/components/three/three-d-ipod";
 import { FixedEditorProvider } from "./fixed-editor";
 import { IpodScreen } from "./ipod-screen";
 import { ClickWheel } from "./click-wheel";
+import { HexColorInput } from "./hex-color-input";
 import type { SongMetadata } from "@/types/ipod";
 
 // Base64 click sound
@@ -168,6 +170,7 @@ export default function IPodClassic() {
   const [editorResetKey, setEditorResetKey] = useState(0);
   const [exportCounter, setExportCounter] = useState(0);
   const [isToolboxOpen, setIsToolboxOpen] = useState(true);
+  const [hasEyeDropper, setHasEyeDropper] = useState(false);
   const isFlatView = viewMode === "flat";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
@@ -175,13 +178,12 @@ export default function IPodClassic() {
   const containerRef = useRef<HTMLDivElement>(null);
   const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const caseColorInputRef = useRef<HTMLInputElement>(null);
-  const bgColorInputRef = useRef<HTMLInputElement>(null);
   const softNoticeTimerRef = useRef<number | null>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND);
+    setHasEyeDropper("EyeDropper" in window);
   }, []);
 
   useEffect(() => {
@@ -507,30 +509,25 @@ export default function IPodClassic() {
     );
   }, []);
 
-  const openSystemColorPicker = useCallback(
-    (target: "case" | "bg") => {
-      const input =
-        target === "case" ? caseColorInputRef.current : bgColorInputRef.current;
-      if (!input) return;
-
-      // Keep picker invocation in the same user gesture for mobile browsers.
+  const openEyeDropper = useCallback(
+    async (target: "case" | "bg") => {
+      if (!("EyeDropper" in window)) return;
       try {
-        if ("showPicker" in input) {
-          (input as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+        // @ts-expect-error EyeDropper API not yet in all TS libs
+        const dropper = new window.EyeDropper();
+        const result = await dropper.open();
+        const color = (result.sRGBHex as string).toUpperCase();
+        if (target === "case") {
+          setSkinColor(color);
         } else {
-          input.click();
+          setBgColor(color);
         }
+        saveCustomColor(target, color);
       } catch {
-        input.click();
-      }
-
-      // Hide panel so users can sample colors from anywhere on-screen.
-      setShowSettings(false);
-      if (isCompactToolbox) {
-        setIsToolboxOpen(false);
+        // User cancelled or API unavailable
       }
     },
-    [isCompactToolbox],
+    [saveCustomColor],
   );
 
   const applySongSnapshot = useCallback((snapshot: SongSnapshot) => {
@@ -658,36 +655,6 @@ export default function IPodClassic() {
         className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-4 py-6 sm:p-6 transition-colors duration-500 overflow-hidden"
         style={{ backgroundColor: bgColor }}
       >
-        {/* Persistent color inputs so native picker stays alive even when UI hides */}
-        <input
-          ref={caseColorInputRef}
-          type="color"
-          data-testid="case-color-input"
-          value={skinColor}
-          onChange={(e) => {
-            setSkinColor(e.target.value);
-            saveCustomColor("case", e.target.value);
-            setShowSettings(false);
-          }}
-          className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-        <input
-          ref={bgColorInputRef}
-          type="color"
-          data-testid="bg-color-input"
-          value={bgColor}
-          onChange={(e) => {
-            setBgColor(e.target.value);
-            saveCustomColor("bg", e.target.value);
-            setShowSettings(false);
-          }}
-          className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none"
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-
         {/* Floating Tools UI */}
         <div
           ref={toolsRef}
@@ -737,14 +704,19 @@ export default function IPodClassic() {
                         style={{ backgroundColor: c.value }}
                       />
                     ))}
-                    {/* System Color Picker integrated */}
+                    {/* System Color Picker — native input, tap-friendly */}
                     <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
-                      <Plus className="w-4 h-4 text-[#4B5563]" />
-                      <button
-                        type="button"
-                        onClick={() => openSystemColorPicker("case")}
+                      <Plus className="w-4 h-4 text-[#4B5563] pointer-events-none" />
+                      <input
+                        type="color"
                         data-testid="custom-case-color-button"
-                        className="absolute inset-0 bg-transparent"
+                        value={skinColor}
+                        onInput={(e) => setSkinColor((e.target as HTMLInputElement).value)}
+                        onChange={(e) => {
+                          setSkinColor(e.target.value);
+                          saveCustomColor("case", e.target.value);
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
                         title="Custom case color"
                         aria-label="Open custom case color picker"
                       />
@@ -772,6 +744,26 @@ export default function IPodClassic() {
                       </div>
                     </div>
                   )}
+                  <div className="flex items-end gap-1 mb-4">
+                    <HexColorInput
+                      value={skinColor}
+                      onChange={(color) => {
+                        setSkinColor(color);
+                        saveCustomColor("case", color);
+                      }}
+                    />
+                    {hasEyeDropper && (
+                      <button
+                        type="button"
+                        onClick={() => openEyeDropper("case")}
+                        className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+                        title="Pick color from screen"
+                        aria-label="Pick case color from screen"
+                      >
+                        <Pipette className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
                     Background
@@ -790,14 +782,19 @@ export default function IPodClassic() {
                         style={{ backgroundColor: bg.value }}
                       />
                     ))}
-                    {/* Background color picker */}
+                    {/* Background color picker — native input, tap-friendly */}
                     <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                      <Plus className="w-3 h-3 text-[#1F2937]" />
-                      <button
-                        type="button"
-                        onClick={() => openSystemColorPicker("bg")}
+                      <Plus className="w-3 h-3 text-[#1F2937] pointer-events-none" />
+                      <input
+                        type="color"
                         data-testid="custom-bg-color-button"
-                        className="absolute inset-0 bg-transparent"
+                        value={bgColor}
+                        onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
+                        onChange={(e) => {
+                          setBgColor(e.target.value);
+                          saveCustomColor("bg", e.target.value);
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
                         title="Custom background color"
                         aria-label="Open custom background color picker"
                       />
@@ -825,6 +822,26 @@ export default function IPodClassic() {
                       </div>
                     </div>
                   )}
+                  <div className="flex items-end gap-1">
+                    <HexColorInput
+                      value={bgColor}
+                      onChange={(color) => {
+                        setBgColor(color);
+                        saveCustomColor("bg", color);
+                      }}
+                    />
+                    {hasEyeDropper && (
+                      <button
+                        type="button"
+                        onClick={() => openEyeDropper("bg")}
+                        className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+                        title="Pick color from screen"
+                        aria-label="Pick background color from screen"
+                      >
+                        <Pipette className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
                   <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
                     <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
