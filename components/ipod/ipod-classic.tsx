@@ -42,7 +42,9 @@ const CLICK_SOUND =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//oeBAAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBBEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBCEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBDEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBEIAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r////////////////////////////////////////////////////////////////";
 
 const CASE_COLOR_PRESETS = [
+  { label: "Bright White", value: "#FBFBF8" },
   { label: "White (5G)", value: "#F5F5F7" },
+  { label: "Soft Silver", value: "#ECEDEE" },
   { label: "Pearl Gray", value: "#E4E4E6" },
   { label: "Black (5G/Classic)", value: "#1B1B1F" },
   { label: "Graphite", value: "#2A2C31" },
@@ -57,7 +59,21 @@ const CASE_COLOR_PRESETS = [
   { label: "Oxide Red", value: "#8D4A4A" },
 ];
 
+const CASE_COLOR_AUTHENTIC = [
+  { label: "White (1st-3rd Gen)", value: "#FFFFFF" },
+  { label: "White (4th Gen)", value: "#F7F7F7" },
+  { label: "White (5th Gen)", value: "#F5F5F5" },
+  { label: "Black (5th Gen)", value: "#1A1A1A" },
+  { label: "Silver (Classic 6th)", value: "#D9D9D9" },
+  { label: "Black (Classic 6th)", value: "#1C1C1E" },
+  { label: "Classic Black 2008", value: "#2D2F34" },
+  { label: "U2 Black Front", value: "#111111" },
+  { label: "U2 Red Wheel", value: "#B00020" },
+];
+
 const BG_COLOR_PRESETS = [
+  { label: "Paper White", value: "#F4F4EF" },
+  { label: "Light Mist", value: "#EBECE7" },
   { label: "Studio Warm", value: "#E5E5E5" },
   { label: "Cloud Gray", value: "#DBDCDD" },
   { label: "Concrete", value: "#D4D6D8" },
@@ -71,6 +87,12 @@ const BG_COLOR_PRESETS = [
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
 const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
 const MAX_CUSTOM_COLORS = 6;
+const OKLCH_CASE_L = 0.72;
+const OKLCH_CASE_C = 0.15;
+const OKLCH_BG_L = 0.88;
+const OKLCH_BG_C = 0.07;
+const OKLCH_CASE_STEPS = 18;
+const OKLCH_BG_STEPS = 14;
 const SHELL_WIDTH = 370;
 const SHELL_HEIGHT = 620;
 const SHELL_PADDING = 48;
@@ -79,16 +101,53 @@ const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
 
 const initialState: SongMetadata = {
-  title: "Have A Destination?",
-  artist: "Mac Miller",
-  album: "Balloonerism",
+  title: "Charcoal Baby",
+  artist: "Blood Orange",
+  album: "Negro Swan",
   artwork: placeholderLogo.src,
-  duration: 334,
+  duration: 244,
   currentTime: 0,
   rating: 5,
-  trackNumber: 2,
-  totalTracks: 10,
+  trackNumber: 7,
+  totalTracks: 16,
 };
+
+const supportsOklch = () =>
+  typeof CSS !== "undefined" &&
+  typeof CSS.supports === "function" &&
+  CSS.supports("color", "oklch(0.7 0.1 20)");
+
+const oklchToHex = (lightness: number, chroma: number, hue: number) => {
+  if (typeof document === "undefined") return null;
+  const swatch = document.createElement("div");
+  swatch.style.color = `oklch(${lightness} ${chroma} ${hue})`;
+  swatch.style.display = "none";
+  document.body.appendChild(swatch);
+  const computed = getComputedStyle(swatch).color;
+  document.body.removeChild(swatch);
+  const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) return null;
+  const [r, g, b] = match.slice(1, 4).map((value) => Number(value));
+  if ([r, g, b].some((value) => Number.isNaN(value))) return null;
+  return `#${[r, g, b]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("")}`.toUpperCase();
+};
+
+const buildOklchPalette = (
+  steps: number,
+  lightness: number,
+  chroma: number,
+  offset = 0,
+) =>
+  Array.from({ length: steps }, (_, index) => {
+    const hue = Math.round(((index / steps) * 360 + offset) % 360);
+    return {
+      label: `OKLCH ${hue}°`,
+      value: `oklch(${lightness} ${chroma} ${hue})`,
+      hue,
+    };
+  });
 
 type Action =
   | { type: "UPDATE_TITLE"; payload: string }
@@ -171,6 +230,13 @@ export default function IPodClassic() {
   const [exportCounter, setExportCounter] = useState(0);
   const [isToolboxOpen, setIsToolboxOpen] = useState(true);
   const [hasEyeDropper, setHasEyeDropper] = useState(false);
+  const [oklchReady, setOklchReady] = useState(false);
+  const [oklchCasePalette, setOklchCasePalette] = useState<
+    { label: string; value: string; hue: number }[]
+  >([]);
+  const [oklchBgPalette, setOklchBgPalette] = useState<
+    { label: string; value: string; hue: number }[]
+  >([]);
   const isFlatView = viewMode === "flat";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
@@ -184,6 +250,14 @@ export default function IPodClassic() {
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND);
     setHasEyeDropper("EyeDropper" in window);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!supportsOklch()) return;
+    setOklchReady(true);
+    setOklchCasePalette(buildOklchPalette(OKLCH_CASE_STEPS, OKLCH_CASE_L, OKLCH_CASE_C));
+    setOklchBgPalette(buildOklchPalette(OKLCH_BG_STEPS, OKLCH_BG_L, OKLCH_BG_C, 30));
   }, []);
 
   useEffect(() => {
@@ -615,9 +689,10 @@ export default function IPodClassic() {
       return 1;
     }
 
-    const toolbarReserve = viewportSize.width >= 768 ? 112 : 24;
-    const availableWidth = Math.max(viewportSize.width - toolbarReserve, 260);
-    const availableHeight = Math.max(viewportSize.height - 24, 320);
+    const horizontalReserve = viewportSize.width >= 768 ? 112 : 24;
+    const verticalReserve = isCompactToolbox ? 128 : 32;
+    const availableWidth = Math.max(viewportSize.width - horizontalReserve, 260);
+    const availableHeight = Math.max(viewportSize.height - verticalReserve, 320);
     const fitScale = Math.min(
       availableWidth / PREVIEW_FRAME_WIDTH,
       availableHeight / PREVIEW_FRAME_HEIGHT,
@@ -634,7 +709,13 @@ export default function IPodClassic() {
     }
 
     return fitScale;
-  }, [isExportCapturing, viewportSize.width, viewportSize.height, viewMode]);
+  }, [
+    isCompactToolbox,
+    isExportCapturing,
+    viewportSize.width,
+    viewportSize.height,
+    viewMode,
+  ]);
 
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
@@ -642,17 +723,17 @@ export default function IPodClassic() {
     ? "inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
     : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
   const toolboxDockClass = isCompactToolbox
-    ? "fixed right-4 bottom-6"
+    ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
     : "fixed top-6 right-6";
   const toolboxPanelClass = isCompactToolbox
-    ? `absolute right-0 bottom-14 flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/88 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-all duration-300 ${isToolboxVisible ? "opacity-100 translate-y-0 visible pointer-events-auto" : "opacity-0 translate-y-2 invisible pointer-events-none"}`
+    ? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/88 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-all duration-300 ${isToolboxVisible ? "opacity-100 translate-y-0 visible pointer-events-auto" : "opacity-0 translate-y-2 invisible pointer-events-none"}`
     : "flex flex-col gap-3";
 
   return (
     <FixedEditorProvider resetKey={editorResetKey}>
       <div
         ref={containerRef}
-        className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-4 py-6 sm:p-6 transition-colors duration-500 overflow-hidden"
+        className="min-h-[100dvh] w-full flex flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-4 pb-24 transition-colors duration-500 sm:justify-center sm:p-6"
         style={{ backgroundColor: bgColor }}
       >
         {/* Floating Tools UI */}
@@ -685,43 +766,91 @@ export default function IPodClassic() {
               {showSettings && (
                 <div
                   data-testid="theme-panel"
-                  className="absolute top-0 right-14 max-sm:right-0 max-sm:bottom-14 max-sm:top-auto bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] animate-in slide-in-from-right-2 border border-[#D5D7DA]"
+                  className="z-20 absolute top-0 right-14 max-sm:right-0 max-sm:bottom-14 max-sm:top-auto bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] max-sm:max-h-[min(68dvh,32rem)] max-sm:overflow-y-auto max-sm:overscroll-contain animate-in slide-in-from-right-2 border border-[#D5D7DA]"
                 >
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
                     Case Color
                   </h3>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {CASE_COLOR_PRESETS.map((c) => (
-                      <button
-                        key={c.value}
-                        onClick={() => setSkinColor(c.value)}
-                        title={c.label}
-                        className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-                          skinColor === c.value
-                            ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-                            : "border-[#B5BBC3]"
-                        }`}
-                        style={{ backgroundColor: c.value }}
-                      />
-                    ))}
-                    {/* System Color Picker — native input, tap-friendly */}
-                    <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
-                      <Plus className="w-4 h-4 text-[#4B5563] pointer-events-none" />
-                      <input
-                        type="color"
-                        data-testid="custom-case-color-button"
-                        value={skinColor}
-                        onInput={(e) => setSkinColor((e.target as HTMLInputElement).value)}
-                        onChange={(e) => {
-                          setSkinColor(e.target.value);
-                          saveCustomColor("case", e.target.value);
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        title="Custom case color"
-                        aria-label="Open custom case color picker"
-                      />
+                  <div className="mb-4">
+                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      Authentic Apple Releases
+                    </h4>
+                    <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+                      {CASE_COLOR_AUTHENTIC.map((c) => (
+                        <button
+                          key={c.value}
+                          onClick={() => setSkinColor(c.value)}
+                          title={c.label}
+                          className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                            skinColor === c.value
+                              ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                              : "border-[#B5BBC3]"
+                          }`}
+                          style={{ backgroundColor: c.value }}
+                        />
+                      ))}
                     </div>
                   </div>
+                  <div className="mb-4">
+                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      Studio Palette
+                    </h4>
+                    <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+                      {CASE_COLOR_PRESETS.map((c) => (
+                        <button
+                          key={c.value}
+                          onClick={() => setSkinColor(c.value)}
+                          title={c.label}
+                          className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                            skinColor === c.value
+                              ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                              : "border-[#B5BBC3]"
+                          }`}
+                          style={{ backgroundColor: c.value }}
+                        />
+                      ))}
+                      {/* System Color Picker — native input, tap-friendly */}
+                      <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
+                        <Plus className="w-4 h-4 text-[#4B5563] pointer-events-none" />
+                        <input
+                          type="color"
+                          data-testid="custom-case-color-button"
+                          value={skinColor}
+                          onInput={(e) => setSkinColor((e.target as HTMLInputElement).value)}
+                          onChange={(e) => {
+                            setSkinColor(e.target.value);
+                            saveCustomColor("case", e.target.value);
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          title="Custom case color"
+                          aria-label="Open custom case color picker"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {oklchReady && oklchCasePalette.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                        OKLCH Spectrum
+                      </h4>
+                      <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
+                        {oklchCasePalette.map((swatch) => (
+                          <button
+                            key={swatch.hue}
+                            onClick={() => {
+                              const hex = oklchToHex(OKLCH_CASE_L, OKLCH_CASE_C, swatch.hue);
+                              if (!hex) return;
+                              setSkinColor(hex);
+                              saveCustomColor("case", hex);
+                            }}
+                            title={swatch.label}
+                            className="w-8 h-8 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
+                            style={{ backgroundColor: swatch.value }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {savedCaseColors.length > 0 && (
                     <div className="mb-4">
                       <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
@@ -733,7 +862,7 @@ export default function IPodClassic() {
                             key={color}
                             onClick={() => setSkinColor(color)}
                             title={`Custom ${color}`}
-                            className={`w-6 h-6 rounded-full border ${
+                            className={`w-7 h-7 rounded-full border ${
                               skinColor === color
                                 ? "border-[#111827] ring-2 ring-[#CDD1D6]"
                                 : "border-[#B5BBC3]"
@@ -743,6 +872,13 @@ export default function IPodClassic() {
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {!oklchReady && (
+                    <p className="mb-4 px-1 text-[10px] text-[#6B7280]">
+                      OKLCH palettes need a modern browser. Use the custom picker for full
+                      compatibility.
+                    </p>
                   )}
                   <div className="flex items-end gap-1 mb-4">
                     <HexColorInput
@@ -768,38 +904,66 @@ export default function IPodClassic() {
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
                     Background
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {BG_COLOR_PRESETS.map((bg) => (
-                      <button
-                        key={bg.value}
-                        onClick={() => setBgColor(bg.value)}
-                        title={bg.label}
-                        className={`w-6 h-6 rounded-full border ${
-                          bgColor === bg.value
-                            ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                            : "border-[#B5BBC3]"
-                        }`}
-                        style={{ backgroundColor: bg.value }}
-                      />
-                    ))}
-                    {/* Background color picker — native input, tap-friendly */}
-                    <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                      <Plus className="w-3 h-3 text-[#1F2937] pointer-events-none" />
-                      <input
-                        type="color"
-                        data-testid="custom-bg-color-button"
-                        value={bgColor}
-                        onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
-                        onChange={(e) => {
-                          setBgColor(e.target.value);
-                          saveCustomColor("bg", e.target.value);
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        title="Custom background color"
-                        aria-label="Open custom background color picker"
-                      />
+                  <div className="mb-3">
+                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      Studio Palette
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {BG_COLOR_PRESETS.map((bg) => (
+                        <button
+                          key={bg.value}
+                          onClick={() => setBgColor(bg.value)}
+                          title={bg.label}
+                          className={`w-6 h-6 rounded-full border ${
+                            bgColor === bg.value
+                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                              : "border-[#B5BBC3]"
+                          }`}
+                          style={{ backgroundColor: bg.value }}
+                        />
+                      ))}
+                      {/* Background color picker — native input, tap-friendly */}
+                      <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
+                        <Plus className="w-3 h-3 text-[#1F2937] pointer-events-none" />
+                        <input
+                          type="color"
+                          data-testid="custom-bg-color-button"
+                          value={bgColor}
+                          onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
+                          onChange={(e) => {
+                            setBgColor(e.target.value);
+                            saveCustomColor("bg", e.target.value);
+                          }}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          title="Custom background color"
+                          aria-label="Open custom background color picker"
+                        />
+                      </div>
                     </div>
                   </div>
+                  {oklchReady && oklchBgPalette.length > 0 && (
+                    <div className="mb-3">
+                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                        OKLCH Ambient
+                      </h4>
+                      <div className="grid grid-cols-7 sm:grid-cols-9 gap-2">
+                        {oklchBgPalette.map((swatch) => (
+                          <button
+                            key={swatch.hue}
+                            onClick={() => {
+                              const hex = oklchToHex(OKLCH_BG_L, OKLCH_BG_C, swatch.hue);
+                              if (!hex) return;
+                              setBgColor(hex);
+                              saveCustomColor("bg", hex);
+                            }}
+                            title={swatch.label}
+                            className="w-6 h-6 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
+                            style={{ backgroundColor: swatch.value }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {savedBgColors.length > 0 && (
                     <div className="mt-3">
                       <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">

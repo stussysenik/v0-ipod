@@ -7,12 +7,12 @@ test.describe("EditableTrackNumber Component", () => {
   });
 
   test("displays initial track number format", async ({ page }) => {
-    await expect(page.getByTestId("track-number-container")).toContainText("2");
+    await expect(page.getByTestId("track-number-container")).toContainText("7");
     await expect(page.getByTestId("track-number-container")).toContainText(
       "of",
     );
     await expect(page.getByTestId("track-number-container")).toContainText(
-      "10",
+      "16",
     );
   });
 
@@ -22,7 +22,7 @@ test.describe("EditableTrackNumber Component", () => {
     const input = page.getByTestId("track-number-input");
     await expect(input).toBeVisible();
     await expect(input).toBeFocused();
-    await expect(input).toHaveValue("2");
+    await expect(input).toHaveValue("7");
   });
 
   test("saves new track number on Enter", async ({ page }) => {
@@ -42,17 +42,17 @@ test.describe("EditableTrackNumber Component", () => {
     await input.fill("9");
     await input.press("Escape");
 
-    await expect(page.getByTestId("track-number-value")).toHaveText("2");
+    await expect(page.getByTestId("track-number-value")).toHaveText("7");
   });
 
   test("validates track number cannot exceed total", async ({ page }) => {
     await page.getByTestId("track-number-value").click();
 
     const input = page.getByTestId("track-number-input");
-    await input.fill("15");
+    await input.fill("20");
     await input.press("Enter");
 
-    await expect(page.getByTestId("track-number-value")).toHaveText("2");
+    await expect(page.getByTestId("track-number-value")).toHaveText("7");
   });
 
   test("total tracks is also editable", async ({ page }) => {

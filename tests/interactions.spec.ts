@@ -28,7 +28,7 @@ test.describe("Core interactions remain usable", () => {
     await page.getByTestId("theme-button").click();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
-    await page.getByText("Have A Destination?").click();
+    await page.getByText("Charcoal Baby").click();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
 
     await page.getByTestId("theme-button").click();
@@ -79,24 +79,24 @@ test.describe("Core interactions remain usable", () => {
     await page.getByTestId("theme-button").click();
     await page.getByTestId("load-song-snapshot-button").click();
 
-    await expect(page.getByText("Have A Destination?")).toBeVisible();
+    await expect(page.getByText("Charcoal Baby")).toBeVisible();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
       "src",
-      /mac-miller-test\.jpg/,
+      /placeholder-logo\.png/,
     );
     await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
 
     await page.reload();
-    await expect(page.getByText("Have A Destination?")).toBeVisible();
+    await expect(page.getByText("Charcoal Baby")).toBeVisible();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
       "src",
-      /mac-miller-test\.jpg/,
+      /placeholder-logo\.png/,
     );
     await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
   });
 
   test("save snapshot stores edited data and load restores it", async ({ page }) => {
-    await page.getByText("Have A Destination?").dblclick();
+    await page.getByText("Charcoal Baby").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill("Snapshot QA");
@@ -173,5 +173,32 @@ test.describe("Core interactions remain usable", () => {
     });
     await page.getByTestId("theme-button").click();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
+  });
+
+  test("long titles wrap within the metadata panel", async ({ page }) => {
+    const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
+
+    await page.getByText("Charcoal Baby").dblclick();
+    const titleInput = page.locator('input[type="text"]').first();
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill(longTitle);
+    await titleInput.press("Enter");
+
+    await expect(page.getByTestId("track-title-text")).toHaveText(longTitle);
+    await expect(page.getByTestId("track-title-text")).toBeVisible();
+
+    const layout = await page.getByTestId("track-title-text").evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      const lineHeight = Number.parseFloat(style.lineHeight) || 16;
+      return {
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+        scrollHeight: el.scrollHeight,
+        lineHeight,
+      };
+    });
+
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+    expect(layout.scrollHeight).toBeGreaterThan(layout.lineHeight * 1.5);
   });
 });

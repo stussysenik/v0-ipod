@@ -21,3 +21,18 @@ cd v0-ipod
 npm install
 npm run dev
 ```
+
+Default local URL: `http://localhost:4001`
+
+Override the port when needed:
+
+```bash
+PORT=4010 npm run dev
+PORT=4010 npm run start
+```
+
+## Troubleshooting
+
+If `npm run dev` appears to open the wrong app on `localhost:4000`, another local service is
+already using that port. This repo defaults to `4001` to avoid that conflict, but `PORT` can be
+set explicitly when you need a different local port.

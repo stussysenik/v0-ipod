@@ -10,6 +10,7 @@ interface EditableTextProps {
   className?: string;
   disabled?: boolean;
   editLabel?: string;
+  dataTestId?: string;
 }
 
 export function EditableText({
@@ -18,6 +19,7 @@ export function EditableText({
   className = "",
   disabled = false,
   editLabel = "Edit text",
+  dataTestId,
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -87,6 +89,7 @@ export function EditableText({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         className={`w-full bg-white/80 border-b border-black focus:outline-none focus:border-blue-500 rounded px-1 ${className}`}
+        data-testid={dataTestId}
       />
     );
   }
@@ -95,9 +98,10 @@ export function EditableText({
     <span
       onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
       onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
-      className={`block w-full break-words rounded px-0.5 -mx-0.5 transition-colors ${
+      className={`block w-full min-w-0 max-w-full break-words rounded px-0.5 -mx-0.5 transition-colors [overflow-wrap:anywhere] [hyphens:auto] ${
         disabled ? "cursor-default" : "cursor-text hover:bg-black/5 hover:text-blue-900"
       } ${className}`}
+      data-testid={dataTestId}
     >
       {value}
     </span>

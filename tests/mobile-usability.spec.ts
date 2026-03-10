@@ -55,7 +55,7 @@ test.describe("Mobile usability", () => {
   });
 
   test("single tap edit and touch seek work", async ({ page }) => {
-    await page.getByText("Have A Destination?").tap();
+    await page.getByText("Charcoal Baby").tap();
     const input = page.getByTestId("fixed-editor-input");
     await expect(input).toBeVisible();
     await input.fill("Mobile Edit");
@@ -66,7 +66,12 @@ test.describe("Mobile usability", () => {
     const box = await track.boundingBox();
     if (!box) throw new Error("progress track not found");
 
-    await page.touchscreen.tap(box.x + box.width * 0.7, box.y + box.height / 2);
+    await track.tap({
+      position: {
+        x: box.width * 0.7,
+        y: box.height / 2,
+      },
+    });
     await expect(page.getByTestId("elapsed-time")).not.toContainText("0:00");
   });
 
@@ -77,13 +82,53 @@ test.describe("Mobile usability", () => {
     await page.getByTestId("load-song-snapshot-button").tap();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
       "src",
-      /mac-miller-test\.jpg/,
+      /placeholder-logo\.png/,
     );
 
     await page.reload();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
       "src",
-      /mac-miller-test\.jpg/,
+      /placeholder-logo\.png/,
     );
+  });
+
+  test("long title wrapping and theme controls stay reachable on mobile", async ({
+    page,
+  }) => {
+    const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
+
+    await page.getByText("Charcoal Baby").tap();
+    const input = page.getByTestId("fixed-editor-input");
+    await expect(input).toBeVisible();
+    await input.fill(longTitle);
+    await page.getByTestId("fixed-editor-done").tap();
+
+    const titleLayout = await page.getByTestId("track-title-text").evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      const lineHeight = Number.parseFloat(style.lineHeight) || 16;
+      return {
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+        scrollHeight: el.scrollHeight,
+        lineHeight,
+      };
+    });
+
+    expect(titleLayout.scrollWidth).toBeLessThanOrEqual(titleLayout.clientWidth + 1);
+    expect(titleLayout.scrollHeight).toBeGreaterThan(titleLayout.lineHeight * 1.5);
+
+    await page.getByTestId("toolbox-toggle-button").tap();
+    await page.getByTestId("theme-button").tap();
+
+    const themePanel = page.getByTestId("theme-panel");
+    await expect(themePanel).toBeVisible();
+    await page.getByTestId("save-song-snapshot-button").scrollIntoViewIfNeeded();
+    await expect(page.getByTestId("save-song-snapshot-button")).toBeVisible();
+
+    const panelBox = await themePanel.boundingBox();
+    expect(panelBox).not.toBeNull();
+    if (!panelBox) throw new Error("theme panel not found");
+    expect(panelBox.y).toBeGreaterThanOrEqual(0);
+    expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(844);
   });
 });
