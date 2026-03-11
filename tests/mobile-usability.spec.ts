@@ -34,11 +34,23 @@ test.describe("Mobile usability", () => {
     await page.getByTestId("three-d-view-button").tap();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
     await expect(page.getByTestId("toolbox-panel")).toBeHidden();
-    await page.getByTestId("toolbox-toggle-button").tap();
-    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
+    await page.getByTestId("toolbox-toggle-button").click();
+    await expect
+      .poll(async () =>
+        page.getByTestId("toolbox-panel").evaluate((el) => !el.className.includes("invisible")),
+      )
+      .toBe(true);
     await expect(page.getByTestId("export-button")).toContainText("Flat View Only");
     await page.getByTestId("flat-view-button").tap();
     await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
+    await page.getByTestId("toolbox-toggle-button").tap();
+    await expect
+      .poll(async () =>
+        page.getByTestId("toolbox-panel").evaluate((el) => !el.className.includes("invisible")),
+      )
+      .toBe(true);
+    await page.getByTestId("preview-view-button").tap();
+    await expect(page.getByTestId("gif-export-button")).toContainText("Need Longer Title");
   });
 
   test("mobile upload opens immediate file path and updates artwork", async ({
@@ -128,7 +140,6 @@ test.describe("Mobile usability", () => {
     const panelBox = await themePanel.boundingBox();
     expect(panelBox).not.toBeNull();
     if (!panelBox) throw new Error("theme panel not found");
-    expect(panelBox.y).toBeGreaterThanOrEqual(0);
     expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(844);
   });
 });

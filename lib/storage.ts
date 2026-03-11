@@ -6,7 +6,7 @@ const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
 const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
-export type IpodViewMode = "flat" | "3d" | "focus";
+export type IpodViewMode = "flat" | "3d" | "focus" | "preview";
 
 export interface IpodUiState {
   skinColor: string;
@@ -40,7 +40,12 @@ export function saveMetadata(state: SongMetadata): void {
 }
 
 function isViewMode(value: unknown): value is IpodViewMode {
-  return value === "flat" || value === "3d" || value === "focus";
+  return (
+    value === "flat" ||
+    value === "3d" ||
+    value === "focus" ||
+    value === "preview"
+  );
 }
 
 export function isHexColor(value: unknown): value is string {

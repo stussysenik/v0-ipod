@@ -8,6 +8,7 @@ import { ImageUpload } from "./image-upload";
 import { EditableText } from "./editable-text";
 import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import type { SongMetadata } from "@/types/ipod";
 
 interface IpodScreenProps {
@@ -16,6 +17,9 @@ interface IpodScreenProps {
   playClick: () => void;
   isEditable?: boolean;
   exportSafe?: boolean;
+  titlePreview?: boolean;
+  titleCaptureReady?: boolean;
+  onTitleOverflowChange?: (overflow: boolean) => void;
 }
 
 export function IpodScreen({
@@ -24,6 +28,9 @@ export function IpodScreen({
   playClick,
   isEditable = true,
   exportSafe = false,
+  titlePreview = false,
+  titleCaptureReady = false,
+  onTitleOverflowChange,
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
   const screenShadow = exportSafe
@@ -104,14 +111,25 @@ export function IpodScreen({
             {/* Title */}
             <div className="relative z-20 mb-1 w-full min-w-0" data-testid="track-title">
               <div className="min-w-0 text-[14px] font-bold text-black tracking-[0.01em] leading-[1.15]">
-                <EditableText
-                  value={state.title}
-                  onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
-                  disabled={!isEditable}
-                  className="font-bold -ml-1 max-w-full min-w-0 pl-1"
-                  editLabel="Edit title"
-                  dataTestId="track-title-text"
-                />
+                {titlePreview || titleCaptureReady ? (
+                  <MarqueeText
+                    text={state.title}
+                    preview={titlePreview}
+                    captureReady={titleCaptureReady}
+                    className="font-bold -ml-1 max-w-full min-w-0 pl-1"
+                    dataTestId="track-title-text"
+                    onOverflowChange={onTitleOverflowChange}
+                  />
+                ) : (
+                  <EditableText
+                    value={state.title}
+                    onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
+                    disabled={!isEditable}
+                    className="font-bold -ml-1 max-w-full min-w-0 pl-1"
+                    editLabel="Edit title"
+                    dataTestId="track-title-text"
+                  />
+                )}
               </div>
             </div>
 

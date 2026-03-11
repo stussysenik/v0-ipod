@@ -1,108 +1,175 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  getMarqueeCycleDurationMs,
+  getMarqueeFrame,
+  getMarqueeGapWidth,
+} from "@/lib/marquee";
 
 interface MarqueeTextProps {
   text: string;
   className?: string;
-  speed?: number;
-  delay?: number;
+  dataTestId?: string;
+  preview?: boolean;
+  captureReady?: boolean;
+  onOverflowChange?: (overflow: boolean) => void;
 }
+
+interface MarqueeMeasurements {
+  containerWidth: number;
+  contentWidth: number;
+  gapWidth: number;
+}
+
+const EMPTY_MEASUREMENTS: MarqueeMeasurements = {
+  containerWidth: 0,
+  contentWidth: 0,
+  gapWidth: 0,
+};
 
 export function MarqueeText({
   text,
   className = "",
-  speed = 50,
-  delay = 2000,
+  dataTestId,
+  preview = false,
+  captureReady = false,
+  onOverflowChange,
 }: MarqueeTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [shouldScroll, setShouldScroll] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [scrolling, setScrolling] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLSpanElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const [measurements, setMeasurements] =
+    useState<MarqueeMeasurements>(EMPTY_MEASUREMENTS);
 
   useEffect(() => {
-    if (!containerRef.current || !contentRef.current) return;
-
     const container = containerRef.current;
-    const content = contentRef.current;
+    const measurementCopy = measurementRef.current;
+    if (!container || !measurementCopy) return;
 
-    const checkOverflow = () => {
-      setShouldScroll(content.scrollWidth > container.clientWidth);
+    const measure = () => {
+      const containerWidth = Math.ceil(container.clientWidth);
+      const contentWidth = Math.ceil(measurementCopy.scrollWidth);
+      const gapWidth = getMarqueeGapWidth(contentWidth, text.length);
+      setMeasurements({ containerWidth, contentWidth, gapWidth });
     };
 
-    checkOverflow();
-    window.addEventListener("resize", checkOverflow);
+    measure();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => measure())
+        : null;
+
+    resizeObserver?.observe(container);
+    resizeObserver?.observe(measurementCopy);
+    window.addEventListener("resize", measure);
 
     return () => {
-      window.removeEventListener("resize", checkOverflow);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", measure);
     };
-  }, [text]);
+  }, [text, preview, captureReady]);
+
+  const overflow = measurements.contentWidth > measurements.containerWidth + 1;
+  const shouldRenderTrack = overflow && (preview || captureReady);
+  const spacerWidth = useMemo(
+    () => measurements.containerWidth + measurements.gapWidth,
+    [measurements.containerWidth, measurements.gapWidth],
+  );
 
   useEffect(() => {
-    if (!containerRef.current || !contentRef.current || !shouldScroll || !isHovered)
-      return;
+    onOverflowChange?.(overflow);
+  }, [onOverflowChange, overflow]);
 
-    const container = containerRef.current;
-    const content = contentRef.current;
-    let animationFrame: number;
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    if (!preview || !shouldRenderTrack) {
+      track.style.transform = "translateX(0px)";
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      return;
+    }
+
     let startTime: number | null = null;
-    let currentPosition = 0;
-    const totalDistance = content.scrollWidth - container.clientWidth;
 
     const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = timestamp - startTime;
-
-      if (progress < delay) {
-        animationFrame = requestAnimationFrame(animate);
-        return;
-      }
-
-      currentPosition =
-        ((progress - delay) / speed) % (totalDistance + container.clientWidth);
-
-      if (currentPosition <= totalDistance) {
-        content.style.transform = `translateX(${-currentPosition}px)`;
-        setScrolling(true);
-      } else {
-        content.style.transform = "translateX(0)";
+      if (startTime === null) {
         startTime = timestamp;
-        setScrolling(false);
       }
 
-      animationFrame = requestAnimationFrame(animate);
+      const frame = getMarqueeFrame(measurements, timestamp - startTime);
+      track.style.transform = `translateX(${frame.translateX}px)`;
+      animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    animationFrame = requestAnimationFrame(animate);
+    animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
-      cancelAnimationFrame(animationFrame);
-      content.style.transform = "translateX(0)";
-      setScrolling(false);
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      track.style.transform = "translateX(0px)";
     };
-  }, [shouldScroll, isHovered, speed, delay]);
+  }, [measurements, preview, shouldRenderTrack]);
 
   return (
     <div
       ref={containerRef}
-      className={`overflow-hidden ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        if (contentRef.current) {
-          contentRef.current.style.transform = "translateX(0)";
-        }
-      }}
+      className={`relative block w-full overflow-hidden ${className}`}
+      data-testid={dataTestId}
+      data-marquee-container="true"
+      data-marquee-active={shouldRenderTrack ? "true" : "false"}
+      data-marquee-overflow={overflow ? "true" : "false"}
+      data-marquee-viewport-width={measurements.containerWidth || undefined}
+      data-marquee-content-width={measurements.contentWidth || undefined}
+      data-marquee-gap-width={measurements.gapWidth || undefined}
+      data-marquee-cycle-duration-ms={
+        overflow ? getMarqueeCycleDurationMs(measurements) : undefined
+      }
     >
-      <div
-        ref={contentRef}
-        className={`inline-block whitespace-nowrap transition-transform ${
-          !scrolling ? "duration-300" : "duration-0"
-        }`}
+      <span
+        ref={measurementRef}
+        className="invisible absolute left-0 top-0 inline-block whitespace-nowrap"
+        aria-hidden="true"
       >
         {text}
-      </div>
+      </span>
+      {shouldRenderTrack ? (
+        <div
+          ref={trackRef}
+          className="flex w-max items-center whitespace-nowrap will-change-transform"
+          style={{ transform: "translateX(0px)" }}
+          data-marquee-track="true"
+        >
+          <span className="inline-block whitespace-nowrap">
+            {text}
+          </span>
+          <span
+            aria-hidden="true"
+            className="inline-block shrink-0"
+            style={{ width: `${spacerWidth}px` }}
+            data-marquee-spacer="true"
+          />
+          <span aria-hidden="true" className="inline-block whitespace-nowrap">
+            {text}
+          </span>
+        </div>
+      ) : (
+        <span
+          className={`block w-full min-w-0 max-w-full break-words [overflow-wrap:anywhere] [hyphens:auto] ${
+            preview ? "whitespace-nowrap" : ""
+          }`}
+        >
+          {text}
+        </span>
+      )}
     </div>
   );
 }

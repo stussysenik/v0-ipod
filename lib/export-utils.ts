@@ -1,10 +1,25 @@
-import { toPng, toBlob } from "html-to-image";
+import { toBlob, toCanvas, toPng } from "html-to-image";
+import { GIFEncoder, applyPalette, quantize } from "gifenc";
+import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@/lib/marquee";
 
-export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error";
+export type ExportStatus =
+  | "idle"
+  | "preparing"
+  | "encoding"
+  | "sharing"
+  | "success"
+  | "error";
 
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
 const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v2";
+const MAX_GIF_FRAME_COUNT = 180;
+const GIF_DELAY_QUANTUM_MS = 10;
+const GIF_CAPTURE_SCALE_HIGH = 2;
+const GIF_CAPTURE_SCALE_BALANCED = 1.5;
+const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
+const EXPORT_SHELL_CONTOUR =
+  "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
 
 interface NextDataWindow extends Window {
   __NEXT_DATA__?: {
@@ -19,6 +34,14 @@ const waitForNextPaint = () =>
   new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
   );
+
+function roundGifDelayMs(value: number): number {
+  return Math.max(
+    GIF_DELAY_QUANTUM_MS,
+    Math.round(Math.max(value, GIF_DELAY_QUANTUM_MS) / GIF_DELAY_QUANTUM_MS) *
+      GIF_DELAY_QUANTUM_MS,
+  );
+}
 
 function parseCssTimeToMs(value: string): number {
   const trimmed = value.trim();
@@ -197,7 +220,8 @@ function createDetachedExportNode(
       filter: none !important;
     }
     [data-export-layer="shell"] {
-      box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08) !important;
+      border-color: ${EXPORT_SHELL_BORDER_COLOR} !important;
+      box-shadow: ${EXPORT_SHELL_CONTOUR} !important;
     }
     [data-export-layer="screen"] {
       box-shadow: none !important;
@@ -227,8 +251,11 @@ function sanitizeDetachedCloneForCapture(
   const constrainedFrame = options?.constrainedFrame ?? false;
   const shell = clone.querySelector<HTMLElement>('[data-export-layer="shell"]');
   if (shell) {
+    shell.style.borderColor = constrainedFrame
+      ? EXPORT_SHELL_BORDER_COLOR
+      : "rgba(255,255,255,0.45)";
     shell.style.boxShadow = constrainedFrame
-      ? "inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
+      ? EXPORT_SHELL_CONTOUR
       : "0 10px 16px -14px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
   }
 
@@ -314,6 +341,116 @@ async function summarizeBlob(
       blobDigest: "unavailable",
     };
   }
+}
+
+function parseNumericDataAttribute(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>('[data-marquee-container="true"]'),
+  ).flatMap((container) => {
+    const track = container.querySelector<HTMLElement>('[data-marquee-track="true"]');
+    if (!track) {
+      return [];
+    }
+
+    const leadCopy = track.firstElementChild as HTMLElement | null;
+    const spacer = track.querySelector<HTMLElement>('[data-marquee-spacer="true"]');
+    const containerWidth =
+      parseNumericDataAttribute(container.dataset.marqueeViewportWidth) ??
+      Math.ceil(container.clientWidth);
+    const contentWidth =
+      parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
+      Math.ceil(leadCopy?.scrollWidth ?? leadCopy?.getBoundingClientRect().width ?? 0);
+    const gapWidthFromDataset = parseNumericDataAttribute(container.dataset.marqueeGapWidth);
+    const spacerWidth = Math.ceil(
+      spacer?.getBoundingClientRect().width ?? spacer?.offsetWidth ?? 0,
+    );
+    const gapWidth =
+      gapWidthFromDataset ?? Math.max(spacerWidth - Math.ceil(containerWidth), 0);
+
+    if (containerWidth <= 0 || contentWidth <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        track,
+        metrics: {
+          containerWidth: Math.ceil(containerWidth),
+          contentWidth: Math.ceil(contentWidth),
+          gapWidth: Math.ceil(Math.max(gapWidth, 0)),
+        },
+      },
+    ];
+  });
+}
+
+function applyMarqueeFrameToClone(root: HTMLElement, elapsedMs: number): number {
+  const nodes = getMarqueeCaptureNodes(root);
+  let cycleDurationMs = 0;
+
+  for (const node of nodes) {
+    const frame = getMarqueeFrame(node.metrics, elapsedMs);
+    node.track.style.transform = `translateX(${frame.translateX}px)`;
+    cycleDurationMs = Math.max(
+      cycleDurationMs,
+      getMarqueeCycleDurationMs(node.metrics),
+    );
+  }
+
+  return cycleDurationMs;
+}
+
+async function captureGifFrameCanvas(
+  element: HTMLElement,
+  options: {
+    backgroundColor?: string;
+    pixelRatio?: number;
+    outputWidth: number;
+    outputHeight: number;
+  },
+): Promise<HTMLCanvasElement> {
+  const sourceCanvas = await toCanvas(element, {
+    cacheBust: true,
+    pixelRatio: options.pixelRatio ?? 1,
+    backgroundColor: options.backgroundColor,
+    skipFonts: false,
+    includeQueryParams: true,
+    style: {
+      transform: "scale(1)",
+    },
+    filter: (node: Node) => {
+      if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
+        return false;
+      }
+      return true;
+    },
+  });
+
+  if (
+    sourceCanvas.width === options.outputWidth &&
+    sourceCanvas.height === options.outputHeight
+  ) {
+    return sourceCanvas;
+  }
+
+  const normalizedCanvas = document.createElement("canvas");
+  normalizedCanvas.width = options.outputWidth;
+  normalizedCanvas.height = options.outputHeight;
+  const normalizedCtx = normalizedCanvas.getContext("2d");
+  if (!normalizedCtx) {
+    throw new Error("Failed to get normalized GIF canvas context");
+  }
+
+  normalizedCtx.imageSmoothingEnabled = true;
+  normalizedCtx.imageSmoothingQuality = "high";
+  normalizedCtx.drawImage(sourceCanvas, 0, 0, options.outputWidth, options.outputHeight);
+  return normalizedCanvas;
 }
 
 async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
@@ -488,6 +625,15 @@ export interface ExportResult {
 interface DownloadAttemptResult {
   success: boolean;
   usedPopup: boolean;
+}
+
+interface MarqueeCaptureNode {
+  track: HTMLElement;
+  metrics: {
+    containerWidth: number;
+    contentWidth: number;
+    gapWidth: number;
+  };
 }
 
 function triggerDownloadLinkWithOptions(
@@ -793,6 +939,194 @@ function downloadImageDataUrlWithOptions(
     };
   } catch {
     return { success: false, usedPopup: false };
+  }
+}
+
+export async function exportAnimatedGif(
+  element: HTMLElement,
+  options: {
+    filename: string;
+    backgroundColor?: string;
+    constrainedFrame?: boolean;
+    fps?: number;
+    onStatusChange?: (status: ExportStatus) => void;
+  },
+): Promise<ExportResult> {
+  const {
+    filename,
+    backgroundColor,
+    constrainedFrame = false,
+    fps = 12,
+    onStatusChange,
+  } = options;
+  const capabilities = detectExportCapabilities();
+  const runtimeBuildContext = resolveRuntimeBuildContext();
+  const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
+  const preparedPopup =
+    capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
+  let keepPreparedPopupOpen = false;
+  const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
+  element.setAttribute(EXPORT_ATTRIBUTE, "true");
+  let exportNode: HTMLElement | null = null;
+
+  console.info("[gif-export:diagnostics] start", {
+    filename,
+    pipelineVersion: EXPORT_PIPELINE_VERSION,
+    constrainedFrame,
+    fps,
+    capabilities,
+    ...runtimeBuildContext,
+  });
+
+  onStatusChange?.("preparing");
+
+  const activeElement = document.activeElement;
+  if (activeElement instanceof HTMLElement && element.contains(activeElement)) {
+    activeElement.blur();
+  }
+  window.getSelection?.()?.removeAllRanges();
+
+  await waitForNextPaint();
+  const settleDelayMs = getMaxVisualSettleDelayMs(element);
+  if (settleDelayMs > 0) {
+    await waitForMs(settleDelayMs + 34);
+    await waitForNextPaint();
+  }
+
+  try {
+    exportNode = createDetachedExportNode(element, { constrainedFrame });
+    await preloadAndEmbedImages(exportNode);
+    await waitForMs(100);
+    await waitForNextPaint();
+
+    const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
+    const targetHeight = Math.ceil(exportNode.offsetHeight || exportNode.clientHeight || 1);
+    const detectedCycleDurationMs = applyMarqueeFrameToClone(exportNode, 0);
+    const captureDurationMs = Math.max(detectedCycleDurationMs, 1000);
+    const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
+    const uncappedFrameCount = Math.max(
+      1,
+      Math.ceil(captureDurationMs / requestedFrameDelayMs),
+    );
+    const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
+    const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
+    const captureScale =
+      frameCount > 140 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
+
+    onStatusChange?.("encoding");
+
+    const encoder = GIFEncoder();
+    let palette: number[][] | null = null;
+    let captureWidth = 0;
+    let captureHeight = 0;
+
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const elapsedMs =
+        frameCount === 1
+          ? 0
+          : Math.round(
+              (frameIndex / (frameCount - 1)) *
+                Math.max(captureDurationMs - frameDelayMs, 0),
+            );
+      applyMarqueeFrameToClone(exportNode, elapsedMs);
+      await waitForNextPaint();
+
+      const canvas = await captureGifFrameCanvas(exportNode, {
+        backgroundColor,
+        pixelRatio: captureScale,
+        outputWidth: targetWidth,
+        outputHeight: targetHeight,
+      });
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Failed to get GIF frame canvas context");
+      }
+
+      captureWidth = canvas.width;
+      captureHeight = canvas.height;
+      const rgba = new Uint8Array(
+        ctx.getImageData(0, 0, captureWidth, captureHeight).data,
+      );
+
+      if (!palette) {
+        palette = quantize(rgba, 256, { format: "rgba4444" });
+      }
+
+      const indexed = applyPalette(rgba, palette, "rgba4444");
+      encoder.writeFrame(indexed, captureWidth, captureHeight, {
+        palette,
+        repeat: frameIndex === 0 ? 0 : undefined,
+        delay: frameCount === 1 ? 1000 : frameDelayMs,
+      });
+    }
+
+    encoder.finish();
+    const blob = new Blob([encoder.bytesView()], { type: "image/gif" });
+    const downloadResult = downloadImageBlobWithOptions(blob, filename, {
+      allowSyntheticClick: useSyntheticDownload,
+      popupWindow: preparedPopup,
+    });
+
+    if (!downloadResult.success) {
+      onStatusChange?.("error");
+      return {
+        success: false,
+        method: "manual",
+        capturePath: "detached-html-to-image-gif",
+        error: "Browser blocked the GIF download. Try retrying on desktop Chrome.",
+      };
+    }
+
+    const blobSummary = await summarizeBlob(blob);
+    keepPreparedPopupOpen = downloadResult.usedPopup;
+    console.info("[gif-export:diagnostics] success", {
+      filename,
+      method: "download",
+      capturePath: "detached-html-to-image-gif",
+      frameCount,
+      frameDelayMs,
+      captureScale,
+      detectedCycleDurationMs,
+      captureDurationMs,
+      captureWidth,
+      captureHeight,
+      ...blobSummary,
+      pipelineVersion: EXPORT_PIPELINE_VERSION,
+      ...runtimeBuildContext,
+    });
+    onStatusChange?.("success");
+    return {
+      success: true,
+      method: "download",
+      capturePath: "detached-html-to-image-gif",
+      ...blobSummary,
+    };
+  } catch (error) {
+    console.error("[gif-export:diagnostics] failure", {
+      filename,
+      method: "manual",
+      capturePath: "detached-html-to-image-gif",
+      pipelineVersion: EXPORT_PIPELINE_VERSION,
+      ...runtimeBuildContext,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    });
+    onStatusChange?.("error");
+    return {
+      success: false,
+      method: "manual",
+      capturePath: "detached-html-to-image-gif",
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  } finally {
+    if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
+      preparedPopup.close();
+    }
+    exportNode?.remove();
+    if (existingExportAttribute === null) {
+      element.removeAttribute(EXPORT_ATTRIBUTE);
+    } else {
+      element.setAttribute(EXPORT_ATTRIBUTE, existingExportAttribute);
+    }
   }
 }
 

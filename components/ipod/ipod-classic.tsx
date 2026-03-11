@@ -12,9 +12,11 @@ import {
   Loader2,
   Menu,
   Pipette,
+  Film,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { exportImage, type ExportStatus } from "@/lib/export-utils";
+import { exportAnimatedGif, exportImage, type ExportStatus } from "@/lib/export-utils";
 import {
   loadMetadata,
   saveMetadata,
@@ -99,6 +101,7 @@ const SHELL_PADDING = 48;
 const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
 const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
+type ExportKind = "png" | "gif";
 
 const initialState: SongMetadata = {
   title: "Charcoal Baby",
@@ -213,8 +216,9 @@ export default function IPodClassic() {
     }
   }, []);
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
+  const [activeExportKind, setActiveExportKind] = useState<ExportKind | null>(null);
 
-  // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
+  // View State: 'flat' (Standard 2D), 'preview' (Animated marquee), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
 
   // Customization State
@@ -224,6 +228,7 @@ export default function IPodClassic() {
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
   const [isExportCapturing, setIsExportCapturing] = useState(false);
+  const [titleCanMarquee, setTitleCanMarquee] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [softNotice, setSoftNotice] = useState<string | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
@@ -238,6 +243,7 @@ export default function IPodClassic() {
     { label: string; value: string; hue: number }[]
   >([]);
   const isFlatView = viewMode === "flat";
+  const isPreviewView = viewMode === "preview";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
 
@@ -458,9 +464,38 @@ export default function IPodClassic() {
     [],
   );
 
-  const handleExportRef = useRef<() => void>();
+  const buildExportSlug = useCallback(
+    () =>
+      state.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "snapshot",
+    [state.title],
+  );
 
-  const handleExport = useCallback(async () => {
+  const completeSuccessfulExport = useCallback(
+    (exportId: number, notice: string) => {
+      const nextCounter = exportId + 1;
+      setExportCounter(nextCounter);
+      saveExportCounter(nextCounter);
+      showSoftNotice(notice);
+    },
+    [showSoftNotice],
+  );
+
+  const resetExportUi = useCallback(() => {
+    setIsExportCapturing(false);
+    window.setTimeout(() => {
+      setExportStatus("idle");
+      setActiveExportKind(null);
+    }, 1500);
+  }, []);
+
+  const handlePngExportRef = useRef<() => void>();
+  const handleGifExportRef = useRef<() => void>();
+
+  const handlePngExport = useCallback(async () => {
     if (exportStatus !== "idle") return;
     resetInteractionChrome({
       closeSettings: true,
@@ -475,18 +510,13 @@ export default function IPodClassic() {
     }
 
     playClick();
-    const exportId = exportCounter;
-    const exportTag = formatExportId(exportId);
-    const slug =
-      state.title
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "snapshot";
-    const filename = `ipod-${exportTag}-${slug}.png`;
-
     if (!exportTargetRef.current) return;
 
+    const exportId = exportCounter;
+    const exportTag = formatExportId(exportId);
+    const filename = `ipod-${exportTag}-${buildExportSlug()}.png`;
+
+    setActiveExportKind("png");
     setIsExportCapturing(true);
 
     try {
@@ -504,20 +534,16 @@ export default function IPodClassic() {
       console.info("[export] finished", result);
 
       if (result.success) {
-        const nextCounter = exportId + 1;
-        setExportCounter(nextCounter);
-        saveExportCounter(nextCounter);
-        if (result.method === "share") {
-          showSoftNotice(`Shared #${exportTag}`);
-        } else {
-          showSoftNotice(`Exported #${exportTag}`);
-        }
+        completeSuccessfulExport(
+          exportId,
+          result.method === "share" ? `Shared #${exportTag}` : `Exported #${exportTag}`,
+        );
       } else {
         toast.error("Export failed", {
           description: result.error,
           action: {
             label: "Retry",
-            onClick: () => handleExportRef.current?.(),
+            onClick: () => handlePngExportRef.current?.(),
           },
         });
       }
@@ -528,28 +554,114 @@ export default function IPodClassic() {
         description: error instanceof Error ? error.message : "Unknown error",
         action: {
           label: "Retry",
-          onClick: () => handleExportRef.current?.(),
+          onClick: () => handlePngExportRef.current?.(),
         },
       });
     } finally {
-      setIsExportCapturing(false);
-      setTimeout(() => setExportStatus("idle"), 1500);
+      resetExportUi();
     }
   }, [
-    playClick,
-    state.title,
     bgColor,
+    buildExportSlug,
+    completeSuccessfulExport,
     exportCounter,
-    formatExportId,
     exportStatus,
+    formatExportId,
     isFlatView,
-    showSoftNotice,
+    playClick,
+    resetExportUi,
     resetInteractionChrome,
+    showSoftNotice,
+  ]);
+
+  const handleGifExport = useCallback(async () => {
+    if (exportStatus !== "idle") return;
+    resetInteractionChrome({
+      closeSettings: true,
+      closeEditor: true,
+      closeToolbox: true,
+      clearNotice: true,
+    });
+    if (!isPreviewView) {
+      playClick();
+      showSoftNotice("Switch to Preview Mode for GIF");
+      return;
+    }
+    if (!titleCanMarquee) {
+      playClick();
+      showSoftNotice("Use a longer title to trigger the marquee");
+      return;
+    }
+
+    playClick();
+    if (!exportTargetRef.current) return;
+
+    const exportId = exportCounter;
+    const exportTag = formatExportId(exportId);
+    const filename = `ipod-${exportTag}-${buildExportSlug()}.gif`;
+
+    setActiveExportKind("gif");
+    setIsExportCapturing(true);
+
+    try {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      console.info("[gif-export] starting preview export", { filename });
+      const result = await exportAnimatedGif(exportTargetRef.current, {
+        filename,
+        backgroundColor: bgColor,
+        constrainedFrame: true,
+        onStatusChange: setExportStatus,
+      });
+      console.info("[gif-export] finished", result);
+
+      if (result.success) {
+        completeSuccessfulExport(exportId, `Animated #${exportTag}`);
+      } else {
+        toast.error("GIF export failed", {
+          description: result.error,
+          action: {
+            label: "Retry",
+            onClick: () => handleGifExportRef.current?.(),
+          },
+        });
+      }
+    } catch (error) {
+      console.error("[gif-export] preview export threw", error);
+      setExportStatus("error");
+      toast.error("GIF export failed", {
+        description: error instanceof Error ? error.message : "Unknown error",
+        action: {
+          label: "Retry",
+          onClick: () => handleGifExportRef.current?.(),
+        },
+      });
+    } finally {
+      resetExportUi();
+    }
+  }, [
+    bgColor,
+    buildExportSlug,
+    completeSuccessfulExport,
+    exportCounter,
+    exportStatus,
+    formatExportId,
+    isPreviewView,
+    titleCanMarquee,
+    playClick,
+    resetExportUi,
+    resetInteractionChrome,
+    showSoftNotice,
   ]);
 
   useEffect(() => {
-    handleExportRef.current = handleExport;
-  }, [handleExport]);
+    handlePngExportRef.current = handlePngExport;
+  }, [handlePngExport]);
+
+  useEffect(() => {
+    handleGifExportRef.current = handleGifExport;
+  }, [handleGifExport]);
 
   const screenComponent = (
     <IpodScreen
@@ -558,6 +670,9 @@ export default function IPodClassic() {
       playClick={playClick}
       isEditable={isFlatView && !isExportCapturing}
       exportSafe={isExportCapturing}
+      titlePreview={isPreviewView && !isExportCapturing}
+      titleCaptureReady={isPreviewView || activeExportKind === "gif"}
+      onTitleOverflowChange={setTitleCanMarquee}
     />
   );
 
@@ -720,8 +835,10 @@ export default function IPodClassic() {
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
   const shellShadow = isExportCapturing
-    ? "inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)"
+    ? "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)"
     : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+  const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
+  const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
     ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
     : "fixed top-6 right-6";
@@ -766,7 +883,7 @@ export default function IPodClassic() {
               {showSettings && (
                 <div
                   data-testid="theme-panel"
-                  className="z-20 absolute top-0 right-14 max-sm:right-0 max-sm:bottom-14 max-sm:top-auto bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] max-sm:max-h-[min(68dvh,32rem)] max-sm:overflow-y-auto max-sm:overscroll-contain animate-in slide-in-from-right-2 border border-[#D5D7DA]"
+                  className="z-20 absolute top-0 right-14 max-h-[min(78dvh,42rem)] overflow-y-auto overscroll-contain bg-[#F2F2F0]/95 p-4 backdrop-blur-sm rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] animate-in slide-in-from-right-2 border border-[#D5D7DA] max-sm:right-0 max-sm:bottom-14 max-sm:top-auto max-sm:w-[min(92vw,320px)] max-sm:max-h-[min(60dvh,28rem)]"
                 >
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
                     Case Color
@@ -1051,6 +1168,13 @@ export default function IPodClassic() {
                 onClick={() => handleViewModeChange("3d")}
               />
               <IconButton
+                icon={<Eye className="w-5 h-5" />}
+                label="Preview Mode"
+                data-testid="preview-view-button"
+                isActive={viewMode === "preview"}
+                onClick={() => handleViewModeChange("preview")}
+              />
+              <IconButton
                 icon={<Monitor className="w-5 h-5" />}
                 label="Focus Mode"
                 data-testid="focus-view-button"
@@ -1062,43 +1186,93 @@ export default function IPodClassic() {
             {/* Export Action */}
             <IconButton
               icon={
-                exportStatus === "success" ? (
+                activeExportKind === "png" && exportStatus === "success" ? (
                   <Check className="w-5 h-5" />
-                ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
+                ) : pngBusy ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <Share className="w-5 h-5" />
                 )
               }
               label={
-                exportStatus === "preparing"
+                activeExportKind === "png" && exportStatus === "preparing"
                   ? "Preparing..."
-                  : exportStatus === "sharing"
+                  : activeExportKind === "png" && exportStatus === "sharing"
                     ? "Sharing..."
-                    : exportStatus === "success"
+                    : activeExportKind === "png" && exportStatus === "success"
                       ? "Done!"
                       : !isFlatView
                         ? "Flat View Only"
                         : "Export 2D Image"
               }
-              onClick={handleExport}
+              onClick={handlePngExport}
               data-testid="export-button"
               contrast={true}
               disabled={!isFlatView || exportStatus !== "idle"}
               className={`transition-colors duration-300 ${
-                exportStatus === "success"
+                activeExportKind === "png" && exportStatus === "success"
                   ? "bg-green-500 hover:bg-green-600 border-none"
-                  : exportStatus === "preparing" || exportStatus === "sharing"
+                  : pngBusy
                     ? "bg-blue-500 hover:bg-blue-600 border-none"
                     : ""
               } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
             />
+            {(isPreviewView || gifBusy) && (
+              <IconButton
+                icon={
+                  activeExportKind === "gif" && exportStatus === "success" ? (
+                    <Check className="w-5 h-5" />
+                  ) : gifBusy ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Film className="w-5 h-5" />
+                  )
+                }
+                label={
+                  activeExportKind === "gif" && exportStatus === "preparing"
+                    ? "Preparing..."
+                    : activeExportKind === "gif" && exportStatus === "encoding"
+                      ? "Encoding GIF..."
+                      : activeExportKind === "gif" && exportStatus === "success"
+                        ? "Done!"
+                        : !titleCanMarquee
+                          ? "Need Longer Title"
+                          : "Export Animated GIF"
+                }
+                onClick={handleGifExport}
+                data-testid="gif-export-button"
+                contrast={true}
+                disabled={!isPreviewView || !titleCanMarquee || exportStatus !== "idle"}
+                className={`transition-colors duration-300 ${
+                  activeExportKind === "gif" && exportStatus === "success"
+                    ? "bg-green-500 hover:bg-green-600 border-none"
+                    : gifBusy
+                      ? "bg-blue-500 hover:bg-blue-600 border-none"
+                      : ""
+                } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
+              />
+            )}
           </div>
         </div>
 
         {softNotice && exportStatus === "idle" && (
           <div className="fixed right-6 bottom-6 z-50 rounded-full border border-black/10 bg-white/72 px-3 py-1 text-[11px] font-medium text-black/65 shadow-[0_8px_18px_rgba(0,0,0,0.1)] backdrop-blur-sm">
             {softNotice}
+          </div>
+        )}
+
+        {isPreviewView && exportStatus === "idle" && (
+          <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
+            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
+                Marquee Preview
+              </div>
+              <div className="mt-0.5 text-[12px] font-medium text-black/70">
+                {titleCanMarquee
+                  ? "The title is crawling. Export Animated GIF to capture it."
+                  : "This title fits. Use a longer song title to trigger the crawl."}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1142,6 +1316,7 @@ export default function IPodClassic() {
                   className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
                   style={{
                     backgroundColor: skinColor,
+                    borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
                     boxShadow: shellShadow,
                   }}
                   data-export-layer="shell"
