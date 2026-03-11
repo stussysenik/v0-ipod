@@ -6,7 +6,7 @@
 ![Status](https://img.shields.io/badge/Status-Active-green?style=flat-square)
 [Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)
 
-- drag n' drop your song and create an iPod-like digital footprint
+drag n' drop your song and create an iPod-like digital footprint
 
 
 <!--
