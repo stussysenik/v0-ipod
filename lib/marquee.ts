@@ -1,7 +1,8 @@
-export const MARQUEE_DELAY_MS = 2000;
-export const MARQUEE_SPEED_PX_PER_SECOND = 24;
-export const MARQUEE_MIN_GAP_PX = 40;
-export const MARQUEE_GAP_CHAR_WIDTH = 4.5;
+export const MARQUEE_DELAY_MS = 1200;
+export const MARQUEE_SPEED_PX_PER_SECOND = 34;
+export const MARQUEE_MIN_GAP_PX = 28;
+export const MARQUEE_MAX_GAP_PX = 52;
+export const MARQUEE_GAP_CHAR_WIDTH = 1.75;
 
 export interface MarqueeMetrics {
   containerWidth: number;
@@ -22,17 +23,17 @@ export function hasMarqueeOverflow(metrics: MarqueeMetrics): boolean {
 
 export function getMarqueeGapWidth(contentWidth: number, textLength: number): number {
   const averageCharWidth = contentWidth / Math.max(textLength, 1);
-  return Math.max(
-    MARQUEE_MIN_GAP_PX,
-    Math.round(averageCharWidth * MARQUEE_GAP_CHAR_WIDTH),
+  return Math.min(
+    MARQUEE_MAX_GAP_PX,
+    Math.max(
+      MARQUEE_MIN_GAP_PX,
+      Math.round(averageCharWidth * MARQUEE_GAP_CHAR_WIDTH),
+    ),
   );
 }
 
 export function getMarqueeCycleDistance(metrics: MarqueeMetrics): number {
-  return Math.max(
-    metrics.contentWidth + metrics.gapWidth + metrics.containerWidth,
-    metrics.containerWidth,
-  );
+  return Math.max(metrics.contentWidth + metrics.gapWidth, metrics.containerWidth);
 }
 
 export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics): number {

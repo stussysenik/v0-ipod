@@ -1,4 +1,4 @@
-import { toBlob, toCanvas, toPng } from "html-to-image";
+import { getFontEmbedCSS, toBlob, toCanvas, toPng } from "html-to-image";
 import { GIFEncoder, applyPalette, quantize } from "gifenc";
 import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@/lib/marquee";
 
@@ -20,11 +20,44 @@ const GIF_CAPTURE_SCALE_BALANCED = 1.5;
 const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
 const EXPORT_SHELL_CONTOUR =
   "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
+const GIF_SHADOW_POLICY = "match-preview";
 
 interface NextDataWindow extends Window {
   __NEXT_DATA__?: {
     buildId?: string;
   };
+}
+
+type SavePickerStartIn =
+  | "desktop"
+  | "documents"
+  | "downloads"
+  | "music"
+  | "pictures"
+  | "videos";
+
+interface SavePickerOptionsLike {
+  suggestedName?: string;
+  startIn?: SavePickerStartIn;
+  types?: Array<{
+    description?: string;
+    accept: Record<string, string[]>;
+  }>;
+}
+
+interface SavePickerWritableLike {
+  write(data: Blob): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface SaveFileHandleLike {
+  createWritable(): Promise<SavePickerWritableLike>;
+}
+
+interface SavePickerWindow extends Window {
+  showSaveFilePicker?: (
+    options?: SavePickerOptionsLike,
+  ) => Promise<SaveFileHandleLike>;
 }
 
 const waitForMs = (ms: number) =>
@@ -180,9 +213,11 @@ function createDetachedExportNode(
   element: HTMLElement,
   options?: {
     constrainedFrame?: boolean;
+    preserveEffects?: boolean;
   },
 ): HTMLElement {
   const constrainedFrame = options?.constrainedFrame ?? false;
+  const preserveEffects = options?.preserveEffects ?? false;
   const rect = element.getBoundingClientRect();
   const width = Math.ceil(element.offsetWidth || rect.width || 1);
   const height = Math.ceil(element.offsetHeight || rect.height || 1);
@@ -206,36 +241,46 @@ function createDetachedExportNode(
   clone.style.transformOrigin = "top left";
   clone.style.isolation = "isolate";
   clone.setAttribute(EXPORT_ATTRIBUTE, "true");
-  sanitizeDetachedCloneForCapture(clone, { constrainedFrame });
+  if (!preserveEffects) {
+    sanitizeDetachedCloneForCapture(clone, { constrainedFrame });
+  }
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
   const freezeStyle = document.createElement("style");
-  freezeStyle.textContent = `
-    *, *::before, *::after {
-      animation: none !important;
-      transition: none !important;
-      caret-color: transparent !important;
-    }
-    [data-export-layer] {
-      filter: none !important;
-    }
-    [data-export-layer="shell"] {
-      border-color: ${EXPORT_SHELL_BORDER_COLOR} !important;
-      box-shadow: ${EXPORT_SHELL_CONTOUR} !important;
-    }
-    [data-export-layer="screen"] {
-      box-shadow: none !important;
-    }
-    [data-export-layer="artwork"] {
-      box-shadow: none !important;
-    }
-    [data-export-layer="wheel"] {
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05) !important;
-    }
-    [data-export-layer="wheel-center"] {
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
-    }
-  `;
+  freezeStyle.textContent = preserveEffects
+    ? `
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+          caret-color: transparent !important;
+        }
+      `
+    : `
+        *, *::before, *::after {
+          animation: none !important;
+          transition: none !important;
+          caret-color: transparent !important;
+        }
+        [data-export-layer] {
+          filter: none !important;
+        }
+        [data-export-layer="shell"] {
+          border-color: ${EXPORT_SHELL_BORDER_COLOR} !important;
+          box-shadow: ${EXPORT_SHELL_CONTOUR} !important;
+        }
+        [data-export-layer="screen"] {
+          box-shadow: none !important;
+        }
+        [data-export-layer="artwork"] {
+          box-shadow: none !important;
+        }
+        [data-export-layer="wheel"] {
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05) !important;
+        }
+        [data-export-layer="wheel-center"] {
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
+        }
+      `;
   clone.appendChild(freezeStyle);
 
   document.body.appendChild(clone);
@@ -370,8 +415,7 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
     const spacerWidth = Math.ceil(
       spacer?.getBoundingClientRect().width ?? spacer?.offsetWidth ?? 0,
     );
-    const gapWidth =
-      gapWidthFromDataset ?? Math.max(spacerWidth - Math.ceil(containerWidth), 0);
+    const gapWidth = gapWidthFromDataset ?? Math.max(spacerWidth, 0);
 
     if (containerWidth <= 0 || contentWidth <= 0) {
       return [];
@@ -406,20 +450,72 @@ function applyMarqueeFrameToClone(root: HTMLElement, elapsedMs: number): number 
   return cycleDurationMs;
 }
 
+type GifFontEmbedMode = "cached" | "skip-fonts-fallback";
+
+interface GifFontCaptureConfig {
+  fontEmbedCSS?: string;
+  skipFonts?: boolean;
+  fontEmbedMode: GifFontEmbedMode;
+}
+
+function parsePixelValue(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function resolveBleedPaddingPx(element: HTMLElement): number {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  const style = window.getComputedStyle(element);
+  return Math.max(
+    parsePixelValue(style.paddingTop),
+    parsePixelValue(style.paddingRight),
+    parsePixelValue(style.paddingBottom),
+    parsePixelValue(style.paddingLeft),
+  );
+}
+
+async function resolveGifFontCaptureConfig(
+  element: HTMLElement,
+): Promise<GifFontCaptureConfig> {
+  try {
+    const fontEmbedCSS = await getFontEmbedCSS(element, {
+      preferredFontFormat: "woff2",
+    });
+    return {
+      fontEmbedCSS,
+      fontEmbedMode: "cached",
+    };
+  } catch (error) {
+    console.warn("[gif-export:diagnostics] font-embed fallback", {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    });
+    return {
+      skipFonts: true,
+      fontEmbedMode: "skip-fonts-fallback",
+    };
+  }
+}
+
 async function captureGifFrameCanvas(
   element: HTMLElement,
   options: {
     backgroundColor?: string;
+    fontEmbedCSS?: string;
     pixelRatio?: number;
     outputWidth: number;
     outputHeight: number;
+    skipFonts?: boolean;
   },
 ): Promise<HTMLCanvasElement> {
   const sourceCanvas = await toCanvas(element, {
     cacheBust: true,
     pixelRatio: options.pixelRatio ?? 1,
     backgroundColor: options.backgroundColor,
-    skipFonts: false,
+    fontEmbedCSS: options.fontEmbedCSS,
+    skipFonts: options.skipFonts ?? false,
     includeQueryParams: true,
     style: {
       transform: "scale(1)",
@@ -607,6 +703,7 @@ async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
 }
 
 export interface ExportCapabilities {
+  canSaveFile: boolean;
   canShare: boolean;
   canShareFiles: boolean;
   isIOS: boolean;
@@ -615,7 +712,7 @@ export interface ExportCapabilities {
 
 export interface ExportResult {
   success: boolean;
-  method: "share" | "download" | "dataurl" | "manual";
+  method: "share" | "save-picker" | "download" | "dataurl" | "manual";
   capturePath?: string;
   blobSize?: number;
   blobDigest?: string;
@@ -625,6 +722,11 @@ export interface ExportResult {
 interface DownloadAttemptResult {
   success: boolean;
   usedPopup: boolean;
+}
+
+interface SavePickerAttemptResult {
+  cancelled: boolean;
+  success: boolean;
 }
 
 interface MarqueeCaptureNode {
@@ -691,6 +793,9 @@ export function detectExportCapabilities(): ExportCapabilities {
   );
 
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
+  const canSaveFile =
+    typeof window !== "undefined" &&
+    typeof (window as SavePickerWindow).showSaveFilePicker === "function";
   // Check if navigator.canShare exists and supports files
   let canShareFiles = false;
   if (typeof navigator !== "undefined" && navigator.canShare) {
@@ -703,7 +808,7 @@ export function detectExportCapabilities(): ExportCapabilities {
     }
   }
 
-  return { canShare, canShareFiles, isIOS, isMobile };
+  return { canSaveFile, canShare, canShareFiles, isIOS, isMobile };
 }
 
 /**
@@ -821,11 +926,83 @@ export async function captureToDataUrl(
   });
 }
 
+function resolveFileMimeType(filename: string, fallbackMimeType: string): string {
+  const extension = filename.split(".").pop()?.toLowerCase();
+  if (extension === "gif") return "image/gif";
+  if (extension === "png") return "image/png";
+  return fallbackMimeType;
+}
+
+function resolveFilePickerTypes(filename: string, mimeType: string) {
+  const extension = filename.split(".").pop()?.toLowerCase();
+  const acceptedExtension = extension ? `.${extension}` : ".png";
+  const description =
+    mimeType === "image/gif" ? "Animated GIF Image" : "PNG Image";
+
+  return [
+    {
+      description,
+      accept: {
+        [mimeType]: [acceptedExtension],
+      },
+    },
+  ];
+}
+
+async function saveBlobWithPicker(
+  blob: Blob,
+  filename: string,
+  mimeType: string,
+): Promise<SavePickerAttemptResult> {
+  const pickerWindow = window as SavePickerWindow;
+  if (typeof pickerWindow.showSaveFilePicker !== "function") {
+    return { success: false, cancelled: false };
+  }
+
+  try {
+    const fileHandle = await pickerWindow.showSaveFilePicker({
+      suggestedName: filename,
+      startIn: "downloads",
+      types: resolveFilePickerTypes(filename, mimeType),
+    });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return { success: true, cancelled: false };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return { success: false, cancelled: true };
+    }
+    console.warn("Save picker failed, trying browser download fallback:", error);
+    return { success: false, cancelled: false };
+  }
+}
+
 /**
  * Share image file using Web Share API (iOS/Android native share sheet)
  */
-export async function shareImageFile(blob: Blob, filename: string): Promise<boolean> {
-  const file = new File([blob], filename, { type: "image/png" });
+export async function shareImageFile(
+  blob: Blob,
+  filename: string,
+  fallbackMimeType = "image/png",
+): Promise<boolean> {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
+    return false;
+  }
+
+  const file = new File([blob], filename, {
+    type: resolveFileMimeType(filename, fallbackMimeType),
+  });
+
+  if (typeof navigator.canShare === "function") {
+    try {
+      if (!navigator.canShare({ files: [file] })) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
 
   // iOS ONLY supports files-only share - no title or text!
   // Adding title or text will cause the share to fail on iOS Safari
@@ -942,6 +1119,61 @@ function downloadImageDataUrlWithOptions(
   }
 }
 
+async function deliverExportBlob(
+  blob: Blob,
+  filename: string,
+  fallbackMimeType: string,
+  capabilities: ExportCapabilities,
+  options: {
+    popupWindow?: Window | null;
+    useSyntheticDownload: boolean;
+  },
+): Promise<{
+  success: boolean;
+  method?: ExportResult["method"];
+  usedPopup?: boolean;
+}> {
+  if (capabilities.isMobile && capabilities.canShare) {
+    try {
+      const shared = await shareImageFile(blob, filename, fallbackMimeType);
+      if (shared) {
+        return { success: true, method: "share" };
+      }
+    } catch (error) {
+      console.warn("Share failed, trying save/download fallback:", error);
+    }
+  }
+
+  if (capabilities.canSaveFile) {
+    const savePickerResult = await saveBlobWithPicker(
+      blob,
+      filename,
+      resolveFileMimeType(filename, fallbackMimeType),
+    );
+    if (savePickerResult.success) {
+      return { success: true, method: "save-picker" };
+    }
+    if (savePickerResult.cancelled) {
+      console.info("Save picker cancelled, falling back to browser-managed download");
+    }
+  }
+
+  const downloadResult = downloadImageBlobWithOptions(blob, filename, {
+    allowSyntheticClick: options.useSyntheticDownload,
+    popupWindow: options.popupWindow,
+  });
+
+  if (!downloadResult.success) {
+    return { success: false };
+  }
+
+  return {
+    success: true,
+    method: "download",
+    usedPopup: downloadResult.usedPopup,
+  };
+}
+
 export async function exportAnimatedGif(
   element: HTMLElement,
   options: {
@@ -963,20 +1195,16 @@ export async function exportAnimatedGif(
   const runtimeBuildContext = resolveRuntimeBuildContext();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
   const preparedPopup =
-    capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
+    capabilities.isMobile &&
+    !capabilities.isIOS &&
+    !capabilities.canShare &&
+    !capabilities.canSaveFile
+      ? openPreparedPopupWindow()
+      : null;
   let keepPreparedPopupOpen = false;
   const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
   element.setAttribute(EXPORT_ATTRIBUTE, "true");
   let exportNode: HTMLElement | null = null;
-
-  console.info("[gif-export:diagnostics] start", {
-    filename,
-    pipelineVersion: EXPORT_PIPELINE_VERSION,
-    constrainedFrame,
-    fps,
-    capabilities,
-    ...runtimeBuildContext,
-  });
 
   onStatusChange?.("preparing");
 
@@ -994,13 +1222,30 @@ export async function exportAnimatedGif(
   }
 
   try {
-    exportNode = createDetachedExportNode(element, { constrainedFrame });
+    const fontCaptureConfig = await resolveGifFontCaptureConfig(element);
+    console.info("[gif-export:diagnostics] start", {
+      filename,
+      pipelineVersion: EXPORT_PIPELINE_VERSION,
+      constrainedFrame,
+      fps,
+      capabilities,
+      preserveEffects: true,
+      shadowPolicy: GIF_SHADOW_POLICY,
+      fontEmbedMode: fontCaptureConfig.fontEmbedMode,
+      ...runtimeBuildContext,
+    });
+
+    exportNode = createDetachedExportNode(element, {
+      constrainedFrame,
+      preserveEffects: true,
+    });
     await preloadAndEmbedImages(exportNode);
     await waitForMs(100);
     await waitForNextPaint();
 
     const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
     const targetHeight = Math.ceil(exportNode.offsetHeight || exportNode.clientHeight || 1);
+    const bleedPaddingPx = resolveBleedPaddingPx(exportNode);
     const detectedCycleDurationMs = applyMarqueeFrameToClone(exportNode, 0);
     const captureDurationMs = Math.max(detectedCycleDurationMs, 1000);
     const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
@@ -1033,9 +1278,11 @@ export async function exportAnimatedGif(
 
       const canvas = await captureGifFrameCanvas(exportNode, {
         backgroundColor,
+        fontEmbedCSS: fontCaptureConfig.fontEmbedCSS,
         pixelRatio: captureScale,
         outputWidth: targetWidth,
         outputHeight: targetHeight,
+        skipFonts: fontCaptureConfig.skipFonts,
       });
       const ctx = canvas.getContext("2d");
       if (!ctx) {
@@ -1062,34 +1309,47 @@ export async function exportAnimatedGif(
 
     encoder.finish();
     const blob = new Blob([encoder.bytesView()], { type: "image/gif" });
-    const downloadResult = downloadImageBlobWithOptions(blob, filename, {
-      allowSyntheticClick: useSyntheticDownload,
-      popupWindow: preparedPopup,
-    });
+    if (capabilities.isMobile && capabilities.canShare) {
+      onStatusChange?.("sharing");
+    }
+    const deliveryResult = await deliverExportBlob(
+      blob,
+      filename,
+      "image/gif",
+      capabilities,
+      {
+        popupWindow: preparedPopup,
+        useSyntheticDownload,
+      },
+    );
 
-    if (!downloadResult.success) {
+    if (!deliveryResult.success || !deliveryResult.method) {
       onStatusChange?.("error");
       return {
         success: false,
         method: "manual",
         capturePath: "detached-html-to-image-gif",
-        error: "Browser blocked the GIF download. Try retrying on desktop Chrome.",
+        error: "Browser blocked the GIF save/share. Try retrying on desktop Chrome.",
       };
     }
 
     const blobSummary = await summarizeBlob(blob);
-    keepPreparedPopupOpen = downloadResult.usedPopup;
+    keepPreparedPopupOpen = deliveryResult.usedPopup ?? false;
     console.info("[gif-export:diagnostics] success", {
       filename,
-      method: "download",
+      method: deliveryResult.method,
       capturePath: "detached-html-to-image-gif",
       frameCount,
       frameDelayMs,
       captureScale,
+      bleedPaddingPx,
       detectedCycleDurationMs,
       captureDurationMs,
       captureWidth,
       captureHeight,
+      preserveEffects: true,
+      shadowPolicy: GIF_SHADOW_POLICY,
+      fontEmbedMode: fontCaptureConfig.fontEmbedMode,
       ...blobSummary,
       pipelineVersion: EXPORT_PIPELINE_VERSION,
       ...runtimeBuildContext,
@@ -1097,7 +1357,7 @@ export async function exportAnimatedGif(
     onStatusChange?.("success");
     return {
       success: true,
-      method: "download",
+      method: deliveryResult.method,
       capturePath: "detached-html-to-image-gif",
       ...blobSummary,
     };
@@ -1107,6 +1367,8 @@ export async function exportAnimatedGif(
       method: "manual",
       capturePath: "detached-html-to-image-gif",
       pipelineVersion: EXPORT_PIPELINE_VERSION,
+      preserveEffects: true,
+      shadowPolicy: GIF_SHADOW_POLICY,
       ...runtimeBuildContext,
       error: error instanceof Error ? error.message : "Unknown error occurred",
     });
@@ -1133,11 +1395,11 @@ export async function exportAnimatedGif(
 /**
  * Main export orchestrator - handles all platforms with fallback chain
  *
- * Fallback Chain:
+ * Delivery Chain:
  * 1. Web Share API with File (mobile) → native share sheet
- * 2. Blob URL download (Desktop) → direct download
- * 3. Data URL download (Legacy) → old method
- * 4. Manual instructions (Ultimate fallback)
+ * 2. File System Access save picker (supported browsers) → native save dialog
+ * 3. Blob URL download → browser-managed download
+ * 4. Data URL download / iOS overlay / manual fallback
  */
 export async function exportImage(
   element: HTMLElement,
@@ -1159,11 +1421,13 @@ export async function exportImage(
   const capabilities = detectExportCapabilities();
   const runtimeBuildContext = resolveRuntimeBuildContext();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-  // Only open a fallback popup on non-iOS mobile (e.g. Android) where synthetic
-  // clicks may be blocked. iOS uses Web Share API natively; opening a popup on
-  // iOS Safari creates a stuck about:blank tab.
   const preparedPopup =
-    capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
+    capabilities.isMobile &&
+    !capabilities.isIOS &&
+    !capabilities.canShare &&
+    !capabilities.canSaveFile
+      ? openPreparedPopupWindow()
+      : null;
   let keepPreparedPopupOpen = false;
   const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
   element.setAttribute(EXPORT_ATTRIBUTE, "true");
@@ -1195,14 +1459,17 @@ export async function exportImage(
   }
 
   let exportNode: HTMLElement | null = null;
-  const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
-    if (!exportNode) {
-      exportNode = createDetachedExportNode(element, { constrainedFrame });
-      // Pre-load and embed all images as inline data URLs.
-      await preloadAndEmbedImages(exportNode);
-      // Additional wait for images to settle after conversion.
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
+      if (!exportNode) {
+        exportNode = createDetachedExportNode(element, {
+          constrainedFrame,
+          preserveEffects: true,
+        });
+        // Pre-load and embed all images as inline data URLs.
+        await preloadAndEmbedImages(exportNode);
+        // Additional wait for images to settle after conversion.
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
     return exportNode;
   };
 
@@ -1301,49 +1568,27 @@ export async function exportImage(
       }
     }
 
-    // Method 1: Web Share API (triggers native share sheet on all platforms)
-    if (blob && capabilities.canShareFiles && capabilities.isMobile) {
-      onStatusChange?.("sharing");
-      try {
-        const shared = await shareImageFile(blob, filename);
-        if (shared) {
-          const blobSummary = await summarizeBlob(blob);
-          if (preparedPopup && !preparedPopup.closed) {
-            preparedPopup.close();
-          }
-          console.info("[export:diagnostics] success", {
-            filename,
-            method: "share",
-            capturePath,
-            ...blobSummary,
-            pipelineVersion: EXPORT_PIPELINE_VERSION,
-            ...runtimeBuildContext,
-          });
-          onStatusChange?.("success");
-          return {
-            success: true,
-            method: "share",
-            capturePath,
-            ...blobSummary,
-          };
-        }
-      } catch (error) {
-        console.warn("Share failed, trying download fallback:", error);
-      }
-    }
-
-    // Method 2: Blob URL download (desktop / non-iOS mobile)
     if (blob) {
-      const downloadResult = downloadImageBlobWithOptions(blob, filename, {
-        allowSyntheticClick: useSyntheticDownload,
-        popupWindow: preparedPopup,
-      });
-      if (downloadResult.success) {
+      if (capabilities.isMobile && capabilities.canShare) {
+        onStatusChange?.("sharing");
+      }
+      const deliveryResult = await deliverExportBlob(
+        blob,
+        filename,
+        "image/png",
+        capabilities,
+        {
+          popupWindow: preparedPopup,
+          useSyntheticDownload,
+        },
+      );
+
+      if (deliveryResult.success && deliveryResult.method) {
         const blobSummary = await summarizeBlob(blob);
-        keepPreparedPopupOpen = downloadResult.usedPopup;
+        keepPreparedPopupOpen = deliveryResult.usedPopup ?? false;
         console.info("[export:diagnostics] success", {
           filename,
-          method: "download",
+          method: deliveryResult.method,
           capturePath,
           ...blobSummary,
           pipelineVersion: EXPORT_PIPELINE_VERSION,
@@ -1352,7 +1597,7 @@ export async function exportImage(
         onStatusChange?.("success");
         return {
           success: true,
-          method: "download",
+          method: deliveryResult.method,
           capturePath,
           ...blobSummary,
         };

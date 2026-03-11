@@ -25,10 +25,10 @@ export function ClickWheel({
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelShadow = exportSafe
     ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
-    : "0 22px 30px -24px rgba(0,0,0,0.46), 0 8px 16px -18px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
+    : "0 12px 16px -18px rgba(0,0,0,0.18), 0 4px 8px -12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.93), inset 0 -1px 0 rgba(0,0,0,0.05)";
   const centerShadow = exportSafe
     ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
-    : "0 10px 14px -12px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
+    : "0 6px 8px -10px rgba(0,0,0,0.16), 0 1px 2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.94)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -110,16 +110,16 @@ export function ClickWheel({
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle at 32% 24%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.24) 34%, rgba(0,0,0,0.04) 100%)",
+              "radial-gradient(circle at 33% 24%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.08) 34%, rgba(0,0,0,0.015) 100%)",
           }}
         />
         <div
           className="absolute inset-[1px] rounded-full pointer-events-none"
           style={{
             background:
-              "conic-gradient(from 225deg, rgba(0,0,0,0.05), rgba(255,255,255,0.1), rgba(0,0,0,0.02), rgba(255,255,255,0.08), rgba(0,0,0,0.05))",
-            mixBlendMode: exportSafe ? "normal" : "soft-light",
-            opacity: 0.45,
+              "conic-gradient(from 225deg, rgba(0,0,0,0.03), rgba(255,255,255,0.06), rgba(0,0,0,0.015), rgba(255,255,255,0.05), rgba(0,0,0,0.03))",
+            mixBlendMode: "normal",
+            opacity: 0.08,
           }}
         />
         <div className="absolute inset-[3px] rounded-full border border-white/65 pointer-events-none" />
@@ -165,9 +165,9 @@ export function ClickWheel({
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0) 44%)",
+              "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.36) 0%, rgba(255,255,255,0) 40%)",
             boxShadow:
-              "inset 2px 2px 4px rgba(255,255,255,0.75), inset -2px -2px 4px rgba(0,0,0,0.035)",
+              "inset 1px 1px 2px rgba(255,255,255,0.42), inset -1px -1px 2px rgba(0,0,0,0.02)",
           }}
         />
       </div>

@@ -49,7 +49,7 @@ export function MarqueeText({
     if (!container || !measurementCopy) return;
 
     const measure = () => {
-      const containerWidth = Math.ceil(container.clientWidth);
+      const containerWidth = Math.max(1, Math.ceil(container.clientWidth));
       const contentWidth = Math.ceil(measurementCopy.scrollWidth);
       const gapWidth = getMarqueeGapWidth(contentWidth, text.length);
       setMeasurements({ containerWidth, contentWidth, gapWidth });
@@ -74,10 +74,7 @@ export function MarqueeText({
 
   const overflow = measurements.contentWidth > measurements.containerWidth + 1;
   const shouldRenderTrack = overflow && (preview || captureReady);
-  const spacerWidth = useMemo(
-    () => measurements.containerWidth + measurements.gapWidth,
-    [measurements.containerWidth, measurements.gapWidth],
-  );
+  const spacerWidth = useMemo(() => measurements.gapWidth, [measurements.gapWidth]);
 
   useEffect(() => {
     onOverflowChange?.(overflow);
@@ -127,6 +124,7 @@ export function MarqueeText({
       data-marquee-container="true"
       data-marquee-active={shouldRenderTrack ? "true" : "false"}
       data-marquee-overflow={overflow ? "true" : "false"}
+      data-marquee-usable-width={measurements.containerWidth || undefined}
       data-marquee-viewport-width={measurements.containerWidth || undefined}
       data-marquee-content-width={measurements.contentWidth || undefined}
       data-marquee-gap-width={measurements.gapWidth || undefined}

@@ -11,6 +11,13 @@ import { EditableTrackNumber } from "./editable-track-number";
 import { MarqueeText } from "@/components/ui/marquee-text";
 import type { SongMetadata } from "@/types/ipod";
 
+const SCREEN_SAFE_INSET_PX = 13;
+const SCREEN_CONTENT_TOP_PX = 15;
+const SCREEN_CONTENT_GAP_PX = 12;
+const SCREEN_ARTWORK_SIZE_PX = 108;
+const TRACK_META_TOP_PX = 1;
+const TRACK_META_INSET_PX = 5;
+
 interface IpodScreenProps {
   state: SongMetadata;
   dispatch: React.Dispatch<{ type: string; payload: string | number }>;
@@ -74,7 +81,13 @@ export function IpodScreen({
     >
       <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#525252]">
         {/* STATUS BAR */}
-        <div className="h-[20px] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD] border-b border-[#9B9B9B] flex items-center justify-between px-2">
+        <div
+          className="h-[20px] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD] border-b border-[#9B9B9B] flex items-center justify-between"
+          style={{
+            paddingLeft: SCREEN_SAFE_INSET_PX,
+            paddingRight: SCREEN_SAFE_INSET_PX,
+          }}
+        >
           <div className="flex items-center gap-1 text-[10px] font-bold tracking-tight text-black/80">
             <span className="text-blue-600">▶</span> Now Playing
           </div>
@@ -82,12 +95,27 @@ export function IpodScreen({
         </div>
 
         {/* CONTENT GRID */}
-        <div className="flex h-[168px]" data-testid="screen-content">
+        <div
+          className="grid h-[168px] items-start"
+          style={{
+            gridTemplateColumns: `${SCREEN_ARTWORK_SIZE_PX}px minmax(0, 1fr)`,
+            columnGap: SCREEN_CONTENT_GAP_PX,
+            paddingLeft: SCREEN_SAFE_INSET_PX,
+            paddingRight: SCREEN_SAFE_INSET_PX,
+            paddingTop: SCREEN_CONTENT_TOP_PX,
+          }}
+          data-testid="screen-content"
+          data-screen-safe-inset={SCREEN_SAFE_INSET_PX}
+        >
           {/* LEFT: ARTWORK */}
-          <div className="w-[140px] h-full px-3 pt-1 pb-2 flex flex-col justify-start items-center">
+          <div className="flex h-full items-start justify-start">
             <div
-              className="w-[114px] h-[114px] bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98]"
-              style={{ boxShadow: artworkShadow }}
+              className="bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98]"
+              style={{
+                width: SCREEN_ARTWORK_SIZE_PX,
+                height: SCREEN_ARTWORK_SIZE_PX,
+                boxShadow: artworkShadow,
+              }}
               data-export-layer="artwork"
             >
               <ImageUpload
@@ -105,7 +133,12 @@ export function IpodScreen({
 
           {/* RIGHT: INFO (Editable) */}
           <div
-            className="flex min-w-0 flex-1 flex-col items-start overflow-hidden pt-5 pr-3 text-left z-20"
+            className="flex min-w-0 flex-1 flex-col items-start overflow-hidden text-left z-20"
+            style={{
+              paddingTop: TRACK_META_TOP_PX,
+              paddingLeft: TRACK_META_INSET_PX,
+              paddingRight: TRACK_META_INSET_PX,
+            }}
             data-testid="track-meta"
           >
             {/* Title */}
@@ -116,7 +149,7 @@ export function IpodScreen({
                     text={state.title}
                     preview={titlePreview}
                     captureReady={titleCaptureReady}
-                    className="font-bold -ml-1 max-w-full min-w-0 pl-1"
+                    className="font-bold max-w-full min-w-0"
                     dataTestId="track-title-text"
                     onOverflowChange={onTitleOverflowChange}
                   />
@@ -125,7 +158,7 @@ export function IpodScreen({
                     value={state.title}
                     onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
                     disabled={!isEditable}
-                    className="font-bold -ml-1 max-w-full min-w-0 pl-1"
+                    className="font-bold max-w-full min-w-0 mx-0 px-0"
                     editLabel="Edit title"
                     dataTestId="track-title-text"
                   />
@@ -140,7 +173,7 @@ export function IpodScreen({
                   value={state.artist}
                   onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
                   disabled={!isEditable}
-                  className="font-semibold text-[#555] -ml-1 max-w-full min-w-0 pl-1"
+                  className="font-semibold text-[#555] max-w-full min-w-0 mx-0 px-0"
                   editLabel="Edit artist"
                   dataTestId="track-artist-text"
                 />
@@ -154,7 +187,7 @@ export function IpodScreen({
                   value={state.album}
                   onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
                   disabled={!isEditable}
-                  className="font-medium text-[#777] -ml-1 max-w-full min-w-0 pl-1"
+                  className="font-medium text-[#777] max-w-full min-w-0 mx-0 px-0"
                   editLabel="Edit album"
                   dataTestId="track-album-text"
                 />
@@ -176,7 +209,7 @@ export function IpodScreen({
               />
             </div>
 
-            <div className="scale-75 origin-left -ml-1 relative z-20">
+            <div className="scale-75 origin-left relative z-20">
               <StarRating
                 rating={state.rating}
                 onChange={(rating) => {
@@ -192,7 +225,11 @@ export function IpodScreen({
 
         {/* BOTTOM: PROGRESS */}
         <div
-          className="absolute bottom-[6px] left-0 right-0 h-[42px] bg-white px-3 py-1.5"
+          className="absolute bottom-[6px] left-0 right-0 h-[42px] bg-white py-1.5"
+          style={{
+            paddingLeft: SCREEN_SAFE_INSET_PX,
+            paddingRight: SCREEN_SAFE_INSET_PX,
+          }}
           data-testid="screen-progress"
         >
           <ProgressBar

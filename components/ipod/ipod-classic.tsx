@@ -45,9 +45,17 @@ const CLICK_SOUND =
 
 const CASE_COLOR_PRESETS = [
   { label: "Bright White", value: "#FBFBF8" },
+  { label: "Reference White", value: "#FFFFFF" },
   { label: "White (5G)", value: "#F5F5F7" },
   { label: "Soft Silver", value: "#ECEDEE" },
   { label: "Pearl Gray", value: "#E4E4E6" },
+  { label: "Powder Cyan", value: "#96D9EE" },
+  { label: "Signal Pink", value: "#E96477" },
+  { label: "Paper Lilac", value: "#FEF7FB" },
+  { label: "Voltage Red", value: "#FF273D" },
+  { label: "Aqua Blue", value: "#0094DC" },
+  { label: "Peach Skin", value: "#F7DECA" },
+  { label: "Warm Sand", value: "#E4CAB6" },
   { label: "Black (5G/Classic)", value: "#1B1B1F" },
   { label: "Graphite", value: "#2A2C31" },
   { label: "Charcoal", value: "#3B3D44" },
@@ -74,7 +82,12 @@ const CASE_COLOR_AUTHENTIC = [
 ];
 
 const BG_COLOR_PRESETS = [
+  { label: "Gallery White", value: "#FCFBF8" },
   { label: "Paper White", value: "#F4F4EF" },
+  { label: "Powder Sky", value: "#EFF8FC" },
+  { label: "Soft Blush", value: "#FEF7FB" },
+  { label: "Peach Wash", value: "#F7DECA" },
+  { label: "Sand Linen", value: "#E4CAB6" },
   { label: "Light Mist", value: "#EBECE7" },
   { label: "Studio Warm", value: "#E5E5E5" },
   { label: "Cloud Gray", value: "#DBDCDD" },
@@ -246,6 +259,7 @@ export default function IPodClassic() {
   const isPreviewView = viewMode === "preview";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
+  const useExportSafeVisuals = false;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
@@ -669,8 +683,8 @@ export default function IPodClassic() {
       dispatch={dispatch}
       playClick={playClick}
       isEditable={isFlatView && !isExportCapturing}
-      exportSafe={isExportCapturing}
-      titlePreview={isPreviewView && !isExportCapturing}
+      exportSafe={useExportSafeVisuals}
+      titlePreview={isPreviewView}
       titleCaptureReady={isPreviewView || activeExportKind === "gif"}
       onTitleOverflowChange={setTitleCanMarquee}
     />
@@ -681,7 +695,7 @@ export default function IPodClassic() {
       playClick={playClick}
       onSeek={handleSeek}
       disabled={!isFlatView}
-      exportSafe={isExportCapturing}
+      exportSafe={useExportSafeVisuals}
     />
   );
 
@@ -834,9 +848,8 @@ export default function IPodClassic() {
 
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
-  const shellShadow = isExportCapturing
-    ? "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)"
-    : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+  const shellShadow =
+    "0 18px 28px -24px rgba(0,0,0,0.22), 0 8px 14px -14px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.06)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
@@ -1306,17 +1319,16 @@ export default function IPodClassic() {
             >
               <div
                 ref={exportTargetRef}
-                data-export-shell={isExportCapturing ? "true" : "false"}
+                data-export-shell={useExportSafeVisuals ? "true" : "false"}
                 className="p-12"
                 style={{
-                  backgroundColor: isExportCapturing ? bgColor : "transparent",
+                  backgroundColor: "transparent",
                 }}
               >
                 <div
                   className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
                   style={{
                     backgroundColor: skinColor,
-                    borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
                     boxShadow: shellShadow,
                   }}
                   data-export-layer="shell"

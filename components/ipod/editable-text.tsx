@@ -26,6 +26,24 @@ export function EditableText({
   const inputRef = useRef<HTMLInputElement>(null);
   const { isTouchEditingPreferred, openEditor } = useFixedEditor();
 
+  const openInlineEditor = (nextValue = value) => {
+    setLocalValue(nextValue);
+    setIsEditing(true);
+  };
+
+  const openTouchEditor = (nextValue = value) => {
+    openEditor({
+      title: editLabel,
+      value: nextValue,
+      placeholder: "Type text",
+      inputMode: "text",
+      onCommit: (committedValue) => onChange(committedValue),
+    });
+  };
+
+  const normalizePastedText = (text: string) =>
+    text.replace(/\r?\n+/g, " ").replace(/\t+/g, " ").trim();
+
   useEffect(() => {
     if (isEditing) return;
     setLocalValue(value);
@@ -47,18 +65,12 @@ export function EditableText({
 
   const handleDesktopActivate = () => {
     if (disabled) return;
-    setIsEditing(true);
+    openInlineEditor();
   };
 
   const handleTouchActivate = () => {
     if (disabled) return;
-    openEditor({
-      title: editLabel,
-      value,
-      placeholder: "Type text",
-      inputMode: "text",
-      onCommit: (nextValue) => onChange(nextValue),
-    });
+    openTouchEditor();
   };
 
   const handleBlur = () => {
@@ -77,6 +89,33 @@ export function EditableText({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
+  };
+
+  const handleDisplayKeyDown = (e: React.KeyboardEvent<HTMLSpanElement>) => {
+    if (disabled) return;
+
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (isTouchEditingPreferred) {
+        openTouchEditor();
+      } else {
+        openInlineEditor();
+      }
+    }
+  };
+
+  const handleDisplayPaste = (e: React.ClipboardEvent<HTMLSpanElement>) => {
+    if (disabled) return;
+
+    const pastedText = normalizePastedText(e.clipboardData.getData("text/plain"));
+    if (!pastedText) return;
+
+    e.preventDefault();
+    if (isTouchEditingPreferred) {
+      openTouchEditor(pastedText);
+    } else {
+      openInlineEditor(pastedText);
+    }
   };
 
   if (isEditing) {
@@ -98,8 +137,13 @@ export function EditableText({
     <span
       onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
       onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
+      onKeyDown={handleDisplayKeyDown}
+      onPaste={handleDisplayPaste}
+      tabIndex={disabled ? undefined : 0}
       className={`block w-full min-w-0 max-w-full break-words rounded px-0.5 -mx-0.5 transition-colors [overflow-wrap:anywhere] [hyphens:auto] ${
-        disabled ? "cursor-default" : "cursor-text hover:bg-black/5 hover:text-blue-900"
+        disabled
+          ? "cursor-default"
+          : "cursor-text hover:bg-black/5 hover:text-blue-900 focus-visible:bg-black/5 focus-visible:text-blue-900 focus-visible:outline-none"
       } ${className}`}
       data-testid={dataTestId}
     >

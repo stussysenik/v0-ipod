@@ -1,29 +1,20 @@
-<div align="center">
+# iPod Snapshot
 
-# iPod digital clone
+Create an iPod-style music frame, tune the shell/background palette, and export either a flat PNG or a marquee-ready animated GIF.
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Active-green?style=flat-square)
-[Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)
+[Production](https://ipod-music.vercel.app)
 
-drag n' drop your song and create an iPod-like digital footprint
+## Screenshots
 
+![Flat editor state](public/readme/flat-editor.png)
 
-<!--
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Active-green?style=flat-square)
+![Preview mode](public/readme/preview-mode.png)
 
-[Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)
+![Theme panel and palette](public/readme/theme-panel.png)
 
-</div>
-
----
-
-## Quick Start
+## Local Development
 
 ```bash
-git clone https://github.com/stussysenik/v0-ipod.git
-cd v0-ipod
 npm install
 npm run dev
 ```
@@ -37,10 +28,23 @@ PORT=4010 npm run dev
 PORT=4010 npm run start
 ```
 
+## Export Notes
+
+- Flat export produces a WYSIWYG PNG from the same live shell styling you see on screen.
+- Preview export captures the title marquee as an animated GIF.
+- On supported mobile browsers, export prefers the native share sheet.
+- On supported Chromium browsers, desktop export prefers the native save picker and suggests Downloads.
+- The studio palette includes the added reference whites, cyans, reds, peach tones, and lighter background washes from the latest direction.
+
+## Deploy
+
+This repo is deployed with Vercel under the `v0-i-pod-project-bx8feebd81r` project.
+
+```bash
+vercel link --yes --scope senik --project v0-i-pod-project-bx8feebd81r
+vercel --prod --yes --scope senik
+```
+
 ## Troubleshooting
 
-If `npm run dev` appears to open the wrong app on `localhost:4000`, another local service is
-already using that port. This repo defaults to `4001` to avoid that conflict, but `PORT` can be
-set explicitly when you need a different local port.
-
-!-->
+If `npm run dev` appears to open the wrong app on `localhost:4000`, another local service is already using that port. This repo defaults to `4001` to avoid that conflict, but `PORT` can be set explicitly when you need a different local port.

@@ -1,11 +1,83 @@
-import { test, expect } from "@playwright/test";
+import {
+  test,
+  expect,
+  devices,
+  type ConsoleMessage,
+  type Page,
+} from "@playwright/test";
 import fs from "fs";
 import path from "path";
 
 const fixtureImage = path.resolve(process.cwd(), "public/test.jpg");
 
+async function waitForExportResult(page: Page, markerText: string) {
+  return await new Promise<{
+    success: boolean;
+    method: string;
+    capturePath?: string;
+    error?: string;
+  }>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      page.off("console", onConsole);
+      reject(new Error(`Timed out waiting for ${markerText} log`));
+    }, 25000);
+
+    const onConsole = async (msg: ConsoleMessage) => {
+      if (!msg.text().includes(markerText)) return;
+
+      try {
+        const args = await Promise.all(
+          msg.args().map(async (arg) => {
+            try {
+              return await arg.jsonValue();
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        const payload = args.find(
+          (value) =>
+            value &&
+            typeof value === "object" &&
+            "success" in value &&
+            "method" in value,
+        );
+        if (!payload) return;
+
+        clearTimeout(timeout);
+        page.off("console", onConsole);
+        resolve(
+          payload as {
+            success: boolean;
+            method: string;
+            capturePath?: string;
+            error?: string;
+          },
+        );
+      } catch (error) {
+        clearTimeout(timeout);
+        page.off("console", onConsole);
+        reject(error);
+      }
+    };
+
+    page.on("console", onConsole);
+  });
+}
+
+async function waitForGifExportResult(page: Page) {
+  return waitForExportResult(page, "[gif-export] finished");
+}
+
 test.describe("Core interactions remain usable", () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "showSaveFilePicker", {
+        configurable: true,
+        value: undefined,
+      });
+    });
     await page.goto("/");
     await expect(page.getByTestId("theme-button")).toBeVisible();
   });
@@ -128,6 +200,29 @@ test.describe("Core interactions remain usable", () => {
       .toContain("Snapshot QA");
   });
 
+  test("text fields accept paste and open the inline editor with the pasted value", async ({
+    page,
+  }) => {
+    const pastedTitle = "Pasted from clipboard";
+    const titleField = page.getByTestId("track-title-text");
+
+    await titleField.focus();
+    await titleField.evaluate((el, text) => {
+      const data = new DataTransfer();
+      data.setData("text/plain", text);
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", {
+        configurable: true,
+        value: data,
+      });
+      el.dispatchEvent(event);
+    }, pastedTitle);
+
+    await expect(titleField).toHaveValue(pastedTitle);
+    await titleField.press("Enter");
+    await expect(page.getByText(pastedTitle)).toBeVisible();
+  });
+
   test("remaining-first timing keeps progress proportionate", async ({ page }) => {
     const remaining = page.getByTestId("remaining-time").locator("span");
     await remaining.dblclick();
@@ -200,6 +295,14 @@ test.describe("Core interactions remain usable", () => {
 
   test("preview marquee animates long titles and exports a gif", async ({ page }) => {
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
+    const gifLogs: string[] = [];
+    const onConsole = (msg: ConsoleMessage) => {
+      const text = msg.text();
+      if (text.includes("[gif-export")) {
+        gifLogs.push(text);
+      }
+    };
+    page.on("console", onConsole);
 
     await page.getByText("Charcoal Baby").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
@@ -211,6 +314,54 @@ test.describe("Core interactions remain usable", () => {
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
     await expect(page.getByText("The title is crawling. Export Animated GIF to capture it.")).toBeVisible();
     await expect(page.getByTestId("gif-export-button")).toBeEnabled();
+
+    const screenLayout = await page.getByTestId("screen-content").evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      const artwork = el.querySelector<HTMLElement>('[data-export-layer="artwork"]');
+      const meta = el.querySelector<HTMLElement>('[data-testid="track-meta"]');
+      if (!artwork || !meta) {
+        return null;
+      }
+
+      const artworkRect = artwork.getBoundingClientRect();
+      const metaRect = meta.getBoundingClientRect();
+
+      return {
+        paddingLeft: Number.parseFloat(style.paddingLeft) || 0,
+        paddingRight: Number.parseFloat(style.paddingRight) || 0,
+        paddingTop: Number.parseFloat(style.paddingTop) || 0,
+        gap: metaRect.left - artworkRect.right,
+        artworkWidth: artworkRect.width,
+        metaWidth: metaRect.width,
+        topAlignmentDelta: Math.abs(metaRect.top - artworkRect.top),
+      };
+    });
+    expect(screenLayout).not.toBeNull();
+    if (!screenLayout) {
+      throw new Error("screen layout metrics missing");
+    }
+    expect(screenLayout.paddingLeft).toBeGreaterThanOrEqual(13);
+    expect(screenLayout.paddingRight).toBeGreaterThanOrEqual(13);
+    expect(screenLayout.paddingTop).toBeGreaterThanOrEqual(15);
+    expect(screenLayout.gap).toBeGreaterThanOrEqual(10);
+    expect(screenLayout.gap).toBeLessThanOrEqual(16);
+    expect(screenLayout.metaWidth).toBeGreaterThan(screenLayout.artworkWidth + 24);
+    expect(screenLayout.topAlignmentDelta).toBeLessThanOrEqual(3);
+
+    const marqueeLayout = await page.getByTestId("track-title-text").evaluate((el) => {
+      return {
+        gapWidth: Number(el.getAttribute("data-marquee-gap-width") ?? "0"),
+        usableWidth: Number(el.getAttribute("data-marquee-usable-width") ?? "0"),
+        viewportWidth: Number(el.getAttribute("data-marquee-viewport-width") ?? "0"),
+        cycleDurationMs: Number(el.getAttribute("data-marquee-cycle-duration-ms") ?? "0"),
+        clientWidth: el.clientWidth,
+      };
+    });
+    expect(marqueeLayout.gapWidth).toBeLessThanOrEqual(52);
+    expect(marqueeLayout.usableWidth).toBe(marqueeLayout.clientWidth);
+    expect(marqueeLayout.usableWidth).toBe(marqueeLayout.viewportWidth);
+    expect(marqueeLayout.cycleDurationMs).toBeGreaterThan(0);
+    expect(marqueeLayout.cycleDurationMs).toBeLessThan(20000);
 
     await expect
       .poll(async () =>
@@ -229,9 +380,12 @@ test.describe("Core interactions remain usable", () => {
     });
     expect(movedTransform).not.toBe("translateX(0px)");
 
+    const resultPromise = waitForGifExportResult(page);
     const downloadPromise = page.waitForEvent("download");
     await page.getByTestId("gif-export-button").click();
-    const download = await downloadPromise;
+    const [result, download] = await Promise.all([resultPromise, downloadPromise]);
+    expect(result.success).toBe(true);
+    expect(result.capturePath).toBe("detached-html-to-image-gif");
     expect(download.suggestedFilename()).toMatch(/^ipod-0000-.*\.gif$/);
 
     const downloadPath = await download.path();
@@ -240,6 +394,52 @@ test.describe("Core interactions remain usable", () => {
 
     const header = fs.readFileSync(downloadPath).subarray(0, 6).toString("ascii");
     expect(header).toBe("GIF89a");
+    expect(gifLogs.join("\n")).not.toContain("font is undefined");
+    expect(gifLogs.join("\n")).not.toContain("[gif-export:diagnostics] failure");
+    page.off("console", onConsole);
+  });
+
+  test("gif export falls back safely when font embedding rules are malformed", async ({
+    page,
+  }) => {
+    const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
+    const gifLogs: string[] = [];
+    const onConsole = (msg: ConsoleMessage) => {
+      const text = msg.text();
+      if (text.includes("[gif-export")) {
+        gifLogs.push(text);
+      }
+    };
+    page.on("console", onConsole);
+
+    await page.addStyleTag({
+      content:
+        '@font-face { src: url("data:font/woff2;base64,d09GMgABAAAAA") format("woff2"); }',
+    });
+
+    await page.getByText("Charcoal Baby").dblclick();
+    const titleInput = page.locator('input[type="text"]').first();
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill(longTitle);
+    await titleInput.press("Enter");
+
+    await page.getByTestId("preview-view-button").click();
+    await expect(page.getByTestId("gif-export-button")).toBeEnabled();
+
+    const resultPromise = waitForGifExportResult(page);
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("gif-export-button").click();
+    const [result, download] = await Promise.all([resultPromise, downloadPromise]);
+
+    expect(result.success).toBe(true);
+    expect(download.suggestedFilename()).toMatch(/^ipod-0000-.*\.gif$/);
+    expect(gifLogs.join("\n")).not.toContain("font is undefined");
+    expect(gifLogs.join("\n")).not.toContain("[gif-export:diagnostics] failure");
+
+    await expect(page.getByTestId("theme-button")).toBeVisible({ timeout: 10000 });
+    await page.getByTestId("theme-button").click();
+    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    page.off("console", onConsole);
   });
 
   test("export does not leave controls blocked", async ({ page }) => {
@@ -277,5 +477,265 @@ test.describe("Core interactions remain usable", () => {
 
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
     expect(layout.scrollHeight).toBeGreaterThan(layout.lineHeight * 1.5);
+  });
+});
+
+test.describe("Native export delivery", () => {
+  test("desktop export prefers the native save picker when available", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const savePickerCalls: Array<{
+        closed?: boolean;
+        options?: unknown;
+        write?: { size: number; type: string };
+      }> = [];
+
+      Object.defineProperty(window, "__savePickerCalls", {
+        configurable: true,
+        value: savePickerCalls,
+      });
+      Object.defineProperty(window, "showSaveFilePicker", {
+        configurable: true,
+        value: async (options?: unknown) => {
+          const call: {
+            closed?: boolean;
+            options?: unknown;
+            write?: { size: number; type: string };
+          } = { options };
+          savePickerCalls.push(call);
+          return {
+            createWritable: async () => ({
+              write: async (blob: Blob) => {
+                call.write = { size: blob.size, type: blob.type };
+              },
+              close: async () => {
+                call.closed = true;
+              },
+            }),
+          };
+        },
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByTestId("theme-button")).toBeVisible();
+
+    const resultPromise = waitForExportResult(page, "[export] finished");
+    await page.getByTestId("export-button").click();
+    const result = await resultPromise;
+
+    expect(result.success).toBe(true);
+    expect(result.method).toBe("save-picker");
+
+    const savePickerCalls = await page.evaluate(() => {
+      const windowWithCalls = window as Window & {
+        __savePickerCalls?: Array<{
+          closed?: boolean;
+          options?: { startIn?: string; suggestedName?: string };
+          write?: { size: number; type: string };
+        }>;
+      };
+      return windowWithCalls.__savePickerCalls ?? [];
+    });
+
+    expect(savePickerCalls).toHaveLength(1);
+    expect(savePickerCalls[0]?.options?.startIn).toBe("downloads");
+    expect(savePickerCalls[0]?.options?.suggestedName).toMatch(/^ipod-0000-.*\.png$/);
+    expect(savePickerCalls[0]?.write?.type).toBe("image/png");
+    expect(savePickerCalls[0]?.write?.size ?? 0).toBeGreaterThan(1000);
+    expect(savePickerCalls[0]?.closed).toBe(true);
+  });
+
+  test("mobile export prefers native share when available", async ({ browser }) => {
+    const context = await browser.newContext({
+      ...devices["iPhone 13"],
+    });
+    const page = await context.newPage();
+
+    await page.addInitScript(() => {
+      const shareCalls: Array<{
+        files: Array<{ name: string; size: number; type: string }>;
+      }> = [];
+
+      Object.defineProperty(window, "__shareCalls", {
+        configurable: true,
+        value: shareCalls,
+      });
+      Object.defineProperty(window, "showSaveFilePicker", {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (data?: { files?: File[] }) =>
+          Array.isArray(data?.files) && data.files.length > 0,
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (data?: { files?: File[] }) => {
+          shareCalls.push({
+            files: (data?.files ?? []).map((file) => ({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+            })),
+          });
+        },
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByTestId("toolbox-toggle-button")).toBeVisible();
+    if (!(await page.getByTestId("toolbox-panel").isVisible())) {
+      await page.getByTestId("toolbox-toggle-button").click();
+    }
+    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
+    await expect(page.getByTestId("export-button")).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.getByTestId("export-button").scrollIntoViewIfNeeded();
+
+    const resultPromise = waitForExportResult(page, "[export] finished");
+    await page.getByTestId("export-button").evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect
+      .poll(async () => {
+        const shareCalls = await page.evaluate(() => {
+          const windowWithCalls = window as Window & {
+            __shareCalls?: Array<{
+              files: Array<{ name: string; size: number; type: string }>;
+            }>;
+          };
+          return windowWithCalls.__shareCalls ?? [];
+        });
+        return shareCalls.length;
+      }, {
+        timeout: 20000,
+      })
+      .toBe(1);
+    const result = await resultPromise;
+
+    const shareCalls = await page.evaluate(() => {
+      const windowWithCalls = window as Window & {
+        __shareCalls?: Array<{
+          files: Array<{ name: string; size: number; type: string }>;
+        }>;
+      };
+      return windowWithCalls.__shareCalls ?? [];
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.method).toBe("share");
+    expect(shareCalls).toHaveLength(1);
+    expect(shareCalls[0]?.files[0]?.name).toMatch(/^ipod-0000-.*\.png$/);
+    expect(shareCalls[0]?.files[0]?.type).toBe("image/png");
+    expect(shareCalls[0]?.files[0]?.size ?? 0).toBeGreaterThan(1000);
+
+    await context.close();
+  });
+
+  test("mobile gif export prefers native share when available", async ({ browser }) => {
+    const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
+    const context = await browser.newContext({
+      ...devices["iPhone 13"],
+    });
+    const page = await context.newPage();
+
+    await page.addInitScript(() => {
+      const shareCalls: Array<{
+        files: Array<{ name: string; size: number; type: string }>;
+      }> = [];
+
+      Object.defineProperty(window, "__shareCalls", {
+        configurable: true,
+        value: shareCalls,
+      });
+      Object.defineProperty(window, "showSaveFilePicker", {
+        configurable: true,
+        value: undefined,
+      });
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (data?: { files?: File[] }) =>
+          Array.isArray(data?.files) &&
+          data.files.length > 0 &&
+          data.files.every((file) => file.type === "image/gif"),
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (data?: { files?: File[] }) => {
+          shareCalls.push({
+            files: (data?.files ?? []).map((file) => ({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+            })),
+          });
+        },
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByTestId("toolbox-toggle-button")).toBeVisible();
+    if (!(await page.getByTestId("toolbox-panel").isVisible())) {
+      await page.getByTestId("toolbox-toggle-button").click();
+    }
+
+    await page.getByTestId("track-title-text").click();
+    await expect(page.getByTestId("fixed-editor-input")).toBeVisible();
+    await page.getByTestId("fixed-editor-input").fill(longTitle);
+    await page.getByTestId("fixed-editor-done").click();
+    await expect(page.getByTestId("track-title-text")).toContainText(longTitle);
+
+    if (!(await page.getByTestId("toolbox-panel").isVisible())) {
+      await page.getByTestId("toolbox-toggle-button").click();
+    }
+    await expect(page.getByTestId("preview-view-button")).toBeVisible();
+    await page.getByTestId("preview-view-button").evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect(page.getByTestId("gif-export-button")).toBeEnabled();
+    await page.getByTestId("gif-export-button").scrollIntoViewIfNeeded();
+
+    const resultPromise = waitForGifExportResult(page);
+    await page.getByTestId("gif-export-button").evaluate((button) => {
+      (button as HTMLButtonElement).click();
+    });
+    await expect
+      .poll(async () => {
+        const shareCalls = await page.evaluate(() => {
+          const windowWithCalls = window as Window & {
+            __shareCalls?: Array<{
+              files: Array<{ name: string; size: number; type: string }>;
+            }>;
+          };
+          return windowWithCalls.__shareCalls ?? [];
+        });
+        return shareCalls.length;
+      }, {
+        timeout: 25000,
+      })
+      .toBe(1);
+    const result = await resultPromise;
+
+    const shareCalls = await page.evaluate(() => {
+      const windowWithCalls = window as Window & {
+        __shareCalls?: Array<{
+          files: Array<{ name: string; size: number; type: string }>;
+        }>;
+      };
+      return windowWithCalls.__shareCalls ?? [];
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.method).toBe("share");
+    expect(result.capturePath).toBe("detached-html-to-image-gif");
+    expect(shareCalls).toHaveLength(1);
+    expect(shareCalls[0]?.files[0]?.name).toMatch(/^ipod-0000-.*\.gif$/);
+    expect(shareCalls[0]?.files[0]?.type).toBe("image/gif");
+    expect(shareCalls[0]?.files[0]?.size ?? 0).toBeGreaterThan(1000);
+
+    await context.close();
   });
 });
