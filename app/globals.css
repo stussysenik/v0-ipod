@@ -45,6 +45,49 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --ipod-shell-border: rgba(190, 194, 199, 0.92);
+    --ipod-shell-shadow:
+      0 18px 28px -24px rgba(0, 0, 0, 0.18), 0 8px 14px -14px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(74, 80, 88, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.58),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+    --ipod-screen-shadow: 0 3px 0 rgba(0, 0, 0, 0.84), 0 1px 5px rgba(0, 0, 0, 0.32);
+    --ipod-artwork-shadow: 0 6px 12px -8px rgba(0, 0, 0, 0.42);
+    --ipod-wheel-surface-top: #f7f7f8;
+    --ipod-wheel-surface-bottom: #eceef0;
+    --ipod-wheel-shadow:
+      0 12px 16px -18px rgba(0, 0, 0, 0.18), 0 4px 8px -12px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(74, 80, 88, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.93),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    --ipod-wheel-border: rgba(186, 190, 196, 0.62);
+    --ipod-wheel-highlight-border: rgba(255, 255, 255, 0.68);
+    --ipod-wheel-inner-border: rgba(74, 80, 88, 0.08);
+    --ipod-wheel-label: #b8bcc2;
+    --ipod-wheel-halo: rgba(74, 80, 88, 0.12);
+    --ipod-wheel-center-top: #f6f7f8;
+    --ipod-wheel-center-bottom: #eaeced;
+    --ipod-wheel-center-shadow:
+      0 0 0 1px rgba(74, 80, 88, 0.08), 0 6px 8px -10px rgba(0, 0, 0, 0.16),
+      0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    --ipod-wheel-center-border: rgba(214, 216, 220, 0.98);
+    --ipod-progress-track-border: #9ea3aa;
+    --ipod-progress-track-bg: #fafafa;
+    --ipod-progress-track-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+    --ipod-progress-fill: linear-gradient(
+      180deg,
+      #7fb8e9 0%,
+      #4d98dc 46%,
+      #2f79c8 47%,
+      #509fe0 100%
+    );
+    --ipod-progress-fill-gloss: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    --ipod-screen-status-leading: 1;
+    --ipod-screen-copy-leading: 1.12;
+    --ipod-star-active: #111111;
+    --ipod-star-inactive: #c4c8cd;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -88,6 +131,31 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  [data-export-shell="true"] {
+    --ipod-shell-border: rgba(120, 126, 134, 0.52);
+    --ipod-shell-shadow:
+      0 0 0 1px rgba(74, 80, 88, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.62),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    --ipod-screen-shadow: none;
+    --ipod-artwork-shadow: none;
+    --ipod-wheel-surface-top: #f0f2f4;
+    --ipod-wheel-surface-bottom: #e4e7ea;
+    --ipod-wheel-shadow:
+      0 0 0 1px rgba(74, 80, 88, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+    --ipod-wheel-border: rgba(110, 116, 124, 0.34);
+    --ipod-wheel-highlight-border: rgba(255, 255, 255, 0.7);
+    --ipod-wheel-inner-border: rgba(74, 80, 88, 0.12);
+    --ipod-wheel-label: #aab1b8;
+    --ipod-wheel-halo: rgba(74, 80, 88, 0.18);
+    --ipod-wheel-center-top: #eef0f2;
+    --ipod-wheel-center-bottom: #e1e5e8;
+    --ipod-wheel-center-shadow:
+      0 0 0 1px rgba(74, 80, 88, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.94),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    --ipod-wheel-center-border: rgba(186, 191, 198, 0.98);
   }
 
   [data-exporting="true"],

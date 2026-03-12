@@ -8,6 +8,7 @@ import {
   Monitor,
   Smartphone,
   Check,
+  AlertCircle,
   Plus,
   Loader2,
   Menu,
@@ -115,6 +116,58 @@ const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
 const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | "gif";
+
+function getExportStageContent(
+  kind: ExportKind | null,
+  status: ExportStatus,
+  detail?: string | null,
+): {
+  eyebrow: string;
+  title: string;
+  description: string;
+} | null {
+  if (!kind || status === "idle") return null;
+
+  const eyebrow = kind === "gif" ? "Animated GIF Export" : "Still Image Export";
+
+  switch (status) {
+    case "preparing":
+      return {
+        eyebrow,
+        title: "Preparing scene",
+        description: "Locking layout, artwork, and typography for a clean capture.",
+      };
+    case "encoding":
+      return {
+        eyebrow,
+        title: "Encoding frames",
+        description: detail ?? "Rendering the marquee motion. This can take a moment.",
+      };
+    case "sharing":
+      return {
+        eyebrow,
+        title: kind === "gif" ? "Saving GIF" : "Saving image",
+        description: "Handing the export to your browser or native share sheet.",
+      };
+    case "success":
+      return {
+        eyebrow,
+        title: "Complete",
+        description:
+          kind === "gif"
+            ? "The animated export finished successfully."
+            : "The still image export finished successfully.",
+      };
+    case "error":
+      return {
+        eyebrow,
+        title: "Export failed",
+        description: "The capture did not finish cleanly. You can retry now.",
+      };
+    default:
+      return null;
+  }
+}
 
 const initialState: SongMetadata = {
   title: "Charcoal Baby",
@@ -246,6 +299,7 @@ export default function IPodClassic() {
   const [softNotice, setSoftNotice] = useState<string | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
   const [exportCounter, setExportCounter] = useState(0);
+  const [exportStageDetail, setExportStageDetail] = useState<string | null>(null);
   const [isToolboxOpen, setIsToolboxOpen] = useState(true);
   const [hasEyeDropper, setHasEyeDropper] = useState(false);
   const [oklchReady, setOklchReady] = useState(false);
@@ -259,7 +313,7 @@ export default function IPodClassic() {
   const isPreviewView = viewMode === "preview";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
-  const useExportSafeVisuals = false;
+  const useExportSafeVisuals = isExportCapturing;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
@@ -503,6 +557,7 @@ export default function IPodClassic() {
     window.setTimeout(() => {
       setExportStatus("idle");
       setActiveExportKind(null);
+      setExportStageDetail(null);
     }, 1500);
   }, []);
 
@@ -531,6 +586,7 @@ export default function IPodClassic() {
     const filename = `ipod-${exportTag}-${buildExportSlug()}.png`;
 
     setActiveExportKind("png");
+    setExportStageDetail(null);
     setIsExportCapturing(true);
 
     try {
@@ -615,6 +671,7 @@ export default function IPodClassic() {
     const filename = `ipod-${exportTag}-${buildExportSlug()}.gif`;
 
     setActiveExportKind("gif");
+    setExportStageDetail(null);
     setIsExportCapturing(true);
 
     try {
@@ -627,6 +684,13 @@ export default function IPodClassic() {
         backgroundColor: bgColor,
         constrainedFrame: true,
         onStatusChange: setExportStatus,
+        onProgress: ({ frameIndex, frameCount }) => {
+          if (frameIndex <= 0) {
+            setExportStageDetail("Measuring the marquee timing and frame budget.");
+            return;
+          }
+          setExportStageDetail(`Rendering frame ${frameIndex} of ${frameCount}.`);
+        },
       });
       console.info("[gif-export] finished", result);
 
@@ -848,10 +912,14 @@ export default function IPodClassic() {
 
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
-  const shellShadow =
-    "0 18px 28px -24px rgba(0,0,0,0.22), 0 8px 14px -14px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.06)";
+  const shellShadow = "var(--ipod-shell-shadow)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
+  const exportStageContent = getExportStageContent(
+    activeExportKind,
+    exportStatus,
+    exportStageDetail,
+  );
   const toolboxDockClass = isCompactToolbox
     ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
     : "fixed top-6 right-6";
@@ -946,7 +1014,9 @@ export default function IPodClassic() {
                           type="color"
                           data-testid="custom-case-color-button"
                           value={skinColor}
-                          onInput={(e) => setSkinColor((e.target as HTMLInputElement).value)}
+                          onInput={(e) =>
+                            setSkinColor((e.target as HTMLInputElement).value)
+                          }
                           onChange={(e) => {
                             setSkinColor(e.target.value);
                             saveCustomColor("case", e.target.value);
@@ -968,7 +1038,11 @@ export default function IPodClassic() {
                           <button
                             key={swatch.hue}
                             onClick={() => {
-                              const hex = oklchToHex(OKLCH_CASE_L, OKLCH_CASE_C, swatch.hue);
+                              const hex = oklchToHex(
+                                OKLCH_CASE_L,
+                                OKLCH_CASE_C,
+                                swatch.hue,
+                              );
                               if (!hex) return;
                               setSkinColor(hex);
                               saveCustomColor("case", hex);
@@ -1059,7 +1133,9 @@ export default function IPodClassic() {
                           type="color"
                           data-testid="custom-bg-color-button"
                           value={bgColor}
-                          onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
+                          onInput={(e) =>
+                            setBgColor((e.target as HTMLInputElement).value)
+                          }
                           onChange={(e) => {
                             setBgColor(e.target.value);
                             saveCustomColor("bg", e.target.value);
@@ -1274,6 +1350,55 @@ export default function IPodClassic() {
           </div>
         )}
 
+        {exportStageContent && (
+          <div className="mb-4 flex w-full max-w-[30rem] items-center justify-center">
+            <div
+              data-testid="export-stage-panel"
+              aria-live="polite"
+              className="flex w-full items-center gap-3 rounded-2xl border border-black/10 bg-white/88 px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.1)] backdrop-blur-sm"
+            >
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                  exportStatus === "success"
+                    ? "bg-green-500 text-white"
+                    : exportStatus === "error"
+                      ? "bg-red-500 text-white"
+                      : "bg-black text-white"
+                }`}
+              >
+                {exportStatus === "success" ? (
+                  <Check className="h-5 w-5" />
+                ) : exportStatus === "error" ? (
+                  <AlertCircle className="h-5 w-5" />
+                ) : exportStatus === "sharing" ? (
+                  activeExportKind === "gif" ? (
+                    <Film className="h-5 w-5" />
+                  ) : (
+                    <Share className="h-5 w-5" />
+                  )
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
+                  {exportStageContent.eyebrow}
+                </div>
+                <div
+                  data-testid="export-stage-title"
+                  className="mt-0.5 text-[13px] font-semibold text-black/80"
+                >
+                  {exportStageContent.title}
+                </div>
+                <div className="mt-0.5 text-[12px] font-medium text-black/60">
+                  {exportStageContent.description}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isPreviewView && exportStatus === "idle" && (
           <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
             <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
@@ -1328,6 +1453,7 @@ export default function IPodClassic() {
                 <div
                   className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
                   style={{
+                    borderColor: "var(--ipod-shell-border)",
                     backgroundColor: skinColor,
                     boxShadow: shellShadow,
                   }}

@@ -12,14 +12,11 @@ export type ExportStatus =
 
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
-const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v2";
-const MAX_GIF_FRAME_COUNT = 180;
+const EXPORT_PIPELINE_VERSION = "2026-03-12-tokenized-2d-v4";
+const MAX_GIF_FRAME_COUNT = 120;
 const GIF_DELAY_QUANTUM_MS = 10;
-const GIF_CAPTURE_SCALE_HIGH = 2;
-const GIF_CAPTURE_SCALE_BALANCED = 1.5;
-const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
-const EXPORT_SHELL_CONTOUR =
-  "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
+const GIF_CAPTURE_SCALE_HIGH = 1.75;
+const GIF_CAPTURE_SCALE_BALANCED = 1.3;
 const GIF_SHADOW_POLICY = "match-preview";
 
 interface NextDataWindow extends Window {
@@ -55,9 +52,7 @@ interface SaveFileHandleLike {
 }
 
 interface SavePickerWindow extends Window {
-  showSaveFilePicker?: (
-    options?: SavePickerOptionsLike,
-  ) => Promise<SaveFileHandleLike>;
+  showSaveFilePicker?: (options?: SavePickerOptionsLike) => Promise<SaveFileHandleLike>;
 }
 
 const waitForMs = (ms: number) =>
@@ -241,8 +236,9 @@ function createDetachedExportNode(
   clone.style.transformOrigin = "top left";
   clone.style.isolation = "isolate";
   clone.setAttribute(EXPORT_ATTRIBUTE, "true");
+  clone.setAttribute("data-export-shell", "true");
   if (!preserveEffects) {
-    sanitizeDetachedCloneForCapture(clone, { constrainedFrame });
+    sanitizeDetachedCloneForCapture(clone);
   }
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
@@ -264,22 +260,6 @@ function createDetachedExportNode(
         [data-export-layer] {
           filter: none !important;
         }
-        [data-export-layer="shell"] {
-          border-color: ${EXPORT_SHELL_BORDER_COLOR} !important;
-          box-shadow: ${EXPORT_SHELL_CONTOUR} !important;
-        }
-        [data-export-layer="screen"] {
-          box-shadow: none !important;
-        }
-        [data-export-layer="artwork"] {
-          box-shadow: none !important;
-        }
-        [data-export-layer="wheel"] {
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05) !important;
-        }
-        [data-export-layer="wheel-center"] {
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
-        }
       `;
   clone.appendChild(freezeStyle);
 
@@ -287,53 +267,7 @@ function createDetachedExportNode(
   return clone;
 }
 
-function sanitizeDetachedCloneForCapture(
-  clone: HTMLElement,
-  options?: {
-    constrainedFrame?: boolean;
-  },
-): void {
-  const constrainedFrame = options?.constrainedFrame ?? false;
-  const shell = clone.querySelector<HTMLElement>('[data-export-layer="shell"]');
-  if (shell) {
-    shell.style.borderColor = constrainedFrame
-      ? EXPORT_SHELL_BORDER_COLOR
-      : "rgba(255,255,255,0.45)";
-    shell.style.boxShadow = constrainedFrame
-      ? EXPORT_SHELL_CONTOUR
-      : "0 10px 16px -14px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
-  }
-
-  const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
-  if (screen) {
-    screen.style.boxShadow = constrainedFrame
-      ? "none"
-      : "0 2px 0 rgba(0,0,0,0.82), 0 1px 2px rgba(0,0,0,0.18)";
-  }
-
-  const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
-  if (artwork) {
-    artwork.style.boxShadow = constrainedFrame
-      ? "none"
-      : "0 2px 6px -5px rgba(0,0,0,0.26)";
-  }
-
-  const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
-  if (wheel) {
-    wheel.style.boxShadow = constrainedFrame
-      ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
-      : "0 8px 12px -12px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)";
-  }
-
-  const wheelCenter = clone.querySelector<HTMLElement>(
-    '[data-export-layer="wheel-center"]',
-  );
-  if (wheelCenter) {
-    wheelCenter.style.boxShadow = constrainedFrame
-      ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
-      : "0 4px 8px -10px rgba(0,0,0,0.36), 0 1px 2px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)";
-  }
-
+function sanitizeDetachedCloneForCapture(clone: HTMLElement): void {
   const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
   layeredNodes.forEach((node) => {
     node.style.filter = "none";
@@ -411,7 +345,9 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
     const contentWidth =
       parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
       Math.ceil(leadCopy?.scrollWidth ?? leadCopy?.getBoundingClientRect().width ?? 0);
-    const gapWidthFromDataset = parseNumericDataAttribute(container.dataset.marqueeGapWidth);
+    const gapWidthFromDataset = parseNumericDataAttribute(
+      container.dataset.marqueeGapWidth,
+    );
     const spacerWidth = Math.ceil(
       spacer?.getBoundingClientRect().width ?? spacer?.offsetWidth ?? 0,
     );
@@ -441,10 +377,7 @@ function applyMarqueeFrameToClone(root: HTMLElement, elapsedMs: number): number 
   for (const node of nodes) {
     const frame = getMarqueeFrame(node.metrics, elapsedMs);
     node.track.style.transform = `translateX(${frame.translateX}px)`;
-    cycleDurationMs = Math.max(
-      cycleDurationMs,
-      getMarqueeCycleDurationMs(node.metrics),
-    );
+    cycleDurationMs = Math.max(cycleDurationMs, getMarqueeCycleDurationMs(node.metrics));
   }
 
   return cycleDurationMs;
@@ -936,8 +869,7 @@ function resolveFileMimeType(filename: string, fallbackMimeType: string): string
 function resolveFilePickerTypes(filename: string, mimeType: string) {
   const extension = filename.split(".").pop()?.toLowerCase();
   const acceptedExtension = extension ? `.${extension}` : ".png";
-  const description =
-    mimeType === "image/gif" ? "Animated GIF Image" : "PNG Image";
+  const description = mimeType === "image/gif" ? "Animated GIF Image" : "PNG Image";
 
   return [
     {
@@ -1182,6 +1114,7 @@ export async function exportAnimatedGif(
     constrainedFrame?: boolean;
     fps?: number;
     onStatusChange?: (status: ExportStatus) => void;
+    onProgress?: (progress: { frameIndex: number; frameCount: number }) => void;
   },
 ): Promise<ExportResult> {
   const {
@@ -1190,6 +1123,7 @@ export async function exportAnimatedGif(
     constrainedFrame = false,
     fps = 12,
     onStatusChange,
+    onProgress,
   } = options;
   const capabilities = detectExportCapabilities();
   const runtimeBuildContext = resolveRuntimeBuildContext();
@@ -1244,7 +1178,9 @@ export async function exportAnimatedGif(
     await waitForNextPaint();
 
     const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
-    const targetHeight = Math.ceil(exportNode.offsetHeight || exportNode.clientHeight || 1);
+    const targetHeight = Math.ceil(
+      exportNode.offsetHeight || exportNode.clientHeight || 1,
+    );
     const bleedPaddingPx = resolveBleedPaddingPx(exportNode);
     const detectedCycleDurationMs = applyMarqueeFrameToClone(exportNode, 0);
     const captureDurationMs = Math.max(detectedCycleDurationMs, 1000);
@@ -1256,9 +1192,10 @@ export async function exportAnimatedGif(
     const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
     const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
     const captureScale =
-      frameCount > 140 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
+      frameCount > 96 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
 
     onStatusChange?.("encoding");
+    onProgress?.({ frameIndex: 0, frameCount });
 
     const encoder = GIFEncoder();
     let palette: number[][] | null = null;
@@ -1305,6 +1242,7 @@ export async function exportAnimatedGif(
         repeat: frameIndex === 0 ? 0 : undefined,
         delay: frameCount === 1 ? 1000 : frameDelayMs,
       });
+      onProgress?.({ frameIndex: frameIndex + 1, frameCount });
     }
 
     encoder.finish();
@@ -1421,6 +1359,7 @@ export async function exportImage(
   const capabilities = detectExportCapabilities();
   const runtimeBuildContext = resolveRuntimeBuildContext();
   const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
+  const preserveEffects = !constrainedFrame;
   const preparedPopup =
     capabilities.isMobile &&
     !capabilities.isIOS &&
@@ -1437,6 +1376,7 @@ export async function exportImage(
     filename,
     pipelineVersion: EXPORT_PIPELINE_VERSION,
     constrainedFrame,
+    preserveEffects,
     capabilities,
     ...runtimeBuildContext,
   });
@@ -1459,17 +1399,17 @@ export async function exportImage(
   }
 
   let exportNode: HTMLElement | null = null;
-    const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
-      if (!exportNode) {
-        exportNode = createDetachedExportNode(element, {
-          constrainedFrame,
-          preserveEffects: true,
-        });
-        // Pre-load and embed all images as inline data URLs.
-        await preloadAndEmbedImages(exportNode);
-        // Additional wait for images to settle after conversion.
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
+  const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
+    if (!exportNode) {
+      exportNode = createDetachedExportNode(element, {
+        constrainedFrame,
+        preserveEffects,
+      });
+      // Pre-load and embed all images as inline data URLs.
+      await preloadAndEmbedImages(exportNode);
+      // Additional wait for images to settle after conversion.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     return exportNode;
   };
 

@@ -8,7 +8,11 @@ interface StarRatingProps {
 
 export function StarRating({ rating, onChange, disabled = false }: StarRatingProps) {
   return (
-    <div className="flex items-center gap-0.5 pl-1" style={{ lineHeight: 1 }}>
+    <div
+      className="flex h-[10px] items-center gap-px"
+      style={{ lineHeight: "var(--ipod-screen-status-leading)" }}
+      data-testid="star-rating"
+    >
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
@@ -17,10 +21,15 @@ export function StarRating({ rating, onChange, disabled = false }: StarRatingPro
             onChange(star);
           }}
           disabled={disabled}
-          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-black rounded p-0.5 -m-0.5"
+          className="flex h-[10px] w-[10px] items-center justify-center rounded-[1px] leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:cursor-default"
+          data-testid={`star-rating-button-${star}`}
         >
           <span
-            className={`text-[11px] ${star <= rating ? "text-black" : "text-gray-300"}`}
+            className="block text-[9px] leading-none"
+            style={{
+              color:
+                star <= rating ? "var(--ipod-star-active)" : "var(--ipod-star-inactive)",
+            }}
           >
             ★
           </span>

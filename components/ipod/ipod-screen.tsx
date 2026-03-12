@@ -40,10 +40,8 @@ export function IpodScreen({
   onTitleOverflowChange,
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
-  const screenShadow = exportSafe
-    ? "none"
-    : "0 3px 0 rgba(0,0,0,0.84), 0 1px 5px rgba(0,0,0,0.32)";
-  const artworkShadow = exportSafe ? "none" : "0 6px 12px -8px rgba(0,0,0,0.42)";
+  const screenShadow = "var(--ipod-screen-shadow)";
+  const artworkShadow = "var(--ipod-artwork-shadow)";
 
   const setCurrentTime = useCallback(
     (currentTime: number, preserveRemaining = false) => {
@@ -77,21 +75,28 @@ export function IpodScreen({
       className="w-[322px] h-[240px] bg-black rounded-[10px] p-[2px] mx-auto z-10 shrink-0 relative"
       style={{ boxShadow: screenShadow }}
       data-export-layer="screen"
+      data-export-screen={exportSafe ? "true" : "false"}
       data-testid="ipod-screen"
     >
       <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#525252]">
         {/* STATUS BAR */}
         <div
-          className="h-[20px] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD] border-b border-[#9B9B9B] flex items-center justify-between"
+          className="flex h-[20px] items-center justify-between border-b border-[#9B9B9B] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD]"
           style={{
             paddingLeft: SCREEN_SAFE_INSET_PX,
             paddingRight: SCREEN_SAFE_INSET_PX,
           }}
         >
-          <div className="flex items-center gap-1 text-[10px] font-bold tracking-tight text-black/80">
+          <div
+            className="flex items-center gap-1 text-[10px] font-bold tracking-tight text-black/80"
+            style={{ lineHeight: "var(--ipod-screen-status-leading)" }}
+          >
             <span className="text-blue-600">▶</span> Now Playing
           </div>
-          <Battery className="w-4 h-3 text-black opacity-60" />
+          <Battery
+            className="h-3 w-4 text-black opacity-60"
+            style={{ transform: "translateY(-0.5px)" }}
+          />
         </div>
 
         {/* CONTENT GRID */}
@@ -143,7 +148,10 @@ export function IpodScreen({
           >
             {/* Title */}
             <div className="relative z-20 mb-1 w-full min-w-0" data-testid="track-title">
-              <div className="min-w-0 text-[14px] font-bold text-black tracking-[0.01em] leading-[1.15]">
+              <div
+                className="min-w-0 text-[14px] font-bold text-black tracking-[0.01em]"
+                style={{ lineHeight: "var(--ipod-screen-copy-leading)" }}
+              >
                 {titlePreview || titleCaptureReady ? (
                   <MarqueeText
                     text={state.title}
@@ -168,7 +176,10 @@ export function IpodScreen({
 
             {/* Artist */}
             <div className="relative z-20 mb-1 w-full min-w-0" data-testid="track-artist">
-              <div className="min-w-0 text-[12px] font-semibold text-[#595959] leading-[1.2]">
+              <div
+                className="min-w-0 text-[12px] font-semibold text-[#595959]"
+                style={{ lineHeight: "var(--ipod-screen-copy-leading)" }}
+              >
                 <EditableText
                   value={state.artist}
                   onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
@@ -181,8 +192,14 @@ export function IpodScreen({
             </div>
 
             {/* Album */}
-            <div className="relative z-20 mb-2.5 w-full min-w-0" data-testid="track-album">
-              <div className="min-w-0 text-[12px] font-medium text-[#757575] leading-[1.2]">
+            <div
+              className="relative z-20 mb-2.5 w-full min-w-0"
+              data-testid="track-album"
+            >
+              <div
+                className="min-w-0 text-[12px] font-medium text-[#757575]"
+                style={{ lineHeight: "var(--ipod-screen-copy-leading)" }}
+              >
                 <EditableText
                   value={state.album}
                   onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
@@ -195,7 +212,10 @@ export function IpodScreen({
             </div>
 
             {/* Meta */}
-            <div className="text-[10px] text-[#868686] mb-1">
+            <div
+              className="mb-1 text-[10px] text-[#868686]"
+              style={{ lineHeight: "var(--ipod-screen-status-leading)" }}
+            >
               <EditableTrackNumber
                 trackNumber={state.trackNumber}
                 totalTracks={state.totalTracks}
@@ -209,7 +229,7 @@ export function IpodScreen({
               />
             </div>
 
-            <div className="scale-75 origin-left relative z-20">
+            <div className="relative z-20 mt-[1px]">
               <StarRating
                 rating={state.rating}
                 onChange={(rating) => {
@@ -243,7 +263,10 @@ export function IpodScreen({
             }}
             disabled={!isEditable}
           />
-          <div className="mt-0.5 flex items-center justify-between text-[11px] font-semibold tracking-tight text-black font-mono">
+          <div
+            className="mt-1 flex items-center justify-between font-mono text-[11px] font-semibold tracking-tight text-black"
+            style={{ lineHeight: "var(--ipod-screen-status-leading)" }}
+          >
             <div data-testid="elapsed-time">
               <EditableTime
                 value={state.currentTime}

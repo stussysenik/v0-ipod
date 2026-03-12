@@ -23,12 +23,6 @@ export function ClickWheel({
   exportSafe = false,
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
-  const wheelShadow = exportSafe
-    ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
-    : "0 12px 16px -18px rgba(0,0,0,0.18), 0 4px 8px -12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.93), inset 0 -1px 0 rgba(0,0,0,0.05)";
-  const centerShadow = exportSafe
-    ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
-    : "0 6px 8px -10px rgba(0,0,0,0.16), 0 1px 2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.94)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -98,11 +92,17 @@ export function ClickWheel({
       ref={wheelRef}
       className={`relative w-[240px] h-[240px] touch-none rounded-full ${disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${className}`}
       style={style}
+      data-export-wheel={exportSafe ? "true" : "false"}
     >
       {/* Wheel Surface - Clean Matte Look */}
       <div
-        className="absolute inset-0 rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#F0F0F0]"
-        style={{ boxShadow: wheelShadow }}
+        className="absolute inset-0 rounded-full"
+        style={{
+          background:
+            "linear-gradient(180deg, var(--ipod-wheel-surface-top) 0%, var(--ipod-wheel-surface-bottom) 100%)",
+          border: "1px solid var(--ipod-wheel-border)",
+          boxShadow: "var(--ipod-wheel-shadow)",
+        }}
         data-export-layer="wheel"
       >
         {/* Subtle analog sheen and bevel */}
@@ -122,37 +122,67 @@ export function ClickWheel({
             opacity: 0.08,
           }}
         />
-        <div className="absolute inset-[3px] rounded-full border border-white/65 pointer-events-none" />
-        <div className="absolute inset-[31%] rounded-full border border-black/[0.045] pointer-events-none" />
+        <div
+          className="absolute inset-[3px] rounded-full border pointer-events-none"
+          style={{
+            borderColor: "var(--ipod-wheel-highlight-border)",
+          }}
+        />
+        <div
+          className="absolute inset-[31%] rounded-full border pointer-events-none"
+          style={{
+            borderColor: "var(--ipod-wheel-inner-border)",
+          }}
+        />
 
         {/* Button Labels */}
-        <div className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold text-[#C7C7C7] tracking-widest uppercase pointer-events-none font-sans">
+        <div
+          className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold tracking-widest uppercase pointer-events-none font-sans"
+          style={{ color: "var(--ipod-wheel-label)" }}
+        >
           Menu
         </div>
 
         {/* Play/Pause Button - Adjusted SVG to fix overlap */}
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 text-[#C7C7C7] pointer-events-none flex gap-1 items-center">
+        <div
+          className="absolute bottom-[14%] left-1/2 -translate-x-1/2 pointer-events-none flex gap-1 items-center"
+          style={{ color: "var(--ipod-wheel-label)" }}
+        >
           <Play className="w-4 h-4 fill-current" />
           <Pause className="w-4 h-4 fill-current" />
         </div>
 
-        <div className="absolute left-[12%] top-1/2 -translate-y-1/2 text-[#C7C7C7] pointer-events-none">
+        <div
+          className="absolute left-[12%] top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: "var(--ipod-wheel-label)" }}
+        >
           <SkipBack className="w-5 h-5 fill-current" />
         </div>
-        <div className="absolute right-[12%] top-1/2 -translate-y-1/2 text-[#C7C7C7] pointer-events-none">
+        <div
+          className="absolute right-[12%] top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: "var(--ipod-wheel-label)" }}
+        >
           <SkipForward className="w-5 h-5 fill-current" />
         </div>
       </div>
 
       {/* Center halo ring */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[96px] h-[96px] rounded-full border border-black/[0.05] pointer-events-none" />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[96px] h-[96px] rounded-full border pointer-events-none"
+        style={{ borderColor: "var(--ipod-wheel-halo)" }}
+      />
 
       {/* Center Button */}
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#ECECEC] transition-transform z-20 border border-[#E6E6E6] ${
+        className={`absolute top-1/2 left-1/2 z-20 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full border transition-transform ${
           disabled ? "cursor-default" : "active:scale-95 cursor-pointer"
         }`}
-        style={{ boxShadow: centerShadow }}
+        style={{
+          background:
+            "linear-gradient(180deg, var(--ipod-wheel-center-top) 0%, var(--ipod-wheel-center-bottom) 100%)",
+          borderColor: "var(--ipod-wheel-center-border)",
+          boxShadow: "var(--ipod-wheel-center-shadow)",
+        }}
         data-export-layer="wheel-center"
         onClick={(e) => {
           e.stopPropagation();

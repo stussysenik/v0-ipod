@@ -1,22 +1,39 @@
-import {
-  test,
-  expect,
-  devices,
-  type ConsoleMessage,
-  type Page,
-} from "@playwright/test";
+import { test, expect, devices, type ConsoleMessage, type Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 
 const fixtureImage = path.resolve(process.cwd(), "public/test.jpg");
 
 async function waitForExportResult(page: Page, markerText: string) {
-  return await new Promise<{
+  return waitForConsolePayload<{
     success: boolean;
     method: string;
     capturePath?: string;
     error?: string;
-  }>((resolve, reject) => {
+  }>(
+    page,
+    markerText,
+    (
+      value,
+    ): value is {
+      success: boolean;
+      method: string;
+      capturePath?: string;
+      error?: string;
+    } =>
+      !!value &&
+      typeof value === "object" &&
+      typeof (value as { success?: unknown }).success === "boolean" &&
+      typeof (value as { method?: unknown }).method === "string",
+  );
+}
+
+async function waitForConsolePayload<T>(
+  page: Page,
+  markerText: string,
+  predicate: (value: unknown) => value is T,
+) {
+  return await new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(() => {
       page.off("console", onConsole);
       reject(new Error(`Timed out waiting for ${markerText} log`));
@@ -36,25 +53,12 @@ async function waitForExportResult(page: Page, markerText: string) {
           }),
         );
 
-        const payload = args.find(
-          (value) =>
-            value &&
-            typeof value === "object" &&
-            "success" in value &&
-            "method" in value,
-        );
+        const payload = args.find((value) => predicate(value));
         if (!payload) return;
 
         clearTimeout(timeout);
         page.off("console", onConsole);
-        resolve(
-          payload as {
-            success: boolean;
-            method: string;
-            capturePath?: string;
-            error?: string;
-          },
-        );
+        resolve(payload);
       } catch (error) {
         clearTimeout(timeout);
         page.off("console", onConsole);
@@ -248,6 +252,36 @@ test.describe("Core interactions remain usable", () => {
       "style",
       /width:\s*33/,
     );
+
+    const screenChrome = await page.evaluate(() => {
+      const stars = document.querySelector<HTMLElement>('[data-testid="star-rating"]');
+      const track = document.querySelector<HTMLElement>('[data-testid="progress-track"]');
+      const fill = document.querySelector<HTMLElement>('[data-testid="progress-fill"]');
+      if (!stars || !track || !fill) {
+        return null;
+      }
+
+      const trackRect = track.getBoundingClientRect();
+      const fillRect = fill.getBoundingClientRect();
+      return {
+        starTransform: window.getComputedStyle(stars).transform,
+        starHeight: stars.getBoundingClientRect().height,
+        fillInsetLeft: fillRect.left - trackRect.left,
+        fillInsetTop: fillRect.top - trackRect.top,
+        fillInsetBottom: trackRect.bottom - fillRect.bottom,
+      };
+    });
+
+    expect(screenChrome).not.toBeNull();
+    if (!screenChrome) {
+      throw new Error("screen chrome metrics missing");
+    }
+    expect(screenChrome.starTransform).toBe("none");
+    expect(screenChrome.starHeight).toBeGreaterThanOrEqual(8);
+    expect(screenChrome.starHeight).toBeLessThanOrEqual(12);
+    expect(screenChrome.fillInsetLeft).toBeGreaterThanOrEqual(0.5);
+    expect(screenChrome.fillInsetTop).toBeGreaterThanOrEqual(0.5);
+    expect(screenChrome.fillInsetBottom).toBeGreaterThanOrEqual(0.5);
   });
 
   test("export filenames use incremental ids", async ({ page }) => {
@@ -264,10 +298,52 @@ test.describe("Core interactions remain usable", () => {
     expect(second.suggestedFilename()).toMatch(/^ipod-0001-/);
   });
 
+  test("flat export uses the constrained export-safe pipeline", async ({ page }) => {
+    const startPromise = waitForConsolePayload<{
+      constrainedFrame: boolean;
+      preserveEffects: boolean;
+      pipelineVersion: string;
+    }>(
+      page,
+      "[export:diagnostics] start",
+      (
+        value,
+      ): value is {
+        constrainedFrame: boolean;
+        preserveEffects: boolean;
+        pipelineVersion: string;
+      } =>
+        !!value &&
+        typeof value === "object" &&
+        typeof (value as { constrainedFrame?: unknown }).constrainedFrame === "boolean" &&
+        typeof (value as { preserveEffects?: unknown }).preserveEffects === "boolean" &&
+        typeof (value as { pipelineVersion?: unknown }).pipelineVersion === "string",
+    );
+    const resultPromise = waitForExportResult(page, "[export] finished");
+    const downloadPromise = page.waitForEvent("download");
+
+    await page.getByTestId("export-button").click();
+
+    const [start, result, download] = await Promise.all([
+      startPromise,
+      resultPromise,
+      downloadPromise,
+    ]);
+
+    expect(start.constrainedFrame).toBe(true);
+    expect(start.preserveEffects).toBe(false);
+    expect(start.pipelineVersion).toContain("tokenized-2d-v4");
+    expect(download.suggestedFilename()).toMatch(/^ipod-0000-.*\.png$/);
+    expect(result.success).toBe(true);
+    expect(result.capturePath).toBe("detached-html-to-image");
+  });
+
   test("preview mode persists after reload", async ({ page }) => {
     await page.getByTestId("preview-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(page.getByText("This title fits. Use a longer song title to trigger the crawl.")).toBeVisible();
+    await expect(
+      page.getByText("This title fits. Use a longer song title to trigger the crawl."),
+    ).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
@@ -289,7 +365,9 @@ test.describe("Core interactions remain usable", () => {
 
     expect(marqueePresence.hasTrack).toBe(false);
     expect(marqueePresence.text?.includes("Glow")).toBe(true);
-    await expect(page.getByTestId("gif-export-button")).toContainText("Need Longer Title");
+    await expect(page.getByTestId("gif-export-button")).toContainText(
+      "Need Longer Title",
+    );
     await expect(page.getByTestId("gif-export-button")).toBeDisabled();
   });
 
@@ -312,7 +390,9 @@ test.describe("Core interactions remain usable", () => {
 
     await page.getByTestId("preview-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(page.getByText("The title is crawling. Export Animated GIF to capture it.")).toBeVisible();
+    await expect(
+      page.getByText("The title is crawling. Export Animated GIF to capture it."),
+    ).toBeVisible();
     await expect(page.getByTestId("gif-export-button")).toBeEnabled();
 
     const screenLayout = await page.getByTestId("screen-content").evaluate((el) => {
@@ -383,6 +463,10 @@ test.describe("Core interactions remain usable", () => {
     const resultPromise = waitForGifExportResult(page);
     const downloadPromise = page.waitForEvent("download");
     await page.getByTestId("gif-export-button").click();
+    await expect(page.getByTestId("export-stage-panel")).toBeVisible();
+    await expect(page.getByTestId("export-stage-title")).toContainText(
+      /Preparing scene|Encoding frames|Saving GIF/,
+    );
     const [result, download] = await Promise.all([resultPromise, downloadPromise]);
     expect(result.success).toBe(true);
     expect(result.capturePath).toBe("detached-html-to-image-gif");
@@ -600,19 +684,22 @@ test.describe("Native export delivery", () => {
       (button as HTMLButtonElement).click();
     });
     await expect
-      .poll(async () => {
-        const shareCalls = await page.evaluate(() => {
-          const windowWithCalls = window as Window & {
-            __shareCalls?: Array<{
-              files: Array<{ name: string; size: number; type: string }>;
-            }>;
-          };
-          return windowWithCalls.__shareCalls ?? [];
-        });
-        return shareCalls.length;
-      }, {
-        timeout: 20000,
-      })
+      .poll(
+        async () => {
+          const shareCalls = await page.evaluate(() => {
+            const windowWithCalls = window as Window & {
+              __shareCalls?: Array<{
+                files: Array<{ name: string; size: number; type: string }>;
+              }>;
+            };
+            return windowWithCalls.__shareCalls ?? [];
+          });
+          return shareCalls.length;
+        },
+        {
+          timeout: 20000,
+        },
+      )
       .toBe(1);
     const result = await resultPromise;
 
@@ -703,19 +790,22 @@ test.describe("Native export delivery", () => {
       (button as HTMLButtonElement).click();
     });
     await expect
-      .poll(async () => {
-        const shareCalls = await page.evaluate(() => {
-          const windowWithCalls = window as Window & {
-            __shareCalls?: Array<{
-              files: Array<{ name: string; size: number; type: string }>;
-            }>;
-          };
-          return windowWithCalls.__shareCalls ?? [];
-        });
-        return shareCalls.length;
-      }, {
-        timeout: 25000,
-      })
+      .poll(
+        async () => {
+          const shareCalls = await page.evaluate(() => {
+            const windowWithCalls = window as Window & {
+              __shareCalls?: Array<{
+                files: Array<{ name: string; size: number; type: string }>;
+              }>;
+            };
+            return windowWithCalls.__shareCalls ?? [];
+          });
+          return shareCalls.length;
+        },
+        {
+          timeout: 25000,
+        },
+      )
       .toBe(1);
     const result = await resultPromise;
 

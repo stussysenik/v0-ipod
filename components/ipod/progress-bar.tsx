@@ -70,7 +70,7 @@ export function ProgressBar({
       <div
         ref={progressRef}
         data-testid="progress-track"
-        className={`relative w-full h-[10px] bg-white border border-[#999] shadow-inner overflow-hidden rounded-[2px] ${
+        className={`relative h-[10px] w-full overflow-hidden rounded-[2px] border ${
           disabled ? "cursor-default" : "cursor-pointer"
         }`}
         onPointerDown={handlePointerDown}
@@ -78,20 +78,41 @@ export function ProgressBar({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
         style={{
-          boxShadow: "inset 0 1px 3px rgba(0,0,0,0.2)",
+          backgroundColor: "var(--ipod-progress-track-bg)",
+          borderColor: "var(--ipod-progress-track-border)",
+          boxShadow: "var(--ipod-progress-track-shadow)",
           touchAction: "none",
         }}
       >
-        {/* Progress Bar (Blue Gel style) */}
-        <div
-          data-testid="progress-fill"
-          className="absolute inset-y-0 left-0"
-          style={{
-            width: `${progress}%`,
-            background:
-              "linear-gradient(180deg, #74ACDF 0%, #3584D3 50%, #1766B5 51%, #358BDB 100%)",
-          }}
-        />
+        <div className="absolute inset-[1px] overflow-hidden rounded-[1px]">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.06) 38%, rgba(0,0,0,0.04) 100%)",
+            }}
+          />
+          <div
+            data-testid="progress-fill"
+            className="absolute inset-y-0 left-0 overflow-hidden"
+            style={{
+              width: `${progress}%`,
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "var(--ipod-progress-fill)",
+              }}
+            />
+            <div
+              className="absolute inset-x-0 top-0 h-[45%]"
+              style={{
+                background: "var(--ipod-progress-fill-gloss)",
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
