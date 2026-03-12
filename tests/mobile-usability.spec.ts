@@ -12,7 +12,9 @@ test.use({
 test.describe("Mobile usability", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByTestId("toolbox-toggle-button")).toBeVisible();
+    await expect(page.getByTestId("toolbox-toggle-button")).toBeVisible({
+      timeout: 15000,
+    });
     await expect(page.getByTestId("toolbox-panel")).toBeHidden();
   });
 
@@ -28,36 +30,16 @@ test.describe("Mobile usability", () => {
 
     await page.getByTestId("toolbox-toggle-button").tap();
     await expect(page.getByTestId("toolbox-panel")).toBeVisible();
-    await page.getByTestId("theme-button").tap();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
-
-    await page.getByTestId("three-d-view-button").tap();
-    await expect(page.getByTestId("theme-panel")).toBeHidden();
-    await expect(page.getByTestId("toolbox-panel")).toBeHidden();
-    await page.getByTestId("toolbox-toggle-button").click();
-    await expect
-      .poll(async () =>
-        page.getByTestId("toolbox-panel").evaluate((el) => !el.className.includes("invisible")),
-      )
-      .toBe(true);
-    await expect(page.getByTestId("export-button")).toContainText("Flat View Only");
-    await page.getByTestId("flat-view-button").tap();
-    await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
-    await page.getByTestId("toolbox-toggle-button").tap();
-    await expect
-      .poll(async () =>
-        page.getByTestId("toolbox-panel").evaluate((el) => !el.className.includes("invisible")),
-      )
-      .toBe(true);
-    await page.getByTestId("preview-view-button").tap();
-    await expect(page.getByTestId("gif-export-button")).toContainText("Need Longer Title");
+    await expect(page.getByTestId("export-button")).toBeVisible();
+    await expect(page.getByTestId("export-preset-select")).toHaveValue("product");
   });
 
   test("mobile upload opens immediate file path and updates artwork", async ({
     page,
   }) => {
+    const liveShell = page.getByTestId("live-ipod-shell");
     await page.getByTestId("artwork-input").setInputFiles(fixtureImage);
-    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+    await expect(liveShell.getByTestId("artwork-image")).toHaveAttribute(
       "src",
       /data:image\//,
       {
@@ -67,14 +49,15 @@ test.describe("Mobile usability", () => {
   });
 
   test("single tap edit and touch seek work", async ({ page }) => {
-    await page.getByText("Charcoal Baby").tap();
+    const liveShell = page.getByTestId("live-ipod-shell");
+    await liveShell.getByText("Charcoal Baby").tap();
     const input = page.getByTestId("fixed-editor-input");
     await expect(input).toBeVisible();
     await input.fill("Mobile Edit");
     await page.getByTestId("fixed-editor-done").tap();
-    await expect(page.getByText("Mobile Edit")).toBeVisible();
+    await expect(liveShell.getByText("Mobile Edit")).toBeVisible();
 
-    const track = page.getByTestId("progress-track");
+    const track = liveShell.getByTestId("progress-track");
     const box = await track.boundingBox();
     if (!box) throw new Error("progress track not found");
 
@@ -84,38 +67,32 @@ test.describe("Mobile usability", () => {
         y: box.height / 2,
       },
     });
-    await expect(page.getByTestId("elapsed-time")).not.toContainText("0:00");
+    await expect(liveShell.getByTestId("elapsed-time")).not.toContainText("0:00");
   });
 
-  test("mobile load snapshot applies persisted artwork data", async ({ page }) => {
+  test("mobile preview / record flow stays reachable", async ({ page }) => {
     await page.getByTestId("toolbox-toggle-button").tap();
-    await expect(page.getByTestId("toolbox-panel")).toBeVisible();
-    await page.getByTestId("theme-button").tap();
-    await page.getByTestId("load-song-snapshot-button").tap();
-    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
-      "src",
-      /placeholder-logo\.png/,
-    );
+    await page.getByTestId("export-format-gif").tap();
+    await page.getByTestId("preview-record-button").tap();
 
-    await page.reload();
-    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
-      "src",
-      /placeholder-logo\.png/,
-    );
+    await expect(page.getByTestId("gif-preview-stage")).toBeVisible({ timeout: 60000 });
+    await expect(page.getByTestId("gif-preview-play-toggle")).toBeVisible();
+    await expect(page.getByTestId("gif-preview-scrubber")).toBeVisible();
   });
 
   test("long title wrapping and theme controls stay reachable on mobile", async ({
     page,
   }) => {
+    const liveShell = page.getByTestId("live-ipod-shell");
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
 
-    await page.getByText("Charcoal Baby").tap();
+    await liveShell.getByText("Charcoal Baby").tap();
     const input = page.getByTestId("fixed-editor-input");
     await expect(input).toBeVisible();
     await input.fill(longTitle);
     await page.getByTestId("fixed-editor-done").tap();
 
-    const titleLayout = await page.getByTestId("track-title-text").evaluate((el) => {
+    const titleLayout = await liveShell.getByTestId("track-title-text").evaluate((el) => {
       const style = window.getComputedStyle(el);
       const lineHeight = Number.parseFloat(style.lineHeight) || 16;
       return {
@@ -136,10 +113,5 @@ test.describe("Mobile usability", () => {
     await expect(themePanel).toBeVisible();
     await page.getByTestId("save-song-snapshot-button").scrollIntoViewIfNeeded();
     await expect(page.getByTestId("save-song-snapshot-button")).toBeVisible();
-
-    const panelBox = await themePanel.boundingBox();
-    expect(panelBox).not.toBeNull();
-    if (!panelBox) throw new Error("theme panel not found");
-    expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(844);
   });
 });

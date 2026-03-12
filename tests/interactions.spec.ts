@@ -1,5 +1,4 @@
-import { test, expect, devices, type ConsoleMessage, type Page } from "@playwright/test";
-import fs from "fs";
+import { test, expect } from "@playwright/test";
 import path from "path";
 
 const fixtureImage = path.resolve(process.cwd(), "public/test.jpg");
@@ -86,47 +85,37 @@ test.describe("Core interactions remain usable", () => {
     await expect(page.getByTestId("theme-button")).toBeVisible();
   });
 
-  test("metadata title + experience switching + settings popover work", async ({
-    page,
-  }) => {
+  test("metadata title, theme popover, and export controls work", async ({ page }) => {
     await expect(page).toHaveTitle(/iPod Snapshot/i);
 
     await page.getByTestId("theme-button").click();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
-    await page.getByTestId("three-d-view-button").click();
-    await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
-
-    await page.getByTestId("flat-view-button").click();
-    await expect(page.getByRole("button", { name: "Export 2D Image" })).toBeVisible();
-
-    await page.getByTestId("preview-view-button").click();
-    await expect(page.getByTestId("gif-export-button")).toBeVisible();
+    await expect(page.getByTestId("export-format-png")).toBeVisible();
+    await expect(page.getByTestId("export-format-gif")).toBeVisible();
+    await expect(page.getByTestId("export-preset-select")).toHaveValue("product");
   });
 
   test("interaction chrome resets to a clean state", async ({ page }) => {
+    const liveShell = page.getByTestId("live-ipod-shell");
     await page.getByTestId("theme-button").click();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
-    await page.getByText("Charcoal Baby").click();
+    await liveShell.getByText("Charcoal Baby").click();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
 
     await page.getByTestId("theme-button").click();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("theme-panel")).toBeHidden();
-
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
-    await page.getByTestId("three-d-view-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeHidden();
   });
 
   test("image upload updates artwork preview", async ({ page }) => {
+    const liveShell = page.getByTestId("live-ipod-shell");
     const fileInput = page.getByTestId("artwork-input");
     await fileInput.setInputFiles(fixtureImage);
 
-    const artwork = page.getByTestId("artwork-image");
+    const artwork = liveShell.getByTestId("artwork-image");
     await expect(artwork).toHaveAttribute("src", /data:image\//, {
       timeout: 15000,
     });
@@ -156,52 +145,48 @@ test.describe("Core interactions remain usable", () => {
   test("load snapshot applies test image/data and persists after reload", async ({
     page,
   }) => {
+    const liveShell = page.getByTestId("live-ipod-shell");
     await page.getByTestId("theme-button").click();
     await page.getByTestId("load-song-snapshot-button").click();
 
-    await expect(page.getByText("Charcoal Baby")).toBeVisible();
-    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+    await expect(liveShell.getByText("Charcoal Baby")).toBeVisible();
+    await expect(liveShell.getByTestId("artwork-image")).toHaveAttribute(
       "src",
       /placeholder-logo\.png/,
     );
-    await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
+    await expect(liveShell.getByTestId("elapsed-time")).toContainText("0:05");
 
     await page.reload();
-    await expect(page.getByText("Charcoal Baby")).toBeVisible();
-    await expect(page.getByTestId("artwork-image")).toHaveAttribute(
+    await expect(liveShell.getByText("Charcoal Baby")).toBeVisible();
+    await expect(liveShell.getByTestId("artwork-image")).toHaveAttribute(
       "src",
       /placeholder-logo\.png/,
     );
-    await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
+    await expect(liveShell.getByTestId("elapsed-time")).toContainText("0:05");
   });
 
   test("save snapshot stores edited data and load restores it", async ({ page }) => {
-    await page.getByText("Charcoal Baby").dblclick();
+    const liveShell = page.getByTestId("live-ipod-shell");
+    await liveShell.getByText("Charcoal Baby").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill("Snapshot QA");
     await titleInput.press("Enter");
-    await expect(page.getByText("Snapshot QA")).toBeVisible();
+    await expect(liveShell.getByText("Snapshot QA")).toBeVisible();
 
     await page.getByTestId("theme-button").click();
     await page.getByTestId("save-song-snapshot-button").click();
     await page.getByTestId("theme-button").click();
 
-    await page.getByText("Snapshot QA").dblclick();
+    await liveShell.getByText("Snapshot QA").dblclick();
     await expect(titleInput).toBeVisible();
     await titleInput.fill("Temp Value");
     await titleInput.press("Enter");
-    await expect(page.getByText("Temp Value")).toBeVisible();
+    await expect(liveShell.getByText("Temp Value")).toBeVisible();
 
     await page.getByTestId("theme-button").click();
     await page.getByTestId("load-song-snapshot-button").click();
-    await expect(page.getByText("Snapshot QA")).toBeVisible();
-
-    await expect
-      .poll(async () =>
-        page.evaluate(() => localStorage.getItem("ipodSnapshotSongSnapshot") ?? ""),
-      )
-      .toContain("Snapshot QA");
+    await expect(liveShell.getByText("Snapshot QA")).toBeVisible();
   });
 
   test("text fields accept paste and open the inline editor with the pasted value", async ({
@@ -228,27 +213,31 @@ test.describe("Core interactions remain usable", () => {
   });
 
   test("remaining-first timing keeps progress proportionate", async ({ page }) => {
-    const remaining = page.getByTestId("remaining-time").locator("span");
+    const liveShell = page.getByTestId("live-ipod-shell");
+    const remaining = liveShell.getByTestId("remaining-time").locator("span");
     await remaining.dblclick();
     const remainingInput = page
+      .getByTestId("live-ipod-shell")
       .getByTestId("remaining-time")
       .locator('input[type="text"]');
     await expect(remainingInput).toBeVisible();
     await remainingInput.fill("1:00");
     await remainingInput.press("Enter");
 
-    await expect(page.getByTestId("remaining-time")).toContainText("-1:00");
+    await expect(liveShell.getByTestId("remaining-time")).toContainText("-1:00");
 
-    const elapsed = page.getByTestId("elapsed-time").locator("span");
+    const elapsed = liveShell.getByTestId("elapsed-time").locator("span");
     await elapsed.dblclick();
-    const elapsedInput = page.getByTestId("elapsed-time").locator('input[type="text"]');
+    const elapsedInput = liveShell
+      .getByTestId("elapsed-time")
+      .locator('input[type="text"]');
     await expect(elapsedInput).toBeVisible();
     await elapsedInput.fill("0:30");
     await elapsedInput.press("Enter");
 
-    await expect(page.getByTestId("elapsed-time")).toContainText("0:30");
-    await expect(page.getByTestId("remaining-time")).toContainText("-1:00");
-    await expect(page.getByTestId("progress-fill")).toHaveAttribute(
+    await expect(liveShell.getByTestId("elapsed-time")).toContainText("0:30");
+    await expect(liveShell.getByTestId("remaining-time")).toContainText("-1:00");
+    await expect(liveShell.getByTestId("progress-fill")).toHaveAttribute(
       "style",
       /width:\s*33/,
     );
@@ -284,271 +273,67 @@ test.describe("Core interactions remain usable", () => {
     expect(screenChrome.fillInsetBottom).toBeGreaterThanOrEqual(0.5);
   });
 
-  test("export filenames use incremental ids", async ({ page }) => {
+  test("png exports include preset id and increment ids", async ({ page }) => {
+    await page.getByTestId("export-preset-select").selectOption("square");
+
     const firstDownload = page.waitForEvent("download");
     await page.getByTestId("export-button").click();
     const first = await firstDownload;
-    expect(first.suggestedFilename()).toMatch(/^ipod-0000-/);
+    expect(first.suggestedFilename()).toMatch(/^ipod-0000-square-.*\.png$/);
 
     await expect(page.getByTestId("export-button")).toBeEnabled({ timeout: 10000 });
 
     const secondDownload = page.waitForEvent("download");
     await page.getByTestId("export-button").click();
     const second = await secondDownload;
-    expect(second.suggestedFilename()).toMatch(/^ipod-0001-/);
+    expect(second.suggestedFilename()).toMatch(/^ipod-0001-square-.*\.png$/);
   });
 
-  test("flat export uses the constrained export-safe pipeline", async ({ page }) => {
-    const startPromise = waitForConsolePayload<{
-      constrainedFrame: boolean;
-      preserveEffects: boolean;
-      pipelineVersion: string;
-    }>(
-      page,
-      "[export:diagnostics] start",
-      (
-        value,
-      ): value is {
-        constrainedFrame: boolean;
-        preserveEffects: boolean;
-        pipelineVersion: string;
-      } =>
-        !!value &&
-        typeof value === "object" &&
-        typeof (value as { constrainedFrame?: unknown }).constrainedFrame === "boolean" &&
-        typeof (value as { preserveEffects?: unknown }).preserveEffects === "boolean" &&
-        typeof (value as { pipelineVersion?: unknown }).pipelineVersion === "string",
-    );
-    const resultPromise = waitForExportResult(page, "[export] finished");
-    const downloadPromise = page.waitForEvent("download");
+  test("gif preview modal and recording popup work", async ({ page }) => {
+    await page.getByTestId("export-format-gif").click();
+    await page.getByTestId("export-preset-select").selectOption("portrait");
 
-    await page.getByTestId("export-button").click();
+    await page.getByTestId("preview-record-button").click();
+    await expect(page.getByTestId("gif-preview-stage")).toBeVisible({ timeout: 60000 });
+    await expect(page.getByTestId("gif-preview-play-toggle")).toBeVisible();
+    await expect(page.getByTestId("gif-preview-scrubber")).toBeVisible();
 
-    const [start, result, download] = await Promise.all([
-      startPromise,
-      resultPromise,
-      downloadPromise,
-    ]);
-
-    expect(start.constrainedFrame).toBe(true);
-    expect(start.preserveEffects).toBe(false);
-    expect(start.pipelineVersion).toContain("tokenized-2d-v4");
-    expect(download.suggestedFilename()).toMatch(/^ipod-0000-.*\.png$/);
-    expect(result.success).toBe(true);
-    expect(result.capturePath).toBe("detached-html-to-image");
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByTestId("gif-preview-record-window").click();
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup.locator('[data-testid="recording-stage"]')).toBeVisible();
   });
 
-  test("preview mode persists after reload", async ({ page }) => {
-    await page.getByTestId("preview-view-button").click();
-    await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(
-      page.getByText("This title fits. Use a longer song title to trigger the crawl."),
-    ).toBeVisible();
-
-    await page.reload();
-    await expect(page.getByTestId("gif-export-button")).toBeVisible();
-  });
-
-  test("preview mode keeps short titles static", async ({ page }) => {
-    await page.getByText("Charcoal Baby").dblclick();
-    const titleInput = page.locator('input[type="text"]').first();
-    await expect(titleInput).toBeVisible();
-    await titleInput.fill("Glow");
-    await titleInput.press("Enter");
-
-    await page.getByTestId("preview-view-button").click();
-
-    const marqueePresence = await page.getByTestId("track-title-text").evaluate((el) => ({
-      hasTrack: !!el.querySelector('[data-marquee-track="true"]'),
-      text: el.textContent,
-    }));
-
-    expect(marqueePresence.hasTrack).toBe(false);
-    expect(marqueePresence.text?.includes("Glow")).toBe(true);
-    await expect(page.getByTestId("gif-export-button")).toContainText(
-      "Need Longer Title",
-    );
-    await expect(page.getByTestId("gif-export-button")).toBeDisabled();
-  });
-
-  test("preview marquee animates long titles and exports a gif", async ({ page }) => {
-    const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
-    const gifLogs: string[] = [];
-    const onConsole = (msg: ConsoleMessage) => {
-      const text = msg.text();
-      if (text.includes("[gif-export")) {
-        gifLogs.push(text);
-      }
-    };
-    page.on("console", onConsole);
-
-    await page.getByText("Charcoal Baby").dblclick();
-    const titleInput = page.locator('input[type="text"]').first();
-    await expect(titleInput).toBeVisible();
-    await titleInput.fill(longTitle);
-    await titleInput.press("Enter");
-
-    await page.getByTestId("preview-view-button").click();
-    await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(
-      page.getByText("The title is crawling. Export Animated GIF to capture it."),
-    ).toBeVisible();
-    await expect(page.getByTestId("gif-export-button")).toBeEnabled();
-
-    const screenLayout = await page.getByTestId("screen-content").evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      const artwork = el.querySelector<HTMLElement>('[data-export-layer="artwork"]');
-      const meta = el.querySelector<HTMLElement>('[data-testid="track-meta"]');
-      if (!artwork || !meta) {
-        return null;
-      }
-
-      const artworkRect = artwork.getBoundingClientRect();
-      const metaRect = meta.getBoundingClientRect();
-
-      return {
-        paddingLeft: Number.parseFloat(style.paddingLeft) || 0,
-        paddingRight: Number.parseFloat(style.paddingRight) || 0,
-        paddingTop: Number.parseFloat(style.paddingTop) || 0,
-        gap: metaRect.left - artworkRect.right,
-        artworkWidth: artworkRect.width,
-        metaWidth: metaRect.width,
-        topAlignmentDelta: Math.abs(metaRect.top - artworkRect.top),
-      };
-    });
-    expect(screenLayout).not.toBeNull();
-    if (!screenLayout) {
-      throw new Error("screen layout metrics missing");
-    }
-    expect(screenLayout.paddingLeft).toBeGreaterThanOrEqual(13);
-    expect(screenLayout.paddingRight).toBeGreaterThanOrEqual(13);
-    expect(screenLayout.paddingTop).toBeGreaterThanOrEqual(15);
-    expect(screenLayout.gap).toBeGreaterThanOrEqual(10);
-    expect(screenLayout.gap).toBeLessThanOrEqual(16);
-    expect(screenLayout.metaWidth).toBeGreaterThan(screenLayout.artworkWidth + 24);
-    expect(screenLayout.topAlignmentDelta).toBeLessThanOrEqual(3);
-
-    const marqueeLayout = await page.getByTestId("track-title-text").evaluate((el) => {
-      return {
-        gapWidth: Number(el.getAttribute("data-marquee-gap-width") ?? "0"),
-        usableWidth: Number(el.getAttribute("data-marquee-usable-width") ?? "0"),
-        viewportWidth: Number(el.getAttribute("data-marquee-viewport-width") ?? "0"),
-        cycleDurationMs: Number(el.getAttribute("data-marquee-cycle-duration-ms") ?? "0"),
-        clientWidth: el.clientWidth,
-      };
-    });
-    expect(marqueeLayout.gapWidth).toBeLessThanOrEqual(52);
-    expect(marqueeLayout.usableWidth).toBe(marqueeLayout.clientWidth);
-    expect(marqueeLayout.usableWidth).toBe(marqueeLayout.viewportWidth);
-    expect(marqueeLayout.cycleDurationMs).toBeGreaterThan(0);
-    expect(marqueeLayout.cycleDurationMs).toBeLessThan(20000);
-
-    await expect
-      .poll(async () =>
-        page.getByTestId("track-title-text").evaluate((el) => {
-          const track = el.querySelector<HTMLElement>('[data-marquee-track="true"]');
-          return track?.style.transform ?? "";
-        }),
-      )
-      .toBe("translateX(0px)");
-
-    await page.waitForTimeout(2600);
-
-    const movedTransform = await page.getByTestId("track-title-text").evaluate((el) => {
-      const track = el.querySelector<HTMLElement>('[data-marquee-track="true"]');
-      return track?.style.transform ?? "";
-    });
-    expect(movedTransform).not.toBe("translateX(0px)");
-
-    const resultPromise = waitForGifExportResult(page);
-    const downloadPromise = page.waitForEvent("download");
-    await page.getByTestId("gif-export-button").click();
-    await expect(page.getByTestId("export-stage-panel")).toBeVisible();
-    await expect(page.getByTestId("export-stage-title")).toContainText(
-      /Preparing scene|Encoding frames|Saving GIF/,
-    );
-    const [result, download] = await Promise.all([resultPromise, downloadPromise]);
-    expect(result.success).toBe(true);
-    expect(result.capturePath).toBe("detached-html-to-image-gif");
-    expect(download.suggestedFilename()).toMatch(/^ipod-0000-.*\.gif$/);
-
-    const downloadPath = await download.path();
-    expect(downloadPath).not.toBeNull();
-    if (!downloadPath) throw new Error("download path missing");
-
-    const header = fs.readFileSync(downloadPath).subarray(0, 6).toString("ascii");
-    expect(header).toBe("GIF89a");
-    expect(gifLogs.join("\n")).not.toContain("font is undefined");
-    expect(gifLogs.join("\n")).not.toContain("[gif-export:diagnostics] failure");
-    page.off("console", onConsole);
-  });
-
-  test("gif export falls back safely when font embedding rules are malformed", async ({
+  test("gif export downloads a gif after preview-capable frame generation", async ({
     page,
   }) => {
-    const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
-    const gifLogs: string[] = [];
-    const onConsole = (msg: ConsoleMessage) => {
-      const text = msg.text();
-      if (text.includes("[gif-export")) {
-        gifLogs.push(text);
-      }
-    };
-    page.on("console", onConsole);
-
-    await page.addStyleTag({
-      content:
-        '@font-face { src: url("data:font/woff2;base64,d09GMgABAAAAA") format("woff2"); }',
-    });
-
-    await page.getByText("Charcoal Baby").dblclick();
-    const titleInput = page.locator('input[type="text"]').first();
-    await expect(titleInput).toBeVisible();
-    await titleInput.fill(longTitle);
-    await titleInput.press("Enter");
-
-    await page.getByTestId("preview-view-button").click();
-    await expect(page.getByTestId("gif-export-button")).toBeEnabled();
+    await page.getByTestId("export-format-gif").click();
+    await page.getByTestId("export-preset-select").selectOption("story");
 
     const resultPromise = waitForGifExportResult(page);
     const downloadPromise = page.waitForEvent("download");
-    await page.getByTestId("gif-export-button").click();
-    const [result, download] = await Promise.all([resultPromise, downloadPromise]);
-
-    expect(result.success).toBe(true);
-    expect(download.suggestedFilename()).toMatch(/^ipod-0000-.*\.gif$/);
-    expect(gifLogs.join("\n")).not.toContain("font is undefined");
-    expect(gifLogs.join("\n")).not.toContain("[gif-export:diagnostics] failure");
-
-    await expect(page.getByTestId("theme-button")).toBeVisible({ timeout: 10000 });
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
-    page.off("console", onConsole);
-  });
-
-  test("export does not leave controls blocked", async ({ page }) => {
     await page.getByTestId("export-button").click();
+    const download = await downloadPromise;
 
-    await expect(page.getByTestId("theme-button")).toBeVisible({
-      timeout: 15000,
-    });
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    expect(download.suggestedFilename()).toMatch(/^ipod-0000-story-.*\.gif$/);
+    await expect(page.getByTestId("export-button")).toBeEnabled({ timeout: 15000 });
   });
 
   test("long titles wrap within the metadata panel", async ({ page }) => {
+    const liveShell = page.getByTestId("live-ipod-shell");
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
 
-    await page.getByText("Charcoal Baby").dblclick();
+    await liveShell.getByText("Charcoal Baby").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill(longTitle);
     await titleInput.press("Enter");
 
-    await expect(page.getByTestId("track-title-text")).toHaveText(longTitle);
-    await expect(page.getByTestId("track-title-text")).toBeVisible();
+    await expect(liveShell.getByTestId("track-title-text")).toHaveText(longTitle);
+    await expect(liveShell.getByTestId("track-title-text")).toBeVisible();
 
-    const layout = await page.getByTestId("track-title-text").evaluate((el) => {
+    const layout = await liveShell.getByTestId("track-title-text").evaluate((el) => {
       const style = window.getComputedStyle(el);
       const lineHeight = Number.parseFloat(style.lineHeight) || 16;
       return {

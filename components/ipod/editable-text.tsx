@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useFixedEditor } from "./fixed-editor";
+import { MarqueeText } from "../ui/marquee-text";
 
 interface EditableTextProps {
   value: string;
@@ -11,6 +12,7 @@ interface EditableTextProps {
   disabled?: boolean;
   editLabel?: string;
   dataTestId?: string;
+  animate?: boolean;
 }
 
 export function EditableText({
@@ -20,6 +22,7 @@ export function EditableText({
   disabled = false,
   editLabel = "Edit text",
   dataTestId,
+  animate = false,
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -127,7 +130,7 @@ export function EditableText({
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className={`w-full bg-white/80 border-b border-black focus:outline-none focus:border-blue-500 rounded px-1 ${className}`}
+        className={`w-full bg-white/80 border-b border-black focus:outline-none focus:border-blue-500 rounded px-1 whitespace-normal break-words ${className}`}
         data-testid={dataTestId}
       />
     );
@@ -137,17 +140,23 @@ export function EditableText({
     <span
       onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
       onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
-      onKeyDown={handleDisplayKeyDown}
-      onPaste={handleDisplayPaste}
-      tabIndex={disabled ? undefined : 0}
-      className={`block w-full min-w-0 max-w-full break-words rounded px-0.5 -mx-0.5 transition-colors [overflow-wrap:anywhere] [hyphens:auto] ${
-        disabled
-          ? "cursor-default"
-          : "cursor-text hover:bg-black/5 hover:text-blue-900 focus-visible:bg-black/5 focus-visible:text-blue-900 focus-visible:outline-none"
+      className={`block w-full min-w-0 max-w-full rounded px-0.5 -mx-0.5 transition-colors [overflow-wrap:anywhere] [hyphens:auto] ${
+        disabled ? "cursor-default" : "cursor-text hover:bg-black/5 hover:text-blue-900"
       } ${className}`}
       data-testid={dataTestId}
     >
-      {value}
+      {animate ? (
+        <MarqueeText
+          text={value}
+          className="w-full"
+          textClassName="whitespace-nowrap"
+          autoPlay
+        />
+      ) : (
+        <span className="block w-full whitespace-normal break-words [overflow-wrap:anywhere] [hyphens:auto]">
+          {value}
+        </span>
+      )}
     </span>
   );
 }

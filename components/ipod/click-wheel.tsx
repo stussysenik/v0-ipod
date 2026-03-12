@@ -23,6 +23,12 @@ export function ClickWheel({
   exportSafe = false,
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
+  const wheelShadow = exportSafe
+    ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
+    : "0 16px 24px -24px rgba(0,0,0,0.34), 0 8px 16px -18px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
+  const centerShadow = exportSafe
+    ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
+    : "0 8px 14px -12px rgba(0,0,0,0.48), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -134,6 +140,22 @@ export function ClickWheel({
             borderColor: "var(--ipod-wheel-inner-border)",
           }}
         />
+        <div
+          className="absolute inset-[8%] rounded-full pointer-events-none opacity-60"
+          style={{
+            background:
+              "conic-gradient(from 214deg, rgba(255,255,255,0.12) 0deg, rgba(255,255,255,0) 74deg, rgba(0,0,0,0.05) 190deg, rgba(255,255,255,0.08) 296deg, rgba(255,255,255,0.12) 360deg)",
+          }}
+        />
+        <div
+          className="absolute left-[18%] top-[10%] h-[20%] w-[48%] rounded-full pointer-events-none opacity-45"
+          style={{
+            background:
+              "linear-gradient(170deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0) 72%)",
+          }}
+        />
+        <div className="absolute inset-[3px] rounded-full border border-white/65 pointer-events-none" />
+        <div className="absolute inset-[31%] rounded-full border border-black/[0.045] pointer-events-none" />
 
         {/* Button Labels */}
         <div

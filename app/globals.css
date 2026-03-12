@@ -165,3 +165,34 @@
     caret-color: transparent !important;
   }
 }
+
+@layer components {
+  .ipod-marquee {
+    --marquee-duration: 10s;
+    --marquee-delay: 1500ms;
+    --marquee-distance: 0px;
+    --marquee-phase: 0;
+    animation: ipod-marquee var(--marquee-duration) linear infinite;
+    animation-delay: var(--marquee-delay);
+    transform: translateX(calc(var(--marquee-distance) * -1 * var(--marquee-phase)));
+  }
+
+  [data-exporting="true"] .ipod-marquee {
+    animation: none !important;
+  }
+}
+
+@keyframes ipod-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(0);
+  }
+  90% {
+    transform: translateX(calc(var(--marquee-distance) * -1));
+  }
+  100% {
+    transform: translateX(calc(var(--marquee-distance) * -1));
+  }
+}

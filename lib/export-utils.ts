@@ -1,23 +1,10 @@
-import { getFontEmbedCSS, toBlob, toCanvas, toPng } from "html-to-image";
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
-import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@/lib/marquee";
+import { toPng, toBlob } from "html-to-image";
 
-export type ExportStatus =
-  | "idle"
-  | "preparing"
-  | "encoding"
-  | "sharing"
-  | "success"
-  | "error";
+export type ExportStatus = "idle" | "preparing" | "sharing" | "success" | "error";
 
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
-const EXPORT_PIPELINE_VERSION = "2026-03-12-tokenized-2d-v4";
-const MAX_GIF_FRAME_COUNT = 120;
-const GIF_DELAY_QUANTUM_MS = 10;
-const GIF_CAPTURE_SCALE_HIGH = 1.75;
-const GIF_CAPTURE_SCALE_BALANCED = 1.3;
-const GIF_SHADOW_POLICY = "match-preview";
+const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v2";
 
 interface NextDataWindow extends Window {
   __NEXT_DATA__?: {
@@ -62,14 +49,6 @@ const waitForNextPaint = () =>
   new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
   );
-
-function roundGifDelayMs(value: number): number {
-  return Math.max(
-    GIF_DELAY_QUANTUM_MS,
-    Math.round(Math.max(value, GIF_DELAY_QUANTUM_MS) / GIF_DELAY_QUANTUM_MS) *
-      GIF_DELAY_QUANTUM_MS,
-  );
-}
 
 function parseCssTimeToMs(value: string): number {
   const trimmed = value.trim();
@@ -177,10 +156,14 @@ function waitForImageLoad(img: HTMLImageElement): Promise<void> {
  * This ensures html-to-image can capture them correctly
  */
 async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
-  const images = element.querySelectorAll("img");
+  const images = element.querySelectorAll<HTMLImageElement>("img");
 
   const imagePromises = Array.from(images).map(async (img) => {
     try {
+      if (img.dataset?.exportSrc) {
+        img.src = img.dataset.exportSrc;
+      }
+
       // Wait for image to load
       await waitForImageLoad(img);
 
@@ -243,31 +226,92 @@ function createDetachedExportNode(
 
   // Freeze animations/transitions to avoid capturing in-between visual states.
   const freezeStyle = document.createElement("style");
-  freezeStyle.textContent = preserveEffects
-    ? `
-        *, *::before, *::after {
-          animation: none !important;
-          transition: none !important;
-          caret-color: transparent !important;
-        }
-      `
-    : `
-        *, *::before, *::after {
-          animation: none !important;
-          transition: none !important;
-          caret-color: transparent !important;
-        }
-        [data-export-layer] {
-          filter: none !important;
-        }
-      `;
+  freezeStyle.textContent = `
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+      caret-color: transparent !important;
+    }
+    [data-export-layer] {
+      filter: none !important;
+    }
+    [data-export-layer="shell"] {
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.1) !important;
+    }
+    [data-export-layer="screen"] {
+      box-shadow: none !important;
+    }
+    [data-export-layer="artwork"] {
+      box-shadow: none !important;
+    }
+    [data-export-layer="wheel"] {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05) !important;
+    }
+    [data-export-layer="wheel-center"] {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
+    }
+    [data-export-layer="shell-shadow"] {
+      box-shadow: 0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34) !important;
+    }
+  `;
   clone.appendChild(freezeStyle);
 
   document.body.appendChild(clone);
   return clone;
 }
 
-function sanitizeDetachedCloneForCapture(clone: HTMLElement): void {
+function sanitizeDetachedCloneForCapture(
+  clone: HTMLElement,
+  options?: {
+    constrainedFrame?: boolean;
+  },
+): void {
+  const constrainedFrame = options?.constrainedFrame ?? false;
+  const shell = clone.querySelector<HTMLElement>('[data-export-layer="shell"]');
+  if (shell) {
+    shell.style.boxShadow = constrainedFrame
+      ? "inset 0 2px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.1)"
+      : "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34), inset 0 2px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.1)";
+  }
+
+  const shellShadow = clone.querySelector<HTMLElement>(
+    '[data-export-layer="shell-shadow"]',
+  );
+  if (shellShadow) {
+    shellShadow.style.boxShadow =
+      "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34)";
+  }
+
+  const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
+  if (screen) {
+    screen.style.boxShadow = constrainedFrame
+      ? "none"
+      : "0 8px 16px -14px rgba(0,0,0,0.9), 0 3px 8px rgba(0,0,0,0.22)";
+  }
+
+  const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
+  if (artwork) {
+    artwork.style.boxShadow = constrainedFrame
+      ? "none"
+      : "0 2px 6px -5px rgba(0,0,0,0.26)";
+  }
+
+  const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
+  if (wheel) {
+    wheel.style.boxShadow = constrainedFrame
+      ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
+      : "0 16px 24px -24px rgba(0,0,0,0.34), 0 8px 16px -18px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)";
+  }
+
+  const wheelCenter = clone.querySelector<HTMLElement>(
+    '[data-export-layer="wheel-center"]',
+  );
+  if (wheelCenter) {
+    wheelCenter.style.boxShadow = constrainedFrame
+      ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
+      : "0 8px 14px -12px rgba(0,0,0,0.48), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
+  }
+
   const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
   layeredNodes.forEach((node) => {
     node.style.filter = "none";
@@ -320,166 +364,6 @@ async function summarizeBlob(
       blobDigest: "unavailable",
     };
   }
-}
-
-function parseNumericDataAttribute(value: string | undefined): number | null {
-  if (!value) return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
-  return Array.from(
-    root.querySelectorAll<HTMLElement>('[data-marquee-container="true"]'),
-  ).flatMap((container) => {
-    const track = container.querySelector<HTMLElement>('[data-marquee-track="true"]');
-    if (!track) {
-      return [];
-    }
-
-    const leadCopy = track.firstElementChild as HTMLElement | null;
-    const spacer = track.querySelector<HTMLElement>('[data-marquee-spacer="true"]');
-    const containerWidth =
-      parseNumericDataAttribute(container.dataset.marqueeViewportWidth) ??
-      Math.ceil(container.clientWidth);
-    const contentWidth =
-      parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
-      Math.ceil(leadCopy?.scrollWidth ?? leadCopy?.getBoundingClientRect().width ?? 0);
-    const gapWidthFromDataset = parseNumericDataAttribute(
-      container.dataset.marqueeGapWidth,
-    );
-    const spacerWidth = Math.ceil(
-      spacer?.getBoundingClientRect().width ?? spacer?.offsetWidth ?? 0,
-    );
-    const gapWidth = gapWidthFromDataset ?? Math.max(spacerWidth, 0);
-
-    if (containerWidth <= 0 || contentWidth <= 0) {
-      return [];
-    }
-
-    return [
-      {
-        track,
-        metrics: {
-          containerWidth: Math.ceil(containerWidth),
-          contentWidth: Math.ceil(contentWidth),
-          gapWidth: Math.ceil(Math.max(gapWidth, 0)),
-        },
-      },
-    ];
-  });
-}
-
-function applyMarqueeFrameToClone(root: HTMLElement, elapsedMs: number): number {
-  const nodes = getMarqueeCaptureNodes(root);
-  let cycleDurationMs = 0;
-
-  for (const node of nodes) {
-    const frame = getMarqueeFrame(node.metrics, elapsedMs);
-    node.track.style.transform = `translateX(${frame.translateX}px)`;
-    cycleDurationMs = Math.max(cycleDurationMs, getMarqueeCycleDurationMs(node.metrics));
-  }
-
-  return cycleDurationMs;
-}
-
-type GifFontEmbedMode = "cached" | "skip-fonts-fallback";
-
-interface GifFontCaptureConfig {
-  fontEmbedCSS?: string;
-  skipFonts?: boolean;
-  fontEmbedMode: GifFontEmbedMode;
-}
-
-function parsePixelValue(value: string): number {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function resolveBleedPaddingPx(element: HTMLElement): number {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
-  const style = window.getComputedStyle(element);
-  return Math.max(
-    parsePixelValue(style.paddingTop),
-    parsePixelValue(style.paddingRight),
-    parsePixelValue(style.paddingBottom),
-    parsePixelValue(style.paddingLeft),
-  );
-}
-
-async function resolveGifFontCaptureConfig(
-  element: HTMLElement,
-): Promise<GifFontCaptureConfig> {
-  try {
-    const fontEmbedCSS = await getFontEmbedCSS(element, {
-      preferredFontFormat: "woff2",
-    });
-    return {
-      fontEmbedCSS,
-      fontEmbedMode: "cached",
-    };
-  } catch (error) {
-    console.warn("[gif-export:diagnostics] font-embed fallback", {
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    });
-    return {
-      skipFonts: true,
-      fontEmbedMode: "skip-fonts-fallback",
-    };
-  }
-}
-
-async function captureGifFrameCanvas(
-  element: HTMLElement,
-  options: {
-    backgroundColor?: string;
-    fontEmbedCSS?: string;
-    pixelRatio?: number;
-    outputWidth: number;
-    outputHeight: number;
-    skipFonts?: boolean;
-  },
-): Promise<HTMLCanvasElement> {
-  const sourceCanvas = await toCanvas(element, {
-    cacheBust: true,
-    pixelRatio: options.pixelRatio ?? 1,
-    backgroundColor: options.backgroundColor,
-    fontEmbedCSS: options.fontEmbedCSS,
-    skipFonts: options.skipFonts ?? false,
-    includeQueryParams: true,
-    style: {
-      transform: "scale(1)",
-    },
-    filter: (node: Node) => {
-      if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
-        return false;
-      }
-      return true;
-    },
-  });
-
-  if (
-    sourceCanvas.width === options.outputWidth &&
-    sourceCanvas.height === options.outputHeight
-  ) {
-    return sourceCanvas;
-  }
-
-  const normalizedCanvas = document.createElement("canvas");
-  normalizedCanvas.width = options.outputWidth;
-  normalizedCanvas.height = options.outputHeight;
-  const normalizedCtx = normalizedCanvas.getContext("2d");
-  if (!normalizedCtx) {
-    throw new Error("Failed to get normalized GIF canvas context");
-  }
-
-  normalizedCtx.imageSmoothingEnabled = true;
-  normalizedCtx.imageSmoothingQuality = "high";
-  normalizedCtx.drawImage(sourceCanvas, 0, 0, options.outputWidth, options.outputHeight);
-  return normalizedCanvas;
 }
 
 async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
@@ -655,20 +539,6 @@ export interface ExportResult {
 interface DownloadAttemptResult {
   success: boolean;
   usedPopup: boolean;
-}
-
-interface SavePickerAttemptResult {
-  cancelled: boolean;
-  success: boolean;
-}
-
-interface MarqueeCaptureNode {
-  track: HTMLElement;
-  metrics: {
-    containerWidth: number;
-    contentWidth: number;
-    gapWidth: number;
-  };
 }
 
 function triggerDownloadLinkWithOptions(
@@ -1048,285 +918,6 @@ function downloadImageDataUrlWithOptions(
     };
   } catch {
     return { success: false, usedPopup: false };
-  }
-}
-
-async function deliverExportBlob(
-  blob: Blob,
-  filename: string,
-  fallbackMimeType: string,
-  capabilities: ExportCapabilities,
-  options: {
-    popupWindow?: Window | null;
-    useSyntheticDownload: boolean;
-  },
-): Promise<{
-  success: boolean;
-  method?: ExportResult["method"];
-  usedPopup?: boolean;
-}> {
-  if (capabilities.isMobile && capabilities.canShare) {
-    try {
-      const shared = await shareImageFile(blob, filename, fallbackMimeType);
-      if (shared) {
-        return { success: true, method: "share" };
-      }
-    } catch (error) {
-      console.warn("Share failed, trying save/download fallback:", error);
-    }
-  }
-
-  if (capabilities.canSaveFile) {
-    const savePickerResult = await saveBlobWithPicker(
-      blob,
-      filename,
-      resolveFileMimeType(filename, fallbackMimeType),
-    );
-    if (savePickerResult.success) {
-      return { success: true, method: "save-picker" };
-    }
-    if (savePickerResult.cancelled) {
-      console.info("Save picker cancelled, falling back to browser-managed download");
-    }
-  }
-
-  const downloadResult = downloadImageBlobWithOptions(blob, filename, {
-    allowSyntheticClick: options.useSyntheticDownload,
-    popupWindow: options.popupWindow,
-  });
-
-  if (!downloadResult.success) {
-    return { success: false };
-  }
-
-  return {
-    success: true,
-    method: "download",
-    usedPopup: downloadResult.usedPopup,
-  };
-}
-
-export async function exportAnimatedGif(
-  element: HTMLElement,
-  options: {
-    filename: string;
-    backgroundColor?: string;
-    constrainedFrame?: boolean;
-    fps?: number;
-    onStatusChange?: (status: ExportStatus) => void;
-    onProgress?: (progress: { frameIndex: number; frameCount: number }) => void;
-  },
-): Promise<ExportResult> {
-  const {
-    filename,
-    backgroundColor,
-    constrainedFrame = false,
-    fps = 12,
-    onStatusChange,
-    onProgress,
-  } = options;
-  const capabilities = detectExportCapabilities();
-  const runtimeBuildContext = resolveRuntimeBuildContext();
-  const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-  const preparedPopup =
-    capabilities.isMobile &&
-    !capabilities.isIOS &&
-    !capabilities.canShare &&
-    !capabilities.canSaveFile
-      ? openPreparedPopupWindow()
-      : null;
-  let keepPreparedPopupOpen = false;
-  const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
-  element.setAttribute(EXPORT_ATTRIBUTE, "true");
-  let exportNode: HTMLElement | null = null;
-
-  onStatusChange?.("preparing");
-
-  const activeElement = document.activeElement;
-  if (activeElement instanceof HTMLElement && element.contains(activeElement)) {
-    activeElement.blur();
-  }
-  window.getSelection?.()?.removeAllRanges();
-
-  await waitForNextPaint();
-  const settleDelayMs = getMaxVisualSettleDelayMs(element);
-  if (settleDelayMs > 0) {
-    await waitForMs(settleDelayMs + 34);
-    await waitForNextPaint();
-  }
-
-  try {
-    const fontCaptureConfig = await resolveGifFontCaptureConfig(element);
-    console.info("[gif-export:diagnostics] start", {
-      filename,
-      pipelineVersion: EXPORT_PIPELINE_VERSION,
-      constrainedFrame,
-      fps,
-      capabilities,
-      preserveEffects: true,
-      shadowPolicy: GIF_SHADOW_POLICY,
-      fontEmbedMode: fontCaptureConfig.fontEmbedMode,
-      ...runtimeBuildContext,
-    });
-
-    exportNode = createDetachedExportNode(element, {
-      constrainedFrame,
-      preserveEffects: true,
-    });
-    await preloadAndEmbedImages(exportNode);
-    await waitForMs(100);
-    await waitForNextPaint();
-
-    const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
-    const targetHeight = Math.ceil(
-      exportNode.offsetHeight || exportNode.clientHeight || 1,
-    );
-    const bleedPaddingPx = resolveBleedPaddingPx(exportNode);
-    const detectedCycleDurationMs = applyMarqueeFrameToClone(exportNode, 0);
-    const captureDurationMs = Math.max(detectedCycleDurationMs, 1000);
-    const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
-    const uncappedFrameCount = Math.max(
-      1,
-      Math.ceil(captureDurationMs / requestedFrameDelayMs),
-    );
-    const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
-    const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
-    const captureScale =
-      frameCount > 96 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
-
-    onStatusChange?.("encoding");
-    onProgress?.({ frameIndex: 0, frameCount });
-
-    const encoder = GIFEncoder();
-    let palette: number[][] | null = null;
-    let captureWidth = 0;
-    let captureHeight = 0;
-
-    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-      const elapsedMs =
-        frameCount === 1
-          ? 0
-          : Math.round(
-              (frameIndex / (frameCount - 1)) *
-                Math.max(captureDurationMs - frameDelayMs, 0),
-            );
-      applyMarqueeFrameToClone(exportNode, elapsedMs);
-      await waitForNextPaint();
-
-      const canvas = await captureGifFrameCanvas(exportNode, {
-        backgroundColor,
-        fontEmbedCSS: fontCaptureConfig.fontEmbedCSS,
-        pixelRatio: captureScale,
-        outputWidth: targetWidth,
-        outputHeight: targetHeight,
-        skipFonts: fontCaptureConfig.skipFonts,
-      });
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        throw new Error("Failed to get GIF frame canvas context");
-      }
-
-      captureWidth = canvas.width;
-      captureHeight = canvas.height;
-      const rgba = new Uint8Array(
-        ctx.getImageData(0, 0, captureWidth, captureHeight).data,
-      );
-
-      if (!palette) {
-        palette = quantize(rgba, 256, { format: "rgba4444" });
-      }
-
-      const indexed = applyPalette(rgba, palette, "rgba4444");
-      encoder.writeFrame(indexed, captureWidth, captureHeight, {
-        palette,
-        repeat: frameIndex === 0 ? 0 : undefined,
-        delay: frameCount === 1 ? 1000 : frameDelayMs,
-      });
-      onProgress?.({ frameIndex: frameIndex + 1, frameCount });
-    }
-
-    encoder.finish();
-    const blob = new Blob([encoder.bytesView()], { type: "image/gif" });
-    if (capabilities.isMobile && capabilities.canShare) {
-      onStatusChange?.("sharing");
-    }
-    const deliveryResult = await deliverExportBlob(
-      blob,
-      filename,
-      "image/gif",
-      capabilities,
-      {
-        popupWindow: preparedPopup,
-        useSyntheticDownload,
-      },
-    );
-
-    if (!deliveryResult.success || !deliveryResult.method) {
-      onStatusChange?.("error");
-      return {
-        success: false,
-        method: "manual",
-        capturePath: "detached-html-to-image-gif",
-        error: "Browser blocked the GIF save/share. Try retrying on desktop Chrome.",
-      };
-    }
-
-    const blobSummary = await summarizeBlob(blob);
-    keepPreparedPopupOpen = deliveryResult.usedPopup ?? false;
-    console.info("[gif-export:diagnostics] success", {
-      filename,
-      method: deliveryResult.method,
-      capturePath: "detached-html-to-image-gif",
-      frameCount,
-      frameDelayMs,
-      captureScale,
-      bleedPaddingPx,
-      detectedCycleDurationMs,
-      captureDurationMs,
-      captureWidth,
-      captureHeight,
-      preserveEffects: true,
-      shadowPolicy: GIF_SHADOW_POLICY,
-      fontEmbedMode: fontCaptureConfig.fontEmbedMode,
-      ...blobSummary,
-      pipelineVersion: EXPORT_PIPELINE_VERSION,
-      ...runtimeBuildContext,
-    });
-    onStatusChange?.("success");
-    return {
-      success: true,
-      method: deliveryResult.method,
-      capturePath: "detached-html-to-image-gif",
-      ...blobSummary,
-    };
-  } catch (error) {
-    console.error("[gif-export:diagnostics] failure", {
-      filename,
-      method: "manual",
-      capturePath: "detached-html-to-image-gif",
-      pipelineVersion: EXPORT_PIPELINE_VERSION,
-      preserveEffects: true,
-      shadowPolicy: GIF_SHADOW_POLICY,
-      ...runtimeBuildContext,
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    });
-    onStatusChange?.("error");
-    return {
-      success: false,
-      method: "manual",
-      capturePath: "detached-html-to-image-gif",
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  } finally {
-    if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
-      preparedPopup.close();
-    }
-    exportNode?.remove();
-    if (existingExportAttribute === null) {
-      element.removeAttribute(EXPORT_ATTRIBUTE);
-    } else {
-      element.setAttribute(EXPORT_ATTRIBUTE, existingExportAttribute);
-    }
   }
 }
 

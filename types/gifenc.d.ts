@@ -1,49 +1,54 @@
 declare module "gifenc" {
+  export type GifPaletteColor = [number, number, number] | [number, number, number, number];
+  export type GifPalette = GifPaletteColor[];
+
   export interface GIFEncoderOptions {
-    initialCapacity?: number;
     auto?: boolean;
+    initialCapacity?: number;
   }
 
-  export interface GIFFrameOptions {
-    palette?: number[][];
-    delay?: number;
-    repeat?: number;
+  export interface GIFEncoderFrameOptions {
+    palette?: GifPalette;
+    first?: boolean;
     transparent?: boolean;
     transparentIndex?: number;
-    colorDepth?: number;
+    delay?: number;
+    repeat?: number;
     dispose?: number;
   }
 
-  export interface GIFEncoderHandle {
-    reset(): void;
-    finish(): void;
-    bytes(): Uint8Array;
-    bytesView(): Uint8Array;
-    writeHeader(): void;
+  export interface GIFEncoderInstance {
+    readonly buffer: ArrayBuffer;
     writeFrame(
       index: Uint8Array,
       width: number,
       height: number,
-      options?: GIFFrameOptions,
+      options?: GIFEncoderFrameOptions,
     ): void;
+    finish(): void;
+    bytes(): Uint8Array<ArrayBuffer>;
+    bytesView(): Uint8Array<ArrayBuffer>;
+    reset(): void;
   }
 
-  export function GIFEncoder(options?: GIFEncoderOptions): GIFEncoderHandle;
+  export interface QuantizeOptions {
+    format?: "rgb565" | "rgb444" | "rgba4444";
+    oneBitAlpha?: boolean | number;
+    clearAlpha?: boolean;
+    clearAlphaThreshold?: number;
+    clearAlphaColor?: number;
+    useSqrt?: boolean;
+  }
+
+  export function GIFEncoder(options?: GIFEncoderOptions): GIFEncoderInstance;
   export function quantize(
-    rgba: Uint8Array,
+    rgba: Uint8Array | Uint8ClampedArray,
     maxColors: number,
-    options?: {
-      format?: "rgb565" | "rgb444" | "rgba4444";
-      clearAlpha?: boolean;
-      clearAlphaColor?: number;
-      clearAlphaThreshold?: number;
-      oneBitAlpha?: boolean | number;
-      useSqrt?: boolean;
-    },
-  ): number[][];
+    options?: QuantizeOptions,
+  ): GifPalette;
   export function applyPalette(
-    rgba: Uint8Array,
-    palette: number[][],
+    rgba: Uint8Array | Uint8ClampedArray,
+    palette: GifPalette,
     format?: "rgb565" | "rgb444" | "rgba4444",
-  ): Uint8Array;
+  ): Uint8Array<ArrayBuffer>;
 }
