@@ -11,6 +11,11 @@ import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
 import type { SongMetadata } from "@/types/ipod";
 
+const SCREEN_SAFE_INSET_PX = 13;
+const SCREEN_CONTENT_TOP_PX = 15;
+const SCREEN_CONTENT_GAP_PX = 12;
+const SCREEN_ARTWORK_SIZE_PX = 108;
+
 type IpodScreenAction =
   | { type: "UPDATE_TITLE"; payload: string }
   | { type: "UPDATE_ARTIST"; payload: string }
