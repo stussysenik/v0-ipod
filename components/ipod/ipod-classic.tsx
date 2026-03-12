@@ -3,20 +3,17 @@
 import { useReducer, useRef, useCallback, useState, useEffect, useMemo } from "react";
 import {
   Settings,
-  Box,
   Share,
-  Monitor,
-  Smartphone,
   Check,
   Plus,
   Loader2,
   Menu,
   Pipette,
-  Film,
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { exportAnimatedGif, exportImage, type ExportStatus } from "@/lib/export-utils";
+import { exportImage, type ExportStatus } from "@/lib/export-utils";
+import { captureGifFrames, encodeGifFrames } from "@/lib/gif-export";
 import {
   loadMetadata,
   saveMetadata,
@@ -32,12 +29,21 @@ import {
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
 import placeholderLogo from "@/public/placeholder-logo.png";
 import { IconButton } from "@/components/ui/icon-button";
-import { ThreeDIpod } from "@/components/three/three-d-ipod";
+import { FramedExportStage } from "./framed-export-stage";
+import { GifPreviewModal } from "./gif-preview-modal";
 import { FixedEditorProvider } from "./fixed-editor";
 import { IpodScreen } from "./ipod-screen";
+import { IPodDeviceShell } from "./ipod-device-shell";
 import { ClickWheel } from "./click-wheel";
 import { HexColorInput } from "./hex-color-input";
 import type { SongMetadata } from "@/types/ipod";
+import {
+  BASE_EXPORT_SCENE_HEIGHT,
+  BASE_EXPORT_SCENE_WIDTH,
+  getExportPreset,
+  getExportPresets,
+  type ExportPresetId,
+} from "@/lib/export-scene";
 
 // Base64 click sound
 const CLICK_SOUND =
@@ -86,6 +92,28 @@ const BG_COLOR_PRESETS = [
   { label: "Night Graphite", value: "#5F6772" },
 ];
 
+const INSPIRATION_CASE_COLORS = [
+  { label: "Coke Red", value: "#E41E2B" },
+  { label: "Tiffany", value: "#7AD9CE" },
+  { label: "Spotify Green", value: "#1DB954" },
+  { label: "LEGO Yellow", value: "#F6D300" },
+  { label: "Nintendo Red", value: "#E60012" },
+  { label: "Yankees Navy", value: "#0C2340" },
+  { label: "Dodgers Blue", value: "#005A9C" },
+  { label: "Matcha", value: "#8AA07A" },
+];
+
+const INSPIRATION_BG_COLORS = [
+  { label: "Oat Milk", value: "#EFE6D5" },
+  { label: "Lavender", value: "#D9D0F0" },
+  { label: "Soft Peach", value: "#F4D3C4" },
+  { label: "Sky Soda", value: "#BFDDF4" },
+  { label: "Gelato", value: "#F7E2E9" },
+  { label: "Matcha Foam", value: "#DDE7D2" },
+  { label: "Cappuccino", value: "#D1B59B" },
+  { label: "Midnight", value: "#1D1F2B" },
+];
+
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
 const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
 const MAX_CUSTOM_COLORS = 6;
@@ -101,7 +129,23 @@ const SHELL_PADDING = 48;
 const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
 const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
-type ExportKind = "png" | "gif";
+const BASE_VIEW_MODE: IpodViewMode = "flat";
+const GIF_EXPORT_DURATION_MS = 2600;
+const GIF_EXPORT_FPS = 12;
+const waitForSettledPaint = () =>
+  new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+
+type GifPreviewStatus = "idle" | "preparing" | "ready" | "error";
+
+interface GifPreviewCache {
+  signature: string;
+  presetId: ExportPresetId;
+  frameDataUrls: string[];
+  delayMs: number;
+  durationMs: number;
+}
 
 const initialState: SongMetadata = {
   title: "Charcoal Baby",
@@ -216,10 +260,10 @@ export default function IPodClassic() {
     }
   }, []);
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
-  const [activeExportKind, setActiveExportKind] = useState<ExportKind | null>(null);
+  const [gifProgress, setGifProgress] = useState(0);
 
-  // View State: 'flat' (Standard 2D), 'preview' (Animated marquee), '3d' (R3F), 'focus' (Close-up)
-  const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
+  // View State: 'flat' (Standard 2D), '3d' (R3F), 'focus' (Close-up)
+  const [viewMode, setViewMode] = useState<IpodViewMode>(BASE_VIEW_MODE);
 
   // Customization State
   const [skinColor, setSkinColor] = useState(CASE_COLOR_PRESETS[0].value);
@@ -228,11 +272,16 @@ export default function IPodClassic() {
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
   const [isExportCapturing, setIsExportCapturing] = useState(false);
-  const [titleCanMarquee, setTitleCanMarquee] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"png" | "gif">("png");
+  const [exportPresetId, setExportPresetId] = useState<ExportPresetId>("product");
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [softNotice, setSoftNotice] = useState<string | null>(null);
   const [editorResetKey, setEditorResetKey] = useState(0);
   const [exportCounter, setExportCounter] = useState(0);
+  const [gifPreviewStatus, setGifPreviewStatus] = useState<GifPreviewStatus>("idle");
+  const [gifPreviewCache, setGifPreviewCache] = useState<GifPreviewCache | null>(null);
+  const [gifPreviewError, setGifPreviewError] = useState<string | null>(null);
+  const [isGifPreviewOpen, setIsGifPreviewOpen] = useState(false);
   const [isToolboxOpen, setIsToolboxOpen] = useState(true);
   const [hasEyeDropper, setHasEyeDropper] = useState(false);
   const [oklchReady, setOklchReady] = useState(false);
@@ -242,16 +291,53 @@ export default function IPodClassic() {
   const [oklchBgPalette, setOklchBgPalette] = useState<
     { label: string; value: string; hue: number }[]
   >([]);
-  const isFlatView = viewMode === "flat";
-  const isPreviewView = viewMode === "preview";
+  const [themeSection, setThemeSection] = useState<"case" | "background">("case");
+  const isFlatView = viewMode === BASE_VIEW_MODE;
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
+  const isWorkflowBusy =
+    exportStatus !== "idle" || gifPreviewStatus === "preparing" || isExportCapturing;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
+  const liveShellRef = useRef<HTMLDivElement>(null);
+  const pngExportStageRef = useRef<HTMLDivElement>(null);
+  const gifExportStageRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const softNoticeTimerRef = useRef<number | null>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
+  const gifPreviewSignature = useMemo(
+    () =>
+      JSON.stringify({
+        bgColor,
+        skinColor,
+        exportPresetId,
+        title: state.title,
+        artist: state.artist,
+        album: state.album,
+        artwork: state.artwork,
+        duration: state.duration,
+        currentTime: state.currentTime,
+        rating: state.rating,
+        trackNumber: state.trackNumber,
+        totalTracks: state.totalTracks,
+        fps: GIF_EXPORT_FPS,
+        durationMs: GIF_EXPORT_DURATION_MS,
+      }),
+    [
+      bgColor,
+      skinColor,
+      exportPresetId,
+      state.title,
+      state.artist,
+      state.album,
+      state.artwork,
+      state.duration,
+      state.currentTime,
+      state.rating,
+      state.trackNumber,
+      state.totalTracks,
+    ],
+  );
 
   useEffect(() => {
     audioRef.current = new Audio(CLICK_SOUND);
@@ -295,14 +381,21 @@ export default function IPodClassic() {
     if (savedUi.bgColor) {
       setBgColor(savedUi.bgColor);
     }
-    if (savedUi.viewMode) {
-      setViewMode(savedUi.viewMode);
-    }
+    setViewMode(BASE_VIEW_MODE);
   }, []);
 
   useEffect(() => {
     setExportCounter(loadExportCounter());
   }, []);
+
+  useEffect(() => {
+    setGifPreviewCache((current) =>
+      current?.signature === gifPreviewSignature ? current : null,
+    );
+    setGifPreviewError(null);
+    setGifPreviewStatus("idle");
+    setIsGifPreviewOpen(false);
+  }, [gifPreviewSignature]);
 
   // Persist song metadata on every change (skip until restored)
   useEffect(() => {
@@ -312,17 +405,8 @@ export default function IPodClassic() {
 
   useEffect(() => {
     if (!hasRestoredUiRef.current) return;
-    saveUiState({ skinColor, bgColor, viewMode });
-  }, [skinColor, bgColor, viewMode]);
-
-  useEffect(() => {
-    if (isFlatView) return;
-    const activeElement = document.activeElement;
-    if (activeElement instanceof HTMLElement) {
-      activeElement.blur();
-    }
-    window.getSelection?.()?.removeAllRanges();
-  }, [isFlatView]);
+    saveUiState({ skinColor, bgColor, viewMode: BASE_VIEW_MODE });
+  }, [skinColor, bgColor]);
 
   useEffect(() => {
     if (!showSettings && !isToolboxVisible) return;
@@ -464,224 +548,361 @@ export default function IPodClassic() {
     [],
   );
 
-  const buildExportSlug = useCallback(
-    () =>
-      state.title
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "snapshot",
-    [state.title],
-  );
+  const handleExportRef = useRef<(() => void) | null>(null);
+  const buildExportFilename = useCallback(
+    (counter: number, format: "png" | "gif") => {
+      const exportTag = formatExportId(counter);
+      const slug =
+        state.title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "snapshot";
 
-  const completeSuccessfulExport = useCallback(
-    (exportId: number, notice: string) => {
-      const nextCounter = exportId + 1;
-      setExportCounter(nextCounter);
-      saveExportCounter(nextCounter);
-      showSoftNotice(notice);
+      return {
+        exportTag,
+        filename: `ipod-${exportTag}-${exportPresetId}-${slug}.${format}`,
+      };
     },
-    [showSoftNotice],
+    [exportPresetId, formatExportId, state.title],
   );
 
-  const resetExportUi = useCallback(() => {
-    setIsExportCapturing(false);
-    window.setTimeout(() => {
-      setExportStatus("idle");
-      setActiveExportKind(null);
-    }, 1500);
+  const downloadBlob = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
   }, []);
 
-  const handlePngExportRef = useRef<() => void>();
-  const handleGifExportRef = useRef<() => void>();
+  const prepareGifPreview = useCallback(async () => {
+    if (
+      gifPreviewCache &&
+      gifPreviewCache.signature === gifPreviewSignature &&
+      gifPreviewCache.presetId === exportPresetId
+    ) {
+      setGifPreviewStatus("ready");
+      return gifPreviewCache;
+    }
 
-  const handlePngExport = useCallback(async () => {
-    if (exportStatus !== "idle") return;
+    if (!gifExportStageRef.current) {
+      throw new Error("GIF preview stage is not ready");
+    }
+
+    setIsExportCapturing(true);
+    setGifPreviewStatus("preparing");
+    setGifPreviewError(null);
+    setGifProgress(0);
+
+    try {
+      await waitForSettledPaint();
+      const captured = await captureGifFrames({
+        element: gifExportStageRef.current,
+        backgroundColor: bgColor,
+        pixelRatio: 1,
+        durationMs: GIF_EXPORT_DURATION_MS,
+        fps: GIF_EXPORT_FPS,
+        onProgress: (progress) => setGifProgress(progress),
+        onFrame: (index, total) => {
+          const phase = total > 1 ? index / (total - 1) : 0;
+          gifExportStageRef.current?.style.setProperty("--marquee-phase", String(phase));
+        },
+      });
+
+      const nextPreview: GifPreviewCache = {
+        signature: gifPreviewSignature,
+        presetId: exportPresetId,
+        frameDataUrls: captured.frameDataUrls,
+        delayMs: captured.delayMs,
+        durationMs: GIF_EXPORT_DURATION_MS,
+      };
+
+      setGifPreviewCache(nextPreview);
+      setGifPreviewStatus("ready");
+      return nextPreview;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to prepare GIF preview";
+      setGifPreviewStatus("error");
+      setGifPreviewError(message);
+      throw error;
+    } finally {
+      gifExportStageRef.current?.style.removeProperty("--marquee-phase");
+      setIsExportCapturing(false);
+      setGifProgress(0);
+    }
+  }, [
+    bgColor,
+    exportPresetId,
+    gifPreviewCache,
+    gifPreviewSignature,
+    setGifProgress,
+  ]);
+
+  const handleOpenGifPreview = useCallback(async () => {
+    if (isWorkflowBusy) return;
+
     resetInteractionChrome({
       closeSettings: true,
       closeEditor: true,
       closeToolbox: true,
       clearNotice: true,
     });
-    if (!isFlatView) {
-      playClick();
-      showSoftNotice("Switch to Flat View to export");
+    playClick();
+    setIsGifPreviewOpen(true);
+
+    try {
+      await prepareGifPreview();
+    } catch (error) {
+      toast.error("Preview failed", {
+        description:
+          error instanceof Error ? error.message : "Unable to render GIF preview",
+        action: {
+          label: "Retry",
+          onClick: () => {
+            setIsGifPreviewOpen(true);
+            void prepareGifPreview();
+          },
+        },
+      });
+    }
+  }, [isWorkflowBusy, playClick, prepareGifPreview, resetInteractionChrome]);
+
+  const handleOpenRecordingWindow = useCallback(async () => {
+    let preview: GifPreviewCache;
+    try {
+      preview = gifPreviewCache ?? (await prepareGifPreview());
+    } catch (error) {
+      toast.error("Preview failed", {
+        description:
+          error instanceof Error ? error.message : "Unable to open recording window",
+      });
       return;
     }
 
+    if (!preview) {
+      return;
+    }
+
+    const preset = getExportPreset(preview.presetId);
+    const popup = window.open(
+      "",
+      "_blank",
+      `popup=yes,width=${Math.min(preset.width + 120, 1400)},height=${Math.min(
+        preset.height + 120,
+        1800,
+      )}`,
+    );
+
+    if (!popup) {
+      toast.error("Popup blocked", {
+        description: "Allow popups to use the clean recording window fallback.",
+      });
+      return;
+    }
+
+    const frames = JSON.stringify(preview.frameDataUrls);
+    popup.document.write(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>iPod Snapshot Recording Stage</title>
+    <style>
+      :root { color-scheme: light; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: ${bgColor};
+      }
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      img {
+        display: block;
+        max-width: 100vw;
+        max-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="recording-stage" data-testid="recording-stage" alt="Recording stage" />
+    <script>
+      const frames = ${frames};
+      const delay = ${preview.delayMs};
+      const image = document.getElementById("recording-stage");
+      let frameIndex = 0;
+      function draw() {
+        image.src = frames[frameIndex];
+        frameIndex = (frameIndex + 1) % frames.length;
+        window.setTimeout(draw, delay);
+      }
+      draw();
+    </script>
+  </body>
+</html>`);
+    popup.document.close();
+  }, [bgColor, gifPreviewCache, prepareGifPreview]);
+
+  const handleExport = useCallback(async () => {
+    if (exportStatus !== "idle" || gifPreviewStatus === "preparing") return;
+    resetInteractionChrome({
+      closeSettings: true,
+      closeEditor: true,
+      closeToolbox: true,
+      clearNotice: true,
+    });
     playClick();
-    if (!exportTargetRef.current) return;
-
     const exportId = exportCounter;
-    const exportTag = formatExportId(exportId);
-    const filename = `ipod-${exportTag}-${buildExportSlug()}.png`;
-
-    setActiveExportKind("png");
-    setIsExportCapturing(true);
+    const { exportTag, filename } = buildExportFilename(exportId, exportFormat);
 
     try {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
-      console.info("[export] starting flat export", { filename });
-      const result = await exportImage(exportTargetRef.current, {
-        filename,
-        backgroundColor: bgColor,
-        pixelRatio: 4,
-        constrainedFrame: true,
-        onStatusChange: setExportStatus,
-      });
-      console.info("[export] finished", result);
-
-      if (result.success) {
-        completeSuccessfulExport(
-          exportId,
-          result.method === "share" ? `Shared #${exportTag}` : `Exported #${exportTag}`,
-        );
+      if (exportFormat === "gif") {
+        setExportStatus("preparing");
+        const preview = await prepareGifPreview();
+        const blob = await encodeGifFrames(preview.frameDataUrls, preview.delayMs);
+        downloadBlob(blob, filename);
+        const nextCounter = exportId + 1;
+        setExportCounter(nextCounter);
+        saveExportCounter(nextCounter);
+        showSoftNotice(`Exported #${exportTag}`);
+        setExportStatus("success");
       } else {
-        toast.error("Export failed", {
-          description: result.error,
-          action: {
-            label: "Retry",
-            onClick: () => handlePngExportRef.current?.(),
-          },
+        if (!pngExportStageRef.current) {
+          throw new Error("PNG export stage is not ready");
+        }
+
+        setIsExportCapturing(true);
+        await waitForSettledPaint();
+        console.info("[export] starting framed export", {
+          filename,
+          presetId: exportPresetId,
         });
+        const result = await exportImage(pngExportStageRef.current, {
+          filename,
+          backgroundColor: bgColor,
+          pixelRatio: 1,
+          constrainedFrame: true,
+          onStatusChange: setExportStatus,
+        });
+        console.info("[export] finished", result);
+
+        if (result.success) {
+          const nextCounter = exportId + 1;
+          setExportCounter(nextCounter);
+          saveExportCounter(nextCounter);
+          if (result.method === "share") {
+            showSoftNotice(`Shared #${exportTag}`);
+          } else {
+            showSoftNotice(`Exported #${exportTag}`);
+          }
+        } else {
+          toast.error("Export failed", {
+            description: result.error,
+            action: {
+              label: "Retry",
+              onClick: () => handleExportRef.current?.(),
+            },
+          });
+        }
       }
     } catch (error) {
-      console.error("[export] flat export threw", error);
+      console.error("[export] workflow threw", error);
       setExportStatus("error");
+      if (exportFormat === "gif" && gifPreviewCache?.frameDataUrls.length) {
+        setIsGifPreviewOpen(true);
+      }
       toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
+        description:
+          exportFormat === "gif" && gifPreviewCache?.frameDataUrls.length
+            ? "GIF export failed. Preview / Record is still available."
+            : error instanceof Error
+              ? error.message
+              : "Unknown error",
         action: {
           label: "Retry",
-          onClick: () => handlePngExportRef.current?.(),
+          onClick: () => handleExportRef.current?.(),
         },
       });
     } finally {
-      resetExportUi();
+      setIsExportCapturing(false);
+      setTimeout(() => setExportStatus("idle"), 1500);
+      setGifProgress(0);
     }
   }, [
     bgColor,
-    buildExportSlug,
-    completeSuccessfulExport,
+    buildExportFilename,
+    downloadBlob,
     exportCounter,
-    exportStatus,
-    formatExportId,
-    isFlatView,
+    exportFormat,
+    exportPresetId,
     playClick,
-    resetExportUi,
-    resetInteractionChrome,
-    showSoftNotice,
-  ]);
-
-  const handleGifExport = useCallback(async () => {
-    if (exportStatus !== "idle") return;
-    resetInteractionChrome({
-      closeSettings: true,
-      closeEditor: true,
-      closeToolbox: true,
-      clearNotice: true,
-    });
-    if (!isPreviewView) {
-      playClick();
-      showSoftNotice("Switch to Preview Mode for GIF");
-      return;
-    }
-    if (!titleCanMarquee) {
-      playClick();
-      showSoftNotice("Use a longer title to trigger the marquee");
-      return;
-    }
-
-    playClick();
-    if (!exportTargetRef.current) return;
-
-    const exportId = exportCounter;
-    const exportTag = formatExportId(exportId);
-    const filename = `ipod-${exportTag}-${buildExportSlug()}.gif`;
-
-    setActiveExportKind("gif");
-    setIsExportCapturing(true);
-
-    try {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
-      console.info("[gif-export] starting preview export", { filename });
-      const result = await exportAnimatedGif(exportTargetRef.current, {
-        filename,
-        backgroundColor: bgColor,
-        constrainedFrame: true,
-        onStatusChange: setExportStatus,
-      });
-      console.info("[gif-export] finished", result);
-
-      if (result.success) {
-        completeSuccessfulExport(exportId, `Animated #${exportTag}`);
-      } else {
-        toast.error("GIF export failed", {
-          description: result.error,
-          action: {
-            label: "Retry",
-            onClick: () => handleGifExportRef.current?.(),
-          },
-        });
-      }
-    } catch (error) {
-      console.error("[gif-export] preview export threw", error);
-      setExportStatus("error");
-      toast.error("GIF export failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
-        action: {
-          label: "Retry",
-          onClick: () => handleGifExportRef.current?.(),
-        },
-      });
-    } finally {
-      resetExportUi();
-    }
-  }, [
-    bgColor,
-    buildExportSlug,
-    completeSuccessfulExport,
-    exportCounter,
     exportStatus,
-    formatExportId,
-    isPreviewView,
-    titleCanMarquee,
-    playClick,
-    resetExportUi,
-    resetInteractionChrome,
+    gifPreviewCache,
+    gifPreviewStatus,
+    prepareGifPreview,
     showSoftNotice,
+    resetInteractionChrome,
+    setGifProgress,
   ]);
 
   useEffect(() => {
-    handlePngExportRef.current = handlePngExport;
-  }, [handlePngExport]);
+    handleExportRef.current = handleExport;
+  }, [handleExport]);
 
-  useEffect(() => {
-    handleGifExportRef.current = handleGifExport;
-  }, [handleGifExport]);
-
-  const screenComponent = (
+  const liveScreenComponent = (
     <IpodScreen
       state={state}
       dispatch={dispatch}
       playClick={playClick}
-      isEditable={isFlatView && !isExportCapturing}
-      exportSafe={isExportCapturing}
-      titlePreview={isPreviewView && !isExportCapturing}
-      titleCaptureReady={isPreviewView || activeExportKind === "gif"}
-      onTitleOverflowChange={setTitleCanMarquee}
+      isEditable={isFlatView && !isWorkflowBusy}
+      exportSafe={false}
+      animateText={false}
     />
   );
 
-  const wheelComponent = (
+  const liveWheelComponent = (
     <ClickWheel
       playClick={playClick}
       onSeek={handleSeek}
-      disabled={!isFlatView}
-      exportSafe={isExportCapturing}
+      disabled={!isFlatView || isWorkflowBusy}
+      exportSafe={false}
+    />
+  );
+
+  const exportStaticScreenComponent = (
+    <IpodScreen
+      state={state}
+      dispatch={dispatch}
+      playClick={playClick}
+      isEditable={false}
+      exportSafe={true}
+      animateText={false}
+    />
+  );
+
+  const exportAnimatedScreenComponent = (
+    <IpodScreen
+      state={state}
+      dispatch={dispatch}
+      playClick={playClick}
+      isEditable={false}
+      exportSafe={true}
+      animateText={true}
+    />
+  );
+
+  const exportWheelComponent = (
+    <ClickWheel
+      playClick={playClick}
+      onSeek={handleSeek}
+      disabled={true}
+      exportSafe={true}
     />
   );
 
@@ -723,7 +944,7 @@ export default function IPodClassic() {
     dispatch({ type: "RESTORE_ALL", payload: snapshot.metadata });
     setSkinColor(snapshot.ui.skinColor);
     setBgColor(snapshot.ui.bgColor);
-    setViewMode(snapshot.ui.viewMode);
+    setViewMode(BASE_VIEW_MODE);
     setShowSettings(false);
   }, []);
 
@@ -737,7 +958,7 @@ export default function IPodClassic() {
     playClick();
     saveSongSnapshot({
       metadata: state,
-      ui: { skinColor, bgColor, viewMode },
+      ui: { skinColor, bgColor, viewMode: BASE_VIEW_MODE },
     });
     showSoftNotice("Snapshot saved");
   }, [
@@ -745,7 +966,6 @@ export default function IPodClassic() {
     state,
     skinColor,
     bgColor,
-    viewMode,
     showSoftNotice,
     resetInteractionChrome,
   ]);
@@ -770,19 +990,6 @@ export default function IPodClassic() {
     showSoftNotice("Loaded sample snapshot");
   }, [applySongSnapshot, playClick, showSoftNotice, resetInteractionChrome]);
 
-  const handleViewModeChange = useCallback(
-    (nextMode: IpodViewMode) => {
-      resetInteractionChrome({
-        closeSettings: true,
-        closeEditor: true,
-        closeToolbox: true,
-        clearNotice: true,
-      });
-      setViewMode(nextMode);
-    },
-    [resetInteractionChrome],
-  );
-
   const handleToggleToolbox = useCallback(() => {
     clearSoftNotice();
     setIsToolboxOpen((prev) => {
@@ -805,7 +1012,7 @@ export default function IPodClassic() {
     }
 
     const horizontalReserve = viewportSize.width >= 768 ? 112 : 24;
-    const verticalReserve = isCompactToolbox ? 128 : 32;
+    const verticalReserve = isCompactToolbox ? 148 : 32;
     const availableWidth = Math.max(viewportSize.width - horizontalReserve, 260);
     const availableHeight = Math.max(viewportSize.height - verticalReserve, 320);
     const fitScale = Math.min(
@@ -814,31 +1021,11 @@ export default function IPodClassic() {
       1,
     );
 
-    if (viewMode === "focus") {
-      const maxScale = Math.min(
-        availableWidth / PREVIEW_FRAME_WIDTH,
-        availableHeight / PREVIEW_FRAME_HEIGHT,
-        1.28,
-      );
-      return Math.min(maxScale, fitScale * 1.3);
-    }
-
     return fitScale;
-  }, [
-    isCompactToolbox,
-    isExportCapturing,
-    viewportSize.width,
-    viewportSize.height,
-    viewMode,
-  ]);
+  }, [isCompactToolbox, isExportCapturing, viewportSize.width, viewportSize.height]);
 
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
-  const shellShadow = isExportCapturing
-    ? "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)"
-    : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
-  const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
-  const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
     ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
     : "fixed top-6 right-6";
@@ -856,7 +1043,7 @@ export default function IPodClassic() {
         {/* Floating Tools UI */}
         <div
           ref={toolsRef}
-          className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+          className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${isWorkflowBusy ? "opacity-0 pointer-events-none" : ""}`}
         >
           {isCompactToolbox && (
             <IconButton
@@ -883,246 +1070,336 @@ export default function IPodClassic() {
               {showSettings && (
                 <div
                   data-testid="theme-panel"
-                  className="z-20 absolute top-0 right-14 max-h-[min(78dvh,42rem)] overflow-y-auto overscroll-contain bg-[#F2F2F0]/95 p-4 backdrop-blur-sm rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] animate-in slide-in-from-right-2 border border-[#D5D7DA] max-sm:right-0 max-sm:bottom-14 max-sm:top-auto max-sm:w-[min(92vw,320px)] max-sm:max-h-[min(60dvh,28rem)]"
+                  className="z-20 absolute top-0 right-14 max-sm:right-0 max-sm:bottom-14 max-sm:top-auto bg-[#F2F2F0]/95 backdrop-blur-sm p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] max-sm:w-[min(92vw,320px)] max-sm:max-h-[min(68dvh,32rem)] max-sm:overflow-y-auto max-sm:overscroll-contain animate-in slide-in-from-right-2 border border-[#D5D7DA]"
                 >
-                  <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-                    Case Color
-                  </h3>
-                  <div className="mb-4">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Authentic Apple Releases
-                    </h4>
-                    <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-                      {CASE_COLOR_AUTHENTIC.map((c) => (
+                  <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-3 border-b border-[#D5D7DA] bg-[#F2F2F0]/95 px-4 pt-3 pb-2 backdrop-blur-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4F555D]">
+                        Theme
+                      </span>
+                      <div className="flex gap-2">
                         <button
-                          key={c.value}
-                          onClick={() => setSkinColor(c.value)}
-                          title={c.label}
-                          className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-                            skinColor === c.value
-                              ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
+                          type="button"
+                          onClick={() => setThemeSection("case")}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                            themeSection === "case"
+                              ? "bg-[#111827] text-white"
+                              : "bg-white text-[#111827] border border-[#D0D4DA]"
                           }`}
-                          style={{ backgroundColor: c.value }}
-                        />
-                      ))}
+                        >
+                          Case
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setThemeSection("background")}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                            themeSection === "background"
+                              ? "bg-[#111827] text-white"
+                              : "bg-white text-[#111827] border border-[#D0D4DA]"
+                          }`}
+                        >
+                          BG
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="mb-4">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Studio Palette
-                    </h4>
-                    <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-                      {CASE_COLOR_PRESETS.map((c) => (
-                        <button
-                          key={c.value}
-                          onClick={() => setSkinColor(c.value)}
-                          title={c.label}
-                          className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-                            skinColor === c.value
-                              ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
-                          }`}
-                          style={{ backgroundColor: c.value }}
-                        />
-                      ))}
-                      {/* System Color Picker — native input, tap-friendly */}
-                      <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
-                        <Plus className="w-4 h-4 text-[#4B5563] pointer-events-none" />
-                        <input
-                          type="color"
-                          data-testid="custom-case-color-button"
+
+                  {themeSection === "case" && (
+                    <div className="space-y-4">
+                      <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] px-1">
+                        Case Color
+                      </h3>
+                      <div>
+                        <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                          Inspiration Picks
+                        </h4>
+                        <div className="grid grid-cols-4 gap-2">
+                          {INSPIRATION_CASE_COLORS.map((c) => (
+                            <button
+                              key={c.value}
+                              onClick={() => setSkinColor(c.value)}
+                              title={c.label}
+                              className={`w-9 h-9 rounded-full border transition-transform hover:scale-105 ${
+                                skinColor === c.value
+                                  ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                                  : "border-[#B5BBC3]"
+                              }`}
+                              style={{ backgroundColor: c.value }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                          Authentic Apple Releases
+                        </h4>
+                        <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+                          {CASE_COLOR_AUTHENTIC.map((c) => (
+                            <button
+                              key={c.value}
+                              onClick={() => setSkinColor(c.value)}
+                              title={c.label}
+                              className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                                skinColor === c.value
+                                  ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                                  : "border-[#B5BBC3]"
+                              }`}
+                              style={{ backgroundColor: c.value }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                          Studio Palette
+                        </h4>
+                        <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+                          {CASE_COLOR_PRESETS.map((c) => (
+                            <button
+                              key={c.value}
+                              onClick={() => setSkinColor(c.value)}
+                              title={c.label}
+                              className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                                skinColor === c.value
+                                  ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                                  : "border-[#B5BBC3]"
+                              }`}
+                              style={{ backgroundColor: c.value }}
+                            />
+                          ))}
+                          <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
+                            <Plus className="w-4 h-4 text-[#4B5563] pointer-events-none" />
+                            <input
+                              type="color"
+                              data-testid="custom-case-color-button"
+                              value={skinColor}
+                              onInput={(e) =>
+                                setSkinColor((e.target as HTMLInputElement).value)
+                              }
+                              onChange={(e) => {
+                                setSkinColor(e.target.value);
+                                saveCustomColor("case", e.target.value);
+                              }}
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                              title="Custom case color"
+                              aria-label="Open custom case color picker"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {oklchReady && oklchCasePalette.length > 0 && (
+                        <div>
+                          <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                            OKLCH Spectrum
+                          </h4>
+                          <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
+                            {oklchCasePalette.map((swatch) => (
+                              <button
+                                key={swatch.hue}
+                                onClick={() => {
+                                  const hex = oklchToHex(
+                                    OKLCH_CASE_L,
+                                    OKLCH_CASE_C,
+                                    swatch.hue,
+                                  );
+                                  if (!hex) return;
+                                  setSkinColor(hex);
+                                  saveCustomColor("case", hex);
+                                }}
+                                title={swatch.label}
+                                className="w-8 h-8 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
+                                style={{ backgroundColor: swatch.value }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {savedCaseColors.length > 0 && (
+                        <div>
+                          <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                            Recent Custom
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {savedCaseColors.map((color) => (
+                              <button
+                                key={color}
+                                onClick={() => setSkinColor(color)}
+                                title={`Custom ${color}`}
+                                className={`w-7 h-7 rounded-full border ${
+                                  skinColor === color
+                                    ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                                    : "border-[#B5BBC3]"
+                                }`}
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!oklchReady && (
+                        <p className="px-1 text-[10px] text-[#6B7280]">
+                          OKLCH palettes need a modern browser. Use the custom picker for
+                          full compatibility.
+                        </p>
+                      )}
+                      <div className="flex items-end gap-1">
+                        <HexColorInput
                           value={skinColor}
-                          onInput={(e) => setSkinColor((e.target as HTMLInputElement).value)}
-                          onChange={(e) => {
-                            setSkinColor(e.target.value);
-                            saveCustomColor("case", e.target.value);
+                          onChange={(color) => {
+                            setSkinColor(color);
+                            saveCustomColor("case", color);
                           }}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          title="Custom case color"
-                          aria-label="Open custom case color picker"
                         />
-                      </div>
-                    </div>
-                  </div>
-                  {oklchReady && oklchCasePalette.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                        OKLCH Spectrum
-                      </h4>
-                      <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
-                        {oklchCasePalette.map((swatch) => (
+                        {hasEyeDropper && (
                           <button
-                            key={swatch.hue}
-                            onClick={() => {
-                              const hex = oklchToHex(OKLCH_CASE_L, OKLCH_CASE_C, swatch.hue);
-                              if (!hex) return;
-                              setSkinColor(hex);
-                              saveCustomColor("case", hex);
-                            }}
-                            title={swatch.label}
-                            className="w-8 h-8 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
-                            style={{ backgroundColor: swatch.value }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {savedCaseColors.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                        Recent Custom
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {savedCaseColors.map((color) => (
-                          <button
-                            key={color}
-                            onClick={() => setSkinColor(color)}
-                            title={`Custom ${color}`}
-                            className={`w-7 h-7 rounded-full border ${
-                              skinColor === color
-                                ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                                : "border-[#B5BBC3]"
-                            }`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
+                            type="button"
+                            onClick={() => openEyeDropper("case")}
+                            className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+                            title="Pick color from screen"
+                            aria-label="Pick case color from screen"
+                          >
+                            <Pipette className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {!oklchReady && (
-                    <p className="mb-4 px-1 text-[10px] text-[#6B7280]">
-                      OKLCH palettes need a modern browser. Use the custom picker for full
-                      compatibility.
-                    </p>
-                  )}
-                  <div className="flex items-end gap-1 mb-4">
-                    <HexColorInput
-                      value={skinColor}
-                      onChange={(color) => {
-                        setSkinColor(color);
-                        saveCustomColor("case", color);
-                      }}
-                    />
-                    {hasEyeDropper && (
-                      <button
-                        type="button"
-                        onClick={() => openEyeDropper("case")}
-                        className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
-                        title="Pick color from screen"
-                        aria-label="Pick case color from screen"
-                      >
-                        <Pipette className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-                    Background
-                  </h3>
-                  <div className="mb-3">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Studio Palette
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {BG_COLOR_PRESETS.map((bg) => (
-                        <button
-                          key={bg.value}
-                          onClick={() => setBgColor(bg.value)}
-                          title={bg.label}
-                          className={`w-6 h-6 rounded-full border ${
-                            bgColor === bg.value
-                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
-                          }`}
-                          style={{ backgroundColor: bg.value }}
-                        />
-                      ))}
-                      {/* Background color picker — native input, tap-friendly */}
-                      <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                        <Plus className="w-3 h-3 text-[#1F2937] pointer-events-none" />
-                        <input
-                          type="color"
-                          data-testid="custom-bg-color-button"
+                  {themeSection === "background" && (
+                    <div className="space-y-4">
+                      <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] px-1">
+                        Background
+                      </h3>
+                      <div>
+                        <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                          Inspiration Picks
+                        </h4>
+                        <div className="grid grid-cols-4 gap-2">
+                          {INSPIRATION_BG_COLORS.map((bg) => (
+                            <button
+                              key={bg.value}
+                              onClick={() => setBgColor(bg.value)}
+                              title={bg.label}
+                              className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                                bgColor === bg.value
+                                  ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                                  : "border-[#B5BBC3]"
+                              }`}
+                              style={{ backgroundColor: bg.value }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                          Studio Palette
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {BG_COLOR_PRESETS.map((bg) => (
+                            <button
+                              key={bg.value}
+                              onClick={() => setBgColor(bg.value)}
+                              title={bg.label}
+                              className={`w-6 h-6 rounded-full border ${
+                                bgColor === bg.value
+                                  ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                                  : "border-[#B5BBC3]"
+                              }`}
+                              style={{ backgroundColor: bg.value }}
+                            />
+                          ))}
+                          <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
+                            <Plus className="w-3 h-3 text-[#1F2937] pointer-events-none" />
+                            <input
+                              type="color"
+                              data-testid="custom-bg-color-button"
+                              value={bgColor}
+                              onInput={(e) =>
+                                setBgColor((e.target as HTMLInputElement).value)
+                              }
+                              onChange={(e) => {
+                                setBgColor(e.target.value);
+                                saveCustomColor("bg", e.target.value);
+                              }}
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                              title="Custom background color"
+                              aria-label="Open custom background color picker"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {oklchReady && oklchBgPalette.length > 0 && (
+                        <div>
+                          <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                            OKLCH Ambient
+                          </h4>
+                          <div className="grid grid-cols-7 sm:grid-cols-9 gap-2">
+                            {oklchBgPalette.map((swatch) => (
+                              <button
+                                key={swatch.hue}
+                                onClick={() => {
+                                  const hex = oklchToHex(
+                                    OKLCH_BG_L,
+                                    OKLCH_BG_C,
+                                    swatch.hue,
+                                  );
+                                  if (!hex) return;
+                                  setBgColor(hex);
+                                  saveCustomColor("bg", hex);
+                                }}
+                                title={swatch.label}
+                                className="w-6 h-6 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
+                                style={{ backgroundColor: swatch.value }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {savedBgColors.length > 0 && (
+                        <div>
+                          <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                            Recent Custom
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {savedBgColors.map((color) => (
+                              <button
+                                key={color}
+                                onClick={() => setBgColor(color)}
+                                title={`Custom ${color}`}
+                                className={`w-6 h-6 rounded-full border ${
+                                  bgColor === color
+                                    ? "border-[#111827] ring-2 ring-[#CDD1D6]"
+                                    : "border-[#B5BBC3]"
+                                }`}
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-end gap-1">
+                        <HexColorInput
                           value={bgColor}
-                          onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
-                          onChange={(e) => {
-                            setBgColor(e.target.value);
-                            saveCustomColor("bg", e.target.value);
+                          onChange={(color) => {
+                            setBgColor(color);
+                            saveCustomColor("bg", color);
                           }}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          title="Custom background color"
-                          aria-label="Open custom background color picker"
                         />
-                      </div>
-                    </div>
-                  </div>
-                  {oklchReady && oklchBgPalette.length > 0 && (
-                    <div className="mb-3">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                        OKLCH Ambient
-                      </h4>
-                      <div className="grid grid-cols-7 sm:grid-cols-9 gap-2">
-                        {oklchBgPalette.map((swatch) => (
+                        {hasEyeDropper && (
                           <button
-                            key={swatch.hue}
-                            onClick={() => {
-                              const hex = oklchToHex(OKLCH_BG_L, OKLCH_BG_C, swatch.hue);
-                              if (!hex) return;
-                              setBgColor(hex);
-                              saveCustomColor("bg", hex);
-                            }}
-                            title={swatch.label}
-                            className="w-6 h-6 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
-                            style={{ backgroundColor: swatch.value }}
-                          />
-                        ))}
+                            type="button"
+                            onClick={() => openEyeDropper("bg")}
+                            className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+                            title="Pick color from screen"
+                            aria-label="Pick background color from screen"
+                          >
+                            <Pipette className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
-                  {savedBgColors.length > 0 && (
-                    <div className="mt-3">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                        Recent Custom
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {savedBgColors.map((color) => (
-                          <button
-                            key={color}
-                            onClick={() => setBgColor(color)}
-                            title={`Custom ${color}`}
-                            className={`w-6 h-6 rounded-full border ${
-                              bgColor === color
-                                ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                                : "border-[#B5BBC3]"
-                            }`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-end gap-1">
-                    <HexColorInput
-                      value={bgColor}
-                      onChange={(color) => {
-                        setBgColor(color);
-                        saveCustomColor("bg", color);
-                      }}
-                    />
-                    {hasEyeDropper && (
-                      <button
-                        type="button"
-                        onClick={() => openEyeDropper("bg")}
-                        className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
-                        title="Pick color from screen"
-                        aria-label="Pick background color from screen"
-                      >
-                        <Pipette className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
 
                   <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
                     <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
@@ -1151,107 +1428,129 @@ export default function IPodClassic() {
               )}
             </div>
 
-            {/* View Modes */}
-            <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
-              <IconButton
-                icon={<Smartphone className="w-5 h-5" />}
-                label="Flat View"
-                data-testid="flat-view-button"
-                isActive={viewMode === "flat"}
-                onClick={() => handleViewModeChange("flat")}
-              />
-              <IconButton
-                icon={<Box className="w-5 h-5" />}
-                label="3D Experience"
-                data-testid="three-d-view-button"
-                isActive={viewMode === "3d"}
-                onClick={() => handleViewModeChange("3d")}
-              />
-              <IconButton
-                icon={<Eye className="w-5 h-5" />}
-                label="Preview Mode"
-                data-testid="preview-view-button"
-                isActive={viewMode === "preview"}
-                onClick={() => handleViewModeChange("preview")}
-              />
-              <IconButton
-                icon={<Monitor className="w-5 h-5" />}
-                label="Focus Mode"
-                data-testid="focus-view-button"
-                isActive={viewMode === "focus"}
-                onClick={() => handleViewModeChange("focus")}
-              />
-            </div>
-
             {/* Export Action */}
-            <IconButton
-              icon={
-                activeExportKind === "png" && exportStatus === "success" ? (
-                  <Check className="w-5 h-5" />
-                ) : pngBusy ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Share className="w-5 h-5" />
-                )
-              }
-              label={
-                activeExportKind === "png" && exportStatus === "preparing"
-                  ? "Preparing..."
-                  : activeExportKind === "png" && exportStatus === "sharing"
-                    ? "Sharing..."
-                    : activeExportKind === "png" && exportStatus === "success"
-                      ? "Done!"
-                      : !isFlatView
-                        ? "Flat View Only"
-                        : "Export 2D Image"
-              }
-              onClick={handlePngExport}
-              data-testid="export-button"
-              contrast={true}
-              disabled={!isFlatView || exportStatus !== "idle"}
-              className={`transition-colors duration-300 ${
-                activeExportKind === "png" && exportStatus === "success"
-                  ? "bg-green-500 hover:bg-green-600 border-none"
-                  : pngBusy
-                    ? "bg-blue-500 hover:bg-blue-600 border-none"
-                    : ""
-              } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-            />
-            {(isPreviewView || gifBusy) && (
+            <div className="flex flex-col gap-2">
+              <div className="space-y-2 rounded-2xl border border-[#D0D4DA] bg-white/80 px-3 py-3 text-[11px] font-semibold text-[#111827] shadow-[0_8px_16px_rgba(0,0,0,0.12)]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] uppercase tracking-[0.1em] text-[#6B7280]">
+                    Export
+                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat("png")}
+                      data-testid="export-format-png"
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                        exportFormat === "png"
+                          ? "bg-[#111827] text-white"
+                          : "bg-white text-[#111827] border border-[#D0D4DA]"
+                      }`}
+                    >
+                      PNG
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat("gif")}
+                      data-testid="export-format-gif"
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                        exportFormat === "gif"
+                          ? "bg-[#111827] text-white"
+                          : "bg-white text-[#111827] border border-[#D0D4DA]"
+                      }`}
+                    >
+                      GIF
+                    </button>
+                  </div>
+                </div>
+                <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">
+                  Framing
+                  <select
+                    value={exportPresetId}
+                    onChange={(event) =>
+                      setExportPresetId(event.target.value as ExportPresetId)
+                    }
+                    className="rounded-xl border border-[#D0D4DA] bg-white px-2 py-2 text-[12px] font-semibold normal-case tracking-normal text-[#111827] outline-none focus:border-[#111827]"
+                    data-testid="export-preset-select"
+                  >
+                    {getExportPresets().map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {exportFormat === "gif" && (
+                <button
+                  type="button"
+                  onClick={() => void handleOpenGifPreview()}
+                  className="flex items-center justify-center gap-2 rounded-full border border-[#D0D4DA] bg-white/90 px-4 py-3 text-sm font-semibold text-[#111827] shadow-[0_10px_22px_rgba(0,0,0,0.12)] transition-all hover:scale-[1.02] hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+                  data-testid="preview-record-button"
+                  disabled={isWorkflowBusy}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview / Record
+                </button>
+              )}
               <IconButton
                 icon={
-                  activeExportKind === "gif" && exportStatus === "success" ? (
+                  exportStatus === "success" ? (
                     <Check className="w-5 h-5" />
-                  ) : gifBusy ? (
+                  ) : exportStatus === "preparing" || exportStatus === "sharing" ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <Film className="w-5 h-5" />
+                    <Share className="w-5 h-5" />
                   )
                 }
                 label={
-                  activeExportKind === "gif" && exportStatus === "preparing"
-                    ? "Preparing..."
-                    : activeExportKind === "gif" && exportStatus === "encoding"
+                  exportStatus === "preparing"
+                    ? exportFormat === "gif"
                       ? "Encoding GIF..."
-                      : activeExportKind === "gif" && exportStatus === "success"
+                      : "Preparing..."
+                    : exportStatus === "sharing"
+                      ? "Sharing..."
+                      : exportStatus === "success"
                         ? "Done!"
-                        : !titleCanMarquee
-                          ? "Need Longer Title"
-                          : "Export Animated GIF"
+                        : exportFormat === "gif"
+                          ? "Export GIF"
+                          : "Export PNG"
                 }
-                onClick={handleGifExport}
-                data-testid="gif-export-button"
+                onClick={handleExport}
+                data-testid="export-button"
                 contrast={true}
-                disabled={!isPreviewView || !titleCanMarquee || exportStatus !== "idle"}
+                disabled={isWorkflowBusy}
                 className={`transition-colors duration-300 ${
-                  activeExportKind === "gif" && exportStatus === "success"
+                  exportStatus === "success"
                     ? "bg-green-500 hover:bg-green-600 border-none"
-                    : gifBusy
+                    : exportStatus === "preparing" || exportStatus === "sharing"
                       ? "bg-blue-500 hover:bg-blue-600 border-none"
                       : ""
                 } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
               />
-            )}
+              {(exportFormat === "gif" || gifPreviewStatus === "preparing") && (
+                <div className="space-y-1">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/70">
+                    <div
+                      className="h-full bg-[#111827] transition-all"
+                      style={{
+                        width: `${
+                          gifPreviewStatus === "preparing" || exportStatus === "preparing"
+                            ? Math.round(gifProgress * 100)
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[10px] font-medium text-[#6B7280]">
+                    {gifPreviewStatus === "preparing"
+                      ? `Preparing preview ${Math.round(gifProgress * 100)}%`
+                      : gifPreviewCache
+                        ? `${gifPreviewCache.frameDataUrls.length} frames cached for preview and export`
+                        : "Prepare a preview to unlock the manual recording fallback."}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1261,34 +1560,7 @@ export default function IPodClassic() {
           </div>
         )}
 
-        {isPreviewView && exportStatus === "idle" && (
-          <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
-            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
-                Marquee Preview
-              </div>
-              <div className="mt-0.5 text-[12px] font-medium text-black/70">
-                {titleCanMarquee
-                  ? "The title is crawling. Export Animated GIF to capture it."
-                  : "This title fits. Use a longer song title to trigger the crawl."}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 3D MODE (R3F) */}
-        {viewMode === "3d" && (
-          <ThreeDIpod
-            skinColor={skinColor}
-            screen={screenComponent}
-            wheel={wheelComponent}
-          />
-        )}
-
-        {/* 2D / EXPORT MODE */}
-        <div
-          className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
-        >
+        <div className="relative transition-all duration-700">
           <div
             className="relative"
             style={{
@@ -1299,40 +1571,64 @@ export default function IPodClassic() {
             <div
               className="origin-top-left"
               style={{
-                width: `${PREVIEW_FRAME_WIDTH}px`,
-                height: `${PREVIEW_FRAME_HEIGHT}px`,
+                width: `${BASE_EXPORT_SCENE_WIDTH}px`,
+                height: `${BASE_EXPORT_SCENE_HEIGHT}px`,
                 transform: `scale(${previewScale})`,
               }}
             >
-              <div
-                ref={exportTargetRef}
-                data-export-shell={isExportCapturing ? "true" : "false"}
-                className="p-12"
-                style={{
-                  backgroundColor: isExportCapturing ? bgColor : "transparent",
-                }}
-              >
-                <div
-                  className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
-                  style={{
-                    backgroundColor: skinColor,
-                    borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
-                    boxShadow: shellShadow,
-                  }}
-                  data-export-layer="shell"
-                >
-                  {/* SCREEN AREA */}
-                  <div className="w-full">{screenComponent}</div>
-
-                  {/* CONTROL AREA */}
-                  <div className="flex-1 flex items-center justify-center relative -mt-4">
-                    {wheelComponent}
-                  </div>
-                </div>
+              <div ref={liveShellRef}>
+                <IPodDeviceShell
+                  skinColor={skinColor}
+                  screen={liveScreenComponent}
+                  wheel={liveWheelComponent}
+                  exportSafe={false}
+                  dataTestId="live-ipod-shell"
+                />
               </div>
             </div>
           </div>
         </div>
+
+        <div
+          className="pointer-events-none fixed left-[-200vw] top-0 z-[-1] opacity-0"
+          aria-hidden="true"
+        >
+          <FramedExportStage
+            ref={pngExportStageRef}
+            presetId={exportPresetId}
+            backgroundColor={bgColor}
+            skinColor={skinColor}
+            screen={exportStaticScreenComponent}
+            wheel={exportWheelComponent}
+            exportSafe={true}
+            showShadowLayer={true}
+            dataTestId="png-export-stage"
+          />
+          <FramedExportStage
+            ref={gifExportStageRef}
+            presetId={exportPresetId}
+            backgroundColor={bgColor}
+            skinColor={skinColor}
+            screen={exportAnimatedScreenComponent}
+            wheel={exportWheelComponent}
+            exportSafe={true}
+            showShadowLayer={true}
+            dataTestId="gif-export-stage"
+          />
+        </div>
+
+        <GifPreviewModal
+          open={isGifPreviewOpen}
+          frames={gifPreviewCache?.frameDataUrls ?? []}
+          frameDelayMs={gifPreviewCache?.delayMs ?? Math.round(1000 / GIF_EXPORT_FPS)}
+          presetId={gifPreviewCache?.presetId ?? exportPresetId}
+          isPreparing={gifPreviewStatus === "preparing"}
+          progress={gifProgress}
+          error={gifPreviewError}
+          onClose={() => setIsGifPreviewOpen(false)}
+          onRetry={() => void handleOpenGifPreview()}
+          onOpenRecordingWindow={() => void handleOpenRecordingWindow()}
+        />
       </div>
     </FixedEditorProvider>
   );

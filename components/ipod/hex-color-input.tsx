@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { isHexColor } from "@/lib/storage";
 
 interface HexColorInputProps {
@@ -36,11 +36,12 @@ export function HexColorInput({ value, onChange }: HexColorInputProps) {
     [onChange],
   );
 
+  // Sync when parent value changes externally
   useEffect(() => {
-    const nextValue = value.toUpperCase();
-    if (nextValue === lastCommitted.current) return;
-    lastCommitted.current = nextValue;
-    setDraft(value.replace("#", "").toUpperCase());
+    if (value.toUpperCase() !== lastCommitted.current) {
+      lastCommitted.current = value.toUpperCase();
+      setDraft(value.replace("#", "").toUpperCase());
+    }
   }, [value]);
 
   return (

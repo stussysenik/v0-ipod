@@ -5,21 +5,30 @@ import { Battery } from "lucide-react";
 import { StarRating } from "./star-rating";
 import { ProgressBar } from "./progress-bar";
 import { ImageUpload } from "./image-upload";
+import placeholderLogo from "@/public/placeholder-logo.png";
 import { EditableText } from "./editable-text";
 import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
-import { MarqueeText } from "@/components/ui/marquee-text";
 import type { SongMetadata } from "@/types/ipod";
+
+type IpodScreenAction =
+  | { type: "UPDATE_TITLE"; payload: string }
+  | { type: "UPDATE_ARTIST"; payload: string }
+  | { type: "UPDATE_ALBUM"; payload: string }
+  | { type: "UPDATE_ARTWORK"; payload: string }
+  | { type: "UPDATE_CURRENT_TIME"; payload: number }
+  | { type: "UPDATE_DURATION"; payload: number }
+  | { type: "UPDATE_RATING"; payload: number }
+  | { type: "UPDATE_TRACK_NUMBER"; payload: number }
+  | { type: "UPDATE_TOTAL_TRACKS"; payload: number };
 
 interface IpodScreenProps {
   state: SongMetadata;
-  dispatch: React.Dispatch<{ type: string; payload: string | number }>;
+  dispatch: React.Dispatch<IpodScreenAction>;
   playClick: () => void;
   isEditable?: boolean;
   exportSafe?: boolean;
-  titlePreview?: boolean;
-  titleCaptureReady?: boolean;
-  onTitleOverflowChange?: (overflow: boolean) => void;
+  animateText?: boolean;
 }
 
 export function IpodScreen({
@@ -28,15 +37,21 @@ export function IpodScreen({
   playClick,
   isEditable = true,
   exportSafe = false,
-  titlePreview = false,
-  titleCaptureReady = false,
-  onTitleOverflowChange,
+  animateText = false,
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
   const screenShadow = exportSafe
     ? "none"
-    : "0 3px 0 rgba(0,0,0,0.84), 0 1px 5px rgba(0,0,0,0.32)";
+    : "0 8px 16px -14px rgba(0,0,0,0.9), 0 3px 8px rgba(0,0,0,0.22)";
   const artworkShadow = exportSafe ? "none" : "0 6px 12px -8px rgba(0,0,0,0.42)";
+  const screenSurface = {
+    background: "linear-gradient(180deg, #0b0b0b 0%, #171717 22%, #050505 100%)",
+  };
+  const glassOverlay = {
+    background: exportSafe
+      ? "linear-gradient(154deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.05) 16%, rgba(255,255,255,0) 42%), linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.05) 100%)"
+      : "linear-gradient(154deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.07) 16%, rgba(255,255,255,0) 42%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0) 32%, rgba(0,0,0,0.06) 100%)",
+  };
 
   const setCurrentTime = useCallback(
     (currentTime: number, preserveRemaining = false) => {
@@ -67,11 +82,19 @@ export function IpodScreen({
 
   return (
     <div
-      className="w-[322px] h-[240px] bg-black rounded-[10px] p-[2px] mx-auto z-10 shrink-0 relative"
-      style={{ boxShadow: screenShadow }}
+      className="relative z-10 mx-auto h-[240px] w-[322px] shrink-0 rounded-[10px] p-[2px]"
+      style={{ ...screenSurface, boxShadow: screenShadow }}
       data-export-layer="screen"
       data-testid="ipod-screen"
     >
+      <div
+        className="pointer-events-none absolute inset-[1px] rounded-[9px]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 18%, rgba(0,0,0,0.12) 100%)",
+        }}
+        aria-hidden="true"
+      />
       <div className="w-full h-full bg-white rounded-[4px] overflow-hidden relative border-2 border-[#525252]">
         {/* STATUS BAR */}
         <div className="h-[20px] bg-gradient-to-b from-[#F1F1F1] to-[#CDCDCD] border-b border-[#9B9B9B] flex items-center justify-between px-2">
@@ -84,52 +107,51 @@ export function IpodScreen({
         {/* CONTENT GRID */}
         <div className="flex h-[168px]" data-testid="screen-content">
           {/* LEFT: ARTWORK */}
-          <div className="w-[140px] h-full px-3 pt-1 pb-2 flex flex-col justify-start items-center">
+          <div className="w-[140px] h-full px-[14px] pt-[5px] pb-0 flex flex-col justify-start items-center">
             <div
               className="w-[114px] h-[114px] bg-[#EEE] border border-[#9F9F9F] relative cursor-pointer transition-transform active:scale-[0.98]"
               style={{ boxShadow: artworkShadow }}
               data-export-layer="artwork"
             >
-              <ImageUpload
-                currentImage={state.artwork}
-                onImageChange={(artwork) => {
-                  if (!isEditable) return;
-                  dispatch({ type: "UPDATE_ARTWORK", payload: artwork });
-                  playClick();
-                }}
-                disabled={!isEditable}
-                className="w-full h-full object-cover"
-              />
+              {exportSafe ? (
+                <img
+                  src={state.artwork || placeholderLogo.src}
+                  data-export-src={state.artwork || placeholderLogo.src}
+                  alt="Album artwork"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ImageUpload
+                  currentImage={state.artwork}
+                  onImageChange={(artwork) => {
+                    if (!isEditable) return;
+                    dispatch({ type: "UPDATE_ARTWORK", payload: artwork });
+                    playClick();
+                  }}
+                  disabled={!isEditable}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
           </div>
 
           {/* RIGHT: INFO (Editable) */}
           <div
-            className="flex min-w-0 flex-1 flex-col items-start overflow-hidden pt-5 pr-3 text-left z-20"
+            className="flex min-w-0 flex-1 flex-col items-start pt-[5px] pr-[14px] text-left z-20"
             data-testid="track-meta"
           >
             {/* Title */}
             <div className="relative z-20 mb-1 w-full min-w-0" data-testid="track-title">
               <div className="min-w-0 text-[14px] font-bold text-black tracking-[0.01em] leading-[1.15]">
-                {titlePreview || titleCaptureReady ? (
-                  <MarqueeText
-                    text={state.title}
-                    preview={titlePreview}
-                    captureReady={titleCaptureReady}
-                    className="font-bold -ml-1 max-w-full min-w-0 pl-1"
-                    dataTestId="track-title-text"
-                    onOverflowChange={onTitleOverflowChange}
-                  />
-                ) : (
-                  <EditableText
-                    value={state.title}
-                    onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
-                    disabled={!isEditable}
-                    className="font-bold -ml-1 max-w-full min-w-0 pl-1"
-                    editLabel="Edit title"
-                    dataTestId="track-title-text"
-                  />
-                )}
+                <EditableText
+                  value={state.title}
+                  onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
+                  disabled={!isEditable}
+                  className="font-bold -ml-1 max-w-full min-w-0 pl-1"
+                  editLabel="Edit title"
+                  dataTestId="track-title-text"
+                  animate={animateText}
+                />
               </div>
             </div>
 
@@ -143,12 +165,13 @@ export function IpodScreen({
                   className="font-semibold text-[#555] -ml-1 max-w-full min-w-0 pl-1"
                   editLabel="Edit artist"
                   dataTestId="track-artist-text"
+                  animate={animateText}
                 />
               </div>
             </div>
 
             {/* Album */}
-            <div className="relative z-20 mb-2.5 w-full min-w-0" data-testid="track-album">
+            <div className="relative z-20 mb-[9px] w-full min-w-0" data-testid="track-album">
               <div className="min-w-0 text-[12px] font-medium text-[#757575] leading-[1.2]">
                 <EditableText
                   value={state.album}
@@ -157,12 +180,13 @@ export function IpodScreen({
                   className="font-medium text-[#777] -ml-1 max-w-full min-w-0 pl-1"
                   editLabel="Edit album"
                   dataTestId="track-album-text"
+                  animate={animateText}
                 />
               </div>
             </div>
 
             {/* Meta */}
-            <div className="text-[10px] text-[#868686] mb-1">
+            <div className="text-[10px] text-[#868686] mb-[6px]">
               <EditableTrackNumber
                 trackNumber={state.trackNumber}
                 totalTracks={state.totalTracks}
@@ -189,6 +213,20 @@ export function IpodScreen({
             </div>
           </div>
         </div>
+
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[4px]"
+          style={glassOverlay}
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute left-[10px] top-[8px] h-[44%] w-[60%] rounded-[24px] opacity-65"
+          style={{
+            background:
+              "linear-gradient(160deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.06) 18%, rgba(255,255,255,0) 60%)",
+          }}
+          aria-hidden="true"
+        />
 
         {/* BOTTOM: PROGRESS */}
         <div
