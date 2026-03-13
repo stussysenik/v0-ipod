@@ -73,11 +73,7 @@ export function MarqueeText({
   }, [text, preview, captureReady]);
 
   const overflow = measurements.contentWidth > measurements.containerWidth + 1;
-  const shouldRenderTrack = overflow && (preview || captureReady);
-  const spacerWidth = useMemo(
-    () => measurements.containerWidth + measurements.gapWidth,
-    [measurements.containerWidth, measurements.gapWidth],
-  );
+  const shouldRenderTrack = preview || captureReady;
 
   useEffect(() => {
     onOverflowChange?.(overflow);
@@ -131,7 +127,7 @@ export function MarqueeText({
       data-marquee-content-width={measurements.contentWidth || undefined}
       data-marquee-gap-width={measurements.gapWidth || undefined}
       data-marquee-cycle-duration-ms={
-        overflow ? getMarqueeCycleDurationMs(measurements) : undefined
+        shouldRenderTrack ? getMarqueeCycleDurationMs(measurements) : undefined
       }
     >
       <span
@@ -148,18 +144,7 @@ export function MarqueeText({
           style={{ transform: "translateX(0px)" }}
           data-marquee-track="true"
         >
-          <span className="inline-block whitespace-nowrap">
-            {text}
-          </span>
-          <span
-            aria-hidden="true"
-            className="inline-block shrink-0"
-            style={{ width: `${spacerWidth}px` }}
-            data-marquee-spacer="true"
-          />
-          <span aria-hidden="true" className="inline-block whitespace-nowrap">
-            {text}
-          </span>
+          <span className="inline-block whitespace-nowrap">{text}</span>
         </div>
       ) : (
         <span
