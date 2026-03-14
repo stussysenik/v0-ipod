@@ -1,70 +1,160 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  getMarqueeCycleDurationMs,
+  getMarqueeFrame,
+  getMarqueeGapWidth,
+} from "@/lib/marquee";
 
 interface MarqueeTextProps {
   text: string;
   className?: string;
-  textClassName?: string;
-  speed?: number;
-  delay?: number;
-  autoPlay?: boolean;
+  dataTestId?: string;
+  preview?: boolean;
+  captureReady?: boolean;
+  onOverflowChange?: (overflow: boolean) => void;
 }
+
+interface MarqueeMeasurements {
+  containerWidth: number;
+  contentWidth: number;
+  gapWidth: number;
+}
+
+const EMPTY_MEASUREMENTS: MarqueeMeasurements = {
+  containerWidth: 0,
+  contentWidth: 0,
+  gapWidth: 0,
+};
 
 export function MarqueeText({
   text,
   className = "",
-  textClassName = "",
-  speed = 48,
-  delay = 1500,
-  autoPlay = true,
+  dataTestId,
+  preview = false,
+  captureReady = false,
+  onOverflowChange,
 }: MarqueeTextProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [shouldScroll, setShouldScroll] = useState(false);
-  const [distance, setDistance] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLSpanElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const [measurements, setMeasurements] =
+    useState<MarqueeMeasurements>(EMPTY_MEASUREMENTS);
 
   useEffect(() => {
-    if (!containerRef.current || !contentRef.current) return;
-
     const container = containerRef.current;
-    const content = contentRef.current;
+    const measurementCopy = measurementRef.current;
+    if (!container || !measurementCopy) return;
 
-    const checkOverflow = () => {
-      const nextDistance = Math.max(content.scrollWidth - container.clientWidth, 0);
-      setShouldScroll(nextDistance > 2);
-      setDistance(nextDistance);
-      if (nextDistance > 0) {
-        setDuration(Math.max(nextDistance / speed, 2.4));
-      } else {
-        setDuration(0);
-      }
+    const measure = () => {
+      const containerWidth = Math.ceil(container.clientWidth);
+      const contentWidth = Math.ceil(measurementCopy.scrollWidth);
+      const gapWidth = getMarqueeGapWidth(contentWidth, text.length);
+      setMeasurements({ containerWidth, contentWidth, gapWidth });
     };
 
-    checkOverflow();
-    window.addEventListener("resize", checkOverflow);
+    measure();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => measure())
+        : null;
+
+    resizeObserver?.observe(container);
+    resizeObserver?.observe(measurementCopy);
+    window.addEventListener("resize", measure);
 
     return () => {
-      window.removeEventListener("resize", checkOverflow);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", measure);
     };
-  }, [text, speed, autoPlay]);
+  }, [text, preview, captureReady]);
+
+  const overflow = measurements.contentWidth > measurements.containerWidth + 1;
+  const shouldRenderTrack = preview || captureReady;
+
+  useEffect(() => {
+    onOverflowChange?.(overflow);
+  }, [onOverflowChange, overflow]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    if (!preview || !shouldRenderTrack) {
+      track.style.transform = "translateX(0px)";
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      return;
+    }
+
+    let startTime: number | null = null;
+
+    const animate = (timestamp: number) => {
+      if (startTime === null) {
+        startTime = timestamp;
+      }
+
+      const frame = getMarqueeFrame(measurements, timestamp - startTime);
+      track.style.transform = `translateX(${frame.translateX}px)`;
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      track.style.transform = "translateX(0px)";
+    };
+  }, [measurements, preview, shouldRenderTrack]);
 
   return (
-    <div ref={containerRef} className={`overflow-hidden ${className}`}>
-      <div
-        ref={contentRef}
-        className={`inline-block whitespace-nowrap ${textClassName} ${
-          shouldScroll && autoPlay ? "ipod-marquee" : ""
-        }`}
-        style={{
-          ["--marquee-distance" as string]: `${distance}px`,
-          ["--marquee-duration" as string]: `${duration}s`,
-          ["--marquee-delay" as string]: `${delay}ms`,
-        }}
+    <div
+      ref={containerRef}
+      className={`relative block w-full overflow-hidden ${className}`}
+      data-testid={dataTestId}
+      data-marquee-container="true"
+      data-marquee-active={shouldRenderTrack ? "true" : "false"}
+      data-marquee-overflow={overflow ? "true" : "false"}
+      data-marquee-viewport-width={measurements.containerWidth || undefined}
+      data-marquee-content-width={measurements.contentWidth || undefined}
+      data-marquee-gap-width={measurements.gapWidth || undefined}
+      data-marquee-cycle-duration-ms={
+        shouldRenderTrack ? getMarqueeCycleDurationMs(measurements) : undefined
+      }
+    >
+      <span
+        ref={measurementRef}
+        className="invisible absolute left-0 top-0 inline-block whitespace-nowrap"
+        aria-hidden="true"
       >
         {text}
-      </div>
+      </span>
+      {shouldRenderTrack ? (
+        <div
+          ref={trackRef}
+          className="flex w-max items-center whitespace-nowrap will-change-transform"
+          style={{ transform: "translateX(0px)" }}
+          data-marquee-track="true"
+        >
+          <span className="inline-block whitespace-nowrap">{text}</span>
+        </div>
+      ) : (
+        <span
+          className={`block w-full min-w-0 max-w-full break-words [overflow-wrap:anywhere] [hyphens:auto] ${
+            preview ? "whitespace-nowrap" : ""
+          }`}
+        >
+          {text}
+        </span>
+      )}
     </div>
   );
 }

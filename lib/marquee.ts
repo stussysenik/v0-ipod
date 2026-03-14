@@ -29,17 +29,14 @@ export function getMarqueeGapWidth(contentWidth: number, textLength: number): nu
 }
 
 export function getMarqueeCycleDistance(metrics: MarqueeMetrics): number {
+  // Single-pass: container width (start position) + content width (exit distance)
   return Math.max(
-    metrics.contentWidth + metrics.gapWidth + metrics.containerWidth,
+    metrics.containerWidth + metrics.contentWidth,
     metrics.containerWidth,
   );
 }
 
 export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics): number {
-  if (!hasMarqueeOverflow(metrics)) {
-    return MARQUEE_DELAY_MS;
-  }
-
   return (
     MARQUEE_DELAY_MS +
     (getMarqueeCycleDistance(metrics) / MARQUEE_SPEED_PX_PER_SECOND) * 1000
@@ -50,34 +47,29 @@ export function getMarqueeFrame(
   metrics: MarqueeMetrics,
   elapsedMs: number,
 ): MarqueeFrame {
-  if (!hasMarqueeOverflow(metrics)) {
-    return {
-      overflow: false,
-      translateX: 0,
-      cycleDistance: 0,
-      cycleDurationMs: MARQUEE_DELAY_MS,
-    };
-  }
-
+  const overflow = hasMarqueeOverflow(metrics);
   const cycleDistance = getMarqueeCycleDistance(metrics);
   const cycleDurationMs = getMarqueeCycleDurationMs(metrics);
 
+  // Initial delay - start off-screen right
   if (elapsedMs <= MARQUEE_DELAY_MS) {
     return {
-      overflow: true,
-      translateX: 0,
+      overflow,
+      translateX: metrics.containerWidth,
       cycleDistance,
       cycleDurationMs,
     };
   }
 
+  // Calculate offset and translate from right to left
   const travelPx =
     ((elapsedMs - MARQUEE_DELAY_MS) * MARQUEE_SPEED_PX_PER_SECOND) / 1000;
-  const offset = Math.floor(travelPx % cycleDistance);
+  const offsetInCycle = Math.floor(travelPx % cycleDistance);
+  const translateX = metrics.containerWidth - offsetInCycle;
 
   return {
-    overflow: true,
-    translateX: -offset,
+    overflow,
+    translateX,
     cycleDistance,
     cycleDurationMs,
   };
