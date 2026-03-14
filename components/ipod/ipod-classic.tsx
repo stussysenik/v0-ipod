@@ -8,12 +8,13 @@ import {
   Monitor,
   Smartphone,
   Check,
-  Plus,
+
   Loader2,
   Menu,
   Pipette,
   Film,
   Eye,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportAnimatedGif, exportImage, type ExportStatus } from "@/lib/export-utils";
@@ -35,31 +36,15 @@ import { IconButton } from "@/components/ui/icon-button";
 import { ThreeDIpod } from "@/components/three/three-d-ipod";
 import { FixedEditorProvider } from "./fixed-editor";
 import { IpodScreen } from "./ipod-screen";
+import { AsciiIpod } from "./ascii-ipod";
 import { ClickWheel } from "./click-wheel";
+import { GreyPalettePicker } from "./grey-palette-picker";
 import { HexColorInput } from "./hex-color-input";
 import type { SongMetadata } from "@/types/ipod";
 
 // Base64 click sound
 const CLICK_SOUND =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//oeBAAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBBEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBCEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBDEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBEIAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r////////////////////////////////////////////////////////////////";
-
-const CASE_COLOR_PRESETS = [
-  { label: "Bright White", value: "#FBFBF8" },
-  { label: "White (5G)", value: "#F5F5F7" },
-  { label: "Soft Silver", value: "#ECEDEE" },
-  { label: "Pearl Gray", value: "#E4E4E6" },
-  { label: "Black (5G/Classic)", value: "#1B1B1F" },
-  { label: "Graphite", value: "#2A2C31" },
-  { label: "Charcoal", value: "#3B3D44" },
-  { label: "Silver (Classic)", value: "#D9DADC" },
-  { label: "Brushed Steel", value: "#C7C9CD" },
-  { label: "Gunmetal", value: "#535861" },
-  { label: "U2 Black/Red", value: "#19191D" },
-  { label: "Slate Blue", value: "#7A90B8" },
-  { label: "Fog Green", value: "#9AAE8E" },
-  { label: "Muted Rose", value: "#BFA5AD" },
-  { label: "Oxide Red", value: "#8D4A4A" },
-];
 
 const CASE_COLOR_AUTHENTIC = [
   { label: "White (1st-3rd Gen)", value: "#FFFFFF" },
@@ -71,19 +56,6 @@ const CASE_COLOR_AUTHENTIC = [
   { label: "Classic Black 2008", value: "#2D2F34" },
   { label: "U2 Black Front", value: "#111111" },
   { label: "U2 Red Wheel", value: "#B00020" },
-];
-
-const BG_COLOR_PRESETS = [
-  { label: "Paper White", value: "#F4F4EF" },
-  { label: "Light Mist", value: "#EBECE7" },
-  { label: "Studio Warm", value: "#E5E5E5" },
-  { label: "Cloud Gray", value: "#DBDCDD" },
-  { label: "Concrete", value: "#D4D6D8" },
-  { label: "Lo-Fi Silver", value: "#CACDD1" },
-  { label: "Slate", value: "#A9AFB6" },
-  { label: "Ash Blue", value: "#98A1AA" },
-  { label: "Darkroom Gray", value: "#7F8791" },
-  { label: "Night Graphite", value: "#5F6772" },
 ];
 
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
@@ -222,8 +194,8 @@ export default function IPodClassic() {
   const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
 
   // Customization State
-  const [skinColor, setSkinColor] = useState(CASE_COLOR_PRESETS[0].value);
-  const [bgColor, setBgColor] = useState(BG_COLOR_PRESETS[0].value);
+  const [skinColor, setSkinColor] = useState("#FBFBF8");
+  const [bgColor, setBgColor] = useState("#F4F4EF");
   const [showSettings, setShowSettings] = useState(false);
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
@@ -244,6 +216,7 @@ export default function IPodClassic() {
   >([]);
   const isFlatView = viewMode === "flat";
   const isPreviewView = viewMode === "preview";
+  const isAsciiView = viewMode === "ascii";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
 
@@ -582,17 +555,11 @@ export default function IPodClassic() {
       closeToolbox: true,
       clearNotice: true,
     });
-    if (!isPreviewView) {
+    if (!isPreviewView && !isAsciiView) {
       playClick();
-      showSoftNotice("Switch to Preview Mode for GIF");
+      showSoftNotice("Switch to Preview or ASCII for GIF");
       return;
     }
-    if (!titleCanMarquee) {
-      playClick();
-      showSoftNotice("Use a longer title to trigger the marquee");
-      return;
-    }
-
     playClick();
     if (!exportTargetRef.current) return;
 
@@ -648,7 +615,7 @@ export default function IPodClassic() {
     exportStatus,
     formatExportId,
     isPreviewView,
-    titleCanMarquee,
+    isAsciiView,
     playClick,
     resetExportUi,
     resetInteractionChrome,
@@ -663,7 +630,9 @@ export default function IPodClassic() {
     handleGifExportRef.current = handleGifExport;
   }, [handleGifExport]);
 
-  const screenComponent = (
+  const screenComponent = isAsciiView ? (
+    <AsciiIpod state={state} />
+  ) : (
     <IpodScreen
       state={state}
       dispatch={dispatch}
@@ -908,43 +877,14 @@ export default function IPodClassic() {
                       ))}
                     </div>
                   </div>
-                  <div className="mb-4">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Studio Palette
-                    </h4>
-                    <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-                      {CASE_COLOR_PRESETS.map((c) => (
-                        <button
-                          key={c.value}
-                          onClick={() => setSkinColor(c.value)}
-                          title={c.label}
-                          className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-                            skinColor === c.value
-                              ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
-                          }`}
-                          style={{ backgroundColor: c.value }}
-                        />
-                      ))}
-                      {/* System Color Picker — native input, tap-friendly */}
-                      <div className="relative w-8 h-8 rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors">
-                        <Plus className="w-4 h-4 text-[#4B5563] pointer-events-none" />
-                        <input
-                          type="color"
-                          data-testid="custom-case-color-button"
-                          value={skinColor}
-                          onInput={(e) => setSkinColor((e.target as HTMLInputElement).value)}
-                          onChange={(e) => {
-                            setSkinColor(e.target.value);
-                            saveCustomColor("case", e.target.value);
-                          }}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          title="Custom case color"
-                          aria-label="Open custom case color picker"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <GreyPalettePicker
+                    target="case"
+                    currentColor={skinColor}
+                    onColorSelect={setSkinColor}
+                    onColorCommit={(hex) => saveCustomColor("case", hex)}
+                    oklchToHex={oklchToHex}
+                    oklchReady={oklchReady}
+                  />
                   {oklchReady && oklchCasePalette.length > 0 && (
                     <div className="mb-4">
                       <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
@@ -1021,43 +961,14 @@ export default function IPodClassic() {
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
                     Background
                   </h3>
-                  <div className="mb-3">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Studio Palette
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {BG_COLOR_PRESETS.map((bg) => (
-                        <button
-                          key={bg.value}
-                          onClick={() => setBgColor(bg.value)}
-                          title={bg.label}
-                          className={`w-6 h-6 rounded-full border ${
-                            bgColor === bg.value
-                              ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                              : "border-[#B5BBC3]"
-                          }`}
-                          style={{ backgroundColor: bg.value }}
-                        />
-                      ))}
-                      {/* Background color picker — native input, tap-friendly */}
-                      <div className="relative w-6 h-6 rounded-full border border-[#B5BBC3] flex items-center justify-center hover:scale-110 cursor-pointer overflow-hidden bg-white">
-                        <Plus className="w-3 h-3 text-[#1F2937] pointer-events-none" />
-                        <input
-                          type="color"
-                          data-testid="custom-bg-color-button"
-                          value={bgColor}
-                          onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
-                          onChange={(e) => {
-                            setBgColor(e.target.value);
-                            saveCustomColor("bg", e.target.value);
-                          }}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          title="Custom background color"
-                          aria-label="Open custom background color picker"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <GreyPalettePicker
+                    target="bg"
+                    currentColor={bgColor}
+                    onColorSelect={setBgColor}
+                    onColorCommit={(hex) => saveCustomColor("bg", hex)}
+                    oklchToHex={oklchToHex}
+                    oklchReady={oklchReady}
+                  />
                   {oklchReady && oklchBgPalette.length > 0 && (
                     <div className="mb-3">
                       <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
@@ -1181,6 +1092,13 @@ export default function IPodClassic() {
                 isActive={viewMode === "focus"}
                 onClick={() => handleViewModeChange("focus")}
               />
+              <IconButton
+                icon={<Terminal className="w-5 h-5" />}
+                label="ASCII Mode"
+                data-testid="ascii-view-button"
+                isActive={viewMode === "ascii"}
+                onClick={() => handleViewModeChange("ascii")}
+              />
             </div>
 
             {/* Export Action */}
@@ -1217,7 +1135,7 @@ export default function IPodClassic() {
                     : ""
               } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
             />
-            {(isPreviewView || gifBusy) && (
+            {(isPreviewView || isAsciiView || gifBusy) && (
               <IconButton
                 icon={
                   activeExportKind === "gif" && exportStatus === "success" ? (
@@ -1235,14 +1153,14 @@ export default function IPodClassic() {
                       ? "Encoding GIF..."
                       : activeExportKind === "gif" && exportStatus === "success"
                         ? "Done!"
-                        : !titleCanMarquee
-                          ? "Need Longer Title"
+                        : isAsciiView
+                          ? "Export ASCII GIF"
                           : "Export Animated GIF"
                 }
                 onClick={handleGifExport}
                 data-testid="gif-export-button"
                 contrast={true}
-                disabled={!isPreviewView || !titleCanMarquee || exportStatus !== "idle"}
+                disabled={(!isPreviewView && !isAsciiView) || exportStatus !== "idle"}
                 className={`transition-colors duration-300 ${
                   activeExportKind === "gif" && exportStatus === "success"
                     ? "bg-green-500 hover:bg-green-600 border-none"
@@ -1270,7 +1188,20 @@ export default function IPodClassic() {
               <div className="mt-0.5 text-[12px] font-medium text-black/70">
                 {titleCanMarquee
                   ? "The title is crawling. Export Animated GIF to capture it."
-                  : "This title fits. Use a longer song title to trigger the crawl."}
+                  : "Title will scroll in the GIF along with progress and time."}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isAsciiView && exportStatus === "idle" && (
+          <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
+            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
+                ASCII Mode
+              </div>
+              <div className="mt-0.5 text-[12px] font-medium text-black/70">
+                Terminal-style Now Playing. Export GIF to animate the progress bar.
               </div>
             </div>
           </div>

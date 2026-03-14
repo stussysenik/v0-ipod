@@ -1,45 +1,57 @@
 # Project Progress
 
-## Status (2026-02-18)
+## Status (2026-03-14)
 
-This pass focused on interaction reliability and mobile usability. 3D visual polish is intentionally deferred.
+This pass added the OKLCH grey palette picker, ASCII mode, animated GIF export, and marquee preview. Previous interaction and mobile stability work remains intact.
 
 ## Completed In This Pass
 
-- Stabilized interaction flow for core non-3D experience:
-  - Theme panel interactions
-  - View mode switching
-  - Export button lifecycle
-  - Metadata editing and progress behavior
-- Hardened mobile usability:
-  - Tap-to-edit for text/time fields
-  - Pointer-based seek bar interactions
-  - Reliable label-based artwork upload trigger
-- Improved color picker usability:
-  - Picker invocation kept inside user gesture path
-  - Theme panel hides while picking so sampling area is unobstructed
-  - Custom colors persist in local storage recents
-- Standardized test runtime config:
-  - Playwright port-aware base URL
-  - `reuseExistingServer: true` for local stability
-- Repository cleanup work:
-  - Continued migration to a single `ipod-classic` component path
-  - Branding alignment to **iPod Snapshot** in metadata/manifest/docs
+- **OKLCH Grey Palette Picker** (`grey-palette-picker.tsx`):
+  - 6 undertone families: Neutral, Warm, Cool, Greige, Sage, Lavender
+  - 23 perceptually-spaced lightness stops per family with hex deduplication
+  - Gradient preview bar, curated favorites, motion design
+  - Undertone tab persistence via localStorage
+- **ASCII Mode** (`ascii-ipod.tsx`):
+  - Terminal-style text rendering of iPod interface
+  - New view mode alongside 2D, 3D, Preview, and Focus
+- **Animated GIF Export**:
+  - 12 FPS marquee animation capture
+  - `gifenc` encoding pipeline in `export-utils.ts`
+- **Marquee Preview Mode**:
+  - Single-pass scrolling animation for long text
+  - Converted from infinite loop to one-shot scroll
+- **Color System Overhaul**:
+  - Removed old static `CASE_COLOR_PRESETS` and `BG_COLOR_PRESETS` arrays
+  - Replaced with dynamic OKLCH-generated palettes
+- **Documentation**:
+  - Added `ARCHITECTURE.md` with system design deep-dive
+  - Added `CONTRIBUTING.md` with semantic commit conventions
+  - Added `.github/PULL_REQUEST_TEMPLATE.md`
+  - Updated `README.md` with feature descriptions and screenshots
 
 ## Verification
 
 Automated:
 
 ```bash
-npx playwright test tests/editable-track-number.spec.ts tests/interactions.spec.ts tests/mobile-usability.spec.ts --reporter=line
+npx playwright test tests/interactions.spec.ts tests/mobile-usability.spec.ts --reporter=line
 ```
 
-Result: `15 passed`.
+Result: 23/25 passed (2 pre-existing flaky tests).
 
 Manual (Chrome DevTools):
-- CSS and JS chunks load from `:4000`
-- Console shows no runtime errors in interaction flow
-- Network shows successful app/chunk/css requests
+- All view modes render correctly (2D, 3D, Preview, ASCII, Focus)
+- Grey palette picker shows 138 unique swatches across 6 tabs
+- GIF export produces valid animated output
+- Marquee scrolls once and stops
+
+## Previous Pass (2026-02-18)
+
+- Stabilized interaction flow for core non-3D experience
+- Hardened mobile usability (tap-to-edit, pointer seek, label-based upload)
+- Improved color picker usability (gesture path, panel hiding, localStorage recents)
+- Standardized Playwright test runtime config
+- Repository cleanup and branding alignment to iPod Snapshot
 
 ## Remaining / Deferred
 

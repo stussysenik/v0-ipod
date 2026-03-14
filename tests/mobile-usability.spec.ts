@@ -50,7 +50,7 @@ test.describe("Mobile usability", () => {
       )
       .toBe(true);
     await page.getByTestId("preview-view-button").tap();
-    await expect(page.getByTestId("gif-export-button")).toContainText("Need Longer Title");
+    await expect(page.getByTestId("gif-export-button")).toContainText("Export Animated GIF");
   });
 
   test("mobile upload opens immediate file path and updates artwork", async ({

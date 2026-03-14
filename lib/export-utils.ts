@@ -390,7 +390,15 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
   });
 }
 
-function applyMarqueeFrameToClone(root: HTMLElement, elapsedMs: number): number {
+function formatExportTime(seconds: number, isRemaining: boolean): string {
+  const clamped = Math.max(0, seconds);
+  const m = Math.floor(clamped / 60);
+  const s = Math.floor(clamped % 60);
+  return `${isRemaining ? "-" : ""}${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): number {
+  // 1. Apply marquee translateX (existing logic)
   const nodes = getMarqueeCaptureNodes(root);
   let cycleDurationMs = 0;
 
@@ -401,6 +409,57 @@ function applyMarqueeFrameToClone(root: HTMLElement, elapsedMs: number): number 
       cycleDurationMs,
       getMarqueeCycleDurationMs(node.metrics),
     );
+  }
+
+  // 2. Animate progress bar and timestamps (standard iPod screen)
+  const progressSection = root.querySelector<HTMLElement>('[data-testid="screen-progress"]');
+  const elapsedEl = root.querySelector<HTMLElement>('[data-testid="elapsed-time"]');
+  const remainingEl = root.querySelector<HTMLElement>('[data-testid="remaining-time"]');
+  const progressFill = root.querySelector<HTMLElement>('[data-testid="progress-fill"]');
+
+  const duration = parseNumericDataAttribute(
+    progressSection?.dataset.exportDuration ??
+    root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset.exportDuration,
+  );
+  const baseCurrentTime = parseNumericDataAttribute(
+    elapsedEl?.dataset.exportTimeValue ??
+    root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset.exportTimeValue,
+  );
+
+  if (duration !== null && duration > 0 && baseCurrentTime !== null) {
+    const simulatedTime = Math.min(baseCurrentTime + elapsedMs / 1000, duration);
+    const progressPct = (simulatedTime / duration) * 100;
+
+    if (progressFill) {
+      progressFill.style.width = `${progressPct}%`;
+    }
+    if (elapsedEl) {
+      elapsedEl.textContent = formatExportTime(simulatedTime, false);
+    }
+    if (remainingEl) {
+      remainingEl.textContent = formatExportTime(duration - simulatedTime, true);
+    }
+
+    // 3. Animate ASCII mode <pre> block if present
+    const asciiPre = root.querySelector<HTMLElement>('[data-testid="ascii-pre"]');
+    if (asciiPre) {
+      const PROGRESS_COLS = 27;
+      const filledCount = Math.round((simulatedTime / duration) * PROGRESS_COLS);
+      const emptyCount = PROGRESS_COLS - filledCount;
+      const progressBar = "\u2593".repeat(filledCount) + "\u2591".repeat(emptyCount);
+      const elapsedStr = formatExportTime(simulatedTime, false);
+      const remainingStr = formatExportTime(duration - simulatedTime, true);
+      const timeInner = 28;
+      const timeGap = Math.max(timeInner - elapsedStr.length - remainingStr.length, 1);
+      const timeLine = ` ${elapsedStr}${" ".repeat(timeGap)}${remainingStr} `;
+
+      const lines = asciiPre.textContent?.split("\n") ?? [];
+      if (lines.length >= 11) {
+        lines[8] = `\u2502 ${progressBar}  \u2502`;
+        lines[9] = `\u2502${timeLine}\u2502`;
+        asciiPre.textContent = lines.join("\n");
+      }
+    }
   }
 
   return cycleDurationMs;
@@ -1001,8 +1060,8 @@ export async function exportAnimatedGif(
 
     const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
     const targetHeight = Math.ceil(exportNode.offsetHeight || exportNode.clientHeight || 1);
-    const detectedCycleDurationMs = applyMarqueeFrameToClone(exportNode, 0);
-    const captureDurationMs = Math.max(detectedCycleDurationMs, 1000);
+    const detectedCycleDurationMs = applyAnimationFrameToClone(exportNode, 0);
+    const captureDurationMs = Math.max(detectedCycleDurationMs, 4000);
     const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
     const uncappedFrameCount = Math.max(
       1,
@@ -1028,7 +1087,7 @@ export async function exportAnimatedGif(
               (frameIndex / (frameCount - 1)) *
                 Math.max(captureDurationMs - frameDelayMs, 0),
             );
-      applyMarqueeFrameToClone(exportNode, elapsedMs);
+      applyAnimationFrameToClone(exportNode, elapsedMs);
       await waitForNextPaint();
 
       const canvas = await captureGifFrameCanvas(exportNode, {

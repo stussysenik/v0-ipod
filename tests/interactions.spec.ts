@@ -172,13 +172,13 @@ test.describe("Core interactions remain usable", () => {
   test("preview mode persists after reload", async ({ page }) => {
     await page.getByTestId("preview-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(page.getByText("This title fits. Use a longer song title to trigger the crawl.")).toBeVisible();
+    await expect(page.getByText("Title will scroll in the GIF along with progress and time.")).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
   });
 
-  test("preview mode keeps short titles static", async ({ page }) => {
+  test("preview mode animates short titles and exports gif", async ({ page }) => {
     await page.getByText("Charcoal Baby").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
@@ -192,10 +192,30 @@ test.describe("Core interactions remain usable", () => {
       text: el.textContent,
     }));
 
-    expect(marqueePresence.hasTrack).toBe(false);
+    expect(marqueePresence.hasTrack).toBe(true);
     expect(marqueePresence.text?.includes("Glow")).toBe(true);
-    await expect(page.getByTestId("gif-export-button")).toContainText("Need Longer Title");
-    await expect(page.getByTestId("gif-export-button")).toBeDisabled();
+    await expect(page.getByTestId("gif-export-button")).toContainText("Export Animated GIF");
+    await expect(page.getByTestId("gif-export-button")).toBeEnabled();
+
+    await page.waitForTimeout(2600);
+
+    const movedTransform = await page.getByTestId("track-title-text").evaluate((el) => {
+      const track = el.querySelector<HTMLElement>('[data-marquee-track="true"]');
+      return track?.style.transform ?? "";
+    });
+    expect(movedTransform).not.toBe("translateX(0px)");
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("gif-export-button").click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.gif$/);
+
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    if (!downloadPath) throw new Error("download path missing");
+
+    const header = fs.readFileSync(downloadPath).subarray(0, 6).toString("ascii");
+    expect(header).toBe("GIF89a");
   });
 
   test("preview marquee animates long titles and exports a gif", async ({ page }) => {

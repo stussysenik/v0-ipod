@@ -194,6 +194,7 @@ export function IpodScreen({
         <div
           className="absolute bottom-[6px] left-0 right-0 h-[42px] bg-white px-3 py-1.5"
           data-testid="screen-progress"
+          data-export-duration={state.duration}
         >
           <ProgressBar
             currentTime={state.currentTime}
@@ -207,7 +208,7 @@ export function IpodScreen({
             disabled={!isEditable}
           />
           <div className="mt-0.5 flex items-center justify-between text-[11px] font-semibold tracking-tight text-black font-mono">
-            <div data-testid="elapsed-time">
+            <div data-testid="elapsed-time" data-export-time-value={state.currentTime}>
               <EditableTime
                 value={state.currentTime}
                 onChange={(time) => {
