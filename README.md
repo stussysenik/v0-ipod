@@ -28,6 +28,9 @@
 
 ## ✨ Features
 
+![Demo](demo.gif)
+
+
 ### 🎵 **iPod Classic Simulation**
 - **Metadata Editing**: Title, artist, album, artwork, rating (1-5 stars)
 - **Click Wheel Navigation**: Authentic iPod controls simulation
