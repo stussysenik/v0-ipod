@@ -4,11 +4,17 @@ interface StarRatingProps {
   rating: number;
   onChange: (rating: number) => void;
   disabled?: boolean;
+  fontSize?: number;
 }
 
-export function StarRating({ rating, onChange, disabled = false }: StarRatingProps) {
+export function StarRating({
+  rating,
+  onChange,
+  disabled = false,
+  fontSize = 9,
+}: StarRatingProps) {
   return (
-    <div className="flex items-center gap-0.5 pl-1" style={{ lineHeight: 1 }}>
+    <div className="flex items-center gap-[1px]" style={{ lineHeight: 1 }}>
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
@@ -17,10 +23,11 @@ export function StarRating({ rating, onChange, disabled = false }: StarRatingPro
             onChange(star);
           }}
           disabled={disabled}
-          className="focus:outline-none focus-visible:ring-2 focus-visible:ring-black rounded p-0.5 -m-0.5"
+          className="rounded-[1px] p-0 leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-black"
         >
           <span
-            className={`text-[11px] ${star <= rating ? "text-black" : "text-gray-300"}`}
+            className={`leading-none ${star <= rating ? "text-black" : "text-gray-300"}`}
+            style={{ fontSize }}
           >
             ★
           </span>

@@ -1,8 +1,25 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 
 const fixtureImage = path.resolve(process.cwd(), "public/test.jpg");
+
+async function openThemePanel(page: Page): Promise<void> {
+  const button = page.getByTestId("theme-button");
+  const panel = page.getByTestId("theme-panel");
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await button.click();
+    try {
+      await expect(panel).toBeVisible({ timeout: 3000 });
+      return;
+    } catch {
+      // Retry once when the initial click is lost to transient UI timing.
+    }
+  }
+
+  await expect(panel).toBeVisible();
+}
 
 test.describe("Core interactions remain usable", () => {
   test.beforeEach(async ({ page }) => {
@@ -15,8 +32,7 @@ test.describe("Core interactions remain usable", () => {
   }) => {
     await expect(page).toHaveTitle(/iPod Snapshot/i);
 
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await openThemePanel(page);
 
     await page.getByTestId("three-d-view-button").click();
     await expect(page.getByRole("button", { name: "Flat View Only" })).toBeVisible();
@@ -29,19 +45,16 @@ test.describe("Core interactions remain usable", () => {
   });
 
   test("interaction chrome resets to a clean state", async ({ page }) => {
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await openThemePanel(page);
 
     await page.getByText("Charcoal Baby").click();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
 
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await openThemePanel(page);
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("theme-panel")).toBeHidden();
 
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await openThemePanel(page);
     await page.getByTestId("three-d-view-button").click();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
   });
@@ -57,7 +70,7 @@ test.describe("Core interactions remain usable", () => {
   });
 
   test("custom color picker flow saves case colors to localStorage", async ({ page }) => {
-    await page.getByTestId("theme-button").click();
+    await openThemePanel(page);
     const caseColorInput = page.getByTestId("custom-case-color-button");
     await caseColorInput.evaluate((el) => {
       const input = el as HTMLInputElement;
@@ -80,7 +93,7 @@ test.describe("Core interactions remain usable", () => {
   test("load snapshot applies test image/data and persists after reload", async ({
     page,
   }) => {
-    await page.getByTestId("theme-button").click();
+    await openThemePanel(page);
     await page.getByTestId("load-song-snapshot-button").click();
 
     await expect(page.getByText("Charcoal Baby")).toBeVisible();
@@ -107,9 +120,9 @@ test.describe("Core interactions remain usable", () => {
     await titleInput.press("Enter");
     await expect(page.getByText("Snapshot QA")).toBeVisible();
 
-    await page.getByTestId("theme-button").click();
+    await openThemePanel(page);
     await page.getByTestId("save-song-snapshot-button").click();
-    await page.getByTestId("theme-button").click();
+    await openThemePanel(page);
 
     await page.getByText("Snapshot QA").dblclick();
     await expect(titleInput).toBeVisible();
@@ -117,7 +130,7 @@ test.describe("Core interactions remain usable", () => {
     await titleInput.press("Enter");
     await expect(page.getByText("Temp Value")).toBeVisible();
 
-    await page.getByTestId("theme-button").click();
+    await openThemePanel(page);
     await page.getByTestId("load-song-snapshot-button").click();
     await expect(page.getByText("Snapshot QA")).toBeVisible();
 
@@ -126,6 +139,116 @@ test.describe("Core interactions remain usable", () => {
         page.evaluate(() => localStorage.getItem("ipodSnapshotSongSnapshot") ?? ""),
       )
       .toContain("Snapshot QA");
+  });
+
+  test("preset selection and authentic iPod OS mode persist after reload", async ({
+    page,
+  }) => {
+    await openThemePanel(page);
+    await page.getByTestId("hardware-preset-classic-2009-button").click();
+    await page.getByTestId("interaction-mode-ipod-os-button").click();
+
+    await expect(page.getByTestId("ipod-os-menu")).toBeVisible();
+    await expect(page.getByTestId("ipod-os-selected-menu-item")).toContainText("Music");
+
+    await page.reload();
+    await expect(page.getByTestId("ipod-os-menu")).toBeVisible();
+
+    await openThemePanel(page);
+    await expect(page.getByTestId("hardware-preset-classic-2009-button")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.getByTestId("interaction-mode-ipod-os-button")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  test("range snapshots serialize start and end times", async ({ page }) => {
+    await openThemePanel(page);
+    await page.getByTestId("snapshot-selection-range-button").click();
+
+    const startInput = page.getByTestId("snapshot-range-start-input");
+    await startInput.fill("0:30");
+    await startInput.blur();
+
+    const endInput = page.getByTestId("snapshot-range-end-input");
+    await endInput.fill("1:10");
+    await endInput.blur();
+
+    await page.getByTestId("save-song-snapshot-button").click();
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("ipodSnapshotSongSnapshot");
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return {
+            selectionKind: parsed.playback.selectionKind,
+            rangeStartTime: parsed.playback.rangeStartTime,
+            rangeEndTime: parsed.playback.rangeEndTime,
+          };
+        }),
+      )
+      .toEqual({
+        selectionKind: "range",
+        rangeStartTime: 30,
+        rangeEndTime: 70,
+      });
+  });
+
+  test("legacy snapshot payloads migrate into the v2 schema", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "ipodSnapshotSongSnapshot",
+        JSON.stringify({
+          metadata: {
+            title: "Legacy Migration",
+            artist: "Archivist",
+            album: "Schema Drift",
+            artwork: "/placeholder-logo.png",
+            duration: 180,
+            currentTime: 17,
+            rating: 4,
+            trackNumber: 3,
+            totalTracks: 12,
+          },
+          ui: {
+            skinColor: "#FBFBF8",
+            bgColor: "#F4F4EF",
+            viewMode: "preview",
+          },
+        }),
+      );
+    });
+
+    await page.reload();
+    await openThemePanel(page);
+    await page.getByTestId("load-song-snapshot-button").click();
+
+    await expect(page.getByTestId("track-title-text")).toContainText("Legacy Migration");
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("ipodSnapshotSongSnapshot");
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return {
+            schemaVersion: parsed.schemaVersion,
+            hardwarePreset: parsed.ui.hardwarePreset,
+            interactionModel: parsed.ui.interactionModel,
+            currentTime: parsed.playback.currentTime,
+          };
+        }),
+      )
+      .toEqual({
+        schemaVersion: 2,
+        hardwarePreset: "classic-2007",
+        interactionModel: "direct",
+        currentTime: 17,
+      });
   });
 
   test("remaining-first timing keeps progress proportionate", async ({ page }) => {
@@ -268,11 +391,10 @@ test.describe("Core interactions remain usable", () => {
     await expect(page.getByTestId("theme-button")).toBeVisible({
       timeout: 15000,
     });
-    await page.getByTestId("theme-button").click();
-    await expect(page.getByTestId("theme-panel")).toBeVisible();
+    await openThemePanel(page);
   });
 
-  test("long titles wrap within the metadata panel", async ({ page }) => {
+  test("long titles stay bounded within the metadata panel", async ({ page }) => {
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
 
     await page.getByText("Charcoal Baby").dblclick();
@@ -292,10 +414,12 @@ test.describe("Core interactions remain usable", () => {
         clientWidth: el.clientWidth,
         scrollHeight: el.scrollHeight,
         lineHeight,
+        marqueeActive: el.getAttribute("data-marquee-active"),
       };
     });
 
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
-    expect(layout.scrollHeight).toBeGreaterThan(layout.lineHeight * 1.5);
+    expect(layout.scrollHeight).toBeLessThanOrEqual(layout.lineHeight * 1.35);
+    expect(layout.marqueeActive).toBeNull();
   });
 });

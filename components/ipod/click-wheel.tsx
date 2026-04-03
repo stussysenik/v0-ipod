@@ -2,11 +2,20 @@
 
 import { useRef, useEffect } from "react";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
+import { getSurfaceToken } from "@/lib/color-manifest";
+import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
+
+const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
 interface ClickWheelProps {
+  preset: IpodClassicPresetDefinition;
   playClick: () => void;
   onSeek: (direction: number) => void;
   onCenterClick?: () => void;
+  onMenuPress?: () => void;
+  onPreviousPress?: () => void;
+  onNextPress?: () => void;
+  onPlayPausePress?: () => void;
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
@@ -14,9 +23,14 @@ interface ClickWheelProps {
 }
 
 export function ClickWheel({
+  preset,
   playClick,
   onSeek,
   onCenterClick,
+  onMenuPress,
+  onPreviousPress,
+  onNextPress,
+  onPlayPausePress,
   className,
   style,
   disabled = false,
@@ -24,11 +38,21 @@ export function ClickWheel({
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const wheelShadow = exportSafe
-    ? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
-    : "0 16px 24px -24px rgba(0,0,0,0.34), 0 8px 16px -18px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.06)";
+    ? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
+    : "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
   const centerShadow = exportSafe
-    ? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
-    : "0 8px 14px -12px rgba(0,0,0,0.48), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95)";
+    ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
+    : "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
+  const wheelBorder = getSurfaceToken("wheel.border");
+  const wheelGradientFrom = getSurfaceToken("wheel.gradient.from");
+  const wheelGradientVia = getSurfaceToken("wheel.gradient.via");
+  const wheelGradientTo = getSurfaceToken("wheel.gradient.to");
+  const wheelCenterBorder = getSurfaceToken("wheel.center.border");
+  const wheelCenterFrom = getSurfaceToken("wheel.center.from");
+  const wheelCenterVia = getSurfaceToken("wheel.center.via");
+  const wheelCenterTo = getSurfaceToken("wheel.center.to");
+  const wheelLabelColor = getSurfaceToken("wheel.label");
+  const wheelTokens = preset.wheel;
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -93,95 +117,173 @@ export function ClickWheel({
     };
   }, [onSeek, playClick, disabled]);
 
+  const handleControlPress = (callback?: () => void) => {
+    if (disabled) return;
+    playClick();
+    callback?.();
+  };
+
   return (
     <div
       ref={wheelRef}
-      className={`relative w-[240px] h-[240px] touch-none rounded-full ${disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${className}`}
-      style={style}
+      className={`relative touch-none rounded-full ${disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${className}`}
+      style={{
+        width: wheelTokens.size,
+        height: wheelTokens.size,
+        ...style,
+      }}
     >
-      {/* Wheel Surface - Clean Matte Look */}
+      {/* Wheel Surface */}
       <div
-        className="absolute inset-0 rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#F0F0F0]"
-        style={{ boxShadow: wheelShadow }}
+        className="absolute inset-0 rounded-full border"
+        style={{
+          borderColor: wheelBorder,
+          backgroundImage: `linear-gradient(180deg, ${wheelGradientFrom}, ${wheelGradientVia}, ${wheelGradientTo})`,
+          boxShadow: wheelShadow,
+        }}
         data-export-layer="wheel"
+        data-testid="click-wheel"
       >
-        {/* Subtle analog sheen and bevel */}
         <div
-          className="absolute inset-0 rounded-full pointer-events-none"
+          className="pointer-events-none absolute inset-[2px] rounded-full"
           style={{
             background:
-              "radial-gradient(circle at 32% 24%, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.24) 34%, rgba(0,0,0,0.04) 100%)",
+              "radial-gradient(circle at 34% 22%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 32%, rgba(255,255,255,0) 56%)",
           }}
         />
+        <div className="pointer-events-none absolute inset-[3px] rounded-full border border-white/45" />
         <div
-          className="absolute inset-[1px] rounded-full pointer-events-none"
+          className="pointer-events-none absolute inset-x-[18%] bottom-[11%] h-[12%] rounded-full opacity-20"
           style={{
             background:
-              "conic-gradient(from 225deg, rgba(0,0,0,0.05), rgba(255,255,255,0.1), rgba(0,0,0,0.02), rgba(255,255,255,0.08), rgba(0,0,0,0.05))",
-            mixBlendMode: exportSafe ? "normal" : "soft-light",
-            opacity: 0.45,
+              "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.045) 100%)",
           }}
         />
-        <div
-          className="absolute inset-[8%] rounded-full pointer-events-none opacity-60"
-          style={{
-            background:
-              "conic-gradient(from 214deg, rgba(255,255,255,0.12) 0deg, rgba(255,255,255,0) 74deg, rgba(0,0,0,0.05) 190deg, rgba(255,255,255,0.08) 296deg, rgba(255,255,255,0.12) 360deg)",
-          }}
-        />
-        <div
-          className="absolute left-[18%] top-[10%] h-[20%] w-[48%] rounded-full pointer-events-none opacity-45"
-          style={{
-            background:
-              "linear-gradient(170deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0) 72%)",
-          }}
-        />
-        <div className="absolute inset-[3px] rounded-full border border-white/65 pointer-events-none" />
-        <div className="absolute inset-[31%] rounded-full border border-black/[0.045] pointer-events-none" />
 
         {/* Button Labels */}
-        <div className="absolute top-[12%] left-1/2 -translate-x-1/2 text-[12px] font-bold text-[#C7C7C7] tracking-widest uppercase pointer-events-none font-sans">
+        <button
+          type="button"
+          data-testid="click-wheel-menu-button"
+          className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent p-0 uppercase font-sans leading-none"
+          style={{
+            top: wheelTokens.menuTopInset,
+            color: wheelLabelColor,
+            fontSize: wheelTokens.labelFontSize,
+            fontWeight: 700,
+            letterSpacing: wheelTokens.labelTracking,
+            fontFamily: WHEEL_FONT_FAMILY,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleControlPress(onMenuPress);
+          }}
+          disabled={disabled}
+          aria-label="Menu"
+        >
           Menu
-        </div>
+        </button>
 
-        {/* Play/Pause Button - Adjusted SVG to fix overlap */}
-        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 text-[#C7C7C7] pointer-events-none flex gap-1 items-center">
-          <Play className="w-4 h-4 fill-current" />
-          <Pause className="w-4 h-4 fill-current" />
-        </div>
+        <button
+          type="button"
+          data-testid="click-wheel-playpause-button"
+          className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 bg-transparent p-0 leading-none"
+          style={{
+            bottom: wheelTokens.bottomInset,
+            color: wheelLabelColor,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleControlPress(onPlayPausePress);
+          }}
+          disabled={disabled}
+          aria-label="Play or pause"
+        >
+          <Play
+            className="fill-current"
+            style={{ width: wheelTokens.playPauseIconSize, height: wheelTokens.playPauseIconSize }}
+          />
+          <Pause
+            className="fill-current"
+            style={{ width: wheelTokens.playPauseIconSize, height: wheelTokens.playPauseIconSize }}
+          />
+        </button>
 
-        <div className="absolute left-[12%] top-1/2 -translate-y-1/2 text-[#C7C7C7] pointer-events-none">
-          <SkipBack className="w-5 h-5 fill-current" />
-        </div>
-        <div className="absolute right-[12%] top-1/2 -translate-y-1/2 text-[#C7C7C7] pointer-events-none">
-          <SkipForward className="w-5 h-5 fill-current" />
-        </div>
+        <button
+          type="button"
+          data-testid="click-wheel-prev-button"
+          className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent p-0 leading-none"
+          style={{
+            left: wheelTokens.sideInset,
+            color: wheelLabelColor,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleControlPress(onPreviousPress);
+          }}
+          disabled={disabled}
+          aria-label="Previous"
+        >
+          <SkipBack
+            className="fill-current"
+            style={{ width: wheelTokens.sideIconSize, height: wheelTokens.sideIconSize }}
+          />
+        </button>
+        <button
+          type="button"
+          data-testid="click-wheel-next-button"
+          className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent p-0 leading-none"
+          style={{
+            right: wheelTokens.sideInset,
+            color: wheelLabelColor,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleControlPress(onNextPress);
+          }}
+          disabled={disabled}
+          aria-label="Next"
+        >
+          <SkipForward
+            className="fill-current"
+            style={{ width: wheelTokens.sideIconSize, height: wheelTokens.sideIconSize }}
+          />
+        </button>
       </div>
 
-      {/* Center halo ring */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[96px] h-[96px] rounded-full border border-black/[0.05] pointer-events-none" />
-
-      {/* Center Button */}
       <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84px] h-[84px] rounded-full bg-gradient-to-b from-[#F9F9F9] to-[#ECECEC] transition-transform z-20 border border-[#E6E6E6] ${
-          disabled ? "cursor-default" : "active:scale-95 cursor-pointer"
+        className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-transform ${
+          disabled ? "cursor-default" : "cursor-pointer active:scale-[0.97]"
         }`}
-        style={{ boxShadow: centerShadow }}
+        style={{
+          width: wheelTokens.centerSize,
+          height: wheelTokens.centerSize,
+          borderColor: wheelCenterBorder,
+          backgroundImage: `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
+          boxShadow: centerShadow,
+        }}
         data-export-layer="wheel-center"
+        data-testid="click-wheel-center"
         onClick={(e) => {
           e.stopPropagation();
-          if (disabled) return;
-          playClick();
-          onCenterClick && onCenterClick();
+          handleControlPress(onCenterClick);
         }}
       >
         <div
+          className="pointer-events-none absolute inset-[7px] rounded-full border"
+          style={{ borderColor: "rgba(120,126,134,0.1)" }}
+          aria-hidden="true"
+        />
+        <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0) 44%)",
+              "radial-gradient(circle at 30% 22%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.12) 38%, rgba(255,255,255,0) 58%)",
             boxShadow:
-              "inset 2px 2px 4px rgba(255,255,255,0.75), inset -2px -2px 4px rgba(0,0,0,0.035)",
+              "inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -1px 2px rgba(0,0,0,0.03)",
           }}
         />
       </div>

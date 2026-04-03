@@ -8,7 +8,6 @@ import {
   Monitor,
   Smartphone,
   Check,
-
   Loader2,
   Menu,
   Pipette,
@@ -17,7 +16,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
-import { exportAnimatedGif, exportImage, type ExportStatus } from "@/lib/export-utils";
+import type { ExportStatus } from "@/lib/export-utils";
 import {
   loadMetadata,
   saveMetadata,
@@ -25,15 +24,25 @@ import {
   saveUiState,
   loadExportCounter,
   saveExportCounter,
-  type IpodViewMode,
   loadSongSnapshot,
   saveSongSnapshot,
-  type SongSnapshot,
 } from "@/lib/storage";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
 import placeholderLogo from "@/public/placeholder-logo.png";
 import { IconButton } from "@/components/ui/icon-button";
-import { ThreeDIpod } from "@/components/three/three-d-ipod";
+import dynamic from "next/dynamic";
+const ThreeDIpod = dynamic(
+  () =>
+    import("@/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-[620px] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+      </div>
+    ),
+  },
+);
 import { FixedEditorProvider } from "./fixed-editor";
 import { IpodScreen } from "./ipod-screen";
 import { AsciiIpod } from "./ascii-ipod";
@@ -41,32 +50,42 @@ import { ClickWheel } from "./click-wheel";
 import { GreyPalettePicker } from "./grey-palette-picker";
 import { HexColorInput } from "./hex-color-input";
 import type { SongMetadata } from "@/types/ipod";
-
-// Base64 click sound
-const CLICK_SOUND =
-  "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//oeBAAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBBEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBCEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBDEAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r//////////////////////////////////////////////////////////////////oeBEIAAAAABB9AAACAAACD6AAAEAAAB//////////////5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r/5w5r////////////////////////////////////////////////////////////////";
-
-const CASE_COLOR_AUTHENTIC = [
-  { label: "White (1st-3rd Gen)", value: "#FFFFFF" },
-  { label: "White (4th Gen)", value: "#F7F7F7" },
-  { label: "White (5th Gen)", value: "#F5F5F5" },
-  { label: "Black (5th Gen)", value: "#1A1A1A" },
-  { label: "Silver (Classic 6th)", value: "#D9D9D9" },
-  { label: "Black (Classic 6th)", value: "#1C1C1E" },
-  { label: "Classic Black 2008", value: "#2D2F34" },
-  { label: "U2 Black Front", value: "#111111" },
-  { label: "U2 Red Wheel", value: "#B00020" },
-];
+import {
+  DEFAULT_INTERACTION_MODEL,
+  DEFAULT_MENU_INDEX,
+  DEFAULT_OS_SCREEN,
+  DEFAULT_SELECTION_KIND,
+  SONG_SNAPSHOT_SCHEMA_VERSION,
+  type IpodInteractionModel,
+  type IpodOsScreen,
+  type IpodViewMode,
+  type SnapshotSelectionKind,
+  type SongSnapshot,
+  type IpodHardwarePresetId,
+} from "@/types/ipod-state";
+import {
+  AUTHENTIC_CASE_COLORS,
+  BACKGROUND_OKLCH_CONFIG,
+  CASE_OKLCH_CONFIG,
+  DEFAULT_BACKDROP_COLOR,
+  DEFAULT_SHELL_COLOR,
+} from "@/lib/color-manifest";
+import {
+  DEFAULT_HARDWARE_PRESET_ID,
+  IPOD_CLASSIC_PRESETS,
+  getIpodClassicPreset,
+} from "@/lib/ipod-classic-presets";
+import { formatTimecode, parseTimecode } from "@/lib/time-utils";
 
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
 const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
 const MAX_CUSTOM_COLORS = 6;
-const OKLCH_CASE_L = 0.72;
-const OKLCH_CASE_C = 0.15;
-const OKLCH_BG_L = 0.88;
-const OKLCH_BG_C = 0.07;
-const OKLCH_CASE_STEPS = 18;
-const OKLCH_BG_STEPS = 14;
+const OKLCH_CASE_L = CASE_OKLCH_CONFIG.lightness;
+const OKLCH_CASE_C = CASE_OKLCH_CONFIG.chroma;
+const OKLCH_BG_L = BACKGROUND_OKLCH_CONFIG.lightness;
+const OKLCH_BG_C = BACKGROUND_OKLCH_CONFIG.chroma;
+const OKLCH_CASE_STEPS = CASE_OKLCH_CONFIG.steps;
+const OKLCH_BG_STEPS = BACKGROUND_OKLCH_CONFIG.steps;
 const SHELL_WIDTH = 370;
 const SHELL_HEIGHT = 620;
 const SHELL_PADDING = 48;
@@ -74,6 +93,27 @@ const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
 const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | "gif";
+
+function slugifyExportSegment(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "snapshot"
+  );
+}
+
+const CLASSIC_OS_MENU_ITEMS = [
+  { id: "music", label: "Music" },
+  { id: "videos", label: "Videos" },
+  { id: "photos", label: "Photos" },
+  { id: "podcasts", label: "Podcasts" },
+  { id: "extras", label: "Extras" },
+  { id: "settings", label: "Settings" },
+  { id: "shuffle-songs", label: "Shuffle Songs" },
+  { id: "now-playing", label: "Now Playing" },
+] as const;
 
 const initialState: SongMetadata = {
   title: "Charcoal Baby",
@@ -173,6 +213,11 @@ function songReducer(state: SongMetadata, action: Action): SongMetadata {
   }
 }
 
+function clampSnapshotTime(value: number | null, duration: number): number | null {
+  if (value === null) return null;
+  return Math.min(Math.max(Math.floor(value), 0), duration);
+}
+
 export default function IPodClassic() {
   const [state, dispatch] = useReducer(songReducer, initialState);
   const hasRestoredRef = useRef(false);
@@ -192,10 +237,20 @@ export default function IPodClassic() {
 
   // View State: 'flat' (Standard 2D), 'preview' (Animated marquee), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
+  const [hardwarePreset, setHardwarePreset] =
+    useState<IpodHardwarePresetId>(DEFAULT_HARDWARE_PRESET_ID);
+  const [interactionModel, setInteractionModel] =
+    useState<IpodInteractionModel>(DEFAULT_INTERACTION_MODEL);
+  const [selectionKind, setSelectionKind] =
+    useState<SnapshotSelectionKind>(DEFAULT_SELECTION_KIND);
+  const [rangeStartTime, setRangeStartTime] = useState<number | null>(null);
+  const [rangeEndTime, setRangeEndTime] = useState<number | null>(null);
+  const [osScreen, setOsScreen] = useState<IpodOsScreen>(DEFAULT_OS_SCREEN);
+  const [osMenuIndex, setOsMenuIndex] = useState(DEFAULT_MENU_INDEX);
 
   // Customization State
-  const [skinColor, setSkinColor] = useState("#FBFBF8");
-  const [bgColor, setBgColor] = useState("#F4F4EF");
+  const [skinColor, setSkinColor] = useState(DEFAULT_SHELL_COLOR);
+  const [bgColor, setBgColor] = useState(DEFAULT_BACKDROP_COLOR);
   const [showSettings, setShowSettings] = useState(false);
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
@@ -214,11 +269,18 @@ export default function IPodClassic() {
   const [oklchBgPalette, setOklchBgPalette] = useState<
     { label: string; value: string; hue: number }[]
   >([]);
+  const [rangeStartDraft, setRangeStartDraft] = useState("");
+  const [rangeEndDraft, setRangeEndDraft] = useState("");
   const isFlatView = viewMode === "flat";
   const isPreviewView = viewMode === "preview";
   const isAsciiView = viewMode === "ascii";
+  const isAuthenticInteraction = interactionModel === "ipod-os";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
+  const activePreset = useMemo(
+    () => getIpodClassicPreset(hardwarePreset),
+    [hardwarePreset],
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const exportTargetRef = useRef<HTMLDivElement>(null); // Wrapper for export
@@ -227,7 +289,6 @@ export default function IPodClassic() {
   const toolsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    audioRef.current = new Audio(CLICK_SOUND);
     setHasEyeDropper("EyeDropper" in window);
   }, []);
 
@@ -235,8 +296,22 @@ export default function IPodClassic() {
     if (typeof window === "undefined") return;
     if (!supportsOklch()) return;
     setOklchReady(true);
-    setOklchCasePalette(buildOklchPalette(OKLCH_CASE_STEPS, OKLCH_CASE_L, OKLCH_CASE_C));
-    setOklchBgPalette(buildOklchPalette(OKLCH_BG_STEPS, OKLCH_BG_L, OKLCH_BG_C, 30));
+    setOklchCasePalette(
+      buildOklchPalette(
+        OKLCH_CASE_STEPS,
+        OKLCH_CASE_L,
+        OKLCH_CASE_C,
+        CASE_OKLCH_CONFIG.hueOffset,
+      ),
+    );
+    setOklchBgPalette(
+      buildOklchPalette(
+        OKLCH_BG_STEPS,
+        OKLCH_BG_L,
+        OKLCH_BG_C,
+        BACKGROUND_OKLCH_CONFIG.hueOffset,
+      ),
+    );
   }, []);
 
   useEffect(() => {
@@ -271,6 +346,27 @@ export default function IPodClassic() {
     if (savedUi.viewMode) {
       setViewMode(savedUi.viewMode);
     }
+    if (savedUi.hardwarePreset) {
+      setHardwarePreset(savedUi.hardwarePreset);
+    }
+    if (savedUi.interactionModel) {
+      setInteractionModel(savedUi.interactionModel);
+    }
+    if (savedUi.selectionKind) {
+      setSelectionKind(savedUi.selectionKind);
+    }
+    if (savedUi.rangeStartTime !== undefined) {
+      setRangeStartTime(savedUi.rangeStartTime);
+    }
+    if (savedUi.rangeEndTime !== undefined) {
+      setRangeEndTime(savedUi.rangeEndTime);
+    }
+    if (savedUi.osScreen) {
+      setOsScreen(savedUi.osScreen);
+    }
+    if (typeof savedUi.menuIndex === "number") {
+      setOsMenuIndex(savedUi.menuIndex);
+    }
   }, []);
 
   useEffect(() => {
@@ -285,17 +381,68 @@ export default function IPodClassic() {
 
   useEffect(() => {
     if (!hasRestoredUiRef.current) return;
-    saveUiState({ skinColor, bgColor, viewMode });
-  }, [skinColor, bgColor, viewMode]);
+    saveUiState({
+      skinColor,
+      bgColor,
+      viewMode,
+      hardwarePreset,
+      interactionModel,
+      selectionKind,
+      rangeStartTime,
+      rangeEndTime,
+      osScreen,
+      menuIndex: osMenuIndex,
+    });
+  }, [
+    skinColor,
+    bgColor,
+    viewMode,
+    hardwarePreset,
+    interactionModel,
+    selectionKind,
+    rangeStartTime,
+    rangeEndTime,
+    osScreen,
+    osMenuIndex,
+  ]);
 
   useEffect(() => {
-    if (isFlatView) return;
+    if (isFlatView && !isAuthenticInteraction) return;
     const activeElement = document.activeElement;
     if (activeElement instanceof HTMLElement) {
       activeElement.blur();
     }
     window.getSelection?.()?.removeAllRanges();
-  }, [isFlatView]);
+  }, [isFlatView, isAuthenticInteraction]);
+
+  useEffect(() => {
+    if (selectionKind !== "range") {
+      if (rangeStartTime !== null) setRangeStartTime(null);
+      if (rangeEndTime !== null) setRangeEndTime(null);
+      return;
+    }
+
+    const nextStart = clampSnapshotTime(rangeStartTime ?? state.currentTime, state.duration);
+    const nextEnd = clampSnapshotTime(
+      Math.max(rangeEndTime ?? state.currentTime + 15, nextStart ?? 0),
+      state.duration,
+    );
+
+    if (nextStart !== rangeStartTime) {
+      setRangeStartTime(nextStart);
+    }
+    if (nextEnd !== rangeEndTime) {
+      setRangeEndTime(nextEnd);
+    }
+  }, [selectionKind, rangeStartTime, rangeEndTime, state.currentTime, state.duration]);
+
+  useEffect(() => {
+    setRangeStartDraft(selectionKind === "range" ? formatTimecode(rangeStartTime) : "");
+  }, [selectionKind, rangeStartTime]);
+
+  useEffect(() => {
+    setRangeEndDraft(selectionKind === "range" ? formatTimecode(rangeEndTime) : "");
+  }, [selectionKind, rangeEndTime]);
 
   useEffect(() => {
     if (!showSettings && !isToolboxVisible) return;
@@ -366,10 +513,11 @@ export default function IPodClassic() {
   }, [savedBgColors]);
 
   const playClick = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/click.mp3");
     }
+    audioRef.current.currentTime = 0;
+    audioRef.current.play().catch(() => {});
   }, []);
 
   const clearSoftNotice = useCallback(() => {
@@ -431,6 +579,76 @@ export default function IPodClassic() {
     [state.currentTime],
   );
 
+  const cycleOsMenu = useCallback((direction: number) => {
+    setOsMenuIndex((prev) => {
+      const total = CLASSIC_OS_MENU_ITEMS.length;
+      return (prev + direction + total) % total;
+    });
+  }, []);
+
+  const handleWheelSeek = useCallback(
+    (direction: number) => {
+      if (isAuthenticInteraction && osScreen === "menu") {
+        cycleOsMenu(direction > 0 ? 1 : -1);
+        return;
+      }
+      handleSeek(direction);
+    },
+    [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen],
+  );
+
+  const handleHardwarePresetChange = useCallback(
+    (nextPresetId: IpodHardwarePresetId) => {
+      const nextPreset = getIpodClassicPreset(nextPresetId);
+      setHardwarePreset(nextPresetId);
+      setSkinColor(nextPreset.defaultShellColor);
+      setBgColor(nextPreset.defaultBackdropColor);
+    },
+    [],
+  );
+
+  const handleInteractionModelChange = useCallback((nextModel: IpodInteractionModel) => {
+    clearSoftNotice();
+    setInteractionModel(nextModel);
+    if (nextModel === "ipod-os") {
+      setOsScreen("menu");
+      return;
+    }
+    setOsScreen("now-playing");
+  }, [clearSoftNotice]);
+
+  const handleSelectionKindChange = useCallback(
+    (nextKind: SnapshotSelectionKind) => {
+      setSelectionKind(nextKind);
+      if (nextKind === "range") {
+        setRangeStartTime((prev) => prev ?? state.currentTime);
+        setRangeEndTime((prev) => prev ?? Math.min(state.duration, state.currentTime + 15));
+      }
+    },
+    [state.currentTime, state.duration],
+  );
+
+  const commitRangeInput = useCallback(
+    (target: "start" | "end", draftValue: string) => {
+      const parsed = parseTimecode(draftValue);
+      if (parsed === null) {
+        if (target === "start") {
+          setRangeStartDraft(formatTimecode(rangeStartTime));
+        } else {
+          setRangeEndDraft(formatTimecode(rangeEndTime));
+        }
+        return;
+      }
+
+      if (target === "start") {
+        setRangeStartTime(clampSnapshotTime(parsed, state.duration));
+        return;
+      }
+      setRangeEndTime(clampSnapshotTime(parsed, state.duration));
+    },
+    [rangeEndTime, rangeStartTime, state.duration],
+  );
+
   const formatExportId = useCallback(
     (counter: number) =>
       String(Math.max(0, Math.floor(counter))).padStart(EXPORT_COUNTER_PAD, "0"),
@@ -438,13 +656,17 @@ export default function IPodClassic() {
   );
 
   const buildExportSlug = useCallback(
-    () =>
-      state.title
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "snapshot",
-    [state.title],
+    () => {
+      const screenContext = interactionModel === "ipod-os" ? osScreen : "now-playing";
+      return [
+        hardwarePreset,
+        interactionModel,
+        screenContext,
+        selectionKind,
+        slugifyExportSegment(state.title),
+      ].join("-");
+    },
+    [hardwarePreset, interactionModel, osScreen, selectionKind, state.title],
   );
 
   const completeSuccessfulExport = useCallback(
@@ -465,8 +687,8 @@ export default function IPodClassic() {
     }, 1500);
   }, []);
 
-  const handlePngExportRef = useRef<() => void>();
-  const handleGifExportRef = useRef<() => void>();
+  const handlePngExportRef = useRef<(() => void) | null>(null);
+  const handleGifExportRef = useRef<(() => void) | null>(null);
 
   const handlePngExport = useCallback(async () => {
     if (exportStatus !== "idle") return;
@@ -497,6 +719,7 @@ export default function IPodClassic() {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
       console.info("[export] starting flat export", { filename });
+      const { exportImage } = await import("@/lib/export-utils");
       const result = await exportImage(exportTargetRef.current, {
         filename,
         backgroundColor: bgColor,
@@ -575,6 +798,7 @@ export default function IPodClassic() {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
       console.info("[gif-export] starting preview export", { filename });
+      const { exportAnimatedGif } = await import("@/lib/export-utils");
       const result = await exportAnimatedGif(exportTargetRef.current, {
         filename,
         backgroundColor: bgColor,
@@ -630,30 +854,6 @@ export default function IPodClassic() {
     handleGifExportRef.current = handleGifExport;
   }, [handleGifExport]);
 
-  const screenComponent = isAsciiView ? (
-    <AsciiIpod state={state} />
-  ) : (
-    <IpodScreen
-      state={state}
-      dispatch={dispatch}
-      playClick={playClick}
-      isEditable={isFlatView && !isExportCapturing}
-      exportSafe={isExportCapturing}
-      titlePreview={isPreviewView && !isExportCapturing}
-      titleCaptureReady={isPreviewView || activeExportKind === "gif"}
-      onTitleOverflowChange={setTitleCanMarquee}
-    />
-  );
-
-  const wheelComponent = (
-    <ClickWheel
-      playClick={playClick}
-      onSeek={handleSeek}
-      disabled={!isFlatView}
-      exportSafe={isExportCapturing}
-    />
-  );
-
   const saveCustomColor = useCallback((target: "case" | "bg", rawColor: string) => {
     const color = rawColor.toUpperCase();
     if (target === "case") {
@@ -688,11 +888,153 @@ export default function IPodClassic() {
     [saveCustomColor],
   );
 
+  const handleOsMenuSelect = useCallback(() => {
+    const activeItem = CLASSIC_OS_MENU_ITEMS[osMenuIndex];
+    if (!activeItem) return;
+
+    switch (activeItem.id) {
+      case "music":
+      case "now-playing":
+      case "shuffle-songs":
+        setOsScreen("now-playing");
+        return;
+      case "settings":
+        if (isCompactToolbox) {
+          setIsToolboxOpen(true);
+        }
+        setShowSettings(true);
+        return;
+      default:
+        showSoftNotice(`${activeItem.label} is queued for the fuller OS pass`);
+    }
+  }, [isCompactToolbox, osMenuIndex, showSoftNotice]);
+
+  const handleMenuButtonPress = useCallback(() => {
+    if (!isAuthenticInteraction) return;
+    setOsScreen("menu");
+  }, [isAuthenticInteraction]);
+
+  const handlePreviousButtonPress = useCallback(() => {
+    if (isAuthenticInteraction && osScreen === "menu") {
+      cycleOsMenu(-1);
+      return;
+    }
+    handleSeek(-1);
+  }, [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen]);
+
+  const handleNextButtonPress = useCallback(() => {
+    if (isAuthenticInteraction && osScreen === "menu") {
+      cycleOsMenu(1);
+      return;
+    }
+    handleSeek(1);
+  }, [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen]);
+
+  const handlePlayPauseButtonPress = useCallback(() => {
+    if (isAuthenticInteraction && osScreen === "menu") {
+      setOsScreen("now-playing");
+      return;
+    }
+    showSoftNotice("Playback remains visual in this build");
+  }, [isAuthenticInteraction, osScreen, showSoftNotice]);
+
+  const buildSongSnapshot = useCallback(
+    (): SongSnapshot => ({
+      schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
+      metadata: state,
+      ui: {
+        skinColor,
+        bgColor,
+        viewMode,
+        hardwarePreset,
+        interactionModel,
+        selectionKind,
+        rangeStartTime: selectionKind === "range" ? rangeStartTime : null,
+        rangeEndTime: selectionKind === "range" ? rangeEndTime : null,
+        osScreen,
+        menuIndex: osMenuIndex,
+      },
+      playback: {
+        currentTime: state.currentTime,
+        duration: state.duration,
+        selectionKind,
+        rangeStartTime: selectionKind === "range" ? rangeStartTime : null,
+        rangeEndTime: selectionKind === "range" ? rangeEndTime : null,
+      },
+    }),
+    [
+      bgColor,
+      hardwarePreset,
+      interactionModel,
+      osMenuIndex,
+      osScreen,
+      rangeEndTime,
+      rangeStartTime,
+      selectionKind,
+      skinColor,
+      state,
+      viewMode,
+    ],
+  );
+
+  const screenComponent = isAsciiView ? (
+    <AsciiIpod state={state} />
+  ) : (
+    <IpodScreen
+      preset={activePreset}
+      state={state}
+      dispatch={dispatch}
+      playClick={playClick}
+      interactionModel={interactionModel}
+      osScreen={osScreen}
+      osMenuItems={CLASSIC_OS_MENU_ITEMS}
+      osMenuIndex={osMenuIndex}
+      isEditable={isFlatView && !isExportCapturing && !isAuthenticInteraction}
+      exportSafe={isExportCapturing}
+      titlePreview={isPreviewView && !isExportCapturing}
+      titleCaptureReady={isPreviewView || activeExportKind === "gif"}
+      onTitleOverflowChange={setTitleCanMarquee}
+    />
+  );
+
+  const wheelComponent = (
+    <ClickWheel
+      preset={activePreset}
+      playClick={playClick}
+      onSeek={handleWheelSeek}
+      onCenterClick={
+        isAuthenticInteraction && osScreen === "menu" ? handleOsMenuSelect : undefined
+      }
+      onMenuPress={handleMenuButtonPress}
+      onPreviousPress={handlePreviousButtonPress}
+      onNextPress={handleNextButtonPress}
+      onPlayPausePress={handlePlayPauseButtonPress}
+      disabled={
+        isExportCapturing || isAsciiView || (!isFlatView && !isAuthenticInteraction)
+      }
+      exportSafe={isExportCapturing}
+    />
+  );
+
   const applySongSnapshot = useCallback((snapshot: SongSnapshot) => {
-    dispatch({ type: "RESTORE_ALL", payload: snapshot.metadata });
+    dispatch({
+      type: "RESTORE_ALL",
+      payload: {
+        ...snapshot.metadata,
+        currentTime: snapshot.playback.currentTime,
+        duration: snapshot.playback.duration,
+      },
+    });
     setSkinColor(snapshot.ui.skinColor);
     setBgColor(snapshot.ui.bgColor);
     setViewMode(snapshot.ui.viewMode);
+    setHardwarePreset(snapshot.ui.hardwarePreset);
+    setInteractionModel(snapshot.ui.interactionModel);
+    setSelectionKind(snapshot.playback.selectionKind);
+    setRangeStartTime(snapshot.playback.rangeStartTime);
+    setRangeEndTime(snapshot.playback.rangeEndTime);
+    setOsScreen(snapshot.ui.osScreen);
+    setOsMenuIndex(snapshot.ui.menuIndex);
     setShowSettings(false);
   }, []);
 
@@ -704,20 +1046,9 @@ export default function IPodClassic() {
       clearNotice: true,
     });
     playClick();
-    saveSongSnapshot({
-      metadata: state,
-      ui: { skinColor, bgColor, viewMode },
-    });
+    saveSongSnapshot(buildSongSnapshot());
     showSoftNotice("Snapshot saved");
-  }, [
-    playClick,
-    state,
-    skinColor,
-    bgColor,
-    viewMode,
-    showSoftNotice,
-    resetInteractionChrome,
-  ]);
+  }, [buildSongSnapshot, playClick, showSoftNotice, resetInteractionChrome]);
 
   const handleLoadSnapshot = useCallback(() => {
     resetInteractionChrome({
@@ -730,6 +1061,7 @@ export default function IPodClassic() {
     const persisted = loadSongSnapshot();
     if (persisted) {
       applySongSnapshot(persisted);
+      saveSongSnapshot(persisted);
       showSoftNotice("Snapshot loaded");
       return;
     }
@@ -804,8 +1136,8 @@ export default function IPodClassic() {
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
   const shellShadow = isExportCapturing
-    ? "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)"
-    : "0 34px 54px -28px rgba(0,0,0,0.48), 0 14px 26px -18px rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+    ? "0 0 0 1px rgba(82,88,97,0.12), 0 14px 20px -22px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
+    : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.12), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
@@ -852,8 +1184,71 @@ export default function IPodClassic() {
               {showSettings && (
                 <div
                   data-testid="theme-panel"
-                  className="z-20 absolute top-0 right-14 max-h-[min(78dvh,42rem)] overflow-y-auto overscroll-contain bg-[#F2F2F0]/95 p-4 backdrop-blur-sm rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] w-[280px] animate-in slide-in-from-right-2 border border-[#D5D7DA] max-sm:right-0 max-sm:bottom-14 max-sm:top-auto max-sm:w-[min(92vw,320px)] max-sm:max-h-[min(60dvh,28rem)]"
+                  className="z-20 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)] overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in slide-in-from-right-2 max-sm:left-1/2 max-sm:right-auto max-sm:top-auto max-sm:bottom-14 max-sm:w-[min(94vw,340px)] max-sm:max-h-[min(52dvh,24rem)] max-sm:-translate-x-1/2"
                 >
+                  <div className="mb-4">
+                    <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
+                      Revision Attempt
+                    </h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {IPOD_CLASSIC_PRESETS.map((presetOption) => (
+                        <button
+                          key={presetOption.id}
+                          type="button"
+                          data-testid={`hardware-preset-${presetOption.id}-button`}
+                          aria-pressed={hardwarePreset === presetOption.id}
+                          onClick={() => handleHardwarePresetChange(presetOption.id)}
+                          className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                            hardwarePreset === presetOption.id
+                              ? "border-[#111827] bg-white/90 shadow-[inset_0_0_0_1px_rgba(17,24,39,0.08)]"
+                              : "border-[#C8CDD3] bg-white/65 hover:bg-white/80"
+                          }`}
+                        >
+                          <div className="text-[11px] font-semibold text-[#111827]">
+                            {presetOption.label}
+                          </div>
+                          <div className="mt-0.5 text-[10px] text-[#6B7280]">
+                            {presetOption.notes}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
+                      Interaction
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        data-testid="interaction-mode-direct-button"
+                        aria-pressed={interactionModel === "direct"}
+                        onClick={() => handleInteractionModelChange("direct")}
+                        className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                          interactionModel === "direct"
+                            ? "border-[#111827] bg-white/90 text-[#111827]"
+                            : "border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80"
+                        }`}
+                      >
+                        Direct Edit
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="interaction-mode-ipod-os-button"
+                        aria-pressed={interactionModel === "ipod-os"}
+                        onClick={() => handleInteractionModelChange("ipod-os")}
+                        className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                          interactionModel === "ipod-os"
+                            ? "border-[#111827] bg-white/90 text-[#111827]"
+                            : "border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80"
+                        }`}
+                      >
+                        iPod OS
+                      </button>
+                    </div>
+                  </div>
+
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
                     Case Color
                   </h3>
@@ -862,7 +1257,7 @@ export default function IPodClassic() {
                       Authentic Apple Releases
                     </h4>
                     <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-                      {CASE_COLOR_AUTHENTIC.map((c) => (
+                      {AUTHENTIC_CASE_COLORS.map((c) => (
                         <button
                           key={c.value}
                           onClick={() => setSkinColor(c.value)}
@@ -895,7 +1290,11 @@ export default function IPodClassic() {
                           <button
                             key={swatch.hue}
                             onClick={() => {
-                              const hex = oklchToHex(OKLCH_CASE_L, OKLCH_CASE_C, swatch.hue);
+                              const hex = oklchToHex(
+                                OKLCH_CASE_L,
+                                OKLCH_CASE_C,
+                                swatch.hue,
+                              );
                               if (!hex) return;
                               setSkinColor(hex);
                               saveCustomColor("case", hex);
@@ -1039,6 +1438,84 @@ export default function IPodClassic() {
                     <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
                       Snapshot
                     </h4>
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        data-testid="snapshot-selection-moment-button"
+                        aria-pressed={selectionKind === "moment"}
+                        onClick={() => handleSelectionKindChange("moment")}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                          selectionKind === "moment"
+                            ? "border-[#111827] bg-white/90 text-[#111827]"
+                            : "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
+                        }`}
+                      >
+                        Exact Moment
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="snapshot-selection-range-button"
+                        aria-pressed={selectionKind === "range"}
+                        onClick={() => handleSelectionKindChange("range")}
+                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                          selectionKind === "range"
+                            ? "border-[#111827] bg-white/90 text-[#111827]"
+                            : "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
+                        }`}
+                      >
+                        Range
+                      </button>
+                    </div>
+
+                    {selectionKind === "range" && (
+                      <div className="mb-3 grid grid-cols-2 gap-2">
+                        <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
+                          Start
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            data-testid="snapshot-range-start-input"
+                            value={rangeStartDraft}
+                            onChange={(event) => setRangeStartDraft(event.target.value)}
+                            onBlur={() => commitRangeInput("start", rangeStartDraft)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                commitRangeInput("start", rangeStartDraft);
+                              }
+                            }}
+                            className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
+                          End
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            data-testid="snapshot-range-end-input"
+                            value={rangeEndDraft}
+                            onChange={(event) => setRangeEndDraft(event.target.value)}
+                            onBlur={() => commitRangeInput("end", rangeEndDraft)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                commitRangeInput("end", rangeEndDraft);
+                              }
+                            }}
+                            className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
+                          />
+                        </label>
+                      </div>
+                    )}
+
+                    <div className="mb-3 rounded-lg border border-[#D5D7DA] bg-white/60 px-3 py-2 text-[10px] text-[#4F555D]">
+                      <div className="font-semibold text-[#111827]">
+                        {activePreset.label} · {interactionModel === "direct" ? "Direct Edit" : "iPod OS"}
+                      </div>
+                      <div className="mt-0.5">
+                        {selectionKind === "range"
+                          ? `Range ${formatTimecode(rangeStartTime)} to ${formatTimecode(rangeEndTime)}`
+                          : `Moment ${formatTimecode(state.currentTime)}`}
+                      </div>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -1066,28 +1543,30 @@ export default function IPodClassic() {
             <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
               <IconButton
                 icon={<Smartphone className="w-5 h-5" />}
-                label="Flat View"
+                label="Flat"
                 data-testid="flat-view-button"
                 isActive={viewMode === "flat"}
                 onClick={() => handleViewModeChange("flat")}
               />
               <IconButton
-                icon={<Box className="w-5 h-5" />}
-                label="3D Experience"
-                data-testid="three-d-view-button"
-                isActive={viewMode === "3d"}
-                onClick={() => handleViewModeChange("3d")}
-              />
-              <IconButton
                 icon={<Eye className="w-5 h-5" />}
-                label="Preview Mode"
+                label="Preview"
                 data-testid="preview-view-button"
                 isActive={viewMode === "preview"}
                 onClick={() => handleViewModeChange("preview")}
               />
               <IconButton
+                icon={<Box className="w-5 h-5" />}
+                label="3D Experience"
+                badge="WIP"
+                data-testid="three-d-view-button"
+                isActive={viewMode === "3d"}
+                onClick={() => handleViewModeChange("3d")}
+              />
+              <IconButton
                 icon={<Monitor className="w-5 h-5" />}
                 label="Focus Mode"
+                badge="WIP"
                 data-testid="focus-view-button"
                 isActive={viewMode === "focus"}
                 onClick={() => handleViewModeChange("focus")}
@@ -1095,6 +1574,7 @@ export default function IPodClassic() {
               <IconButton
                 icon={<Terminal className="w-5 h-5" />}
                 label="ASCII Mode"
+                badge="WIP"
                 data-testid="ascii-view-button"
                 isActive={viewMode === "ascii"}
                 onClick={() => handleViewModeChange("ascii")}
@@ -1135,7 +1615,7 @@ export default function IPodClassic() {
                     : ""
               } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
             />
-            {(isPreviewView || isAsciiView || gifBusy) && (
+            {(isPreviewView || gifBusy) && (
               <IconButton
                 icon={
                   activeExportKind === "gif" && exportStatus === "success" ? (
@@ -1153,14 +1633,12 @@ export default function IPodClassic() {
                       ? "Encoding GIF..."
                       : activeExportKind === "gif" && exportStatus === "success"
                         ? "Done!"
-                        : isAsciiView
-                          ? "Export ASCII GIF"
-                          : "Export Animated GIF"
+                        : "Export Animated GIF"
                 }
                 onClick={handleGifExport}
                 data-testid="gif-export-button"
                 contrast={true}
-                disabled={(!isPreviewView && !isAsciiView) || exportStatus !== "idle"}
+                disabled={!isPreviewView || exportStatus !== "idle"}
                 className={`transition-colors duration-300 ${
                   activeExportKind === "gif" && exportStatus === "success"
                     ? "bg-green-500 hover:bg-green-600 border-none"
@@ -1244,19 +1722,38 @@ export default function IPodClassic() {
                 }}
               >
                 <div
-                  className="relative w-[370px] h-[620px] rounded-[36px] border border-white/45 transition-all duration-300 flex flex-col items-center justify-between p-6"
+                  className="relative flex h-[620px] w-[370px] flex-col items-center border border-white/45 transition-all duration-300"
                   style={{
                     backgroundColor: skinColor,
                     borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
                     boxShadow: shellShadow,
+                    borderRadius: activePreset.shell.radius,
+                    paddingLeft: activePreset.shell.paddingX,
+                    paddingRight: activePreset.shell.paddingX,
+                    paddingTop: activePreset.shell.paddingTop,
+                    paddingBottom: activePreset.shell.paddingBottom,
                   }}
                   data-export-layer="shell"
                 >
+                  <div
+                    className="pointer-events-none absolute inset-[1px]"
+                    aria-hidden="true"
+                    style={{
+                      borderRadius: activePreset.shell.innerRadius,
+                      background:
+                        "radial-gradient(circle at 22% 10%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 18%, rgba(255,255,255,0) 42%, rgba(0,0,0,0.02) 100%)",
+                    }}
+                  />
                   {/* SCREEN AREA */}
-                  <div className="w-full">{screenComponent}</div>
+                  <div className="relative z-10 flex w-full justify-center">
+                    {screenComponent}
+                  </div>
 
                   {/* CONTROL AREA */}
-                  <div className="flex-1 flex items-center justify-center relative -mt-4">
+                  <div
+                    className="relative z-10 flex justify-center"
+                    style={{ marginTop: activePreset.shell.controlMarginTop }}
+                  >
                     {wheelComponent}
                   </div>
                 </div>

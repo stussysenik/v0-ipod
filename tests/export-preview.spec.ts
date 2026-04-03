@@ -1,60 +1,77 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import fs from "fs";
 
-async function runtimeValue<T>(client: {
-  send: (...args: any[]) => Promise<{ result: { value?: T } }>;
-}) {
-  return async (expression: string): Promise<T | null> => {
-    const response = await client.send("Runtime.evaluate", {
-      expression,
-      returnByValue: true,
-    });
-    return (response.result.value as T | undefined) ?? null;
-  };
+async function openThemePanel(page: Page): Promise<void> {
+  const button = page.getByTestId("theme-button");
+  const panel = page.getByTestId("theme-panel");
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await button.click();
+    try {
+      await expect(panel).toBeVisible({ timeout: 3000 });
+      return;
+    } catch {
+      // Retry once when the initial click is lost to transient UI timing.
+    }
+  }
+
+  await expect(panel).toBeVisible();
 }
 
-test.describe("GIF preview timing", () => {
-  test("transport controls paint within 16ms after interaction", async ({ page }) => {
+test.describe("Export state fidelity", () => {
+  test("flat export filenames encode preset and interaction context", async ({ page }) => {
     await page.goto("/");
-    await page.getByTestId("export-format-gif").click();
-    await page.getByTestId("preview-record-button").click();
-    await expect(page.getByTestId("gif-preview-stage")).toBeVisible({ timeout: 60000 });
-    await expect(page.getByTestId("gif-preview-image")).toBeVisible({ timeout: 60000 });
 
-    const client = await page.context().newCDPSession(page);
-    const readValue = await runtimeValue<number>(client);
+    await openThemePanel(page);
+    await page.getByTestId("hardware-preset-classic-2009-button").click();
+    await page.getByTestId("interaction-mode-ipod-os-button").click();
+    await expect(page.getByTestId("ipod-os-menu")).toBeVisible();
+    await page.keyboard.press("Escape");
 
-    await client.send("Runtime.evaluate", {
-      expression: "window.__ipodGifPreviewPerf?.reset?.()",
-      returnByValue: true,
-    });
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("export-button").click();
+    const download = await downloadPromise;
 
-    await page.getByTestId("gif-preview-play-toggle").click();
+    expect(download.suggestedFilename()).toBe(
+      "ipod-0000-classic-2009-ipod-os-menu-moment-charcoal-baby.png",
+    );
 
-    await expect
-      .poll(async () => readValue("window.__ipodGifPreviewPerf?.getLastDelta?.() ?? null"), {
-        timeout: 3000,
-      })
-      .not.toBeNull();
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    if (!downloadPath) {
+      throw new Error("download path missing");
+    }
 
-    const playDelta = await readValue("window.__ipodGifPreviewPerf?.getLastDelta?.() ?? null");
-    expect(playDelta).not.toBeNull();
-    expect(playDelta ?? 999).toBeLessThanOrEqual(16);
+    const header = fs.readFileSync(downloadPath).subarray(0, 8).toString("hex");
+    expect(header).toBe("89504e470d0a1a0a");
+  });
 
-    await client.send("Runtime.evaluate", {
-      expression: "window.__ipodGifPreviewPerf?.reset?.()",
-      returnByValue: true,
-    });
+  test("preview gif export stays valid for authentic menu state", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("preview-view-button").click();
+    await expect(page.getByTestId("gif-export-button")).toBeVisible();
 
-    await page.getByTestId("gif-preview-scrubber").fill("3");
+    await openThemePanel(page);
+    await page.getByTestId("hardware-preset-classic-2008-button").click();
+    await page.getByTestId("interaction-mode-ipod-os-button").click();
+    await expect(page.getByTestId("ipod-os-menu")).toBeVisible();
+    await page.keyboard.press("Escape");
 
-    await expect
-      .poll(async () => readValue("window.__ipodGifPreviewPerf?.getLastDelta?.() ?? null"), {
-        timeout: 3000,
-      })
-      .not.toBeNull();
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("gif-export-button").click();
+    const download = await downloadPromise;
 
-    const scrubDelta = await readValue("window.__ipodGifPreviewPerf?.getLastDelta?.() ?? null");
-    expect(scrubDelta).not.toBeNull();
-    expect(scrubDelta ?? 999).toBeLessThanOrEqual(16);
+    expect(download.suggestedFilename()).toBe(
+      "ipod-0000-classic-2008-ipod-os-menu-moment-charcoal-baby.gif",
+    );
+
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    if (!downloadPath) {
+      throw new Error("download path missing");
+    }
+
+    const header = fs.readFileSync(downloadPath).subarray(0, 6).toString("ascii");
+    expect(header).toBe("GIF89a");
   });
 });

@@ -21,11 +21,14 @@ const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
 const EXPORT_SHELL_CONTOUR =
   "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
 
-interface NextDataWindow extends Window {
+type NextDataWindow = Window & {
   __NEXT_DATA__?: {
     buildId?: string;
   };
-}
+};
+
+type GifPaletteColor = [number, number, number] | [number, number, number, number];
+type GifPalette = GifPaletteColor[];
 
 const waitForMs = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
@@ -71,7 +74,7 @@ function getMaxVisualSettleDelayMs(element: HTMLElement): number {
     return 0;
   }
 
-  const nodes: HTMLElement[] = [element, ...Array.from(element.querySelectorAll("*"))];
+  const nodes = [element, ...Array.from(element.querySelectorAll<HTMLElement>("*"))];
   let maxMs = 0;
 
   for (const node of nodes) {
@@ -307,6 +310,16 @@ function resolveRuntimeBuildContext() {
   return { deployVersion, buildId };
 }
 
+function toGifPalette(palette: number[][]): GifPalette {
+  return palette as GifPalette;
+}
+
+function removeExportNode(node: HTMLElement | null): void {
+  if (node) {
+    node.remove();
+  }
+}
+
 function dataUrlToBlob(dataUrl: string): Blob {
   const [meta, data] = dataUrl.split(",");
   const mime =
@@ -366,7 +379,9 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
     const contentWidth =
       parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
       Math.ceil(leadCopy?.scrollWidth ?? leadCopy?.getBoundingClientRect().width ?? 0);
-    const gapWidthFromDataset = parseNumericDataAttribute(container.dataset.marqueeGapWidth);
+    const gapWidthFromDataset = parseNumericDataAttribute(
+      container.dataset.marqueeGapWidth,
+    );
     const spacerWidth = Math.ceil(
       spacer?.getBoundingClientRect().width ?? spacer?.offsetWidth ?? 0,
     );
@@ -405,25 +420,26 @@ function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): numbe
   for (const node of nodes) {
     const frame = getMarqueeFrame(node.metrics, elapsedMs);
     node.track.style.transform = `translateX(${frame.translateX}px)`;
-    cycleDurationMs = Math.max(
-      cycleDurationMs,
-      getMarqueeCycleDurationMs(node.metrics),
-    );
+    cycleDurationMs = Math.max(cycleDurationMs, getMarqueeCycleDurationMs(node.metrics));
   }
 
   // 2. Animate progress bar and timestamps (standard iPod screen)
-  const progressSection = root.querySelector<HTMLElement>('[data-testid="screen-progress"]');
+  const progressSection = root.querySelector<HTMLElement>(
+    '[data-testid="screen-progress"]',
+  );
   const elapsedEl = root.querySelector<HTMLElement>('[data-testid="elapsed-time"]');
   const remainingEl = root.querySelector<HTMLElement>('[data-testid="remaining-time"]');
   const progressFill = root.querySelector<HTMLElement>('[data-testid="progress-fill"]');
 
   const duration = parseNumericDataAttribute(
     progressSection?.dataset.exportDuration ??
-    root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset.exportDuration,
+      root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset
+        .exportDuration,
   );
   const baseCurrentTime = parseNumericDataAttribute(
     elapsedEl?.dataset.exportTimeValue ??
-    root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset.exportTimeValue,
+      root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset
+        .exportTimeValue,
   );
 
   if (duration !== null && duration > 0 && baseCurrentTime !== null) {
@@ -1059,7 +1075,9 @@ export async function exportAnimatedGif(
     await waitForNextPaint();
 
     const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
-    const targetHeight = Math.ceil(exportNode.offsetHeight || exportNode.clientHeight || 1);
+    const targetHeight = Math.ceil(
+      exportNode.offsetHeight || exportNode.clientHeight || 1,
+    );
     const detectedCycleDurationMs = applyAnimationFrameToClone(exportNode, 0);
     const captureDurationMs = Math.max(detectedCycleDurationMs, 4000);
     const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
@@ -1075,7 +1093,7 @@ export async function exportAnimatedGif(
     onStatusChange?.("encoding");
 
     const encoder = GIFEncoder();
-    let palette: number[][] | null = null;
+    let palette: GifPalette | null = null;
     let captureWidth = 0;
     let captureHeight = 0;
 
@@ -1108,10 +1126,10 @@ export async function exportAnimatedGif(
       );
 
       if (!palette) {
-        palette = quantize(rgba, 256, { format: "rgba4444" });
+        palette = toGifPalette(quantize(rgba, 256));
       }
 
-      const indexed = applyPalette(rgba, palette, "rgba4444");
+      const indexed = applyPalette(rgba, palette);
       encoder.writeFrame(indexed, captureWidth, captureHeight, {
         palette,
         repeat: frameIndex === 0 ? 0 : undefined,
@@ -1180,7 +1198,7 @@ export async function exportAnimatedGif(
     if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
       preparedPopup.close();
     }
-    exportNode?.remove();
+    removeExportNode(exportNode);
     if (existingExportAttribute === null) {
       element.removeAttribute(EXPORT_ATTRIBUTE);
     } else {
@@ -1541,7 +1559,7 @@ export async function exportImage(
     if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
       preparedPopup.close();
     }
-    exportNode?.remove();
+    removeExportNode(exportNode);
     if (existingExportAttribute === null) {
       element.removeAttribute(EXPORT_ATTRIBUTE);
     } else {

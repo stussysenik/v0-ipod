@@ -13,6 +13,10 @@ interface EditableTextProps {
   editLabel?: string;
   dataTestId?: string;
   animate?: boolean;
+  preview?: boolean;
+  captureReady?: boolean;
+  onOverflowChange?: (overflow: boolean) => void;
+  singleLine?: boolean;
 }
 
 export function EditableText({
@@ -23,6 +27,10 @@ export function EditableText({
   editLabel = "Edit text",
   dataTestId,
   animate = false,
+  preview = false,
+  captureReady = false,
+  onOverflowChange,
+  singleLine = false,
 }: EditableTextProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -104,17 +112,25 @@ export function EditableText({
       className={`block w-full min-w-0 max-w-full rounded px-0.5 -mx-0.5 transition-colors [overflow-wrap:anywhere] [hyphens:auto] ${
         disabled ? "cursor-default" : "cursor-text hover:bg-black/5 hover:text-blue-900"
       } ${className}`}
-      data-testid={dataTestId}
+      data-testid={animate ? undefined : dataTestId}
     >
       {animate ? (
         <MarqueeText
           text={value}
           className="w-full"
-          textClassName="whitespace-nowrap"
-          autoPlay
+          dataTestId={dataTestId}
+          preview={preview}
+          captureReady={captureReady}
+          onOverflowChange={onOverflowChange}
         />
       ) : (
-        <span className="block w-full whitespace-normal break-words [overflow-wrap:anywhere] [hyphens:auto]">
+        <span
+          className={`block w-full ${
+            singleLine
+              ? "overflow-hidden text-ellipsis whitespace-nowrap"
+              : "whitespace-normal break-words [overflow-wrap:anywhere] [hyphens:auto]"
+          }`}
+        >
           {value}
         </span>
       )}

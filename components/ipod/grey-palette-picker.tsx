@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus } from "lucide-react";
+import {
+  BACKGROUND_CURATED_FAVORITES,
+  CASE_CURATED_FAVORITES,
+  colorManifest,
+} from "@/lib/color-manifest";
 
 // --- Data Model ---
 
@@ -14,47 +19,49 @@ interface GreyFamily {
 }
 
 const GREY_FAMILIES: Record<GreyFamilyId, GreyFamily> = {
-  neutral:  { label: "Neutral",  hue: 0,   chroma: 0     },
-  warm:     { label: "Warm",     hue: 85,  chroma: 0.008 },
-  cool:     { label: "Cool",     hue: 260, chroma: 0.008 },
-  greige:   { label: "Greige",   hue: 100, chroma: 0.006 },
-  sage:     { label: "Sage",     hue: 135, chroma: 0.010 },
-  lavender: { label: "Lavender", hue: 290, chroma: 0.012 },
+  neutral: {
+    label: colorManifest.greyFamilies.neutral.label,
+    hue: colorManifest.greyFamilies.neutral.oklchHue,
+    chroma: colorManifest.greyFamilies.neutral.oklchChroma,
+  },
+  warm: {
+    label: colorManifest.greyFamilies.warm.label,
+    hue: colorManifest.greyFamilies.warm.oklchHue,
+    chroma: colorManifest.greyFamilies.warm.oklchChroma,
+  },
+  cool: {
+    label: colorManifest.greyFamilies.cool.label,
+    hue: colorManifest.greyFamilies.cool.oklchHue,
+    chroma: colorManifest.greyFamilies.cool.oklchChroma,
+  },
+  greige: {
+    label: colorManifest.greyFamilies.greige.label,
+    hue: colorManifest.greyFamilies.greige.oklchHue,
+    chroma: colorManifest.greyFamilies.greige.oklchChroma,
+  },
+  sage: {
+    label: colorManifest.greyFamilies.sage.label,
+    hue: colorManifest.greyFamilies.sage.oklchHue,
+    chroma: colorManifest.greyFamilies.sage.oklchChroma,
+  },
+  lavender: {
+    label: colorManifest.greyFamilies.lavender.label,
+    hue: colorManifest.greyFamilies.lavender.oklchHue,
+    chroma: colorManifest.greyFamilies.lavender.oklchChroma,
+  },
 };
 
-const FAMILY_IDS: GreyFamilyId[] = ["neutral", "warm", "cool", "greige", "sage", "lavender"];
+const FAMILY_IDS: GreyFamilyId[] = [
+  "neutral",
+  "warm",
+  "cool",
+  "greige",
+  "sage",
+  "lavender",
+];
 
 // 23 perceptually-spaced lightness stops: denser in the mid-range
-const LIGHTNESS_STOPS = [
-  // Whites (5 stops, delta 0.025)
-  1.00, 0.975, 0.95, 0.925, 0.90,
-  // Light (5 stops, delta 0.04)
-  0.88, 0.84, 0.80, 0.76, 0.72,
-  // Mid (5 stops, delta 0.05)
-  0.68, 0.63, 0.58, 0.53, 0.48,
-  // Dark (5 stops, delta 0.05)
-  0.42, 0.37, 0.32, 0.27, 0.22,
-  // Charcoal (3 stops)
-  0.15, 0.08, 0.00,
-];
-
-// Curated favorites from the old preset arrays
-const CASE_CURATED = [
-  { label: "Bright White", value: "#FBFBF8" },
-  { label: "Pearl Gray", value: "#E4E4E6" },
-  { label: "Silver", value: "#D9DADC" },
-  { label: "Brushed Steel", value: "#C7C9CD" },
-  { label: "Gunmetal", value: "#535861" },
-  { label: "Black", value: "#1B1B1F" },
-];
-
-const BG_CURATED = [
-  { label: "Paper White", value: "#F4F4EF" },
-  { label: "Studio Warm", value: "#E5E5E5" },
-  { label: "Cloud Gray", value: "#DBDCDD" },
-  { label: "Slate", value: "#A9AFB6" },
-  { label: "Night Graphite", value: "#5F6772" },
-];
+const LIGHTNESS_STOPS = colorManifest.greyLightnessStops;
 
 const GREY_FAMILY_STORAGE_KEY = "ipodSnapshotGreyFamily";
 
@@ -171,7 +178,8 @@ export function GreyPalettePicker({
     [ramp],
   );
 
-  const curated = target === "case" ? CASE_CURATED : BG_CURATED;
+  const curated =
+    target === "case" ? CASE_CURATED_FAVORITES : BACKGROUND_CURATED_FAVORITES;
   const isCase = target === "case";
   const swatchSize = isCase ? "w-7 h-7" : "w-6 h-6";
   const curatedSize = "w-5 h-5";
@@ -185,14 +193,19 @@ export function GreyPalettePicker({
       </h4>
 
       {/* A. Undertone Tab Bar */}
-      <div className="flex gap-1 mb-2 px-0.5" role="tablist" aria-label="Grey undertone families">
+      <div
+        className="flex gap-1 mb-2 px-0.5"
+        role="tablist"
+        aria-label="Grey undertone families"
+      >
         {FAMILY_IDS.map((id) => {
           const f = GREY_FAMILIES[id];
           const isActive = id === activeFamily;
           // Mid-grey dot at L=0.50 for visual reference
-          const dotHex = oklchReady && f.chroma > 0
-            ? oklchToHex(0.5, f.chroma, f.hue) ?? "#808080"
-            : "#808080";
+          const dotHex =
+            oklchReady && f.chroma > 0
+              ? (oklchToHex(0.5, f.chroma, f.hue) ?? "#808080")
+              : "#808080";
 
           return (
             <button
@@ -229,7 +242,9 @@ export function GreyPalettePicker({
         key={activeFamily}
         className="animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
       >
-        <div className={`grid ${isCase ? "grid-cols-7 sm:grid-cols-8" : "grid-cols-7 sm:grid-cols-8"} gap-1.5 mb-2`}>
+        <div
+          className={`grid ${isCase ? "grid-cols-7 sm:grid-cols-8" : "grid-cols-7 sm:grid-cols-8"} gap-1.5 mb-2`}
+        >
           {ramp.map((swatch) => {
             const isSelected = swatch.hex === currentUpper;
             return (
@@ -250,8 +265,12 @@ export function GreyPalettePicker({
             );
           })}
           {/* System Color Picker — native input, tap-friendly */}
-          <div className={`relative ${swatchSize} rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors`}>
-            <Plus className={`${isCase ? "w-4 h-4" : "w-3 h-3"} text-[#4B5563] pointer-events-none`} />
+          <div
+            className={`relative ${swatchSize} rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors`}
+          >
+            <Plus
+              className={`${isCase ? "w-4 h-4" : "w-3 h-3"} text-[#4B5563] pointer-events-none`}
+            />
             <input
               type="color"
               data-testid={isCase ? "custom-case-color-button" : "custom-bg-color-button"}
@@ -282,9 +301,7 @@ export function GreyPalettePicker({
               }}
               title={c.label}
               className={`${curatedSize} rounded-full border transition-all duration-150 ease-out hover:scale-110 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
-                isSelected
-                  ? "border-[#111827] ring-2 ring-[#CDD1D6]"
-                  : "border-[#B5BBC3]"
+                isSelected ? "border-[#111827] ring-2 ring-[#CDD1D6]" : "border-[#B5BBC3]"
               }`}
               style={{ backgroundColor: c.value }}
             />

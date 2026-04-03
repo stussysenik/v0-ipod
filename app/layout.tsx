@@ -6,8 +6,8 @@ import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
 import { BuildVersionBadge } from "@/components/build-version-badge";
 import "./globals.css";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 function resolveDeployVersion(): string {
   const explicitVersion = process.env.NEXT_PUBLIC_DEPLOY_VERSION?.trim();
@@ -76,7 +76,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-deploy-version={deployVersion}>
-      <body className={`font-sans antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
         <ServiceWorkerCleanup deployVersion={deployVersion} />
         {children}
         <BuildVersionBadge initialVersion={deployVersion} />

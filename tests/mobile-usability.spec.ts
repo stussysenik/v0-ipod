@@ -123,11 +123,13 @@ test.describe("Mobile usability", () => {
         clientWidth: el.clientWidth,
         scrollHeight: el.scrollHeight,
         lineHeight,
+        marqueeActive: el.getAttribute("data-marquee-active"),
       };
     });
 
     expect(titleLayout.scrollWidth).toBeLessThanOrEqual(titleLayout.clientWidth + 1);
-    expect(titleLayout.scrollHeight).toBeGreaterThan(titleLayout.lineHeight * 1.5);
+    expect(titleLayout.scrollHeight).toBeLessThanOrEqual(titleLayout.lineHeight * 1.35);
+    expect(titleLayout.marqueeActive).toBeNull();
 
     await page.getByTestId("toolbox-toggle-button").tap();
     await page.getByTestId("theme-button").tap();

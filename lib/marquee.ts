@@ -51,11 +51,11 @@ export function getMarqueeFrame(
   const cycleDistance = getMarqueeCycleDistance(metrics);
   const cycleDurationMs = getMarqueeCycleDurationMs(metrics);
 
-  // Initial delay - start off-screen right
+  // Initial delay - hold at the visible origin before scrolling.
   if (elapsedMs <= MARQUEE_DELAY_MS) {
     return {
       overflow,
-      translateX: metrics.containerWidth,
+      translateX: 0,
       cycleDistance,
       cycleDurationMs,
     };
