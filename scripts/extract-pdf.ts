@@ -6,7 +6,7 @@
  *   npx tsx scripts/extract-pdf.ts <pdf-path> [--output <output-dir>] [--service-url <url>]
  *
  * Prerequisites:
- *   1. Start the MinerU service: cd mineru-service && python app.py
+ *   1. Start the MinerU service: cd services/mineru && python app.py
  *   2. Run this script with a PDF path
  *
  * Examples:
@@ -44,7 +44,7 @@ Options:
 
 Prerequisites:
   Start the MinerU service first:
-    cd mineru-service && python app.py
+    cd services/mineru && python app.py
 
 Examples:
   npx tsx scripts/extract-pdf.ts document.pdf
@@ -189,7 +189,7 @@ async function main() {
 Error: MinerU service is not running at ${options.serviceUrl}
 
 Please start the service first:
-  cd mineru-service && python app.py
+  cd services/mineru && python app.py
 `)
     process.exit(1)
   }

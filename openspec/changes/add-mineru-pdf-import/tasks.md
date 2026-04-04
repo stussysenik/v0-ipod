@@ -1,5 +1,5 @@
 ## 1. Python MinerU Service Setup (Local)
-- [ ] 1.1 Create `mineru-service/` directory
+- [ ] 1.1 Create `services/mineru/` directory
 - [ ] 1.2 Create `requirements.txt` with MinerU and Flask dependencies
 - [ ] 1.3 Implement `app.py` Flask server with `/health` and `/process` endpoints
 - [ ] 1.4 Add image extraction and color palette analysis
