@@ -22,7 +22,7 @@ This integration will:
 
 - Affected specs: New `pdf-import` capability
 - Affected code:
-  - `mineru-service/` (new Python service - local only)
+  - `services/mineru/` (new Python service - local only)
   - `app/api/pdf/upload/route.ts` (new API route)
   - `components/pdf-upload-modal.tsx` (new)
   - `components/ipod-classic.tsx` (modified - apply 2D refinements)
