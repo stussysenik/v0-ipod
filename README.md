@@ -16,7 +16,7 @@
 ![Tests](https://img.shields.io/badge/Tests-Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
-**[🎵 Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)** • **[📖 Docs](#documentation)** • **[🤝 Contributing](./CONTRIBUTING.md)** • **[🏗️ Architecture](./ARCHITECTURE.md)**
+**[🎵 Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)** • **[📖 Project Docs](./docs/README.md)** • **[🤝 Contributing](./CONTRIBUTING.md)** • **[🏗️ Architecture](./docs/ARCHITECTURE.md)**
 
 *Drag & drop your song and create an iPod-like digital footprint*
 
@@ -185,28 +185,26 @@ graph LR
 
 ```
 v0-ipod/
-├── app/                      # Next.js 15 app directory
-│   ├── layout.tsx           # Root layout with PWA manifest
-│   └── page.tsx             # Main iPod component page
-├── components/
-│   ├── ipod/
-│   │   ├── ipod-classic.tsx        # Main iPod container
-│   │   ├── ipod-screen.tsx         # Screen display logic
-│   │   ├── ascii-ipod.tsx          # ASCII mode renderer
-│   │   ├── grey-palette-picker.tsx # OKLCH grey palette picker
-│   │   └── click-wheel.tsx         # Navigation controls
-│   ├── three/
-│   │   └── three-d-ipod.tsx        # 3D iPod with Three.js
-│   └── ui/                          # Radix UI components
-├── lib/
-│   ├── export-utils.ts              # PNG/GIF export pipeline
-│   ├── storage.ts                   # localStorage persistence
-│   └── utils.ts                     # Utility functions
-├── tests/
-│   ├── interactions.spec.ts         # E2E interaction tests
-│   └── mobile-usability.spec.ts     # Mobile responsiveness tests
-└── public/
-    └── manifest.json                # PWA manifest
+├── app/                      # Next.js app router entrypoints
+├── components/               # UI and iPod-specific components
+│   ├── ipod/                 # 2D iPod experience and editors
+│   ├── three/                # 3D renderer and post-processing
+│   └── ui/                   # Shared UI primitives
+├── docs/                     # Project docs, notes, research, and archives
+│   ├── README.md             # Docs index
+│   ├── DOCS.md               # Interaction architecture notes
+│   ├── PROGRESS.md           # Changelog-style progress log
+│   ├── NEXT-TASK.md          # Follow-up ideas
+│   ├── ARCHITECTURE.md       # Deep technical architecture guide
+│   ├── research/             # Reference PDFs and design research
+│   ├── notes/                # Misc working notes
+│   └── archive/              # One-off outputs and archived artifacts
+├── lib/                      # Export, storage, and utility logic
+├── openspec/                 # Specs and change proposals
+├── public/                   # Static assets and screenshots
+├── scripts/                  # Local scripts and verification helpers
+├── tests/                    # Playwright coverage
+└── types/                    # Shared TypeScript types
 ```
 
 ---
@@ -312,7 +310,8 @@ Full spectrum color picker with infinite color possibilities
 ## 📖 Documentation
 
 - **[Contributing Guide](./CONTRIBUTING.md)**: Learn about semantic commits and development workflow
-- **[Architecture Deep-Dive](./ARCHITECTURE.md)**: Technical implementation details and system design
+- **[Architecture Deep-Dive](./docs/ARCHITECTURE.md)**: Technical implementation details and system design
+- **[Design Research PDF](./docs/research/Enhancing%20iPod%20Classic%20Visual%20Realism.pdf)**: Source reference material for visual fidelity work
 - **[Pull Request Template](./.github/PULL_REQUEST_TEMPLATE.md)**: Contribution guidelines
 
 ---

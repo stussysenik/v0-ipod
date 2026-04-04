@@ -6,6 +6,7 @@ interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   isActive?: boolean;
   contrast?: boolean;
   badge?: string;
+  badgeMode?: "pill" | "sr-only" | "superscript";
 }
 
 export function IconButton({
@@ -14,9 +15,15 @@ export function IconButton({
   isActive,
   contrast,
   badge,
+  badgeMode = "pill",
   className = "",
   ...props
 }: IconButtonProps) {
+  const superscriptBadgeClass =
+    isActive || contrast
+      ? "text-white/54 [text-shadow:0_1px_1px_rgba(0,0,0,0.18)]"
+      : "text-[#7E848C] [text-shadow:0_1px_0_rgba(255,255,255,0.9)]";
+
   return (
     <button
       type="button"
@@ -36,12 +43,22 @@ export function IconButton({
       `}
       {...props}
     >
-      {icon}
-      {badge && (
+      <span className="relative inline-flex items-center justify-center">
+        <span className="inline-flex items-center justify-center">{icon}</span>
+        {badge && badgeMode === "superscript" && (
+          <span
+            className={`pointer-events-none absolute left-[66%] top-0 -translate-y-[42%] text-[5px] font-semibold uppercase tracking-[0.08em] leading-none ${superscriptBadgeClass}`}
+          >
+            {badge}
+          </span>
+        )}
+      </span>
+      {badge && badgeMode === "pill" && (
         <span className="pointer-events-none absolute -right-1 -top-1 rounded-full border border-[#E8B65A] bg-[#FFF4CC] px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-[0.12em] text-[#7A5612] shadow-[0_4px_10px_rgba(0,0,0,0.12)]">
           {badge}
         </span>
       )}
+      {badge && badgeMode === "sr-only" && <span className="sr-only">{badge}</span>}
       {label && (
         <span className="pointer-events-none absolute right-full mr-2 hidden whitespace-nowrap rounded-full border border-black/10 bg-white/92 px-2.5 py-1 text-[11px] font-medium text-black/72 opacity-0 shadow-[0_8px_16px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 sm:block">
           {label}

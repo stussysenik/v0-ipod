@@ -2,7 +2,7 @@
 
 ## Interaction Architecture
 
-Core interaction state lives in `components/ipod-classic.tsx`:
+Core interaction state lives in `components/ipod/ipod-classic.tsx`:
 - View mode (`flat`, `focus`, `3d`)
 - Theme panel visibility
 - Case/background colors

@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useRef, useCallback } from "react";
+import { screenChromeTokens } from "@/lib/design-system";
 
 interface ProgressBarProps {
   currentTime: number;
@@ -66,6 +67,7 @@ export function ProgressBar({
 
   const safeDuration = Math.max(duration, 1);
   const progress = Math.min(Math.max((currentTime / safeDuration) * 100, 0), 100);
+  const progressTokens = screenChromeTokens.progress;
 
   return (
     <div className="w-full">
@@ -82,11 +84,9 @@ export function ProgressBar({
         style={{
           height: trackHeight,
           borderRadius: Math.max(1, Math.round(trackHeight / 3)),
-          borderColor: "#AEAEAB",
-          background:
-            "linear-gradient(180deg, rgba(251,251,249,1) 0%, rgba(238,238,234,1) 100%)",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 1px 2px rgba(0,0,0,0.08)",
+          borderColor: progressTokens.trackBorder,
+          background: progressTokens.trackBackground,
+          boxShadow: progressTokens.trackInsetShadow,
           touchAction: "none",
         }}
       >
@@ -95,9 +95,8 @@ export function ProgressBar({
           className="absolute inset-y-0 left-0"
           style={{
             width: `${progress}%`,
-            backgroundImage:
-              "linear-gradient(180deg, rgba(123,195,246,1) 0%, rgba(63,145,222,1) 100%)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.26)",
+            backgroundImage: progressTokens.fillBackground,
+            boxShadow: progressTokens.fillHighlight,
           }}
         />
       </div>

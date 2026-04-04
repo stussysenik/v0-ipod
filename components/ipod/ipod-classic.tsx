@@ -237,10 +237,12 @@ export default function IPodClassic() {
 
   // View State: 'flat' (Standard 2D), 'preview' (Animated marquee), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
-  const [hardwarePreset, setHardwarePreset] =
-    useState<IpodHardwarePresetId>(DEFAULT_HARDWARE_PRESET_ID);
-  const [interactionModel, setInteractionModel] =
-    useState<IpodInteractionModel>(DEFAULT_INTERACTION_MODEL);
+  const [hardwarePreset, setHardwarePreset] = useState<IpodHardwarePresetId>(
+    DEFAULT_HARDWARE_PRESET_ID,
+  );
+  const [interactionModel, setInteractionModel] = useState<IpodInteractionModel>(
+    DEFAULT_INTERACTION_MODEL,
+  );
   const [selectionKind, setSelectionKind] =
     useState<SnapshotSelectionKind>(DEFAULT_SELECTION_KIND);
   const [rangeStartTime, setRangeStartTime] = useState<number | null>(null);
@@ -422,7 +424,10 @@ export default function IPodClassic() {
       return;
     }
 
-    const nextStart = clampSnapshotTime(rangeStartTime ?? state.currentTime, state.duration);
+    const nextStart = clampSnapshotTime(
+      rangeStartTime ?? state.currentTime,
+      state.duration,
+    );
     const nextEnd = clampSnapshotTime(
       Math.max(rangeEndTime ?? state.currentTime + 15, nextStart ?? 0),
       state.duration,
@@ -597,32 +602,34 @@ export default function IPodClassic() {
     [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen],
   );
 
-  const handleHardwarePresetChange = useCallback(
-    (nextPresetId: IpodHardwarePresetId) => {
-      const nextPreset = getIpodClassicPreset(nextPresetId);
-      setHardwarePreset(nextPresetId);
-      setSkinColor(nextPreset.defaultShellColor);
-      setBgColor(nextPreset.defaultBackdropColor);
-    },
-    [],
-  );
+  const handleHardwarePresetChange = useCallback((nextPresetId: IpodHardwarePresetId) => {
+    const nextPreset = getIpodClassicPreset(nextPresetId);
+    setHardwarePreset(nextPresetId);
+    setSkinColor(nextPreset.defaultShellColor);
+    setBgColor(nextPreset.defaultBackdropColor);
+  }, []);
 
-  const handleInteractionModelChange = useCallback((nextModel: IpodInteractionModel) => {
-    clearSoftNotice();
-    setInteractionModel(nextModel);
-    if (nextModel === "ipod-os") {
-      setOsScreen("menu");
-      return;
-    }
-    setOsScreen("now-playing");
-  }, [clearSoftNotice]);
+  const handleInteractionModelChange = useCallback(
+    (nextModel: IpodInteractionModel) => {
+      clearSoftNotice();
+      setInteractionModel(nextModel);
+      if (nextModel === "ipod-os") {
+        setOsScreen("menu");
+        return;
+      }
+      setOsScreen("now-playing");
+    },
+    [clearSoftNotice],
+  );
 
   const handleSelectionKindChange = useCallback(
     (nextKind: SnapshotSelectionKind) => {
       setSelectionKind(nextKind);
       if (nextKind === "range") {
         setRangeStartTime((prev) => prev ?? state.currentTime);
-        setRangeEndTime((prev) => prev ?? Math.min(state.duration, state.currentTime + 15));
+        setRangeEndTime(
+          (prev) => prev ?? Math.min(state.duration, state.currentTime + 15),
+        );
       }
     },
     [state.currentTime, state.duration],
@@ -655,19 +662,16 @@ export default function IPodClassic() {
     [],
   );
 
-  const buildExportSlug = useCallback(
-    () => {
-      const screenContext = interactionModel === "ipod-os" ? osScreen : "now-playing";
-      return [
-        hardwarePreset,
-        interactionModel,
-        screenContext,
-        selectionKind,
-        slugifyExportSegment(state.title),
-      ].join("-");
-    },
-    [hardwarePreset, interactionModel, osScreen, selectionKind, state.title],
-  );
+  const buildExportSlug = useCallback(() => {
+    const screenContext = interactionModel === "ipod-os" ? osScreen : "now-playing";
+    return [
+      hardwarePreset,
+      interactionModel,
+      screenContext,
+      selectionKind,
+      slugifyExportSegment(state.title),
+    ].join("-");
+  }, [hardwarePreset, interactionModel, osScreen, selectionKind, state.title]);
 
   const completeSuccessfulExport = useCallback(
     (exportId: number, notice: string) => {
@@ -1140,12 +1144,23 @@ export default function IPodClassic() {
     : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.12), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
+  const compactDockPositionClass = isToolboxVisible
+    ? "fixed right-4 top-[max(5rem,calc(50dvh-12.5rem))]"
+    : "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]";
   const toolboxDockClass = isCompactToolbox
-    ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
+    ? compactDockPositionClass
     : "fixed top-6 right-6";
   const toolboxPanelClass = isCompactToolbox
-    ? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/88 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-all duration-300 ${isToolboxVisible ? "opacity-100 translate-y-0 visible pointer-events-auto" : "opacity-0 translate-y-2 invisible pointer-events-none"}`
-    : "flex flex-col gap-3";
+    ? `flex flex-col items-center gap-3 transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
+    : "flex flex-col items-center gap-3";
+  const compactThemePanelClass =
+    "fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-20 max-h-[min(48dvh,32rem)] overflow-y-auto overscroll-contain rounded-[24px] border border-[#D6D8DC] bg-[#F1F1ED]/96 p-4 shadow-[0_24px_56px_rgba(0,0,0,0.18)] backdrop-blur-xl animate-in slide-in-from-bottom-4 duration-300";
+  const desktopThemePanelClass =
+    "z-20 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)] overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in slide-in-from-right-2";
+  const themePanelClass = isCompactToolbox
+    ? compactThemePanelClass
+    : `${desktopThemePanelClass} max-sm:left-1/2 max-sm:right-auto max-sm:top-auto max-sm:bottom-14 max-sm:w-[min(94vw,340px)] max-sm:max-h-[min(52dvh,24rem)] max-sm:-translate-x-1/2`;
+  const showCompactDockActions = !isCompactToolbox || !showSettings;
 
   return (
     <FixedEditorProvider resetKey={editorResetKey}>
@@ -1157,9 +1172,9 @@ export default function IPodClassic() {
         {/* Floating Tools UI */}
         <div
           ref={toolsRef}
-          className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+          className={`${toolboxDockClass} z-50 flex flex-col items-center gap-3 transition-all duration-300 animate-in fade-in slide-in-from-top-4 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
         >
-          {isCompactToolbox && (
+          {isCompactToolbox && !isToolboxVisible && (
             <IconButton
               icon={<Menu className="w-5 h-5" />}
               label={isToolboxVisible ? "Hide Toolbox" : "Toolbox"}
@@ -1175,17 +1190,14 @@ export default function IPodClassic() {
             <div className="relative group">
               <IconButton
                 icon={<Settings className="w-5 h-5" />}
-                label="Theme"
+                label="Settings"
                 data-testid="theme-button"
                 onClick={handleToggleSettings}
                 isActive={showSettings}
               />
 
               {showSettings && (
-                <div
-                  data-testid="theme-panel"
-                  className="z-20 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)] overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in slide-in-from-right-2 max-sm:left-1/2 max-sm:right-auto max-sm:top-auto max-sm:bottom-14 max-sm:w-[min(94vw,340px)] max-sm:max-h-[min(52dvh,24rem)] max-sm:-translate-x-1/2"
-                >
+                <div data-testid="theme-panel" className={themePanelClass}>
                   <div className="mb-4">
                     <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
                       Revision Attempt
@@ -1508,7 +1520,8 @@ export default function IPodClassic() {
 
                     <div className="mb-3 rounded-lg border border-[#D5D7DA] bg-white/60 px-3 py-2 text-[10px] text-[#4F555D]">
                       <div className="font-semibold text-[#111827]">
-                        {activePreset.label} · {interactionModel === "direct" ? "Direct Edit" : "iPod OS"}
+                        {activePreset.label} ·{" "}
+                        {interactionModel === "direct" ? "Direct Edit" : "iPod OS"}
                       </div>
                       <div className="mt-0.5">
                         {selectionKind === "range"
@@ -1539,114 +1552,132 @@ export default function IPodClassic() {
               )}
             </div>
 
-            {/* View Modes */}
-            <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
-              <IconButton
-                icon={<Smartphone className="w-5 h-5" />}
-                label="Flat"
-                data-testid="flat-view-button"
-                isActive={viewMode === "flat"}
-                onClick={() => handleViewModeChange("flat")}
-              />
-              <IconButton
-                icon={<Eye className="w-5 h-5" />}
-                label="Preview"
-                data-testid="preview-view-button"
-                isActive={viewMode === "preview"}
-                onClick={() => handleViewModeChange("preview")}
-              />
-              <IconButton
-                icon={<Box className="w-5 h-5" />}
-                label="3D Experience"
-                badge="WIP"
-                data-testid="three-d-view-button"
-                isActive={viewMode === "3d"}
-                onClick={() => handleViewModeChange("3d")}
-              />
-              <IconButton
-                icon={<Monitor className="w-5 h-5" />}
-                label="Focus Mode"
-                badge="WIP"
-                data-testid="focus-view-button"
-                isActive={viewMode === "focus"}
-                onClick={() => handleViewModeChange("focus")}
-              />
-              <IconButton
-                icon={<Terminal className="w-5 h-5" />}
-                label="ASCII Mode"
-                badge="WIP"
-                data-testid="ascii-view-button"
-                isActive={viewMode === "ascii"}
-                onClick={() => handleViewModeChange("ascii")}
-              />
-            </div>
+            {showCompactDockActions && (
+              <>
+                {/* View Modes */}
+                <div className="flex flex-col gap-2.5 rounded-[28px] border border-[#D0D4DA] bg-[#E8E8E4]/88 p-2.5 shadow-[0_16px_34px_rgba(0,0,0,0.14)] backdrop-blur-md">
+                  <div className="flex flex-col gap-2">
+                    <IconButton
+                      icon={<Smartphone className="w-5 h-5" />}
+                      label="Flat"
+                      data-testid="flat-view-button"
+                      isActive={viewMode === "flat"}
+                      onClick={() => handleViewModeChange("flat")}
+                    />
+                    <IconButton
+                      icon={<Eye className="w-5 h-5" />}
+                      label="Preview"
+                      data-testid="preview-view-button"
+                      isActive={viewMode === "preview"}
+                      onClick={() => handleViewModeChange("preview")}
+                    />
+                  </div>
+                  <div className="h-px rounded-full bg-[#D6D9DE]" aria-hidden="true" />
+                  <div className="flex flex-col gap-2">
+                    <IconButton
+                      icon={<Box className="w-5 h-5" />}
+                      label="3D Experience"
+                      badge="WIP"
+                      badgeMode="superscript"
+                      aria-label="3D Experience WIP"
+                      data-testid="three-d-view-button"
+                      isActive={viewMode === "3d"}
+                      onClick={() => handleViewModeChange("3d")}
+                      className="opacity-90"
+                    />
+                    <IconButton
+                      icon={<Monitor className="w-5 h-5" />}
+                      label="Focus Mode"
+                      badge="WIP"
+                      badgeMode="superscript"
+                      aria-label="Focus Mode WIP"
+                      data-testid="focus-view-button"
+                      isActive={viewMode === "focus"}
+                      onClick={() => handleViewModeChange("focus")}
+                      className="opacity-90"
+                    />
+                    <IconButton
+                      icon={<Terminal className="w-5 h-5" />}
+                      label="ASCII Mode"
+                      badge="WIP"
+                      badgeMode="superscript"
+                      aria-label="ASCII Mode WIP"
+                      data-testid="ascii-view-button"
+                      isActive={viewMode === "ascii"}
+                      onClick={() => handleViewModeChange("ascii")}
+                      className="opacity-90"
+                    />
+                  </div>
+                </div>
 
-            {/* Export Action */}
-            <IconButton
-              icon={
-                activeExportKind === "png" && exportStatus === "success" ? (
-                  <Check className="w-5 h-5" />
-                ) : pngBusy ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Share className="w-5 h-5" />
-                )
-              }
-              label={
-                activeExportKind === "png" && exportStatus === "preparing"
-                  ? "Preparing..."
-                  : activeExportKind === "png" && exportStatus === "sharing"
-                    ? "Sharing..."
-                    : activeExportKind === "png" && exportStatus === "success"
-                      ? "Done!"
-                      : !isFlatView
-                        ? "Flat View Only"
-                        : "Export 2D Image"
-              }
-              onClick={handlePngExport}
-              data-testid="export-button"
-              contrast={true}
-              disabled={!isFlatView || exportStatus !== "idle"}
-              className={`transition-colors duration-300 ${
-                activeExportKind === "png" && exportStatus === "success"
-                  ? "bg-green-500 hover:bg-green-600 border-none"
-                  : pngBusy
-                    ? "bg-blue-500 hover:bg-blue-600 border-none"
-                    : ""
-              } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-            />
-            {(isPreviewView || gifBusy) && (
-              <IconButton
-                icon={
-                  activeExportKind === "gif" && exportStatus === "success" ? (
-                    <Check className="w-5 h-5" />
-                  ) : gifBusy ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Film className="w-5 h-5" />
-                  )
-                }
-                label={
-                  activeExportKind === "gif" && exportStatus === "preparing"
-                    ? "Preparing..."
-                    : activeExportKind === "gif" && exportStatus === "encoding"
-                      ? "Encoding GIF..."
-                      : activeExportKind === "gif" && exportStatus === "success"
-                        ? "Done!"
-                        : "Export Animated GIF"
-                }
-                onClick={handleGifExport}
-                data-testid="gif-export-button"
-                contrast={true}
-                disabled={!isPreviewView || exportStatus !== "idle"}
-                className={`transition-colors duration-300 ${
-                  activeExportKind === "gif" && exportStatus === "success"
-                    ? "bg-green-500 hover:bg-green-600 border-none"
-                    : gifBusy
-                      ? "bg-blue-500 hover:bg-blue-600 border-none"
-                      : ""
-                } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-              />
+                {/* Export Action */}
+                <IconButton
+                  icon={
+                    activeExportKind === "png" && exportStatus === "success" ? (
+                      <Check className="w-5 h-5" />
+                    ) : pngBusy ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Share className="w-5 h-5" />
+                    )
+                  }
+                  label={
+                    activeExportKind === "png" && exportStatus === "preparing"
+                      ? "Preparing..."
+                      : activeExportKind === "png" && exportStatus === "sharing"
+                        ? "Sharing..."
+                        : activeExportKind === "png" && exportStatus === "success"
+                          ? "Done!"
+                          : !isFlatView
+                            ? "Flat View Only"
+                            : "Export 2D Image"
+                  }
+                  onClick={handlePngExport}
+                  data-testid="export-button"
+                  contrast={true}
+                  disabled={!isFlatView || exportStatus !== "idle"}
+                  className={`transition-colors duration-300 ${
+                    activeExportKind === "png" && exportStatus === "success"
+                      ? "bg-green-500 hover:bg-green-600 border-none"
+                      : pngBusy
+                        ? "bg-blue-500 hover:bg-blue-600 border-none"
+                        : ""
+                  } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
+                />
+                {(isPreviewView || gifBusy) && (
+                  <IconButton
+                    icon={
+                      activeExportKind === "gif" && exportStatus === "success" ? (
+                        <Check className="w-5 h-5" />
+                      ) : gifBusy ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Film className="w-5 h-5" />
+                      )
+                    }
+                    label={
+                      activeExportKind === "gif" && exportStatus === "preparing"
+                        ? "Preparing..."
+                        : activeExportKind === "gif" && exportStatus === "encoding"
+                          ? "Encoding GIF..."
+                          : activeExportKind === "gif" && exportStatus === "success"
+                            ? "Done!"
+                            : "Export Animated GIF"
+                    }
+                    onClick={handleGifExport}
+                    data-testid="gif-export-button"
+                    contrast={true}
+                    disabled={!isPreviewView || exportStatus !== "idle"}
+                    className={`transition-colors duration-300 ${
+                      activeExportKind === "gif" && exportStatus === "success"
+                        ? "bg-green-500 hover:bg-green-600 border-none"
+                        : gifBusy
+                          ? "bg-blue-500 hover:bg-blue-600 border-none"
+                          : ""
+                    } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>

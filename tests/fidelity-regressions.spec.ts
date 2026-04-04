@@ -53,11 +53,35 @@ test.describe("Fidelity regressions", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.getByTestId("three-d-view-button")).toContainText(/WIP|Experimental/i);
-    await expect(page.getByTestId("focus-view-button")).toContainText(/WIP|Experimental/i);
-    await expect(page.getByTestId("ascii-view-button")).toContainText(/WIP|Experimental/i);
+    await expect(page.getByTestId("three-d-view-button")).toHaveAttribute(
+      "aria-label",
+      /WIP/i,
+    );
+    await expect(page.getByTestId("focus-view-button")).toHaveAttribute(
+      "aria-label",
+      /WIP/i,
+    );
+    await expect(page.getByTestId("ascii-view-button")).toHaveAttribute(
+      "aria-label",
+      /WIP/i,
+    );
 
     await page.getByTestId("ascii-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeHidden();
+  });
+
+  test("screen chrome keeps the battery icon and removes the extra footer divider", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await expect(page.getByTestId("screen-battery")).toBeVisible();
+    await expect(page.getByTestId("screen-status-label")).toContainText("Now Playing");
+
+    const footerBorderTopWidth = await page
+      .getByTestId("screen-progress")
+      .evaluate((el) => getComputedStyle(el).borderTopWidth);
+
+    expect(footerBorderTopWidth).toBe("0px");
   });
 });

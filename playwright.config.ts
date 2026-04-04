@@ -18,6 +18,30 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: [
+        "**/web-vitals.spec.ts",
+        "**/performance-budget.spec.ts",
+        "**/mobile-usability.spec.ts",
+      ],
+    },
+    {
+      name: "mobile",
+      use: {
+        ...devices["Pixel 7"],
+        isMobile: true,
+        hasTouch: true,
+      },
+      testMatch: ["**/mobile-usability.spec.ts"],
+    },
+    {
+      name: "perf",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: [
+        "**/web-vitals.spec.ts",
+        "**/performance-budget.spec.ts",
+      ],
+      fullyParallel: false,
+      timeout: 60_000,
     },
   ],
   webServer: {

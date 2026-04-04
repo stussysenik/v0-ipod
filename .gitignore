@@ -41,3 +41,15 @@ next-env.d.ts
 
 # local test assets
 IMG_5875.PNG
+
+# Generated artifacts
+__pycache__/
+*.pyc
+playwright-report/
+test-results/
+.next/
+
+# Local assistant / deployment state
+.agents/
+.claude/
+.vercel/

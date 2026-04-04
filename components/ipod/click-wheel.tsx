@@ -41,13 +41,15 @@ export function ClickWheel({
     ? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
     : "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
   const centerShadow = exportSafe
-    ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
-    : "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
+    ? "inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
+    : "0 4px 10px -12px rgba(0,0,0,0.14), 0 1px 3px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
   const wheelBorder = getSurfaceToken("wheel.border");
   const wheelGradientFrom = getSurfaceToken("wheel.gradient.from");
   const wheelGradientVia = getSurfaceToken("wheel.gradient.via");
   const wheelGradientTo = getSurfaceToken("wheel.gradient.to");
-  const wheelCenterBorder = getSurfaceToken("wheel.center.border");
+  const wheelCenterBorderColor = exportSafe
+    ? "rgba(227,229,230,0.8)"
+    : "rgba(227,229,230,0.56)";
   const wheelCenterFrom = getSurfaceToken("wheel.center.from");
   const wheelCenterVia = getSurfaceToken("wheel.center.via");
   const wheelCenterTo = getSurfaceToken("wheel.center.to");
@@ -261,7 +263,7 @@ export function ClickWheel({
         style={{
           width: wheelTokens.centerSize,
           height: wheelTokens.centerSize,
-          borderColor: wheelCenterBorder,
+          borderColor: wheelCenterBorderColor,
           backgroundImage: `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
           boxShadow: centerShadow,
         }}
@@ -272,11 +274,6 @@ export function ClickWheel({
           handleControlPress(onCenterClick);
         }}
       >
-        <div
-          className="pointer-events-none absolute inset-[7px] rounded-full border"
-          style={{ borderColor: "rgba(120,126,134,0.1)" }}
-          aria-hidden="true"
-        />
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{

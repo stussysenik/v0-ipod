@@ -450,7 +450,7 @@ Before submitting a PR, ensure:
 - [ ] **Linting**: `npm run lint` has no errors
 - [ ] **Formatting**: `npm run format:check` passes
 - [ ] **Type checking**: `npm run type-check` succeeds
-- [ ] **Documentation**: Updated relevant docs (README, ARCHITECTURE, etc.)
+- [ ] **Documentation**: Updated relevant docs (README, docs/DOCS.md, ARCHITECTURE, etc.)
 - [ ] **Testing**: Added/updated tests for changes
 - [ ] **Mobile tested**: Verified on mobile viewport (if UI change)
 - [ ] **No breaking changes**: Or clearly marked with `!` and `BREAKING CHANGE:`
@@ -509,7 +509,7 @@ When adding a new feature:
 2. **Add types** in component file or `lib/types.ts`
 3. **Implement logic** following existing patterns
 4. **Add tests** in `tests/` directory
-5. **Update docs** in README.md and ARCHITECTURE.md
+5. **Update docs** in README.md and docs/docs/ARCHITECTURE.md
 6. **Export utilities** from index files when applicable
 
 ---

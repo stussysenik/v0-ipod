@@ -1,14 +1,17 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
 import { StarRating } from "./star-rating";
 import { ProgressBar } from "./progress-bar";
 import { ImageUpload } from "./image-upload";
+import { ScreenBattery } from "./screen-battery";
 import placeholderLogo from "@/public/placeholder-logo.png";
 import { EditableText } from "./editable-text";
 import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
 import { getSurfaceToken, getTextTokenCss } from "@/lib/color-manifest";
+import { screenChromeTokens } from "@/lib/design-system";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodInteractionModel, IpodOsScreen } from "@/types/ipod-state";
@@ -43,24 +46,6 @@ interface IpodScreenProps {
 
 const SCREEN_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
-function ScreenBattery() {
-  return (
-    <div className="flex items-center gap-px" aria-hidden="true">
-      <div className="relative h-[7px] w-[15px] rounded-[1px] border border-[#7B7B7B] bg-[#F7F7F5] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-        <div
-          className="absolute inset-y-[1px] left-[1px] rounded-[0.5px]"
-          style={{
-            width: "72%",
-            backgroundImage:
-              "linear-gradient(180deg, rgba(170,224,109,1) 0%, rgba(119,183,64,1) 100%)",
-          }}
-        />
-      </div>
-      <div className="h-[3px] w-[2px] rounded-r-[1px] bg-[#7B7B7B]" />
-    </div>
-  );
-}
-
 export function IpodScreen({
   preset,
   state,
@@ -81,16 +66,16 @@ export function IpodScreen({
   const screenTokens = preset.screen;
   const showOsMenu = interactionModel === "ipod-os" && osScreen === "menu";
   const screenShadow = exportSafe
-    ? "0 0 0 1px rgba(60,60,60,0.08)"
-    : "0 1px 1px rgba(0,0,0,0.22), 0 7px 10px -9px rgba(0,0,0,0.48)";
+    ? screenChromeTokens.frame.exportShadow
+    : screenChromeTokens.frame.liveShadow;
   const artworkShadow = exportSafe ? "none" : "0 1px 2px rgba(0,0,0,0.14)";
   const screenSurface = {
     background: `linear-gradient(180deg, ${getSurfaceToken("screen.surround.top")} 0%, ${getSurfaceToken("screen.surround.mid")} 16%, ${getSurfaceToken("screen.surround.bottom")} 100%)`,
   };
   const glassOverlay = {
     background: exportSafe
-      ? "linear-gradient(152deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.018) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.006) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.025) 100%)"
-      : "linear-gradient(152deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.022) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.03) 100%)",
+      ? screenChromeTokens.frame.glassOverlayExport
+      : screenChromeTokens.frame.glassOverlayLive,
   };
   const titleColor = getTextTokenCss("screen.title");
   const artistColor = getTextTokenCss("screen.artist");
@@ -146,14 +131,14 @@ export function IpodScreen({
       data-export-layer="screen"
       data-testid="ipod-screen"
     >
-        <div
-          className="pointer-events-none absolute inset-[1px]"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 18%, rgba(0,0,0,0.06) 100%)",
-            borderRadius: Math.max(1, screenTokens.outerRadius - 1),
-          }}
-          aria-hidden="true"
+      <div
+        className="pointer-events-none absolute inset-[1px]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 18%, rgba(0,0,0,0.06) 100%)",
+          borderRadius: Math.max(1, screenTokens.outerRadius - 1),
+        }}
+        aria-hidden="true"
       />
       <div
         className="relative h-full w-full overflow-hidden border"
@@ -170,7 +155,7 @@ export function IpodScreen({
             height: screenTokens.statusBarHeight,
             paddingInline: screenTokens.statusBarPaddingX,
             backgroundImage: `linear-gradient(180deg, ${getSurfaceToken("screen.statusbar.bg.from")}, ${getSurfaceToken("screen.statusbar.bg.to")})`,
-            borderColor: "#9B9B9B",
+            borderColor: screenChromeTokens.statusBar.divider,
           }}
         >
           <div
@@ -181,7 +166,14 @@ export function IpodScreen({
             }}
             data-testid="screen-status-label"
           >
-            {!showOsMenu && <span className="text-[7px] text-[#3B79C4]">▶</span>}
+            {!showOsMenu && (
+              <span
+                className="text-[7px]"
+                style={{ color: screenChromeTokens.statusBar.playIndicator }}
+              >
+                ▶
+              </span>
+            )}
             <span>{showOsMenu ? "iPod" : "Now Playing"}</span>
           </div>
           <ScreenBattery />
@@ -212,7 +204,11 @@ export function IpodScreen({
                     }}
                   >
                     <span>{item.label}</span>
-                    {isActive ? <span aria-hidden="true">›</span> : <span aria-hidden="true" />}
+                    {isActive ? (
+                      <span aria-hidden="true">›</span>
+                    ) : (
+                      <span aria-hidden="true" />
+                    )}
                   </div>
                 );
               })}
@@ -321,7 +317,9 @@ export function IpodScreen({
                   >
                     <EditableText
                       value={state.artist}
-                      onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
+                      onChange={(val) =>
+                        dispatch({ type: "UPDATE_ARTIST", payload: val })
+                      }
                       disabled={!isEditable}
                       className="max-w-full min-w-0"
                       editLabel="Edit artist"
@@ -389,14 +387,13 @@ export function IpodScreen({
             </div>
 
             <div
-              className="absolute left-0 right-0 border-t border-black/[0.08]"
+              className="absolute left-0 right-0"
               style={{
                 bottom: screenTokens.progressBottom,
                 height: screenTokens.progressHeight,
                 paddingInline: screenTokens.progressPaddingX,
                 paddingTop: screenTokens.progressPaddingTop,
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,248,246,0.96) 100%)",
+                background: screenChromeTokens.progress.footerBackground,
               }}
               data-testid="screen-progress"
               data-export-duration={state.duration}
@@ -421,7 +418,10 @@ export function IpodScreen({
                   fontSize: Math.max(8, screenTokens.metaFontSize + 1),
                 }}
               >
-                <div data-testid="elapsed-time" data-export-time-value={state.currentTime}>
+                <div
+                  data-testid="elapsed-time"
+                  data-export-time-value={state.currentTime}
+                >
                   <EditableTime
                     value={state.currentTime}
                     onChange={(time) => {
@@ -452,7 +452,11 @@ export function IpodScreen({
           </>
         )}
 
-        <div className="pointer-events-none absolute inset-0" style={glassOverlay} aria-hidden="true" />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={glassOverlay}
+          aria-hidden="true"
+        />
         <div
           className="pointer-events-none absolute left-[11px] top-[9px] h-[32%] w-[48%] rounded-[18px] opacity-25"
           style={{

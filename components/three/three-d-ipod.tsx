@@ -72,7 +72,7 @@ function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps
     // Subtle floating animation for screen glow
     if (screenGroupRef.current) {
       const time = state.clock.elapsedTime;
-      screenGroupRef.current.children.forEach((child, i) => {
+      screenGroupRef.current.children.forEach((child) => {
         if (
           child instanceof THREE.Mesh &&
           child.material instanceof THREE.MeshPhysicalMaterial
@@ -424,16 +424,9 @@ function SceneCapture({
     onCapture(captureHighRes);
     // Signal that the scene is ready for capture
     onReady?.();
-  }, [gl, scene, camera, onCapture, onReady]);
+  }, [gl, scene, camera, onCapture, onReady, modelResetRef]);
 
   return null;
-}
-
-// Use a mutable ref to store the capture function
-interface ThreeDIpodInternalProps extends ThreeDIpodProps {
-  captureRef?: React.MutableRefObject<
-    ((w?: number, h?: number) => Promise<Blob | null>) | null
-  >;
 }
 
 export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, ref) => {
