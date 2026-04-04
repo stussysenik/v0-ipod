@@ -1,5 +1,4 @@
 import { toBlob, toCanvas, toPng } from "html-to-image";
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
 import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@/lib/marquee";
 
 export type ExportStatus =
@@ -1015,6 +1014,7 @@ export async function exportAnimatedGif(
 
     onStatusChange?.("encoding");
 
+    const { GIFEncoder, applyPalette, quantize } = await import("gifenc");
     const encoder = GIFEncoder();
     let palette: number[][] | null = null;
     let captureWidth = 0;
@@ -1049,10 +1049,10 @@ export async function exportAnimatedGif(
       );
 
       if (!palette) {
-        palette = quantize(rgba, 256, { format: "rgba4444" });
+        palette = quantize(rgba, 256);
       }
 
-      const indexed = applyPalette(rgba, palette, "rgba4444");
+      const indexed = applyPalette(rgba, palette);
       encoder.writeFrame(indexed, captureWidth, captureHeight, {
         palette,
         repeat: frameIndex === 0 ? 0 : undefined,

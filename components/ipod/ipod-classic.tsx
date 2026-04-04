@@ -1262,14 +1262,14 @@ export default function IPodClassic() {
         )}
 
         {isPreviewView && exportStatus === "idle" && (
-          <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
-            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
+          <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="rounded-full border border-black/5 bg-[#F2F2F0]/85 px-5 py-2.5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.12)] backdrop-blur-md backdrop-saturate-150 transition-all cursor-default hover:scale-[1.02]">
+              <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#4F555D]">
                 Marquee Preview
               </div>
-              <div className="mt-0.5 text-[12px] font-medium text-black/70">
+              <div className="mt-1 text-[12px] font-medium text-[#111827]">
                 {titleCanMarquee
-                  ? "The title is crawling. Export Animated GIF to capture it."
+                  ? "Title will scroll in the GIF along with progress and time."
                   : "This title fits. Use a longer song title to trigger the crawl."}
               </div>
             </div>
