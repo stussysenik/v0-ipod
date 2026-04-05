@@ -37,6 +37,19 @@
 - **Progress Seeking**: Scrub through your track with visual feedback
 - **Track Numbers**: Full album context with track X of Y
 
+### 🕹️ **Interaction Modes**
+
+| Control | Menu Screen | Now Playing Screen |
+|---------|------------|-------------------|
+| **Wheel rotation** | Scroll through menu items | Seek through track |
+| **Center button** | Select highlighted item | Toggle edit mode |
+| **Menu button** | — | Return to menu |
+| **Play/Pause** | Jump to Now Playing | Visual feedback |
+| **Prev / Next** | Cycle menu items | Seek -5s / +5s |
+
+- **iPod OS Mode** (default): Full menu navigation with 9 items (Music, Videos, Photos, Podcasts, Extras, Settings, Shuffle Songs, Now Playing, About)
+- **Center button on Now Playing**: Toggles edit mode — tap to make title, artist, album, rating, and time editable, tap again to lock
+
 ### 🎨 **View Modes**
 ```mermaid
 graph LR

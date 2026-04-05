@@ -119,6 +119,23 @@ graph TD
 - File upload handling (drag & drop + file input)
 - View mode switching
 - Color customization orchestration
+- iPod OS menu navigation and screen routing
+
+**iPod OS Interaction Flow:**
+
+```
+Menu Screen                          Now Playing Screen
+┌─────────────────┐                 ┌─────────────────┐
+│ Wheel: cycle     │──center click──▶│ Wheel: seek ±5s  │
+│ Next/Prev: cycle │                 │ Next/Prev: seek  │
+│ Play/Pause: →NP  │                 │ Center: toggle   │
+│ Center: select   │◀──menu button──│   edit mode      │
+└─────────────────┘                 └─────────────────┘
+```
+
+- Center button on Now Playing toggles `isOsNowPlayingEditable`
+- Menu button resets edit state and returns to menu
+- Edit mode enables inline editing of title, artist, album, rating, and time
 
 **Key State:**
 

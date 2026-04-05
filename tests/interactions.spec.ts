@@ -23,6 +23,12 @@ async function openThemePanel(page: Page): Promise<void> {
 
 test.describe("Core interactions remain usable", () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "ipodSnapshotUiState",
+        JSON.stringify({ interactionModel: "direct", osScreen: "now-playing" }),
+      );
+    });
     await page.goto("/");
     await expect(page.getByTestId("theme-button")).toBeVisible();
   });
@@ -47,7 +53,7 @@ test.describe("Core interactions remain usable", () => {
   test("interaction chrome resets to a clean state", async ({ page }) => {
     await openThemePanel(page);
 
-    await page.getByText("Charcoal Baby").click();
+    await page.getByText("Chamakay").click();
     await expect(page.getByTestId("theme-panel")).toBeHidden();
 
     await openThemePanel(page);
@@ -96,7 +102,7 @@ test.describe("Core interactions remain usable", () => {
     await openThemePanel(page);
     await page.getByTestId("load-song-snapshot-button").click();
 
-    await expect(page.getByText("Charcoal Baby")).toBeVisible();
+    await expect(page.getByText("Chamakay")).toBeVisible();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
       "src",
       /placeholder-logo\.png/,
@@ -104,7 +110,7 @@ test.describe("Core interactions remain usable", () => {
     await expect(page.getByTestId("elapsed-time")).toContainText("0:05");
 
     await page.reload();
-    await expect(page.getByText("Charcoal Baby")).toBeVisible();
+    await expect(page.getByText("Chamakay")).toBeVisible();
     await expect(page.getByTestId("artwork-image")).toHaveAttribute(
       "src",
       /placeholder-logo\.png/,
@@ -113,7 +119,7 @@ test.describe("Core interactions remain usable", () => {
   });
 
   test("save snapshot stores edited data and load restores it", async ({ page }) => {
-    await page.getByText("Charcoal Baby").dblclick();
+    await page.getByText("Chamakay").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill("Snapshot QA");
@@ -246,7 +252,7 @@ test.describe("Core interactions remain usable", () => {
       .toEqual({
         schemaVersion: 2,
         hardwarePreset: "classic-2007",
-        interactionModel: "direct",
+        interactionModel: "ipod-os",
         currentTime: 17,
       });
   });
@@ -302,7 +308,7 @@ test.describe("Core interactions remain usable", () => {
   });
 
   test("preview mode animates short titles and exports gif", async ({ page }) => {
-    await page.getByText("Charcoal Baby").dblclick();
+    await page.getByText("Chamakay").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill("Glow");
@@ -344,7 +350,7 @@ test.describe("Core interactions remain usable", () => {
   test("preview marquee animates long titles and exports a gif", async ({ page }) => {
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
 
-    await page.getByText("Charcoal Baby").dblclick();
+    await page.getByText("Chamakay").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill(longTitle);
@@ -397,7 +403,7 @@ test.describe("Core interactions remain usable", () => {
   test("long titles stay bounded within the metadata panel", async ({ page }) => {
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
 
-    await page.getByText("Charcoal Baby").dblclick();
+    await page.getByText("Chamakay").dblclick();
     const titleInput = page.locator('input[type="text"]').first();
     await expect(titleInput).toBeVisible();
     await titleInput.fill(longTitle);

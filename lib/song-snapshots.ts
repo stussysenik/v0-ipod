@@ -10,15 +10,15 @@ import { DEFAULT_HARDWARE_PRESET_ID } from "@/lib/ipod-classic-presets";
 export const TEST_SONG_SNAPSHOT: SongSnapshot = {
   schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
   metadata: {
-    title: "Charcoal Baby",
+    title: "Chamakay",
     artist: "Blood Orange",
-    album: "Negro Swan",
-    artwork: "/placeholder-logo.png",
-    duration: 244,
-    currentTime: 5,
-    rating: 5,
-    trackNumber: 7,
-    totalTracks: 16,
+    album: "Cupid Deluxe",
+    artwork: "/default-artwork.png",
+    duration: 252,
+    currentTime: 47,
+    rating: 4,
+    trackNumber: 2,
+    totalTracks: 12,
   },
   ui: {
     skinColor: "#FBFBF8",

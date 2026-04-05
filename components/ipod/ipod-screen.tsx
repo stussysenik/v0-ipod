@@ -8,7 +8,7 @@ import placeholderLogo from "@/public/placeholder-logo.png";
 import { EditableText } from "./editable-text";
 import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
-import { getSurfaceToken, getTextTokenCss } from "@/lib/color-manifest";
+import { getSurfaceToken, getTextTokenCss, deriveScreenSurround } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodInteractionModel, IpodOsScreen } from "@/types/ipod-state";
@@ -26,6 +26,7 @@ type IpodScreenAction =
 
 interface IpodScreenProps {
   preset: IpodClassicPresetDefinition;
+  skinColor?: string;
   state: SongMetadata;
   dispatch: React.Dispatch<IpodScreenAction>;
   playClick: () => void;
@@ -63,6 +64,7 @@ function ScreenBattery() {
 
 export function IpodScreen({
   preset,
+  skinColor,
   state,
   dispatch,
   playClick,
@@ -84,8 +86,9 @@ export function IpodScreen({
     ? "0 0 0 1px rgba(60,60,60,0.08)"
     : "0 1px 1px rgba(0,0,0,0.22), 0 7px 10px -9px rgba(0,0,0,0.48)";
   const artworkShadow = exportSafe ? "none" : "0 1px 2px rgba(0,0,0,0.14)";
+  const surround = skinColor ? deriveScreenSurround(skinColor) : null;
   const screenSurface = {
-    background: `linear-gradient(180deg, ${getSurfaceToken("screen.surround.top")} 0%, ${getSurfaceToken("screen.surround.mid")} 16%, ${getSurfaceToken("screen.surround.bottom")} 100%)`,
+    background: `linear-gradient(180deg, ${surround?.top ?? getSurfaceToken("screen.surround.top")} 0%, ${surround?.mid ?? getSurfaceToken("screen.surround.mid")} 16%, ${surround?.bottom ?? getSurfaceToken("screen.surround.bottom")} 100%)`,
   };
   const glassOverlay = {
     background: exportSafe
@@ -182,14 +185,14 @@ export function IpodScreen({
             data-testid="screen-status-label"
           >
             {!showOsMenu && <span className="text-[7px] text-[#3B79C4]">▶</span>}
-            <span>{showOsMenu ? "iPod" : "Now Playing"}</span>
+            <span>{showOsMenu ? "RE:MIX" : "Now Playing"}</span>
           </div>
           <ScreenBattery />
         </div>
 
         {showOsMenu ? (
           <div
-            className="grid"
+            className="grid animate-in slide-in-from-left-2 duration-200"
             style={{
               height: screenTokens.frameHeight - screenTokens.statusBarHeight - 2,
               gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",
@@ -202,7 +205,7 @@ export function IpodScreen({
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-2 px-[8px] py-[2px] text-[10px] font-semibold leading-[1.15]"
+                    className="flex items-center justify-between gap-2 px-[8px] py-[3.5px] text-[10px] font-semibold leading-[1.15]"
                     data-testid={isActive ? "ipod-os-selected-menu-item" : undefined}
                     style={{
                       color: isActive ? "#FFFFFF" : "#111111",
@@ -218,30 +221,77 @@ export function IpodScreen({
               })}
             </div>
             <div className="flex items-center justify-center bg-[#F4F4F0] p-[8px]">
-              <div
-                className="overflow-hidden border border-[#C8C9CA] bg-white"
-                style={{
-                  width: menuArtworkSize,
-                  height: menuArtworkSize,
-                  boxShadow: artworkShadow,
-                }}
-                data-export-layer="artwork"
-              >
-                <img
-                  src={state.artwork || placeholderLogo.src}
-                  data-export-src={state.artwork || placeholderLogo.src}
-                  alt="Album artwork"
-                  className="h-full w-full object-cover"
-                />
-              </div>
+              {osMenuItems[osMenuIndex]?.id === "about" ? (
+                <div
+                  className="flex flex-col items-center justify-center text-center"
+                  style={{ fontFamily: SCREEN_FONT_FAMILY }}
+                  data-testid="about-panel"
+                >
+                  <div className="text-[9px] font-bold tracking-[0.04em] text-[#333]">
+                    RE:MIX
+                  </div>
+                  <div className="mt-[3px] text-[7px] font-medium text-[#666]">
+                    STUSSY SENIK
+                  </div>
+                  <div className="mt-[1px] text-[6.5px] font-normal text-[#999]">
+                    &copy; 2026
+                  </div>
+                </div>
+              ) : osMenuItems[osMenuIndex]?.id === "now-playing" ? (
+                <div
+                  className="flex w-full flex-col items-center gap-[4px]"
+                  style={{ fontFamily: SCREEN_FONT_FAMILY }}
+                  data-testid="now-playing-preview"
+                >
+                  <div
+                    className="overflow-hidden border border-[#C8C9CA] bg-white"
+                    style={{
+                      width: menuArtworkSize - 16,
+                      height: menuArtworkSize - 16,
+                      boxShadow: artworkShadow,
+                    }}
+                  >
+                    <img
+                      src={state.artwork || placeholderLogo.src}
+                      alt="Album artwork"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="w-full text-center">
+                    <div className="truncate text-[8px] font-bold leading-[1.2] text-[#111]">
+                      {state.title}
+                    </div>
+                    <div className="truncate text-[7px] font-medium leading-[1.2] text-[#555]">
+                      {state.artist}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="overflow-hidden border border-[#C8C9CA] bg-white"
+                  style={{
+                    width: menuArtworkSize,
+                    height: menuArtworkSize,
+                    boxShadow: artworkShadow,
+                  }}
+                  data-export-layer="artwork"
+                >
+                  <img
+                    src={state.artwork || placeholderLogo.src}
+                    data-export-src={state.artwork || placeholderLogo.src}
+                    alt="Album artwork"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
             </div>
           </div>
         ) : (
           <>
             <div
-              className="grid"
+              className="grid animate-in slide-in-from-right-2 duration-200"
               style={{
-                height: screenTokens.contentHeight,
+                height: `calc(100% - ${screenTokens.statusBarHeight + screenTokens.progressHeight + screenTokens.progressBottom + 2}px)`,
                 gridTemplateColumns: `${screenTokens.artworkColumnWidth}px minmax(0, 1fr)`,
                 columnGap: screenTokens.contentGapX,
                 paddingInline: screenTokens.contentPaddingX,
@@ -352,12 +402,24 @@ export function IpodScreen({
                   </div>
                 </div>
 
+                <div className="relative z-20" style={{ marginBottom: screenTokens.metaMarginBottom }}>
+                  <StarRating
+                    rating={state.rating}
+                    onChange={(rating) => {
+                      if (!isEditable) return;
+                      dispatch({ type: "UPDATE_RATING", payload: rating });
+                      playClick();
+                    }}
+                    disabled={!isEditable}
+                    fontSize={Math.max(7.6, screenTokens.metaFontSize - 0.2)}
+                  />
+                </div>
+
                 <div
                   className="font-medium leading-none tracking-[0.01em]"
                   style={{
                     color: trackInfoColor,
                     fontSize: screenTokens.metaFontSize,
-                    marginBottom: screenTokens.metaMarginBottom,
                   }}
                 >
                   <EditableTrackNumber
@@ -372,24 +434,11 @@ export function IpodScreen({
                     disabled={!isEditable}
                   />
                 </div>
-
-                <div className="relative z-20">
-                  <StarRating
-                    rating={state.rating}
-                    onChange={(rating) => {
-                      if (!isEditable) return;
-                      dispatch({ type: "UPDATE_RATING", payload: rating });
-                      playClick();
-                    }}
-                    disabled={!isEditable}
-                    fontSize={Math.max(7.6, screenTokens.metaFontSize - 0.2)}
-                  />
-                </div>
               </div>
             </div>
 
             <div
-              className="absolute left-0 right-0 border-t border-black/[0.08]"
+              className="absolute left-0 right-0"
               style={{
                 bottom: screenTokens.progressBottom,
                 height: screenTokens.progressHeight,

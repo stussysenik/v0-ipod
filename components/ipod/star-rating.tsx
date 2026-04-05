@@ -1,11 +1,15 @@
 "use client";
 
+import { getTextTokenCss } from "@/lib/color-manifest";
+
 interface StarRatingProps {
   rating: number;
   onChange: (rating: number) => void;
   disabled?: boolean;
   fontSize?: number;
 }
+
+const INACTIVE_STAR_COLOR = "#BDBDBD";
 
 export function StarRating({
   rating,
@@ -18,19 +22,15 @@ export function StarRating({
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
-          onClick={() => {
-            if (disabled) return;
-            onChange(star);
-          }}
+          onClick={() => onChange(star)}
           disabled={disabled}
-          className="rounded-[1px] p-0 leading-none focus:outline-none focus-visible:ring-2 focus-visible:ring-black"
+          className="appearance-none p-0 leading-none focus:outline-none focus-visible:ring-1 focus-visible:ring-black/30"
+          style={{
+            fontSize,
+            color: star <= rating ? getTextTokenCss("screen.artist") : INACTIVE_STAR_COLOR,
+          }}
         >
-          <span
-            className={`leading-none ${star <= rating ? "text-black" : "text-gray-300"}`}
-            style={{ fontSize }}
-          >
-            ★
-          </span>
+          ★
         </button>
       ))}
     </div>

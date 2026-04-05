@@ -4,55 +4,114 @@
   "description": "Canonical color token manifest for iPod Classic anniversary tribute. All color decisions must be auditable through dcal.",
 
   "authenticCaseColors": [
+    { "label": "White (1st-3rd Gen)", "hex": "#FFFFFF", "family": "white", "generation": "1-3" },
+    { "label": "White (4th Gen)", "hex": "#F7F7F7", "family": "white", "generation": "4" },
+    { "label": "White (5th Gen)", "hex": "#F5F5F0", "family": "white", "generation": "5" },
+    { "label": "Black (5th Gen)", "hex": "#1A1A1A", "family": "black", "generation": "5" },
+    { "label": "Silver (Classic 6th)", "hex": "#C0C0C0", "family": "silver", "generation": "6" },
+    { "label": "Black (Classic 6th)", "hex": "#1C1C1E", "family": "black", "generation": "6" },
+    { "label": "Charcoal (7th Gen)", "hex": "#2D2F34", "family": "black", "generation": "7" },
+    { "label": "Black (7th Gen)", "hex": "#1A1B1F", "family": "black", "generation": "7" },
+    { "label": "U2 Special Edition", "hex": "#111111", "family": "u2", "generation": "u2" },
+    { "label": "(PRODUCT)RED", "hex": "#CC0000", "family": "red", "generation": "special" }
+  ],
+
+  "authenticFinishes": [
     {
-      "label": "White (1st-3rd Gen)",
+      "id": "white-1g",
+      "label": "White",
+      "generation": "1st–3rd Gen",
+      "year": 2001,
       "hex": "#FFFFFF",
-      "family": "white",
-      "generation": "1-3"
+      "wheelVariant": "light",
+      "notes": "Original polycarbonate white, 2001–2004"
     },
     {
-      "label": "White (4th Gen)",
+      "id": "white-4g",
+      "label": "White",
+      "generation": "4th Gen (Click Wheel)",
+      "year": 2004,
       "hex": "#F7F7F7",
-      "family": "white",
-      "generation": "4"
+      "wheelVariant": "light",
+      "notes": "Slightly warm white, first Click Wheel model"
     },
     {
-      "label": "White (5th Gen)",
-      "hex": "#F5F5F5",
-      "family": "white",
-      "generation": "5"
+      "id": "white-5g",
+      "label": "White",
+      "generation": "5th Gen (Video)",
+      "year": 2005,
+      "hex": "#F5F5F0",
+      "wheelVariant": "light",
+      "notes": "Warm ivory white, thinner profile"
     },
     {
-      "label": "Black (5th Gen)",
+      "id": "black-5g",
+      "label": "Black",
+      "generation": "5th Gen (Video)",
+      "year": 2005,
       "hex": "#1A1A1A",
-      "family": "black",
-      "generation": "5"
+      "wheelVariant": "dark",
+      "notes": "First black iPod, anodized aluminum back"
     },
     {
-      "label": "Silver (Classic 6th)",
-      "hex": "#D9D9D9",
-      "family": "silver",
-      "generation": "6"
+      "id": "silver-6g",
+      "label": "Silver",
+      "generation": "Classic 6th Gen",
+      "year": 2007,
+      "hex": "#C0C0C0",
+      "wheelVariant": "light",
+      "notes": "Anodized aluminum front, thinner 80/160GB"
     },
     {
-      "label": "Black (Classic 6th)",
+      "id": "black-6g",
+      "label": "Black",
+      "generation": "Classic 6th Gen",
+      "year": 2007,
       "hex": "#1C1C1E",
-      "family": "black",
-      "generation": "6"
+      "wheelVariant": "dark",
+      "notes": "Deep black anodized aluminum, 160GB"
     },
     {
-      "label": "Classic Black 2008",
+      "id": "charcoal-7g",
+      "label": "Charcoal",
+      "generation": "Classic 7th Gen",
+      "year": 2008,
       "hex": "#2D2F34",
-      "family": "black",
-      "generation": "6-late"
+      "wheelVariant": "dark",
+      "notes": "Space grey predecessor, late 2008 revision"
     },
-    { "label": "U2 Black Front", "hex": "#111111", "family": "u2", "generation": "u2" },
-    { "label": "U2 Red Wheel", "hex": "#B00020", "family": "u2", "generation": "u2" }
+    {
+      "id": "black-7g",
+      "label": "Black",
+      "generation": "Classic 7th Gen",
+      "year": 2009,
+      "hex": "#1A1B1F",
+      "wheelVariant": "dark",
+      "notes": "Final black Classic, 160GB, last iPod Classic"
+    },
+    {
+      "id": "u2-special",
+      "label": "U2 Special Edition",
+      "generation": "U2 Edition",
+      "year": 2004,
+      "hex": "#111111",
+      "wheelVariant": "dark",
+      "notes": "Black case, red click wheel accent"
+    },
+    {
+      "id": "product-red",
+      "label": "(PRODUCT)RED",
+      "generation": "Special Edition",
+      "year": 2006,
+      "hex": "#CC0000",
+      "wheelVariant": "dark",
+      "notes": "AIDS charity edition, red anodized aluminum"
+    }
   ],
 
   "surfaceTokens": {
     "shell.default": { "hex": "#FBFBF8", "role": "shell", "family": "neutral" },
-    "backdrop.default": { "hex": "#F3F3EE", "role": "backdrop", "family": "neutral" },
+    "backdrop.default": { "hex": "#FEFFFF", "role": "backdrop", "family": "neutral" },
 
     "wheel.border": { "hex": "#DADCDD", "role": "wheel", "family": "neutral" },
     "wheel.gradient.from": { "hex": "#FAFAF8", "role": "wheel", "family": "neutral" },

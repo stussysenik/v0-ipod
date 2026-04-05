@@ -28,7 +28,7 @@ import {
   saveSongSnapshot,
 } from "@/lib/storage";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
-import placeholderLogo from "@/public/placeholder-logo.png";
+import defaultArtwork from "@/public/default-artwork.png";
 import { IconButton } from "@/components/ui/icon-button";
 import dynamic from "next/dynamic";
 const ThreeDIpod = dynamic(
@@ -113,18 +113,19 @@ const CLASSIC_OS_MENU_ITEMS = [
   { id: "settings", label: "Settings" },
   { id: "shuffle-songs", label: "Shuffle Songs" },
   { id: "now-playing", label: "Now Playing" },
+  { id: "about", label: "About" },
 ] as const;
 
 const initialState: SongMetadata = {
-  title: "Charcoal Baby",
+  title: "Chamakay",
   artist: "Blood Orange",
-  album: "Negro Swan",
-  artwork: placeholderLogo.src,
-  duration: 244,
-  currentTime: 0,
-  rating: 5,
-  trackNumber: 7,
-  totalTracks: 16,
+  album: "Cupid Deluxe",
+  artwork: defaultArtwork.src,
+  duration: 252,
+  currentTime: 47,
+  rating: 4,
+  trackNumber: 2,
+  totalTracks: 12,
 };
 
 const supportsOklch = () =>
@@ -247,6 +248,7 @@ export default function IPodClassic() {
   const [rangeEndTime, setRangeEndTime] = useState<number | null>(null);
   const [osScreen, setOsScreen] = useState<IpodOsScreen>(DEFAULT_OS_SCREEN);
   const [osMenuIndex, setOsMenuIndex] = useState(DEFAULT_MENU_INDEX);
+  const [isOsNowPlayingEditable, setIsOsNowPlayingEditable] = useState(false);
 
   // Customization State
   const [skinColor, setSkinColor] = useState(DEFAULT_SHELL_COLOR);
@@ -272,8 +274,10 @@ export default function IPodClassic() {
   const [rangeStartDraft, setRangeStartDraft] = useState("");
   const [rangeEndDraft, setRangeEndDraft] = useState("");
   const isFlatView = viewMode === "flat";
+  const isFocusView = viewMode === "focus";
   const isPreviewView = viewMode === "preview";
   const isAsciiView = viewMode === "ascii";
+  const canPngExport = isFlatView || isFocusView;
   const isAuthenticInteraction = interactionModel === "ipod-os";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
@@ -698,9 +702,9 @@ export default function IPodClassic() {
       closeToolbox: true,
       clearNotice: true,
     });
-    if (!isFlatView) {
+    if (!canPngExport) {
       playClick();
-      showSoftNotice("Switch to Flat View to export");
+      showSoftNotice("Switch to Flat or Focus View to export");
       return;
     }
 
@@ -763,7 +767,7 @@ export default function IPodClassic() {
     exportCounter,
     exportStatus,
     formatExportId,
-    isFlatView,
+    canPngExport,
     playClick,
     resetExportUi,
     resetInteractionChrome,
@@ -909,8 +913,13 @@ export default function IPodClassic() {
     }
   }, [isCompactToolbox, osMenuIndex, showSoftNotice]);
 
+  const handleNowPlayingCenterClick = useCallback(() => {
+    setIsOsNowPlayingEditable((prev) => !prev);
+  }, []);
+
   const handleMenuButtonPress = useCallback(() => {
     if (!isAuthenticInteraction) return;
+    setIsOsNowPlayingEditable(false);
     setOsScreen("menu");
   }, [isAuthenticInteraction]);
 
@@ -989,7 +998,10 @@ export default function IPodClassic() {
       osScreen={osScreen}
       osMenuItems={CLASSIC_OS_MENU_ITEMS}
       osMenuIndex={osMenuIndex}
-      isEditable={isFlatView && !isExportCapturing && !isAuthenticInteraction}
+      isEditable={
+        !isExportCapturing &&
+        (isAuthenticInteraction ? isOsNowPlayingEditable && osScreen === "now-playing" : isFlatView)
+      }
       exportSafe={isExportCapturing}
       titlePreview={isPreviewView && !isExportCapturing}
       titleCaptureReady={isPreviewView || activeExportKind === "gif"}
@@ -1003,14 +1015,18 @@ export default function IPodClassic() {
       playClick={playClick}
       onSeek={handleWheelSeek}
       onCenterClick={
-        isAuthenticInteraction && osScreen === "menu" ? handleOsMenuSelect : undefined
+        isAuthenticInteraction
+          ? osScreen === "menu"
+            ? handleOsMenuSelect
+            : handleNowPlayingCenterClick
+          : undefined
       }
       onMenuPress={handleMenuButtonPress}
       onPreviousPress={handlePreviousButtonPress}
       onNextPress={handleNextButtonPress}
       onPlayPausePress={handlePlayPauseButtonPress}
       disabled={
-        isExportCapturing || isAsciiView || (!isFlatView && !isAuthenticInteraction)
+        isExportCapturing || isAsciiView || (!isFlatView && !isFocusView && !isAuthenticInteraction)
       }
       exportSafe={isExportCapturing}
     />
@@ -1137,14 +1153,14 @@ export default function IPodClassic() {
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
   const shellShadow = isExportCapturing
     ? "0 0 0 1px rgba(82,88,97,0.12), 0 14px 20px -22px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
-    : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.12), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+    : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.04)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
     ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
     : "fixed top-6 right-6";
   const toolboxPanelClass = isCompactToolbox
-    ? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/88 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-all duration-300 ${isToolboxVisible ? "opacity-100 translate-y-0 visible pointer-events-auto" : "opacity-0 translate-y-2 invisible pointer-events-none"}`
+    ? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
     : "flex flex-col gap-3";
 
   return (
@@ -1184,7 +1200,11 @@ export default function IPodClassic() {
               {showSettings && (
                 <div
                   data-testid="theme-panel"
-                  className="z-20 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)] overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in slide-in-from-right-2 max-sm:left-1/2 max-sm:right-auto max-sm:top-auto max-sm:bottom-14 max-sm:w-[min(94vw,340px)] max-sm:max-h-[min(52dvh,24rem)] max-sm:-translate-x-1/2"
+                  className={`z-20 overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in ${
+                    isCompactToolbox
+                      ? "slide-in-from-bottom-2 fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] max-h-[min(52dvh,24rem)] rounded-2xl"
+                      : "slide-in-from-right-2 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)]"
+                  }`}
                 >
                   <div className="mb-4">
                     <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
@@ -1566,7 +1586,6 @@ export default function IPodClassic() {
               <IconButton
                 icon={<Monitor className="w-5 h-5" />}
                 label="Focus Mode"
-                badge="WIP"
                 data-testid="focus-view-button"
                 isActive={viewMode === "focus"}
                 onClick={() => handleViewModeChange("focus")}
@@ -1599,14 +1618,14 @@ export default function IPodClassic() {
                     ? "Sharing..."
                     : activeExportKind === "png" && exportStatus === "success"
                       ? "Done!"
-                      : !isFlatView
-                        ? "Flat View Only"
+                      : !canPngExport
+                        ? "Flat or Focus View"
                         : "Export 2D Image"
               }
               onClick={handlePngExport}
               data-testid="export-button"
               contrast={true}
-              disabled={!isFlatView || exportStatus !== "idle"}
+              disabled={!canPngExport || exportStatus !== "idle"}
               className={`transition-colors duration-300 ${
                 activeExportKind === "png" && exportStatus === "success"
                   ? "bg-green-500 hover:bg-green-600 border-none"

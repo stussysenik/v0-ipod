@@ -11,6 +11,12 @@ test.use({
 
 test.describe("Mobile usability", () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "ipodSnapshotUiState",
+        JSON.stringify({ interactionModel: "direct", osScreen: "now-playing" }),
+      );
+    });
     await page.goto("/");
     await expect(page.getByTestId("toolbox-toggle-button")).toBeVisible();
     await expect(page.getByTestId("toolbox-panel")).toBeHidden();
@@ -67,7 +73,7 @@ test.describe("Mobile usability", () => {
   });
 
   test("single tap edit and touch seek work", async ({ page }) => {
-    await page.getByText("Charcoal Baby").tap();
+    await page.getByText("Chamakay").tap();
     const input = page.getByTestId("fixed-editor-input");
     await expect(input).toBeVisible();
     await input.fill("Mobile Edit");
@@ -109,7 +115,7 @@ test.describe("Mobile usability", () => {
   }) => {
     const longTitle = "The Field (feat. The Durutti Column and Caroline Polachek)";
 
-    await page.getByText("Charcoal Baby").tap();
+    await page.getByText("Chamakay").tap();
     const input = page.getByTestId("fixed-editor-input");
     await expect(input).toBeVisible();
     await input.fill(longTitle);

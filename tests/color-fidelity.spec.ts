@@ -17,6 +17,7 @@ interface SurfaceToken {
 
 interface Manifest {
   authenticCaseColors: Array<{ label: string; hex: string }>;
+  authenticFinishes: Array<{ id: string; label: string; year: number; hex: string }>;
   surfaceTokens: Record<string, SurfaceToken>;
 }
 
@@ -93,14 +94,14 @@ test.describe("Color Fidelity — Manifest Compliance", () => {
     expect(bgColor).toBeTruthy();
   });
 
-  test("all 9 authentic case colors are valid hex values", async () => {
+  test("all authentic case colors are valid hex values", async () => {
     const hexRe = /^#[0-9A-Fa-f]{6}$/;
     for (const color of manifest.authenticCaseColors) {
       expect(hexRe.test(color.hex), `${color.label}: ${color.hex} should be valid hex`).toBe(true);
     }
   });
 
-  test("each authentic case color produces a distinct visual", async ({ page }) => {
+  test("each authentic finish produces a distinct visual", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByTestId("theme-button")).toBeVisible({ timeout: 10_000 });
 
@@ -108,13 +109,12 @@ test.describe("Color Fidelity — Manifest Compliance", () => {
     await page.getByTestId("theme-button").click();
     await expect(page.getByTestId("theme-panel")).toBeVisible();
 
-    // Verify that the preset buttons exist for each authentic color
-    for (const color of manifest.authenticCaseColors) {
-      // The authentic case colors are rendered as swatch buttons with title attributes
-      const swatch = page.locator(`button[title="${color.label}"]`);
-      // Not all may be visible if the panel is scrollable, but they should exist in DOM
+    // Verify that swatch buttons exist for each authentic finish
+    // Title format is: "Label (year) — notes"
+    for (const finish of manifest.authenticFinishes) {
+      const swatch = page.locator(`button[title^="${finish.label} (${finish.year})"]`);
       const count = await swatch.count();
-      expect(count, `Swatch for "${color.label}" should exist`).toBeGreaterThanOrEqual(1);
+      expect(count, `Swatch for "${finish.label} (${finish.year})" should exist`).toBeGreaterThanOrEqual(1);
     }
   });
 });

@@ -7,9 +7,9 @@ export type SnapshotSelectionKind = "moment" | "range";
 export type IpodOsScreen = "menu" | "now-playing";
 
 export const SONG_SNAPSHOT_SCHEMA_VERSION = 2 as const;
-export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = "direct";
+export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = "ipod-os";
 export const DEFAULT_SELECTION_KIND: SnapshotSelectionKind = "moment";
-export const DEFAULT_OS_SCREEN: IpodOsScreen = "now-playing";
+export const DEFAULT_OS_SCREEN: IpodOsScreen = "menu";
 export const DEFAULT_MENU_INDEX = 0;
 
 export interface IpodUiState {

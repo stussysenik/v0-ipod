@@ -21,6 +21,7 @@ import {
 } from "@react-three/drei";
 import * as THREE from "three";
 import { PostProcessing } from "./post-processing";
+import { deriveWheelColors } from "@/lib/color-manifest";
 
 // Export handle for capturing high-res renders
 export interface ThreeDIpodHandle {
@@ -41,6 +42,7 @@ interface IpodModelProps extends Omit<ThreeDIpodProps, "onReady"> {
 function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps) {
   const meshRef = useRef<THREE.Group>(null);
   const screenGroupRef = useRef<THREE.Group>(null);
+  const wheelColors = useMemo(() => deriveWheelColors(skinColor), [skinColor]);
 
   // Register reset function for export capture
   useEffect(() => {
@@ -281,11 +283,11 @@ function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps
 
           {/* 4. CLICK WHEEL ASSEMBLY */}
           <group position={[0, -1.5, 0]}>
-            {/* Wheel Ring (Polycarbonate Touch Surface) */}
+            {/* Wheel Ring (Polycarbonate Touch Surface) — color derived from case */}
             <mesh position={[0, 0, z.wheelBase]}>
               <ringGeometry args={[0.75, 1.2, 64]} />
               <meshPhysicalMaterial
-                color="#F5F5F5"
+                color={wheelColors.gradient.via}
                 roughness={0.18}
                 metalness={0.0}
                 clearcoat={0.8}
@@ -293,15 +295,15 @@ function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps
                 envMapIntensity={0.85}
                 sheen={0.24}
                 sheenRoughness={0.42}
-                sheenColor="#ffffff"
+                sheenColor={wheelColors.gradient.from}
               />
             </mesh>
 
-            {/* Center Button (Chrome/Metal) */}
+            {/* Center Button — color derived from case */}
             <mesh position={[0, 0, z.wheelBase + 0.001]}>
               <circleGeometry args={[0.73, 50]} />
               <meshPhysicalMaterial
-                color="#d0d0d0"
+                color={wheelColors.centerGradient.via}
                 roughness={0.24}
                 metalness={0.55}
                 clearcoat={0.35}
