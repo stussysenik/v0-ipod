@@ -3,6 +3,7 @@ import {
   DEFAULT_INTERACTION_MODEL,
   DEFAULT_OS_SCREEN,
   DEFAULT_SELECTION_KIND,
+  DEFAULT_NOW_PLAYING_FIDELITY,
   SONG_SNAPSHOT_SCHEMA_VERSION,
 } from "@/types/ipod-state";
 import { DEFAULT_HARDWARE_PRESET_ID } from "@/lib/ipod-classic-presets";
@@ -31,6 +32,7 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
     rangeEndTime: null,
     osScreen: DEFAULT_OS_SCREEN,
     menuIndex: 0,
+    nowPlayingFidelity: DEFAULT_NOW_PLAYING_FIDELITY,
   },
   playback: {
     currentTime: 5,

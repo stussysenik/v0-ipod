@@ -9,6 +9,7 @@ interface ProgressBarProps {
   onSeek: (time: number) => void;
   disabled?: boolean;
   trackHeight?: number;
+  variant?: "experimental" | "classic";
 }
 
 export function ProgressBar({
@@ -17,6 +18,7 @@ export function ProgressBar({
   onSeek,
   disabled = false,
   trackHeight = 7,
+  variant = "classic",
 }: ProgressBarProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [activePointerId, setActivePointerId] = useState<number | null>(null);
@@ -66,13 +68,14 @@ export function ProgressBar({
 
   const safeDuration = Math.max(duration, 1);
   const progress = Math.min(Math.max((currentTime / safeDuration) * 100, 0), 100);
+  const isClassic = variant === "classic";
 
   return (
     <div className="w-full">
       <div
         ref={progressRef}
         data-testid="progress-track"
-        className={`relative w-full overflow-hidden border ${
+        className={`relative w-full overflow-visible ${
           disabled ? "cursor-default" : "cursor-pointer"
         }`}
         onPointerDown={handlePointerDown}
@@ -80,13 +83,14 @@ export function ProgressBar({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
         style={{
-          height: trackHeight,
-          borderRadius: Math.max(1, Math.round(trackHeight / 3)),
-          borderColor: "#AEAEAB",
-          background:
-            "linear-gradient(180deg, rgba(251,251,249,1) 0%, rgba(238,238,234,1) 100%)",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 1px 2px rgba(0,0,0,0.08)",
+          height: isClassic ? 12 : trackHeight,
+          borderRadius: isClassic ? 0 : Math.max(1, Math.round(trackHeight / 3)),
+          background: isClassic
+            ? "#d1d1d1"
+            : "linear-gradient(180deg, rgba(251,251,249,1) 0%, rgba(238,238,234,1) 100%)",
+          boxShadow: isClassic
+            ? "inset 0 1px 2px rgba(0,0,0,0.2)"
+            : "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 1px 2px rgba(0,0,0,0.08)",
           touchAction: "none",
         }}
       >
@@ -95,11 +99,26 @@ export function ProgressBar({
           className="absolute inset-y-0 left-0"
           style={{
             width: `${progress}%`,
-            backgroundImage:
-              "linear-gradient(180deg, rgba(123,195,246,1) 0%, rgba(63,145,222,1) 100%)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.26)",
+            backgroundColor: isClassic ? "#0099DD" : undefined,
+            backgroundImage: isClassic
+              ? "none"
+              : "linear-gradient(180deg, rgba(123,195,246,1) 0%, rgba(63,145,222,1) 100%)",
+            boxShadow: isClassic ? "none" : "inset 0 1px 0 rgba(255,255,255,0.26)",
           }}
         />
+        {isClassic && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[14px] h-[14px] z-10"
+            style={{
+              left: `${progress}%`,
+              backgroundColor: "#f0f0f0",
+              border: "1px solid #999",
+              transform: "translateY(-50%) rotate(45deg)",
+              boxShadow: "-1px 1px 3px rgba(0,0,0,0.3)",
+              marginTop: "-1px",
+            }}
+          />
+        )}
       </div>
     </div>
   );

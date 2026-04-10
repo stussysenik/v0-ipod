@@ -40,24 +40,32 @@ interface IpodScreenProps {
   titlePreview?: boolean;
   titleCaptureReady?: boolean;
   onTitleOverflowChange?: (overflow: boolean) => void;
+  nowPlayingFidelity?: "experimental" | "classic";
 }
 
-const SCREEN_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+const SCREEN_FONT_FAMILY = '"ChicagoFLF", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 function ScreenBattery() {
   return (
     <div className="flex items-center gap-px" aria-hidden="true">
-      <div className="relative h-[7px] w-[15px] rounded-[1px] border border-[#7B7B7B] bg-[#F7F7F5] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-        <div
-          className="absolute inset-y-[1px] left-[1px] rounded-[0.5px]"
-          style={{
-            width: "72%",
-            backgroundImage:
-              "linear-gradient(180deg, rgba(170,224,109,1) 0%, rgba(119,183,64,1) 100%)",
-          }}
-        />
+      <div className="relative h-[8px] w-[17px] rounded-[1px] border border-[#7B7B7B] bg-[#F7F7F5] p-[1px]">
+        {/* 4 segmented "liquid" bars */}
+        <div className="flex h-full w-full gap-[0.5px]">
+          {[1, 2, 3, 4].map((seg, i) => (
+            <div
+              key={seg}
+              className="h-full flex-1 rounded-[0.5px]"
+              style={{
+                backgroundColor: i < 3 ? "#00CC00" : "transparent",
+                backgroundImage: i < 3 
+                  ? "linear-gradient(to bottom, #00EE00 0%, #00AA00 100%)" 
+                  : "none",
+              }}
+            />
+          ))}
+        </div>
       </div>
-      <div className="h-[3px] w-[2px] rounded-r-[1px] bg-[#7B7B7B]" />
+      <div className="h-[4px] w-[1.5px] rounded-r-[0.5px] bg-[#7B7B7B]" />
     </div>
   );
 }
@@ -78,6 +86,7 @@ export function IpodScreen({
   titlePreview = false,
   titleCaptureReady = false,
   onTitleOverflowChange,
+  nowPlayingFidelity = "classic",
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
   const screenTokens = preset.screen;
@@ -155,6 +164,7 @@ export function IpodScreen({
             background:
               "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 18%, rgba(0,0,0,0.06) 100%)",
             borderRadius: Math.max(1, screenTokens.outerRadius - 1),
+            pointerEvents: "none",
           }}
           aria-hidden="true"
       />
@@ -168,26 +178,56 @@ export function IpodScreen({
         }}
       >
         <div
-          className="flex items-center justify-between border-b"
+          className="flex items-center border-b"
           style={{
             height: screenTokens.statusBarHeight,
             paddingInline: screenTokens.statusBarPaddingX,
-            backgroundImage: `linear-gradient(180deg, ${getSurfaceToken("screen.statusbar.bg.from")}, ${getSurfaceToken("screen.statusbar.bg.to")})`,
-            borderColor: "#9B9B9B",
+            backgroundImage: "linear-gradient(to bottom, #f0f0f0 0%, #d9d9d9 100%)",
+            borderColor: "#b0b0b0",
           }}
         >
           <div
-            className="flex items-center gap-[4px] font-semibold leading-none tracking-[-0.01em]"
+            className="flex flex-1 items-center gap-[4px] font-bold leading-none tracking-[-0.01em]"
             style={{
               color: statusBarTextColor,
-              fontSize: Math.max(7.5, screenTokens.statusBarHeight - 8),
+              fontSize: "11px",
             }}
             data-testid="screen-status-label"
           >
-            {!showOsMenu && <span className="text-[7px] text-[#3B79C4]">▶</span>}
+            {!showOsMenu && (
+              <div 
+                className="w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-[#0099DD]" 
+                aria-hidden="true" 
+              />
+            )}
             <span>{showOsMenu ? "RE:MIX" : "Now Playing"}</span>
           </div>
-          <ScreenBattery />
+
+          {!showOsMenu && nowPlayingFidelity === "classic" && (
+            <div
+              className="flex-1 flex justify-center font-bold leading-none tracking-tight"
+              style={{
+                color: statusBarTextColor,
+                fontSize: "11px",
+              }}
+            >
+              <EditableTrackNumber
+                trackNumber={state.trackNumber}
+                totalTracks={state.totalTracks}
+                onTrackNumberChange={(num) =>
+                  dispatch({ type: "UPDATE_TRACK_NUMBER", payload: num })
+                }
+                onTotalTracksChange={(num) =>
+                  dispatch({ type: "UPDATE_TOTAL_TRACKS", payload: num })
+                }
+                disabled={!isEditable}
+              />
+            </div>
+          )}
+
+          <div className="flex-1 flex justify-end">
+            <ScreenBattery />
+          </div>
         </div>
 
         {showOsMenu ? (
@@ -284,6 +324,205 @@ export function IpodScreen({
                   />
                 </div>
               )}
+            </div>
+          </div>
+        ) : nowPlayingFidelity === "classic" ? (
+          <div
+            className="flex flex-col h-full animate-in slide-in-from-right-2 duration-200"
+            style={{
+              paddingTop: 0,
+              height: `calc(100% - ${screenTokens.statusBarHeight}px)`,
+              background: "linear-gradient(180deg, #F7F7F7 0%, #E2E2E2 100%)",
+            }}
+          >
+            {/* Standard iPod Classic 6th Gen Now Playing Layout */}
+            <div
+              className="flex-1 grid"
+              style={{
+                gridTemplateColumns: `${screenTokens.artworkSize + 28}px 1fr`,
+                paddingInline: 12,
+                paddingTop: 18,
+              }}
+            >
+              {/* Album Art Column */}
+              <div className="flex flex-col items-start relative">
+                <div
+                  className="relative cursor-pointer bg-white"
+                  style={{
+                    width: screenTokens.artworkSize,
+                    height: screenTokens.artworkSize,
+                    boxShadow: "0 1px 0 rgba(255,255,255,0.4) inset, 0 0 0 1px rgba(0,0,0,0.1)",
+                    overflow: "hidden",
+                  }}
+                  data-export-layer="artwork"
+                >
+                  {exportSafe ? (
+                    <img
+                      src={state.artwork || placeholderLogo.src}
+                      data-export-src={state.artwork || placeholderLogo.src}
+                      alt="Album artwork"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <ImageUpload
+                      currentImage={state.artwork}
+                      onImageChange={(artwork) => {
+                        if (!isEditable) return;
+                        dispatch({ type: "UPDATE_ARTWORK", payload: artwork });
+                        playClick();
+                      }}
+                      disabled={!isEditable}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+                {/* Authentic Reflection Effect */}
+                <div 
+                  className="relative overflow-hidden"
+                  style={{
+                    width: screenTokens.artworkSize,
+                    height: screenTokens.artworkSize * 0.25,
+                    marginTop: "-2px",
+                    transform: "scaleY(-1)",
+                    opacity: 0.3,
+                  }}
+                >
+                  <img
+                    src={state.artwork || placeholderLogo.src}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{
+                      maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%)",
+                      WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 100%)",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Metadata Column */}
+              <div className="flex flex-col justify-start pt-[2px] pr-2 overflow-hidden">
+                <div className="truncate mb-[2px]">
+                  <EditableText
+                    value={state.title}
+                    onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
+                    disabled={!isEditable}
+                    className="font-bold tracking-tight text-black"
+                    style={{
+                      fontSize: "13px",
+                      lineHeight: 1.1,
+                      color: "#000000",
+                    }}
+                    editLabel="Edit title"
+                    dataTestId="track-title-text"
+                    animate={titlePreview || animateText}
+                    preview={titlePreview || animateText}
+                    captureReady={titleCaptureReady}
+                    onOverflowChange={onTitleOverflowChange}
+                    singleLine={!titlePreview && !animateText}
+                  />
+                </div>
+                <div className="truncate mb-[1px]">
+                  <EditableText
+                    value={state.artist}
+                    onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
+                    disabled={!isEditable}
+                    className="font-normal"
+                    style={{
+                      fontSize: "11px",
+                      lineHeight: 1.2,
+                      color: "#333333",
+                    }}
+                    editLabel="Edit artist"
+                    dataTestId="track-artist-text"
+                    singleLine
+                  />
+                </div>
+                <div className="truncate">
+                  <EditableText
+                    value={state.album}
+                    onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
+                    disabled={!isEditable}
+                    className="font-normal"
+                    style={{
+                      fontSize: "11px",
+                      lineHeight: 1.2,
+                      color: "#666666",
+                    }}
+                    editLabel="Edit album"
+                    dataTestId="track-album-text"
+                    singleLine
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <StarRating
+                    rating={state.rating}
+                    onChange={(rating) => {
+                      if (!isEditable) return;
+                      dispatch({ type: "UPDATE_RATING", payload: rating });
+                      playClick();
+                    }}
+                    disabled={!isEditable}
+                    fontSize={10}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Progress Area */}
+            <div
+              className="px-[14px] pb-[12px]"
+              data-testid="screen-progress"
+              data-export-duration={state.duration}
+            >
+              <ProgressBar
+                currentTime={state.currentTime}
+                duration={state.duration}
+                onSeek={(currentTime) => {
+                  if (!isEditable) return;
+                  remainingAnchorRef.current = null;
+                  setCurrentTime(currentTime, false);
+                  playClick();
+                }}
+                disabled={!isEditable}
+                trackHeight={8}
+                variant="classic"
+              />
+              <div
+                className="mt-[4px] flex items-center justify-between font-bold tracking-tight text-black"
+                style={{
+                  fontVariantNumeric: "tabular-nums",
+                  fontFamily: SCREEN_FONT_FAMILY,
+                  fontSize: "11px",
+                }}
+              >
+                <div data-testid="elapsed-time" data-export-time-value={state.currentTime}>
+                  <EditableTime
+                    value={state.currentTime}
+                    onChange={(time) => {
+                      if (!isEditable) return;
+                      setCurrentTime(time, true);
+                    }}
+                    disabled={!isEditable}
+                    editLabel="Edit elapsed time"
+                  />
+                </div>
+                <div
+                  className="text-black flex items-center gap-[1px]"
+                  data-testid="remaining-time"
+                >
+                  <EditableTime
+                    value={Math.max(state.duration - state.currentTime, 0)}
+                    isRemaining
+                    onChange={(remaining) => {
+                      if (!isEditable) return;
+                      setRemainingTime(remaining);
+                    }}
+                    disabled={!isEditable}
+                    editLabel="Edit remaining time"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -461,6 +700,7 @@ export function IpodScreen({
                 }}
                 disabled={!isEditable}
                 trackHeight={screenTokens.progressHeight >= 33 ? 6 : 5}
+                variant="experimental"
               />
               <div
                 className="mt-[3px] flex items-center justify-between font-semibold leading-none tracking-[-0.02em] text-black"
@@ -501,12 +741,17 @@ export function IpodScreen({
           </>
         )}
 
-        <div className="pointer-events-none absolute inset-0" style={glassOverlay} aria-hidden="true" />
+        <div 
+          className="pointer-events-none absolute inset-0" 
+          style={{ ...glassOverlay, pointerEvents: "none" }} 
+          aria-hidden="true" 
+        />
         <div
           className="pointer-events-none absolute left-[11px] top-[9px] h-[32%] w-[48%] rounded-[18px] opacity-25"
           style={{
             background:
               "linear-gradient(160deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.024) 18%, rgba(255,255,255,0) 58%)",
+            pointerEvents: "none",
           }}
           aria-hidden="true"
         />

@@ -68,6 +68,10 @@ function isOsScreen(value: unknown): value is IpodOsScreen {
   return value === "menu" || value === "now-playing";
 }
 
+function isNowPlayingFidelity(value: unknown): value is "experimental" | "classic" {
+  return value === "experimental" || value === "classic";
+}
+
 export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR_PATTERN.test(value);
 }
@@ -159,6 +163,9 @@ export function loadUiState(): Partial<IpodUiState> | null {
     }
     if (isSelectionKind(candidate.selectionKind)) safe.selectionKind = candidate.selectionKind;
     if (isOsScreen(candidate.osScreen)) safe.osScreen = candidate.osScreen;
+    if (isNowPlayingFidelity(candidate.nowPlayingFidelity)) {
+      safe.nowPlayingFidelity = candidate.nowPlayingFidelity;
+    }
     const rangeStartTime = getFiniteNonNegativeNumber(candidate.rangeStartTime);
     if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
     const rangeEndTime = getFiniteNonNegativeNumber(candidate.rangeEndTime);
@@ -212,6 +219,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
       rangeEndTime: playback.rangeEndTime,
       osScreen: partialUi.osScreen ?? DEFAULT_OS_SCREEN,
       menuIndex: partialUi.menuIndex ?? DEFAULT_MENU_INDEX,
+      nowPlayingFidelity: partialUi.nowPlayingFidelity ?? "classic",
     };
 
     return {
@@ -267,6 +275,9 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
   if (isInteractionModel(parsed.interactionModel)) safe.interactionModel = parsed.interactionModel;
   if (isSelectionKind(parsed.selectionKind)) safe.selectionKind = parsed.selectionKind;
   if (isOsScreen(parsed.osScreen)) safe.osScreen = parsed.osScreen;
+  if (isNowPlayingFidelity(parsed.nowPlayingFidelity)) {
+    safe.nowPlayingFidelity = parsed.nowPlayingFidelity;
+  }
 
   const rangeStartTime = getFiniteNonNegativeNumber(parsed.rangeStartTime);
   if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;

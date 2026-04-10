@@ -20,18 +20,24 @@ export function IPodDeviceShell({
   showShadowLayer = false,
   dataTestId,
 }: IPodDeviceShellProps) {
-  const shellShadow =
-    "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34), inset 0 2px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.1)";
+  const isWhite = skinColor.toLowerCase() === "#ffffff" || skinColor.toLowerCase() === "#f2f2f2";
+  
+  const shellShadow = isWhite 
+    ? "inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 4px rgba(0,0,0,0.05), 0 20px 40px rgba(0,0,0,0.15)"
+    : "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34), inset 0 2px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.1)";
+
   const shellSurfaceStyle = useMemo(
     () => ({
-      backgroundColor: skinColor,
-      backgroundImage: [
-        "linear-gradient(158deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.08) 18%, rgba(255,255,255,0) 34%)",
-        "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.08) 100%)",
-        "radial-gradient(circle at 50% 102%, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0) 44%)",
-      ].join(", "),
+      backgroundColor: isWhite ? "#f2f2f2" : skinColor,
+      backgroundImage: isWhite 
+        ? "linear-gradient(145deg, rgba(255,255,255,0.1) 0%, transparent 50%)"
+        : [
+            "linear-gradient(158deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.08) 18%, rgba(255,255,255,0) 34%)",
+            "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.08) 100%)",
+            "radial-gradient(circle at 50% 102%, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0) 44%)",
+          ].join(", "),
     }),
-    [skinColor],
+    [skinColor, isWhite],
   );
 
   return (
@@ -48,6 +54,7 @@ export function IPodDeviceShell({
         style={{
           background:
             "radial-gradient(circle, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.16) 42%, rgba(0,0,0,0) 74%)",
+          pointerEvents: "none",
         }}
         aria-hidden="true"
       />
@@ -55,12 +62,13 @@ export function IPodDeviceShell({
         className="pointer-events-none absolute left-1/2 top-[522px] h-[42px] w-[196px] -translate-x-1/2 rounded-full opacity-50 blur-[18px]"
         style={{
           background: "radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 78%)",
+          pointerEvents: "none",
         }}
         aria-hidden="true"
       />
       <div className="relative p-12">
         <div
-          className="relative flex h-[620px] w-[370px] flex-col items-center justify-between overflow-hidden rounded-[36px] border border-white/45 p-6 transition-all duration-300"
+          className="relative flex h-[620px] w-[370px] flex-col items-center justify-between overflow-hidden rounded-[24px] border border-white/45 p-6 transition-all duration-300"
           style={{
             ...shellSurfaceStyle,
             boxShadow: shellShadow,
@@ -69,41 +77,60 @@ export function IPodDeviceShell({
         >
           {(showShadowLayer || exportSafe) && (
             <div
-              className="absolute inset-0 rounded-[36px]"
+              className="absolute inset-0 rounded-[24px]"
               style={{
-                boxShadow:
-                  "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34)",
+                boxShadow: isWhite
+                  ? "0 20px 40px rgba(0,0,0,0.15)"
+                  : "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34)",
+                pointerEvents: "none",
               }}
               aria-hidden="true"
               data-export-layer="shell-shadow"
             />
           )}
-          <div
-            className="pointer-events-none absolute inset-[3px] rounded-[33px]"
+          {!isWhite && (
+            <>
+              <div
+                className="pointer-events-none absolute inset-[3px] rounded-[21px]"
+                style={{
+                  boxShadow:
+                    "inset 0 0 0 1px rgba(255,255,255,0.1), inset 0 -14px 24px rgba(0,0,0,0.035)",
+                  pointerEvents: "none",
+                }}
+                aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none absolute left-[9%] top-[3.5%] h-[34%] w-[76%] rounded-[88px] opacity-50"
+                style={{
+                  background:
+                    "linear-gradient(166deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.12) 18%, rgba(255,255,255,0) 54%)",
+                  pointerEvents: "none",
+                }}
+                aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none absolute inset-x-[7%] bottom-[6%] h-[22%] rounded-[72px] opacity-28"
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.07) 74%, rgba(0,0,0,0.11) 100%)",
+                  pointerEvents: "none",
+                }}
+                aria-hidden="true"
+              />
+            </>
+          )}
+          <div 
+            className="relative z-10 w-full"
             style={{
-              boxShadow:
-                "inset 0 0 0 1px rgba(255,255,255,0.1), inset 0 -14px 24px rgba(0,0,0,0.035)",
+              padding: "3px",
+              backgroundColor: "#0a0a0a",
+              borderRadius: "4px",
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.8)"
             }}
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute left-[9%] top-[3.5%] h-[34%] w-[76%] rounded-[88px] opacity-50"
-            style={{
-              background:
-                "linear-gradient(166deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.12) 18%, rgba(255,255,255,0) 54%)",
-            }}
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute inset-x-[7%] bottom-[6%] h-[22%] rounded-[72px] opacity-28"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.07) 74%, rgba(0,0,0,0.11) 100%)",
-            }}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 w-full">{screen}</div>
-          <div className="relative z-10 -mt-4 flex flex-1 items-center justify-center">
+          >
+            {screen}
+          </div>
+          <div className="relative z-20 -mt-4 flex flex-1 items-center justify-center">
             {wheel}
           </div>
         </div>

@@ -40,12 +40,8 @@ export function ClickWheel({
 }: ClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const derived = skinColor ? deriveWheelColors(skinColor) : null;
-  const wheelShadow = exportSafe
-    ? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
-    : "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
-  const centerShadow = exportSafe
-    ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
-    : "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
+  const isWhite = skinColor?.toLowerCase() === "#ffffff" || skinColor?.toLowerCase() === "#f2f2f2";
+
   const wheelBorder = derived?.border ?? getSurfaceToken("wheel.border");
   const wheelGradientFrom = derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
   const wheelGradientVia = derived?.gradient.via ?? getSurfaceToken("wheel.gradient.via");
@@ -56,6 +52,27 @@ export function ClickWheel({
   const wheelCenterTo = derived?.centerGradient.to ?? getSurfaceToken("wheel.center.to");
   const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
   const wheelTokens = preset.wheel;
+
+  const wheelShadow = isWhite
+    ? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
+    : exportSafe
+      ? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
+      : "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
+
+  const wheelSurfaceStyle = isWhite
+    ? {
+        backgroundColor: "#e8e8e8",
+        backgroundImage: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, transparent 60%)",
+      }
+    : {
+        backgroundImage: `linear-gradient(180deg, ${wheelGradientFrom}, ${wheelGradientVia}, ${wheelGradientTo})`,
+      };
+
+  const centerShadow = isWhite
+    ? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
+    : exportSafe
+      ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
+      : "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -142,20 +159,23 @@ export function ClickWheel({
       <div
         className="absolute inset-0 rounded-full border"
         style={{
-          borderColor: wheelBorder,
-          backgroundImage: `linear-gradient(180deg, ${wheelGradientFrom}, ${wheelGradientVia}, ${wheelGradientTo})`,
+          borderColor: isWhite ? "#d1d1d1" : wheelBorder,
+          ...wheelSurfaceStyle,
           boxShadow: wheelShadow,
         }}
         data-export-layer="wheel"
         data-testid="click-wheel"
       >
-        <div
-          className="pointer-events-none absolute inset-[2px] rounded-full"
-          style={{
-            background:
-              "radial-gradient(circle at 38% 26%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 36%, rgba(255,255,255,0) 58%)",
-          }}
-        />
+        {!isWhite && (
+          <div
+            className="pointer-events-none absolute inset-[2px] rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle at 38% 26%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 36%, rgba(255,255,255,0) 58%)",
+              pointerEvents: "none",
+            }}
+          />
+        )}
 
         {/* Button Labels */}
         <button
@@ -269,11 +289,11 @@ export function ClickWheel({
         style={{
           width: wheelTokens.centerSize,
           height: wheelTokens.centerSize,
-          borderColor: wheelCenterBorder,
-          backgroundImage: `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
-          boxShadow: exportSafe
-            ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
-            : "0 2px 6px -2px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(92,96,104,0.06), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -2px 4px rgba(0,0,0,0.04)",
+          borderColor: isWhite ? "#d1d1d1" : wheelCenterBorder,
+          backgroundImage: isWhite 
+            ? "linear-gradient(180deg, #f0f0f0, #e8e8e8)"
+            : `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
+          boxShadow: centerShadow,
         }}
         data-export-layer="wheel-center"
         data-testid="click-wheel-center"
@@ -285,14 +305,17 @@ export function ClickWheel({
           handleControlPress(onCenterClick);
         }}
       >
-        <div
-          className="pointer-events-none absolute inset-[3px] rounded-full"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 50% at 50% 34%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 44%, rgba(255,255,255,0) 72%)",
-          }}
-          aria-hidden="true"
-        />
+        {!isWhite && (
+          <div
+            className="pointer-events-none absolute inset-[3px] rounded-full"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 50% at 50% 34%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 44%, rgba(255,255,255,0) 72%)",
+              pointerEvents: "none",
+            }}
+            aria-hidden="true"
+          />
+        )}
       </div>
     </div>
   );

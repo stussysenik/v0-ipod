@@ -55,6 +55,7 @@ import {
   DEFAULT_MENU_INDEX,
   DEFAULT_OS_SCREEN,
   DEFAULT_SELECTION_KIND,
+  DEFAULT_NOW_PLAYING_FIDELITY,
   SONG_SNAPSHOT_SCHEMA_VERSION,
   type IpodInteractionModel,
   type IpodOsScreen,
@@ -62,6 +63,7 @@ import {
   type SnapshotSelectionKind,
   type SongSnapshot,
   type IpodHardwarePresetId,
+  type NowPlayingFidelity,
 } from "@/types/ipod-state";
 import {
   AUTHENTIC_CASE_COLORS,
@@ -249,6 +251,7 @@ export default function IPodClassic() {
   const [osScreen, setOsScreen] = useState<IpodOsScreen>(DEFAULT_OS_SCREEN);
   const [osMenuIndex, setOsMenuIndex] = useState(DEFAULT_MENU_INDEX);
   const [isOsNowPlayingEditable, setIsOsNowPlayingEditable] = useState(false);
+  const [nowPlayingFidelity, setNowPlayingFidelity] = useState<NowPlayingFidelity>(DEFAULT_NOW_PLAYING_FIDELITY);
 
   // Customization State
   const [skinColor, setSkinColor] = useState(DEFAULT_SHELL_COLOR);
@@ -371,6 +374,9 @@ export default function IPodClassic() {
     if (typeof savedUi.menuIndex === "number") {
       setOsMenuIndex(savedUi.menuIndex);
     }
+    if (savedUi.nowPlayingFidelity) {
+      setNowPlayingFidelity(savedUi.nowPlayingFidelity);
+    }
   }, []);
 
   useEffect(() => {
@@ -396,6 +402,7 @@ export default function IPodClassic() {
       rangeEndTime,
       osScreen,
       menuIndex: osMenuIndex,
+      nowPlayingFidelity,
     });
   }, [
     skinColor,
@@ -408,6 +415,7 @@ export default function IPodClassic() {
     rangeEndTime,
     osScreen,
     osMenuIndex,
+    nowPlayingFidelity,
   ]);
 
   useEffect(() => {
@@ -969,6 +977,7 @@ export default function IPodClassic() {
         rangeEndTime: selectionKind === "range" ? rangeEndTime : null,
         osScreen,
         menuIndex: osMenuIndex,
+        nowPlayingFidelity,
       },
       playback: {
         currentTime: state.currentTime,
@@ -1013,6 +1022,7 @@ export default function IPodClassic() {
       titlePreview={isPreviewView && !isExportCapturing}
       titleCaptureReady={isPreviewView || activeExportKind === "gif"}
       onTitleOverflowChange={setTitleCanMarquee}
+      nowPlayingFidelity={nowPlayingFidelity}
     />
   );
 
@@ -1056,6 +1066,9 @@ export default function IPodClassic() {
     setRangeEndTime(snapshot.playback.rangeEndTime);
     setOsScreen(snapshot.ui.osScreen);
     setOsMenuIndex(snapshot.ui.menuIndex);
+    if (snapshot.ui.nowPlayingFidelity) {
+      setNowPlayingFidelity(snapshot.ui.nowPlayingFidelity);
+    }
     setShowSettings(false);
   }, []);
 
@@ -1154,11 +1167,15 @@ export default function IPodClassic() {
     viewMode,
   ]);
 
+  const isWhiteShell = skinColor.toLowerCase() === "#ffffff" || skinColor.toLowerCase() === "#f2f2f2";
+
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
-  const shellShadow = isExportCapturing
-    ? "0 0 0 1px rgba(82,88,97,0.12), 0 14px 20px -22px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
-    : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.04)";
+  const shellShadow = isWhiteShell
+    ? "inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 4px rgba(0,0,0,0.05), 0 20px 40px rgba(0,0,0,0.15)"
+    : isExportCapturing
+      ? "0 0 0 1px rgba(82,88,97,0.12), 0 14px 20px -22px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
+      : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.04)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
@@ -1211,6 +1228,46 @@ export default function IPodClassic() {
                       : "slide-in-from-right-2 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)]"
                   }`}
                 >
+                  <div className="mb-4">
+                    <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
+                      Now Playing Fidelity
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        data-testid="fidelity-classic-button"
+                        aria-pressed={nowPlayingFidelity === "classic"}
+                        onClick={() => {
+                          setNowPlayingFidelity("classic");
+                          playClick();
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                          nowPlayingFidelity === "classic"
+                            ? "border-[#111827] bg-white/90 text-[#111827]"
+                            : "border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80"
+                        }`}
+                      >
+                        Classic (1:1)
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="fidelity-experimental-button"
+                        aria-pressed={nowPlayingFidelity === "experimental"}
+                        onClick={() => {
+                          setNowPlayingFidelity("experimental");
+                          playClick();
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
+                          nowPlayingFidelity === "experimental"
+                            ? "border-[#111827] bg-white/90 text-[#111827]"
+                            : "border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80"
+                        }`}
+                      >
+                        Experimental
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="mb-4">
                     <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
                       Revision Attempt
@@ -1746,12 +1803,14 @@ export default function IPodClassic() {
                 }}
               >
                 <div
-                  className="relative flex h-[620px] w-[370px] flex-col items-center border border-white/45 transition-all duration-300"
+                  className="relative flex h-[620px] w-[400px] flex-col items-center border border-white/45 transition-all duration-300 overflow-hidden"
                   style={{
-                    backgroundColor: skinColor,
-                    borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
+                    backgroundColor: isWhiteShell ? "#f2f2f2" : skinColor,
+                    backgroundImage: isWhiteShell 
+                      ? "linear-gradient(145deg, rgba(255,255,255,0.1) 0%, transparent 50%)"
+                      : isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
                     boxShadow: shellShadow,
-                    borderRadius: activePreset.shell.radius,
+                    borderRadius: 24, // Authentic 5G "fat" corners
                     paddingLeft: activePreset.shell.paddingX,
                     paddingRight: activePreset.shell.paddingX,
                     paddingTop: activePreset.shell.paddingTop,
@@ -1759,23 +1818,46 @@ export default function IPodClassic() {
                   }}
                   data-export-layer="shell"
                 >
-                  <div
-                    className="pointer-events-none absolute inset-[1px]"
-                    aria-hidden="true"
-                    style={{
-                      borderRadius: activePreset.shell.innerRadius,
-                      background:
-                        "radial-gradient(circle at 22% 10%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 18%, rgba(255,255,255,0) 42%, rgba(0,0,0,0.02) 100%)",
-                    }}
-                  />
+                  {/* Glossy plastic effect overlay */}
+                  {!isWhiteShell && (
+                    <>
+                      <div
+                        className="pointer-events-none absolute inset-0 h-1/2"
+                        style={{
+                          background: "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)",
+                          borderRadius: `24px 24px 0 0`,
+                          pointerEvents: "none",
+                        }}
+                        aria-hidden="true"
+                      />
+                      <div
+                        className="pointer-events-none absolute inset-[1px]"
+                        aria-hidden="true"
+                        style={{
+                          borderRadius: 21,
+                          background:
+                            "radial-gradient(circle at 22% 10%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 18%, rgba(255,255,255,0) 42%, rgba(0,0,0,0.02) 100%)",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    </>
+                  )}
                   {/* SCREEN AREA */}
-                  <div className="relative z-10 flex w-full justify-center">
+                  <div 
+                    className="relative z-10 flex w-full justify-center"
+                    style={{
+                      padding: "3px",
+                      backgroundColor: "#0a0a0a",
+                      borderRadius: "4px",
+                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.8)"
+                    }}
+                  >
                     {screenComponent}
                   </div>
 
                   {/* CONTROL AREA */}
                   <div
-                    className="relative z-10 flex justify-center"
+                    className="relative z-20 flex flex-1 items-center justify-center"
                     style={{ marginTop: activePreset.shell.controlMarginTop }}
                   >
                     {wheelComponent}
