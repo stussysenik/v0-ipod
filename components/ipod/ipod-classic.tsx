@@ -918,10 +918,17 @@ export default function IPodClassic() {
   }, []);
 
   const handleMenuButtonPress = useCallback(() => {
-    if (!isAuthenticInteraction) return;
+    // Switch to iPod OS interaction model
+    setInteractionModel("ipod-os");
+
+    // If we're in ASCII view, switch back to Flat to show the OS interface
+    if (viewMode === "ascii") {
+      setViewMode("flat");
+    }
+
     setIsOsNowPlayingEditable(false);
     setOsScreen("menu");
-  }, [isAuthenticInteraction]);
+  }, [viewMode]);
 
   const handlePreviousButtonPress = useCallback(() => {
     if (isAuthenticInteraction && osScreen === "menu") {
@@ -1025,9 +1032,7 @@ export default function IPodClassic() {
       onPreviousPress={handlePreviousButtonPress}
       onNextPress={handleNextButtonPress}
       onPlayPausePress={handlePlayPauseButtonPress}
-      disabled={
-        isExportCapturing || isAsciiView || (!isFlatView && !isFocusView && !isAuthenticInteraction)
-      }
+      disabled={isExportCapturing}
       exportSafe={isExportCapturing}
     />
   );
