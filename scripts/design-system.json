@@ -1,37 +1,37 @@
 {
-  "screenChrome": {
-    "frame": {
-      "liveShadow": "0 1px 1px rgba(0,0,0,0.15)",
-      "exportShadow": "0 0 0 1px rgba(60,60,60,0.08)",
-      "glassOverlayLive": "linear-gradient(152deg, rgba(255,255,255,0.068) 0%, rgba(255,255,255,0.02) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.008) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.018) 100%)",
-      "glassOverlayExport": "linear-gradient(152deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.016) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.006) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.014) 100%)"
-    },
-    "statusBar": {
-      "divider": "#969696",
-      "playIndicator": "#3B79C4",
-      "battery": {
-        "width": 16,
-        "height": 8,
-        "capWidth": 2,
-        "capHeight": 4,
-        "gap": 1,
-        "borderRadius": 1.5,
-        "fillInset": 1,
-        "fillWidthRatio": 0.74,
-        "border": "#747474",
-        "background": "#F7F7F5",
-        "fillFrom": "#D8F76E",
-        "fillTo": "#94D23E",
-        "highlight": "rgba(255,255,255,0.58)"
-      }
-    },
-    "progress": {
-      "footerBackground": "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(247,247,244,0.96) 100%)",
-      "trackBorder": "#AEAEAB",
-      "trackBackground": "linear-gradient(180deg, rgba(251,251,249,1) 0%, rgba(238,238,234,1) 100%)",
-      "trackInsetShadow": "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 1px 2px rgba(0,0,0,0.08)",
-      "fillBackground": "linear-gradient(180deg, rgba(123,195,246,1) 0%, rgba(63,145,222,1) 100%)",
-      "fillHighlight": "inset 0 1px 0 rgba(255,255,255,0.26)"
-    }
-  }
+	"screenChrome": {
+		"frame": {
+			"liveShadow": "0 1px 1px rgba(0,0,0,0.15)",
+			"exportShadow": "0 0 0 1px rgba(60,60,60,0.08)",
+			"glassOverlayLive": "linear-gradient(152deg, rgba(255,255,255,0.068) 0%, rgba(255,255,255,0.02) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.008) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.018) 100%)",
+			"glassOverlayExport": "linear-gradient(152deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.016) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.006) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.014) 100%)"
+		},
+		"statusBar": {
+			"divider": "#969696",
+			"playIndicator": "#3B79C4",
+			"battery": {
+				"width": 16,
+				"height": 8,
+				"capWidth": 2,
+				"capHeight": 4,
+				"gap": 1,
+				"borderRadius": 1.5,
+				"fillInset": 1,
+				"fillWidthRatio": 0.74,
+				"border": "#747474",
+				"background": "#F7F7F5",
+				"fillFrom": "#D8F76E",
+				"fillTo": "#94D23E",
+				"highlight": "rgba(255,255,255,0.58)"
+			}
+		},
+		"progress": {
+			"footerBackground": "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(247,247,244,0.96) 100%)",
+			"trackBorder": "#AEAEAB",
+			"trackBackground": "linear-gradient(180deg, rgba(251,251,249,1) 0%, rgba(238,238,234,1) 100%)",
+			"trackInsetShadow": "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 1px 2px rgba(0,0,0,0.08)",
+			"fillBackground": "linear-gradient(180deg, rgba(123,195,246,1) 0%, rgba(63,145,222,1) 100%)",
+			"fillHighlight": "inset 0 1px 0 rgba(255,255,255,0.26)"
+		}
+	}
 }
