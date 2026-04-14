@@ -1,200 +1,213 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import { useFixedEditor } from "./fixed-editor";
 
 interface EditableTrackNumberProps {
-  trackNumber: number;
-  totalTracks: number;
-  onTrackNumberChange: (trackNumber: number) => void;
-  onTotalTracksChange: (totalTracks: number) => void;
-  className?: string;
-  disabled?: boolean;
+	trackNumber: number;
+	totalTracks: number;
+	onTrackNumberChange: (trackNumber: number) => void;
+	onTotalTracksChange: (totalTracks: number) => void;
+	className?: string;
+	disabled?: boolean;
 }
 
 export function EditableTrackNumber({
-  trackNumber,
-  totalTracks,
-  onTrackNumberChange,
-  onTotalTracksChange,
-  className = "",
-  disabled = false,
+	trackNumber,
+	totalTracks,
+	onTrackNumberChange,
+	onTotalTracksChange,
+	className = "",
+	disabled = false,
 }: EditableTrackNumberProps) {
-  const [isEditingTrack, setIsEditingTrack] = useState(false);
-  const [isEditingTotal, setIsEditingTotal] = useState(false);
-  const [trackValue, setTrackValue] = useState(trackNumber.toString());
-  const [totalValue, setTotalValue] = useState(totalTracks.toString());
+	const [isEditingTrack, setIsEditingTrack] = useState(false);
+	const [isEditingTotal, setIsEditingTotal] = useState(false);
+	const [trackValue, setTrackValue] = useState(trackNumber.toString());
+	const [totalValue, setTotalValue] = useState(totalTracks.toString());
 
-  const trackInputRef = useRef<HTMLInputElement>(null);
-  const totalInputRef = useRef<HTMLInputElement>(null);
-  const { isTouchEditingPreferred, openEditor } = useFixedEditor();
+	const trackInputRef = useRef<HTMLInputElement>(null);
+	const totalInputRef = useRef<HTMLInputElement>(null);
+	const { isTouchEditingPreferred, openEditor } = useFixedEditor();
 
-  useEffect(() => {
-    setTrackValue(trackNumber.toString());
-  }, [trackNumber]);
+	useEffect(() => {
+		setTrackValue(trackNumber.toString());
+	}, [trackNumber]);
 
-  useEffect(() => {
-    setTotalValue(totalTracks.toString());
-  }, [totalTracks]);
+	useEffect(() => {
+		setTotalValue(totalTracks.toString());
+	}, [totalTracks]);
 
-  useEffect(() => {
-    if (isEditingTrack && trackInputRef.current) {
-      trackInputRef.current.focus();
-      trackInputRef.current.select();
-    }
-  }, [isEditingTrack]);
+	useEffect(() => {
+		if (isEditingTrack && trackInputRef.current) {
+			trackInputRef.current.focus();
+			trackInputRef.current.select();
+		}
+	}, [isEditingTrack]);
 
-  useEffect(() => {
-    if (isEditingTotal && totalInputRef.current) {
-      totalInputRef.current.focus();
-      totalInputRef.current.select();
-    }
-  }, [isEditingTotal]);
+	useEffect(() => {
+		if (isEditingTotal && totalInputRef.current) {
+			totalInputRef.current.focus();
+			totalInputRef.current.select();
+		}
+	}, [isEditingTotal]);
 
-  useEffect(() => {
-    if (!disabled) return;
-    setIsEditingTrack(false);
-    setIsEditingTotal(false);
-    setTrackValue(trackNumber.toString());
-    setTotalValue(totalTracks.toString());
-  }, [disabled, trackNumber, totalTracks]);
+	useEffect(() => {
+		if (!disabled) return;
+		setIsEditingTrack(false);
+		setIsEditingTotal(false);
+		setTrackValue(trackNumber.toString());
+		setTotalValue(totalTracks.toString());
+	}, [disabled, trackNumber, totalTracks]);
 
-  const handleTrackBlur = () => {
-    const num = parseInt(trackValue, 10);
-    if (!isNaN(num) && num >= 1 && num <= totalTracks) {
-      onTrackNumberChange(num);
-    } else {
-      setTrackValue(trackNumber.toString());
-    }
-    setIsEditingTrack(false);
-  };
+	const handleTrackBlur = () => {
+		const num = Number.parseInt(trackValue, 10);
+		if (!Number.isNaN(num) && num >= 1 && num <= totalTracks) {
+			onTrackNumberChange(num);
+		} else {
+			setTrackValue(trackNumber.toString());
+		}
+		setIsEditingTrack(false);
+	};
 
-  const handleTotalBlur = () => {
-    const num = parseInt(totalValue, 10);
-    if (!isNaN(num) && num >= 1 && num >= trackNumber) {
-      onTotalTracksChange(num);
-    } else {
-      setTotalValue(totalTracks.toString());
-    }
-    setIsEditingTotal(false);
-  };
+	const handleTotalBlur = () => {
+		const num = Number.parseInt(totalValue, 10);
+		if (!Number.isNaN(num) && num >= 1 && num >= trackNumber) {
+			onTotalTracksChange(num);
+		} else {
+			setTotalValue(totalTracks.toString());
+		}
+		setIsEditingTotal(false);
+	};
 
-  const handleTrackKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleTrackBlur();
-    } else if (e.key === "Escape") {
-      setTrackValue(trackNumber.toString());
-      setIsEditingTrack(false);
-    }
-  };
+	const handleTrackKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter") {
+			handleTrackBlur();
+		} else if (e.key === "Escape") {
+			setTrackValue(trackNumber.toString());
+			setIsEditingTrack(false);
+		}
+	};
 
-  const handleTotalKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleTotalBlur();
-    } else if (e.key === "Escape") {
-      setTotalValue(totalTracks.toString());
-      setIsEditingTotal(false);
-    }
-  };
+	const handleTotalKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter") {
+			handleTotalBlur();
+		} else if (e.key === "Escape") {
+			setTotalValue(totalTracks.toString());
+			setIsEditingTotal(false);
+		}
+	};
 
-  const openTouchTrackEditor = () => {
-    if (disabled) return;
-    openEditor({
-      title: "Edit track number",
-      value: trackNumber.toString(),
-      inputMode: "numeric",
-      pattern: "[0-9]*",
-      onCommit: (nextValue) => {
-        const num = parseInt(nextValue, 10);
-        if (!isNaN(num) && num >= 1 && num <= totalTracks) {
-          onTrackNumberChange(num);
-        }
-      },
-    });
-  };
+	const openTouchTrackEditor = () => {
+		if (disabled) return;
+		openEditor({
+			title: "Edit track number",
+			value: trackNumber.toString(),
+			inputMode: "numeric",
+			pattern: "[0-9]*",
+			onCommit: (nextValue) => {
+				const num = Number.parseInt(nextValue, 10);
+				if (!Number.isNaN(num) && num >= 1 && num <= totalTracks) {
+					onTrackNumberChange(num);
+				}
+			},
+		});
+	};
 
-  const openTouchTotalEditor = () => {
-    if (disabled) return;
-    openEditor({
-      title: "Edit total tracks",
-      value: totalTracks.toString(),
-      inputMode: "numeric",
-      pattern: "[0-9]*",
-      onCommit: (nextValue) => {
-        const num = parseInt(nextValue, 10);
-        if (!isNaN(num) && num >= 1 && num >= trackNumber) {
-          onTotalTracksChange(num);
-        }
-      },
-    });
-  };
+	const openTouchTotalEditor = () => {
+		if (disabled) return;
+		openEditor({
+			title: "Edit total tracks",
+			value: totalTracks.toString(),
+			inputMode: "numeric",
+			pattern: "[0-9]*",
+			onCommit: (nextValue) => {
+				const num = Number.parseInt(nextValue, 10);
+				if (!Number.isNaN(num) && num >= 1 && num >= trackNumber) {
+					onTotalTracksChange(num);
+				}
+			},
+		});
+	};
 
-  return (
-    <div
-      className={`flex items-center gap-1 ${className}`}
-      data-testid="track-number-container"
-    >
-      {isEditingTrack ? (
-        <input
-          ref={trackInputRef}
-          type="text"
-          value={trackValue}
-          onChange={(e) => setTrackValue(e.target.value)}
-          onBlur={handleTrackBlur}
-          onKeyDown={handleTrackKeyDown}
-          className="w-6 bg-white border border-blue-400 rounded px-0.5 text-center outline-none"
-          style={{ fontSize: "inherit", fontFamily: "inherit" }}
-          data-testid="track-number-input"
-        />
-      ) : (
-        <span
-          onClick={
-            isTouchEditingPreferred
-              ? undefined
-              : () => {
-                  if (!disabled) {
-                    setIsEditingTrack(true);
-                  }
-                }
-          }
-          onPointerUp={isTouchEditingPreferred ? openTouchTrackEditor : undefined}
-          className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
-          data-testid="track-number-value"
-        >
-          {trackNumber}
-        </span>
-      )}
-      <span>of</span>
-      {isEditingTotal ? (
-        <input
-          ref={totalInputRef}
-          type="text"
-          value={totalValue}
-          onChange={(e) => setTotalValue(e.target.value)}
-          onBlur={handleTotalBlur}
-          onKeyDown={handleTotalKeyDown}
-          className="w-6 bg-white border border-blue-400 rounded px-0.5 text-center outline-none"
-          style={{ fontSize: "inherit", fontFamily: "inherit" }}
-          data-testid="total-tracks-input"
-        />
-      ) : (
-        <span
-          onClick={
-            isTouchEditingPreferred
-              ? undefined
-              : () => {
-                  if (!disabled) {
-                    setIsEditingTotal(true);
-                  }
-                }
-          }
-          onPointerUp={isTouchEditingPreferred ? openTouchTotalEditor : undefined}
-          className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
-          data-testid="total-tracks-value"
-        >
-          {totalTracks}
-        </span>
-      )}
-    </div>
-  );
+	return (
+		<div
+			className={`flex items-center gap-1 ${className}`}
+			data-testid="track-number-container"
+		>
+			{isEditingTrack ? (
+				<input
+					ref={trackInputRef}
+					className="w-6 bg-white border border-blue-400 rounded px-0.5 text-center outline-none"
+					data-testid="track-number-input"
+					style={{ fontSize: "inherit", fontFamily: "inherit" }}
+					type="text"
+					value={trackValue}
+					onBlur={handleTrackBlur}
+					onChange={(e) => setTrackValue(e.target.value)}
+					onKeyDown={handleTrackKeyDown}
+				/>
+			) : (
+				<span
+					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
+					data-testid="track-number-value"
+					onClick={
+						isTouchEditingPreferred
+							? undefined
+							: () => {
+									if (!disabled) {
+										setIsEditingTrack(
+											true,
+										);
+									}
+								}
+					}
+					onPointerUp={
+						isTouchEditingPreferred
+							? openTouchTrackEditor
+							: undefined
+					}
+				>
+					{trackNumber}
+				</span>
+			)}
+			<span>of</span>
+			{isEditingTotal ? (
+				<input
+					ref={totalInputRef}
+					className="w-6 bg-white border border-blue-400 rounded px-0.5 text-center outline-none"
+					data-testid="total-tracks-input"
+					style={{ fontSize: "inherit", fontFamily: "inherit" }}
+					type="text"
+					value={totalValue}
+					onBlur={handleTotalBlur}
+					onChange={(e) => setTotalValue(e.target.value)}
+					onKeyDown={handleTotalKeyDown}
+				/>
+			) : (
+				<span
+					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
+					data-testid="total-tracks-value"
+					onClick={
+						isTouchEditingPreferred
+							? undefined
+							: () => {
+									if (!disabled) {
+										setIsEditingTotal(
+											true,
+										);
+									}
+								}
+					}
+					onPointerUp={
+						isTouchEditingPreferred
+							? openTouchTotalEditor
+							: undefined
+					}
+				>
+					{totalTracks}
+				</span>
+			)}
+		</div>
+	);
 }

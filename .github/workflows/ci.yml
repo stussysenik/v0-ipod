@@ -61,7 +61,13 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run tests
-        run: bun test --coverage
+        run: |
+          # Only run unit tests (*.test.ts files); skip Playwright *.spec.ts files
+          if find . -name "*.test.ts" -not -path "*/node_modules/*" | grep -q .; then
+            bun test --coverage
+          else
+            echo "No unit tests found — skipping (E2E tests run separately)"
+          fi
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -167,9 +173,9 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
+          base: ${{ github.event.before }}
+          head: ${{ github.sha }}
+          extra_args: --only-verified
 
   # ─────────────────────────────────────────
   # Lighthouse CI

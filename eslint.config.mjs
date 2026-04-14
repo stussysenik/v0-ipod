@@ -161,11 +161,13 @@ const eslintConfig = [
       "scripts/**",
       "ipod-classic.tsx",
       "components/ipod-form.tsx",
-      // JS config files: eslint-config-next applies @typescript-eslint/parser to .js
-      // but @typescript-eslint/scope-manager lacks addGlobals needed by ESLint 10
-      "*.js",
-      "*.mjs",
-      "*.cjs",
+      // JS/MJS/CJS files: eslint-config-next's Babel parser returns a scopeManager
+      // without addGlobals(), which ESLint 10 requires. Ignore all JS files at any depth.
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.cjs",
+      // Figma plugin source — not part of the web app
+      "figma/**",
     ],
   },
   ...nextConfig,
