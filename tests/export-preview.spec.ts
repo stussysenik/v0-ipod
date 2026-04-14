@@ -34,7 +34,7 @@ test.describe("Export state fidelity", () => {
 		const download = await downloadPromise;
 
 		expect(download.suggestedFilename()).toBe(
-			"ipod-0000-classic-2009-ipod-os-menu-moment-charcoal-baby.png",
+			"ipod-0000-classic-2009-ipod-os-menu-moment-chamakay.png",
 		);
 
 		const downloadPath = await download.path();
@@ -53,7 +53,7 @@ test.describe("Export state fidelity", () => {
 		await expect(page.getByTestId("gif-export-button")).toBeVisible();
 
 		await openThemePanel(page);
-		await page.getByTestId("hardware-preset-classic-2008-button").click();
+		await page.getByTestId("hardware-preset-classic-2008-black-button").click();
 		await page.getByTestId("interaction-mode-ipod-os-button").click();
 		await expect(page.getByTestId("ipod-os-menu")).toBeVisible();
 		await page.keyboard.press("Escape");
@@ -63,7 +63,7 @@ test.describe("Export state fidelity", () => {
 		const download = await downloadPromise;
 
 		expect(download.suggestedFilename()).toBe(
-			"ipod-0000-classic-2008-ipod-os-menu-moment-charcoal-baby.gif",
+			"ipod-0000-classic-2008-black-ipod-os-menu-moment-chamakay.gif",
 		);
 
 		const downloadPath = await download.path();

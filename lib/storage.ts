@@ -58,7 +58,13 @@ function isInteractionModel(value: unknown): value is IpodInteractionModel {
 }
 
 function isHardwarePreset(value: unknown): value is IpodHardwarePresetId {
-	return value === "classic-2007" || value === "classic-2008" || value === "classic-2009";
+	return (
+		value === "classic-2007" ||
+		value === "classic-2008" ||
+		value === "classic-2009" ||
+		value === "classic-2008-black" ||
+		value === "classic-2008-silver"
+	);
 }
 
 function isSelectionKind(value: unknown): value is SnapshotSelectionKind {
@@ -218,6 +224,15 @@ export function loadSongSnapshot(): SongSnapshot | null {
 			return null;
 		}
 
+		// Legacy v1 snapshots (no schemaVersion) were created before hardware presets
+		// existed. Map them to the original 2007 design rather than the current default.
+		const isLegacyV1 =
+			!candidate.schemaVersion ||
+			candidate.schemaVersion < SONG_SNAPSHOT_SCHEMA_VERSION;
+		const defaultPreset: IpodHardwarePresetId = isLegacyV1
+			? "classic-2007"
+			: DEFAULT_HARDWARE_PRESET_ID;
+
 		const playback = normalizePlaybackSnapshot(
 			candidate.metadata,
 			candidate.playback,
@@ -227,7 +242,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
 			skinColor: partialUi.skinColor,
 			bgColor: partialUi.bgColor,
 			viewMode: partialUi.viewMode,
-			hardwarePreset: partialUi.hardwarePreset ?? DEFAULT_HARDWARE_PRESET_ID,
+			hardwarePreset: partialUi.hardwarePreset ?? defaultPreset,
 			interactionModel: partialUi.interactionModel ?? DEFAULT_INTERACTION_MODEL,
 			selectionKind: playback.selectionKind,
 			rangeStartTime: playback.rangeStartTime,

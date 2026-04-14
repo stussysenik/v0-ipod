@@ -2,6 +2,18 @@ import { expect, test } from "@playwright/test";
 
 test.describe("EditableTrackNumber Component", () => {
 	test.beforeEach(async ({ page }) => {
+		// Seed direct-edit mode so the Now Playing screen is visible on load.
+		// Without this, the app starts in iPod OS menu mode which hides the
+		// track number container.
+		await page.addInitScript(() => {
+			localStorage.setItem(
+				"ipodSnapshotUiState",
+				JSON.stringify({
+					interactionModel: "direct",
+					osScreen: "now-playing",
+				}),
+			);
+		});
 		await page.goto("/");
 		await expect(page.getByTestId("track-number-container")).toBeVisible();
 	});

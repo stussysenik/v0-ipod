@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 import { CarbonCheckbox, IconButton, ThemeToggle } from "@/components/ui";
 import useIPodTheme, { IPOD_6G_COLORS, IPodThemeProvider } from "@/hooks/use-ipod-theme";
-import { AUTHENTIC_CASE_COLORS } from "@/lib/color-manifest";
+import { colorManifest } from "@/lib/color-manifest";
 import {
 	DEFAULT_HARDWARE_PRESET_ID,
 	IPOD_CLASSIC_PRESETS,
@@ -1407,30 +1407,28 @@ export default function IPodClassic() {
 												Releases
 											</h4>
 											<div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-												{AUTHENTIC_CASE_COLORS.map(
+												{colorManifest.authenticFinishes.map(
 													(
-														c,
+														finish,
 													) => (
 														<button
 															key={
-																c.value
+																finish.hex
 															}
 															className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
 																skinColor ===
-																c.value
+																finish.hex
 																	? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
 																	: "border-[#B5BBC3]"
 															}`}
 															style={{
 																backgroundColor:
-																	c.value,
+																	finish.hex,
 															}}
-															title={
-																c.label
-															}
+															title={`${finish.label} (${finish.year}) — ${finish.notes}`}
 															onClick={() =>
 																setSkinColor(
-																	c.value,
+																	finish.hex,
 																)
 															}
 														/>
@@ -1866,6 +1864,7 @@ export default function IPodClassic() {
 									}
 								/>
 								<IconButton
+									badge="WIP"
 									data-testid="focus-view-button"
 									icon={
 										<Monitor className="w-5 h-5" />
