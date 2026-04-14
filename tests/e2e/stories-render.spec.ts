@@ -7,7 +7,11 @@
  * This is not a visual regression test — those will ship in a follow-up
  * change along with Chromatic. This test only catches "story throws on
  * mount" and "a11y addon reports a critical contrast violation".
+ *
+ * Tests are skipped automatically when STORYBOOK_URL is unreachable.
  */
+
+import http from "node:http";
 
 import { expect, test } from "@playwright/test";
 
@@ -37,9 +41,46 @@ const STORIES = [
 
 const STORYBOOK_URL = process.env.STORYBOOK_URL ?? "http://localhost:6006";
 
+/** Returns true if the Storybook server is reachable. */
+function isStorybookReachable(): Promise<boolean> {
+	return new Promise((resolve) => {
+		const url = new URL(STORYBOOK_URL);
+		const req = http.request(
+			{
+				hostname: url.hostname,
+				port: Number(url.port) || 80,
+				path: "/",
+				method: "HEAD",
+			},
+			() => resolve(true),
+		);
+		req.on("error", () => resolve(false));
+		req.setTimeout(2000, () => {
+			req.destroy();
+			resolve(false);
+		});
+		req.end();
+	});
+}
+
 test.describe("Storybook smoke", () => {
+	let storybookAvailable = false;
+
+	test.beforeAll(async () => {
+		storybookAvailable = await isStorybookReachable();
+		if (!storybookAvailable) {
+			console.info(
+				`[stories-render] Storybook not reachable at ${STORYBOOK_URL} — skipping smoke tests`,
+			);
+		}
+	});
+
 	for (const storyId of STORIES) {
 		test(`renders ${storyId}`, async ({ page }) => {
+			if (!storybookAvailable) {
+				test.skip(true, `Storybook not running at ${STORYBOOK_URL}`);
+			}
+
 			const errors: string[] = [];
 			page.on("pageerror", (error) => errors.push(error.message));
 			page.on("console", (msg) => {

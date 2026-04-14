@@ -102,26 +102,10 @@ jobs:
         env:
           NEXT_PUBLIC_CI: true
 
-      - name: Build Storybook
-        run: bun run storybook:build
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-
-      - name: Serve Storybook
-        run: bunx http-server storybook-static -p 6006 --silent &
-        shell: bash
-
-      - name: Wait for Storybook
-        run: |
-          echo "Waiting for Storybook on port 6006..."
-          timeout 30 bash -c 'until curl -sf http://localhost:6006 > /dev/null; do sleep 1; done'
-          echo "Storybook is ready"
-
       - name: Run E2E tests
         run: bun run test
         env:
           CI: true
-          STORYBOOK_URL: http://localhost:6006
 
       - name: Upload test results
         if: always()
