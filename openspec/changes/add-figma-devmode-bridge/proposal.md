@@ -1,0 +1,23 @@
+# Change: Add a Storybook-backed Figma dev-mode bridge for live vector design authoring
+
+## Why
+The iPod project is a visual product, but the design loop is currently one-way: code renders in the browser, designers look at screenshots, and any canonical Figma artifact is manually rebuilt by hand. There is no single place where a designer and an engineer can see the same component, in the same state, with the same tokens, at the same time. The goal of this change is to turn Figma into a live, vector-first dev mode for the project — essentially "Chrome DevTools, but the target is Figma instead of the browser" — so that editing a component on disk reflects into the Figma file as real selectable vectors, and so that editing a design token in Figma writes back into the codebase.
+
+The change also gives the project its first real component library surface (Storybook), which is currently missing despite ~30 focused iPod components being eligible for it. Storybook is the foundation that makes every downstream Figma integration possible, because stories are the canonical way to say "this component, in this state, with these args."
+
+## What Changes
+- Stand up Storybook 8 (Next.js framework) as the canonical 2D component library and wire it to the existing Tailwind config, `globals.css`, and theme provider so renders match the production app pixel-for-pixel.
+- Author CSF3 stories for every in-scope iPod and `ui/*` component, with explicit per-story `compat` metadata indicating whether the component can be rendered through satori, must be rasterized, or must be excluded from the Figma pipeline entirely.
+- Establish one canonical Figma file with a documented page layout that mirrors the Storybook hierarchy, and wire Storybook stories to Figma nodes via `@storybook/addon-designs` so the Figma frame is visible inside Storybook's docs panel.
+- Ship a phase-1 off-the-shelf push path (Story.to.Design) that turns every compatible story into editable vector frames in the canonical Figma file on a single command, with stable Figma node IDs that survive re-pushes.
+- Build a design token authority layer that extracts Tailwind + CSS custom property tokens into a W3C DTCG JSON file and imports them into Figma as Variables organized into `Primitives`, `Semantic`, and `Component` collections with light and dark modes, preserving Variable IDs across runs.
+- Install Figma Code Connect for every in-scope component so Dev Mode shows the real import path and props snippet sourced from the working tree rather than hand-authored hints.
+- Build the phase-2 HMR bridge: a local WebSocket server, a chokidar file watcher, a satori JSX-to-SVG renderer, and a custom Figma plugin we own. On save, the bridge re-renders the affected stories and updates only the interior of the bound Figma frame, preserving parent layout, position, constraints, and auto-layout settings.
+- Build the phase-3 token round-trip: Figma Variable edits in the `Primitives` and `Semantic` collections are captured by the plugin and written back into `app/globals.css` or `tailwind.config.ts` with a `[figma-hmr]` blame marker, debounced so a slider drag produces at most one commit-ready change per 500ms.
+- Document the sharp edges explicitly: the `@react-three/fiber` 3D view, advanced CSS filters, and animations are out of scope for the vector pipeline and will not appear in the Figma file. Designers get a "Not in Figma" callout on the file cover so this boundary is never implicit.
+- Add a component scaffolder CLI (`bun run scaffold:component`) that stamps out component + story + Code Connect binding + token audit entry in a single command so the maintenance tax stays bounded as the library grows.
+
+## Impact
+- Affected specs: `component-library-stories`, `figma-design-bridge`, `design-token-bridge`, `figma-hmr-loop`
+- Affected code: `components/ipod/*`, `components/ui/*`, `app/globals.css`, `tailwind.config.ts`, `package.json` scripts, new directories `.storybook/`, `stories/`, `figma/code-connect/`, `figma/plugin/`, `tools/figma/`, `scripts/extract-tokens.ts`, `scripts/render-story.ts`, `scripts/figma-hmr-server.ts`, `design-tokens/tokens.json`, `docs/figma/` runbook set, `ENGINEERING_SETUP.md` for the `FIGMA_TOKEN` workflow
+- Phased delivery: Phase 1 (Storybook + Story.to.Design + Code Connect + token extract) is independently shippable and delivers actual editable vector frames in Figma on its own. Phase 2 (HMR bridge) is additive on top of Phase 1 and can be disabled without losing Phase 1 value. Phase 3 (token round-trip) is additive on top of Phase 2 and can likewise be disabled. Each phase is a real checkpoint, not a half-finished step.

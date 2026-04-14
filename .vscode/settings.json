@@ -1,0 +1,60 @@
+{
+	// Editor
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit",
+		"source.organizeImports": "explicit"
+	},
+	"editor.rulers": [100],
+	"editor.tabSize": 8,
+	"editor.insertSpaces": false,
+	"editor.detectIndentation": false,
+
+	// TypeScript
+	"typescript.preferences.importModuleSpecifier": "non-relative",
+	"typescript.suggest.autoImports": true,
+	"typescript.updateImportsOnFileMove.enabled": "always",
+	"typescript.tsdk": "node_modules/typescript/lib",
+
+	// Files
+	"files.eol": "\n",
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true,
+	"files.exclude": {
+		"**/.next": true,
+		"**/node_modules": true,
+		"**/*.log": true
+	},
+
+	// Search
+	"search.exclude": {
+		"**/.next": true,
+		"**/node_modules": true,
+		"**/bun.lock": true
+	},
+
+	// ESLint
+	"eslint.workingDirectories": ["."],
+	"eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+
+	// Tailwind
+	"tailwindCSS.includeLanguages": {
+		"typescript": "javascript",
+		"typescriptreact": "javascript"
+	},
+	"tailwindCSS.experimental.classRegex": [
+		["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+		["cva\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+	],
+
+	// Git
+	"git.enableSmartCommit": true,
+	"git.confirmSync": false,
+
+	// Terminal
+	"terminal.integrated.defaultProfile.osx": "zsh",
+
+	// Extensions recommendations
+	"extensions.ignoreRecommendations": false
+}

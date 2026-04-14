@@ -1,0 +1,65 @@
+import { Meta } from "@storybook/blocks";
+
+<Meta title="Docs/Not In Scope" />
+
+# Not In Figma
+
+The Figma dev-mode bridge is **vector-first**. Components that cannot be
+serialized to SVG without rasterization are deliberately excluded from the
+Figma pipeline. This page is the canonical list of what the bridge does
+**not** cover.
+
+If you need to add a new component to this list, update
+`docs/figma/component-audit.md` and add `parameters.compat = "exclude"` to
+its story (or skip the story if the component has no visual surface).
+
+## Excluded Components
+
+### `components/three/*`
+
+The 3D iPod view uses `@react-three/fiber` and Three.js.
+
+- **Why excluded:** Three.js scenes cannot be serialized to SVG without
+  baking a raster snapshot. A raster snapshot violates the vector-first rule
+  established in D4 of the design doc.
+- **Where it still lives:** The Next.js app at `components/three/three-d-ipod.tsx`.
+  Designers can view it in the running app but not in Figma.
+
+### `ascii-ipod`
+
+A character-grid ASCII renderer.
+
+- **Why excluded:** The visual payload is a text grid that loses meaning if
+  rasterized. The grid is also a runtime-only experience — it has no canonical
+  "at-rest" frame.
+
+### `fixed-editor` / `gif-preview-modal` / `framed-export-stage`
+
+Modal and staging surfaces.
+
+- **Why excluded:** These are behavioural containers, not design surfaces.
+  They host runtime artifacts (a text input, a GIF blob, an export frame).
+  They have no static visual state worth representing in Figma.
+
+### `service-worker-cleanup`
+
+- **Why excluded:** No DOM output. Lifecycle-only component.
+
+### `image-upload`
+
+- **Why excluded:** File input UI is behavioural rather than visual. The
+  image it renders is driven by runtime file selection.
+
+## Sharp Edges
+
+Satori supports a subset of CSS. Any component that relies on the following
+cannot be rendered through the vector pipeline and must be reclassified as
+`raster` or `exclude`:
+
+- `backdrop-filter`
+- `mix-blend-mode`
+- SVG filters (`filter: url(#...)`)
+- CSS animations and transitions (static render only)
+- Custom fonts that are not loaded in the satori context
+
+See `docs/figma/component-audit.md` for the full classification table.

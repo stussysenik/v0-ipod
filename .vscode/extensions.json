@@ -1,0 +1,30 @@
+{
+	"recommendations": [
+		// Core
+		"dbaeumer.vscode-eslint",
+		"esbenp.prettier-vscode",
+		"bradlc.vscode-tailwindcss",
+		"usernamehw.errorlens",
+
+		// TypeScript
+		"ms-vscode.vscode-typescript-next",
+		"pmneo.tsimporter",
+
+		// React
+		"formulahendry.auto-rename-tag",
+		"christian-kohler.path-intellisense",
+
+		// Git
+		"eamodio.gitlens",
+		"github.vscode-pull-request-github",
+
+		// Quality of Life
+		"aaron-bond.better-comments",
+		"streetsidesoftware.code-spell-checker",
+		"EditorConfig.EditorConfig",
+
+		// Testing
+		"ms-playwright.playwright"
+	],
+	"unwantedRecommendations": ["ms-vscode.vscode-typescript-tslint-plugin"]
+}

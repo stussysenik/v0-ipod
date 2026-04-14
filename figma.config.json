@@ -1,0 +1,23 @@
+{
+	"codeConnect": {
+		"include": ["figma/code-connect/**/*.figma.tsx"],
+		"parser": "react",
+		"importPaths": {
+			"components/*": "@/components/*"
+		}
+	},
+	"figma": {
+		"fileKey": "PLACEHOLDER_FILE_KEY",
+		"pages": [
+			"Cover",
+			"Tokens",
+			"Primitives",
+			"iPod / Shell",
+			"iPod / Screen",
+			"iPod / Wheel",
+			"iPod / Now Playing",
+			"Controls",
+			"Docs"
+		]
+	}
+}
