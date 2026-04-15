@@ -1,10 +1,5 @@
 import { DEFAULT_HARDWARE_PRESET_ID } from "@/lib/ipod-classic-presets";
-import {
-	DEFAULT_INTERACTION_MODEL,
-	DEFAULT_OS_SCREEN,
-	DEFAULT_SELECTION_KIND,
-	SONG_SNAPSHOT_SCHEMA_VERSION,
-} from "@/types/ipod-state";
+import { DEFAULT_SELECTION_KIND, SONG_SNAPSHOT_SCHEMA_VERSION } from "@/types/ipod-state";
 
 import type { SongSnapshot } from "@/types/ipod-state";
 import type { Page } from "@playwright/test";
@@ -27,11 +22,11 @@ export const LONG_METADATA_SNAPSHOT: SongSnapshot = {
 		bgColor: "#F4F4EF",
 		viewMode: "flat",
 		hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
-		interactionModel: DEFAULT_INTERACTION_MODEL,
+		interactionModel: "direct",
 		selectionKind: DEFAULT_SELECTION_KIND,
 		rangeStartTime: null,
 		rangeEndTime: null,
-		osScreen: DEFAULT_OS_SCREEN,
+		osScreen: "now-playing",
 		menuIndex: 0,
 	},
 	playback: {

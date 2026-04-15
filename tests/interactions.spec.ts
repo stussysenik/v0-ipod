@@ -25,11 +25,24 @@ async function openThemePanel(page: Page): Promise<void> {
 test.describe("Core interactions remain usable", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.addInitScript(() => {
+			// Merge defaults with any previously saved state so reloads within a
+			// test preserve mutations (e.g. viewMode, hardwarePreset) while still
+			// guaranteeing the Now Playing screen on a fresh load.
+			const existing = (() => {
+				try {
+					return JSON.parse(
+						localStorage.getItem("ipodSnapshotUiState") || "{}",
+					) as Record<string, unknown>;
+				} catch {
+					return {} as Record<string, unknown>;
+				}
+			})();
 			localStorage.setItem(
 				"ipodSnapshotUiState",
 				JSON.stringify({
 					interactionModel: "direct",
 					osScreen: "now-playing",
+					...existing,
 				}),
 			);
 		});

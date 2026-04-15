@@ -225,13 +225,17 @@ export function loadSongSnapshot(): SongSnapshot | null {
 		}
 
 		// Legacy v1 snapshots (no schemaVersion) were created before hardware presets
-		// existed. Map them to the original 2007 design rather than the current default.
+		// and iPod OS mode existed. Map them to the original 2007 design and show the
+		// Now Playing screen so the track title is visible after loading.
 		const isLegacyV1 =
 			!candidate.schemaVersion ||
 			candidate.schemaVersion < SONG_SNAPSHOT_SCHEMA_VERSION;
 		const defaultPreset: IpodHardwarePresetId = isLegacyV1
 			? "classic-2007"
 			: DEFAULT_HARDWARE_PRESET_ID;
+		const defaultOsScreen: IpodOsScreen = isLegacyV1
+			? "now-playing"
+			: DEFAULT_OS_SCREEN;
 
 		const playback = normalizePlaybackSnapshot(
 			candidate.metadata,
@@ -247,7 +251,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
 			selectionKind: playback.selectionKind,
 			rangeStartTime: playback.rangeStartTime,
 			rangeEndTime: playback.rangeEndTime,
-			osScreen: partialUi.osScreen ?? DEFAULT_OS_SCREEN,
+			osScreen: partialUi.osScreen ?? defaultOsScreen,
 			menuIndex: partialUi.menuIndex ?? DEFAULT_MENU_INDEX,
 		};
 

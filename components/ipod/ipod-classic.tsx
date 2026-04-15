@@ -245,7 +245,6 @@ export default function IPodClassic() {
 		isBlack: _isBlack,
 		caseColor: themeSkinColor,
 		backgroundColor: themeBgColor,
-		presetId: themePresetId,
 		toggleTheme: toggleThemeRaw,
 	} = useIPodTheme("black");
 
@@ -258,12 +257,14 @@ export default function IPodClassic() {
 	// Flipping the theme must clear any custom case/bg overrides so the
 	// black/white switch is atomic end-to-end. Without this the user's last
 	// picked hex silently survives the toggle and theme switching becomes a
-	// no-op on persisted sessions.
+	// no-op on persisted sessions. Also sync the hardware preset to the
+	// theme's canonical preset so the preset selector stays consistent.
 	const toggleTheme = useCallback(() => {
 		setSkinColor(null);
 		setBgColor(null);
 		toggleThemeRaw();
-	}, [toggleThemeRaw]);
+		setHardwarePreset(theme === "black" ? "classic-2008-silver" : "classic-2008-black");
+	}, [toggleThemeRaw, theme]);
 
 	const [showShadow, setShowShadow] = useState(true); // Carbon Design checkbox
 	const [showSettings, setShowSettings] = useState(false);
@@ -614,11 +615,6 @@ export default function IPodClassic() {
 		},
 		[cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen],
 	);
-
-	// Theme-aware preset change - Addy Osmani: single source of truth
-	useEffect(() => {
-		setHardwarePreset(themePresetId);
-	}, [themePresetId]);
 
 	const handleHardwarePresetChange = useCallback((nextPresetId: IpodHardwarePresetId) => {
 		setHardwarePreset(nextPresetId);
@@ -1831,7 +1827,7 @@ export default function IPodClassic() {
 							</div>
 
 							{/* View Modes - Carbon Design Toolbar Section */}
-							<div className="flex flex-col gap-2 p-3 bg-[#F4F4F4] rounded-lg border border-[#E0E0E0] shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
+							<div className="relative z-30 flex flex-col gap-2 p-3 bg-[#F4F4F4] rounded-lg border border-[#E0E0E0] shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
 								<IconButton
 									data-testid="flat-view-button"
 									icon={
@@ -1956,7 +1952,7 @@ export default function IPodClassic() {
 														"success"
 												? "Done!"
 												: !canPngExport
-													? "Flat or Focus View"
+													? "Flat View Only"
 													: "Export 2D Image"
 								}
 								onClick={handlePngExport}
