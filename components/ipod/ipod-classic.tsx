@@ -122,8 +122,8 @@ const initialState: SongMetadata = {
 	duration: 252,
 	currentTime: 47,
 	rating: 4,
-	trackNumber: 2,
-	totalTracks: 12,
+	trackNumber: 7,
+	totalTracks: 16,
 };
 
 const supportsOklch = () =>
