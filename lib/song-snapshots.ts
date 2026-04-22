@@ -2,6 +2,8 @@ import type { SongSnapshot } from "@/types/ipod-state";
 import {
   DEFAULT_INTERACTION_MODEL,
   DEFAULT_OS_SCREEN,
+  DEFAULT_OS_NOW_PLAYING_LAYOUT,
+  DEFAULT_OS_ORIGINAL_MENU_SPLIT,
   DEFAULT_SELECTION_KIND,
   SONG_SNAPSHOT_SCHEMA_VERSION,
 } from "@/types/ipod-state";
@@ -31,6 +33,8 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
     rangeEndTime: null,
     osScreen: DEFAULT_OS_SCREEN,
     menuIndex: 0,
+    osOriginalMenuSplit: DEFAULT_OS_ORIGINAL_MENU_SPLIT,
+    osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
   },
   playback: {
     currentTime: 5,

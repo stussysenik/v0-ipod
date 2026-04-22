@@ -2,11 +2,16 @@ import type { SongMetadata } from "@/types/ipod";
 import {
   DEFAULT_INTERACTION_MODEL,
   DEFAULT_MENU_INDEX,
+  DEFAULT_OS_NOW_PLAYING_LAYOUT,
   DEFAULT_OS_SCREEN,
+  DEFAULT_OS_ORIGINAL_MENU_SPLIT,
+  NOW_PLAYING_LAYOUT_ELEMENT_IDS,
   DEFAULT_SELECTION_KIND,
   SONG_SNAPSHOT_SCHEMA_VERSION,
   type IpodHardwarePresetId,
   type IpodInteractionModel,
+  type IpodNowPlayingLayoutPosition,
+  type IpodNowPlayingLayoutState,
   type IpodOsScreen,
   type IpodPlaybackSnapshot,
   type IpodUiState,
@@ -53,7 +58,7 @@ function isViewMode(value: unknown): value is IpodViewMode {
 }
 
 function isInteractionModel(value: unknown): value is IpodInteractionModel {
-  return value === "direct" || value === "ipod-os";
+  return value === "direct" || value === "ipod-os" || value === "ipod-os-original";
 }
 
 function isHardwarePreset(value: unknown): value is IpodHardwarePresetId {
@@ -95,6 +100,51 @@ function getFiniteNonNegativeNumber(value: unknown): number | null {
   return Math.floor(value);
 }
 
+function getMenuSplit(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+  return Math.min(Math.max(value, 0.4), 0.7);
+}
+
+function getLayoutPosition(value: unknown): IpodNowPlayingLayoutPosition | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const candidate = value as Partial<IpodNowPlayingLayoutPosition>;
+  if (
+    typeof candidate.x !== "number" ||
+    !Number.isFinite(candidate.x) ||
+    typeof candidate.y !== "number" ||
+    !Number.isFinite(candidate.y)
+  ) {
+    return null;
+  }
+
+  return {
+    x: Math.round(candidate.x),
+    y: Math.round(candidate.y),
+  };
+}
+
+function getNowPlayingLayout(value: unknown): IpodNowPlayingLayoutState {
+  if (typeof value !== "object" || value === null) {
+    return DEFAULT_OS_NOW_PLAYING_LAYOUT;
+  }
+
+  const safe: IpodNowPlayingLayoutState = {};
+
+  for (const id of NOW_PLAYING_LAYOUT_ELEMENT_IDS) {
+    const position = getLayoutPosition((value as Record<string, unknown>)[id]);
+    if (position) {
+      safe[id] = position;
+    }
+  }
+
+  return safe;
+}
+
 function normalizePlaybackSnapshot(
   metadata: SongMetadata,
   playback: unknown,
@@ -106,23 +156,34 @@ function normalizePlaybackSnapshot(
       : null;
   const safeDuration = Math.max(
     1,
-    getFiniteNonNegativeNumber(playbackCandidate?.duration) ?? Math.floor(metadata.duration),
+    getFiniteNonNegativeNumber(playbackCandidate?.duration) ??
+      Math.floor(metadata.duration),
   );
   const safeCurrentTime = Math.min(
-    Math.max(getFiniteNonNegativeNumber(playbackCandidate?.currentTime) ?? metadata.currentTime, 0),
+    Math.max(
+      getFiniteNonNegativeNumber(playbackCandidate?.currentTime) ?? metadata.currentTime,
+      0,
+    ),
     safeDuration,
   );
   const selectionKind = isSelectionKind(playbackCandidate?.selectionKind)
     ? playbackCandidate.selectionKind
-    : ui?.selectionKind ?? DEFAULT_SELECTION_KIND;
+    : (ui?.selectionKind ?? DEFAULT_SELECTION_KIND);
 
   let rangeStartTime =
-    getFiniteNonNegativeNumber(playbackCandidate?.rangeStartTime) ?? ui?.rangeStartTime ?? null;
+    getFiniteNonNegativeNumber(playbackCandidate?.rangeStartTime) ??
+    ui?.rangeStartTime ??
+    null;
   let rangeEndTime =
-    getFiniteNonNegativeNumber(playbackCandidate?.rangeEndTime) ?? ui?.rangeEndTime ?? null;
+    getFiniteNonNegativeNumber(playbackCandidate?.rangeEndTime) ??
+    ui?.rangeEndTime ??
+    null;
 
   if (selectionKind === "range") {
-    rangeStartTime = Math.min(Math.max(rangeStartTime ?? safeCurrentTime, 0), safeDuration);
+    rangeStartTime = Math.min(
+      Math.max(rangeStartTime ?? safeCurrentTime, 0),
+      safeDuration,
+    );
     rangeEndTime = Math.min(
       Math.max(rangeEndTime ?? safeCurrentTime + 15, rangeStartTime),
       safeDuration,
@@ -153,11 +214,13 @@ export function loadUiState(): Partial<IpodUiState> | null {
     if (isHexColor(candidate.skinColor)) safe.skinColor = candidate.skinColor;
     if (isHexColor(candidate.bgColor)) safe.bgColor = candidate.bgColor;
     if (isViewMode(candidate.viewMode)) safe.viewMode = candidate.viewMode;
-    if (isHardwarePreset(candidate.hardwarePreset)) safe.hardwarePreset = candidate.hardwarePreset;
+    if (isHardwarePreset(candidate.hardwarePreset))
+      safe.hardwarePreset = candidate.hardwarePreset;
     if (isInteractionModel(candidate.interactionModel)) {
       safe.interactionModel = candidate.interactionModel;
     }
-    if (isSelectionKind(candidate.selectionKind)) safe.selectionKind = candidate.selectionKind;
+    if (isSelectionKind(candidate.selectionKind))
+      safe.selectionKind = candidate.selectionKind;
     if (isOsScreen(candidate.osScreen)) safe.osScreen = candidate.osScreen;
     const rangeStartTime = getFiniteNonNegativeNumber(candidate.rangeStartTime);
     if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
@@ -166,6 +229,11 @@ export function loadUiState(): Partial<IpodUiState> | null {
     if (typeof candidate.menuIndex === "number" && Number.isFinite(candidate.menuIndex)) {
       safe.menuIndex = Math.max(0, Math.floor(candidate.menuIndex));
     }
+    const osOriginalMenuSplit = getMenuSplit(candidate.osOriginalMenuSplit);
+    if (osOriginalMenuSplit !== null) {
+      safe.osOriginalMenuSplit = osOriginalMenuSplit;
+    }
+    safe.osNowPlayingLayout = getNowPlayingLayout(candidate.osNowPlayingLayout);
     return safe;
   } catch {
     return null;
@@ -200,7 +268,11 @@ export function loadSongSnapshot(): SongSnapshot | null {
       return null;
     }
 
-    const playback = normalizePlaybackSnapshot(candidate.metadata, candidate.playback, partialUi);
+    const playback = normalizePlaybackSnapshot(
+      candidate.metadata,
+      candidate.playback,
+      partialUi,
+    );
     const ui: IpodUiState = {
       skinColor: partialUi.skinColor,
       bgColor: partialUi.bgColor,
@@ -212,6 +284,9 @@ export function loadSongSnapshot(): SongSnapshot | null {
       rangeEndTime: playback.rangeEndTime,
       osScreen: partialUi.osScreen ?? DEFAULT_OS_SCREEN,
       menuIndex: partialUi.menuIndex ?? DEFAULT_MENU_INDEX,
+      osOriginalMenuSplit:
+        partialUi.osOriginalMenuSplit ?? DEFAULT_OS_ORIGINAL_MENU_SPLIT,
+      osNowPlayingLayout: partialUi.osNowPlayingLayout ?? DEFAULT_OS_NOW_PLAYING_LAYOUT,
     };
 
     return {
@@ -231,7 +306,11 @@ export function loadSongSnapshot(): SongSnapshot | null {
 
 export function saveSongSnapshot(snapshot: SongSnapshot): void {
   try {
-    const playback = normalizePlaybackSnapshot(snapshot.metadata, snapshot.playback, snapshot.ui);
+    const playback = normalizePlaybackSnapshot(
+      snapshot.metadata,
+      snapshot.playback,
+      snapshot.ui,
+    );
     const normalized: SongSnapshot = {
       schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
       metadata: {
@@ -263,8 +342,10 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
   if (isHexColor(parsed.skinColor)) safe.skinColor = parsed.skinColor;
   if (isHexColor(parsed.bgColor)) safe.bgColor = parsed.bgColor;
   if (isViewMode(parsed.viewMode)) safe.viewMode = parsed.viewMode;
-  if (isHardwarePreset(parsed.hardwarePreset)) safe.hardwarePreset = parsed.hardwarePreset;
-  if (isInteractionModel(parsed.interactionModel)) safe.interactionModel = parsed.interactionModel;
+  if (isHardwarePreset(parsed.hardwarePreset))
+    safe.hardwarePreset = parsed.hardwarePreset;
+  if (isInteractionModel(parsed.interactionModel))
+    safe.interactionModel = parsed.interactionModel;
   if (isSelectionKind(parsed.selectionKind)) safe.selectionKind = parsed.selectionKind;
   if (isOsScreen(parsed.osScreen)) safe.osScreen = parsed.osScreen;
 
@@ -275,6 +356,11 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
   if (typeof parsed.menuIndex === "number" && Number.isFinite(parsed.menuIndex)) {
     safe.menuIndex = Math.max(0, Math.floor(parsed.menuIndex));
   }
+  const osOriginalMenuSplit = getMenuSplit(parsed.osOriginalMenuSplit);
+  if (osOriginalMenuSplit !== null) {
+    safe.osOriginalMenuSplit = osOriginalMenuSplit;
+  }
+  safe.osNowPlayingLayout = getNowPlayingLayout(parsed.osNowPlayingLayout);
 
   return safe;
 }

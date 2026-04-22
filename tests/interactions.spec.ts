@@ -3,6 +3,10 @@ import fs from "fs";
 import path from "path";
 
 const fixtureImage = path.resolve(process.cwd(), "public/test.jpg");
+const LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS =
+  "rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors border-[#111827] bg-white/90 text-[#111827]";
+const LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS =
+  "rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80";
 
 async function openThemePanel(page: Page): Promise<void> {
   const button = page.getByTestId("theme-button");
@@ -171,6 +175,134 @@ test.describe("Core interactions remain usable", () => {
     );
   });
 
+  test("interaction mode buttons keep their locked visual treatment", async ({
+    page,
+  }) => {
+    await openThemePanel(page);
+
+    await expect(page.getByTestId("interaction-mode-direct-button")).toHaveClass(
+      LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS,
+    );
+    await expect(page.getByTestId("interaction-mode-ipod-os-button")).toHaveClass(
+      LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS,
+    );
+    await expect(
+      page.getByTestId("interaction-mode-ipod-os-original-button"),
+    ).toHaveClass(`col-span-2 ${LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS}`);
+
+    await page.getByTestId("interaction-mode-ipod-os-button").click();
+
+    await expect(page.getByTestId("interaction-mode-direct-button")).toHaveClass(
+      LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS,
+    );
+    await expect(page.getByTestId("interaction-mode-ipod-os-button")).toHaveClass(
+      LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS,
+    );
+    await expect(
+      page.getByTestId("interaction-mode-ipod-os-original-button"),
+    ).toHaveClass(`col-span-2 ${LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS}`);
+
+    await page.getByTestId("interaction-mode-ipod-os-original-button").click();
+
+    await expect(page.getByTestId("interaction-mode-direct-button")).toHaveClass(
+      LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS,
+    );
+    await expect(page.getByTestId("interaction-mode-ipod-os-button")).toHaveClass(
+      LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS,
+    );
+    await expect(
+      page.getByTestId("interaction-mode-ipod-os-original-button"),
+    ).toHaveClass(`col-span-2 ${LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS}`);
+  });
+
+  test("iPod OS Original mirrors the standard menu layout without a divider", async ({
+    page,
+  }) => {
+    await openThemePanel(page);
+    await page.getByTestId("interaction-mode-ipod-os-original-button").click();
+
+    await expect(page.getByTestId("ipod-os-menu")).toBeVisible();
+    await expect(page.getByTestId("ipod-os-original-divider")).toHaveCount(0);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("ipodSnapshotUiState");
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return {
+            interactionModel: parsed.interactionModel,
+            osOriginalMenuSplit: parsed.osOriginalMenuSplit,
+          };
+        }),
+      )
+      .toEqual({
+        interactionModel: "ipod-os-original",
+        osOriginalMenuSplit: expect.any(Number),
+      });
+  });
+
+  test("iPod OS Now Playing drag mode saves element offsets", async ({ page }) => {
+    await openThemePanel(page);
+    await page.getByTestId("interaction-mode-ipod-os-button").click();
+    await page.keyboard.press("Escape");
+
+    await page.getByTestId("click-wheel-center").click();
+    await expect(page.getByTestId("screen-content")).toBeVisible();
+
+    await page.getByTestId("click-wheel-center").click();
+
+    const title = page.getByTestId("track-title");
+    const box = await title.boundingBox();
+    if (!box) throw new Error("title not found");
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 18, box.y + box.height / 2 + 9, {
+      steps: 6,
+    });
+    await page.mouse.up();
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("ipodSnapshotUiState");
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          return parsed.osNowPlayingLayout?.title ?? null;
+        }),
+      )
+      .toMatchObject({
+        x: expect.any(Number),
+        y: expect.any(Number),
+      });
+
+    await expect(title).not.toHaveAttribute("data-layout-x", "0");
+    await expect(title).not.toHaveAttribute("data-layout-y", "0");
+  });
+
+  test("iPod OS Original applies saved Now Playing drag offsets like iPod OS", async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "ipodSnapshotUiState",
+        JSON.stringify({
+          interactionModel: "ipod-os-original",
+          osScreen: "now-playing",
+          osNowPlayingLayout: {
+            title: { x: 18, y: 9 },
+          },
+        }),
+      );
+    });
+
+    await page.reload();
+
+    const title = page.getByTestId("track-title");
+    await expect(title).toHaveAttribute("data-layout-x", "18");
+    await expect(title).toHaveAttribute("data-layout-y", "9");
+  });
+
   test("range snapshots serialize start and end times", async ({ page }) => {
     await openThemePanel(page);
     await page.getByTestId("snapshot-selection-range-button").click();
@@ -301,7 +433,9 @@ test.describe("Core interactions remain usable", () => {
   test("preview mode persists after reload", async ({ page }) => {
     await page.getByTestId("preview-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(page.getByText("Title will scroll in the GIF along with progress and time.")).toBeVisible();
+    await expect(
+      page.getByText("Title will scroll in the GIF along with progress and time."),
+    ).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
@@ -323,7 +457,9 @@ test.describe("Core interactions remain usable", () => {
 
     expect(marqueePresence.hasTrack).toBe(true);
     expect(marqueePresence.text?.includes("Glow")).toBe(true);
-    await expect(page.getByTestId("gif-export-button")).toContainText("Export Animated GIF");
+    await expect(page.getByTestId("gif-export-button")).toContainText(
+      "Export Animated GIF",
+    );
     await expect(page.getByTestId("gif-export-button")).toBeEnabled();
 
     await page.waitForTimeout(2600);
@@ -358,7 +494,9 @@ test.describe("Core interactions remain usable", () => {
 
     await page.getByTestId("preview-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeVisible();
-    await expect(page.getByText("The title is crawling. Export Animated GIF to capture it.")).toBeVisible();
+    await expect(
+      page.getByText("The title is crawling. Export Animated GIF to capture it."),
+    ).toBeVisible();
     await expect(page.getByTestId("gif-export-button")).toBeEnabled();
 
     await expect

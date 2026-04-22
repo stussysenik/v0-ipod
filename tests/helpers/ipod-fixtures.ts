@@ -2,7 +2,9 @@ import type { Page } from "@playwright/test";
 import type { SongSnapshot } from "@/types/ipod-state";
 import {
   DEFAULT_INTERACTION_MODEL,
+  DEFAULT_OS_NOW_PLAYING_LAYOUT,
   DEFAULT_OS_SCREEN,
+  DEFAULT_OS_ORIGINAL_MENU_SPLIT,
   DEFAULT_SELECTION_KIND,
   SONG_SNAPSHOT_SCHEMA_VERSION,
 } from "@/types/ipod-state";
@@ -11,7 +13,8 @@ import { DEFAULT_HARDWARE_PRESET_ID } from "@/lib/ipod-classic-presets";
 export const LONG_METADATA_SNAPSHOT: SongSnapshot = {
   schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
   metadata: {
-    title: "The Field (feat. The Durutti Column, Caroline Polachek, and Oneohtrix Point Never)",
+    title:
+      "The Field (feat. The Durutti Column, Caroline Polachek, and Oneohtrix Point Never)",
     artist: "Sufjan Stevens, Angelo De Augustine, and The National",
     album: "A Beginner's Mind: Expanded Edition for Midnight Signal Studies",
     artwork: "/placeholder-logo.png",
@@ -32,6 +35,8 @@ export const LONG_METADATA_SNAPSHOT: SongSnapshot = {
     rangeEndTime: null,
     osScreen: DEFAULT_OS_SCREEN,
     menuIndex: 0,
+    osOriginalMenuSplit: DEFAULT_OS_ORIGINAL_MENU_SPLIT,
+    osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
   },
   playback: {
     currentTime: 53,
@@ -42,7 +47,10 @@ export const LONG_METADATA_SNAPSHOT: SongSnapshot = {
   },
 };
 
-export async function seedSnapshot(page: Page, snapshot: SongSnapshot = LONG_METADATA_SNAPSHOT) {
+export async function seedSnapshot(
+  page: Page,
+  snapshot: SongSnapshot = LONG_METADATA_SNAPSHOT,
+) {
   await page.addInitScript((seed) => {
     window.localStorage.setItem("ipodSnapshotMetadata", JSON.stringify(seed.metadata));
     window.localStorage.setItem("ipodSnapshotUiState", JSON.stringify(seed.ui));
