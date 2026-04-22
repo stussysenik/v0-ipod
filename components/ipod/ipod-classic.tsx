@@ -53,10 +53,13 @@ import type { SongMetadata } from "@/types/ipod";
 import {
   DEFAULT_INTERACTION_MODEL,
   DEFAULT_MENU_INDEX,
+  DEFAULT_OS_NOW_PLAYING_LAYOUT,
   DEFAULT_OS_SCREEN,
+  DEFAULT_OS_ORIGINAL_MENU_SPLIT,
   DEFAULT_SELECTION_KIND,
   SONG_SNAPSHOT_SCHEMA_VERSION,
   type IpodInteractionModel,
+  type IpodNowPlayingLayoutState,
   type IpodOsScreen,
   type IpodViewMode,
   type SnapshotSelectionKind,
@@ -115,6 +118,24 @@ const CLASSIC_OS_MENU_ITEMS = [
   { id: "now-playing", label: "Now Playing" },
   { id: "about", label: "About" },
 ] as const;
+const LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS =
+  "rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors border-[#111827] bg-white/90 text-[#111827]";
+const LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS =
+  "rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80";
+
+function getLockedInteractionModeButtonClass(
+  isActive: boolean,
+  extraClassName?: string,
+): string {
+  return [
+    extraClassName,
+    isActive
+      ? LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS
+      : LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 const initialState: SongMetadata = {
   title: "Chamakay",
@@ -238,16 +259,24 @@ export default function IPodClassic() {
 
   // View State: 'flat' (Standard 2D), 'preview' (Animated marquee), '3d' (R3F), 'focus' (Close-up)
   const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
-  const [hardwarePreset, setHardwarePreset] =
-    useState<IpodHardwarePresetId>(DEFAULT_HARDWARE_PRESET_ID);
-  const [interactionModel, setInteractionModel] =
-    useState<IpodInteractionModel>(DEFAULT_INTERACTION_MODEL);
+  const [hardwarePreset, setHardwarePreset] = useState<IpodHardwarePresetId>(
+    DEFAULT_HARDWARE_PRESET_ID,
+  );
+  const [interactionModel, setInteractionModel] = useState<IpodInteractionModel>(
+    DEFAULT_INTERACTION_MODEL,
+  );
   const [selectionKind, setSelectionKind] =
     useState<SnapshotSelectionKind>(DEFAULT_SELECTION_KIND);
   const [rangeStartTime, setRangeStartTime] = useState<number | null>(null);
   const [rangeEndTime, setRangeEndTime] = useState<number | null>(null);
   const [osScreen, setOsScreen] = useState<IpodOsScreen>(DEFAULT_OS_SCREEN);
   const [osMenuIndex, setOsMenuIndex] = useState(DEFAULT_MENU_INDEX);
+  const [osOriginalMenuSplit, setOsOriginalMenuSplit] = useState(
+    DEFAULT_OS_ORIGINAL_MENU_SPLIT,
+  );
+  const [osNowPlayingLayout, setOsNowPlayingLayout] = useState<IpodNowPlayingLayoutState>(
+    DEFAULT_OS_NOW_PLAYING_LAYOUT,
+  );
   const [isOsNowPlayingEditable, setIsOsNowPlayingEditable] = useState(false);
 
   // Customization State
@@ -278,7 +307,7 @@ export default function IPodClassic() {
   const isPreviewView = viewMode === "preview";
   const isAsciiView = viewMode === "ascii";
   const canPngExport = isFlatView || isFocusView;
-  const isAuthenticInteraction = interactionModel === "ipod-os";
+  const isAuthenticInteraction = interactionModel !== "direct";
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
   const activePreset = useMemo(
@@ -371,6 +400,12 @@ export default function IPodClassic() {
     if (typeof savedUi.menuIndex === "number") {
       setOsMenuIndex(savedUi.menuIndex);
     }
+    if (typeof savedUi.osOriginalMenuSplit === "number") {
+      setOsOriginalMenuSplit(savedUi.osOriginalMenuSplit);
+    }
+    if (savedUi.osNowPlayingLayout) {
+      setOsNowPlayingLayout(savedUi.osNowPlayingLayout);
+    }
   }, []);
 
   useEffect(() => {
@@ -396,6 +431,8 @@ export default function IPodClassic() {
       rangeEndTime,
       osScreen,
       menuIndex: osMenuIndex,
+      osOriginalMenuSplit,
+      osNowPlayingLayout,
     });
   }, [
     skinColor,
@@ -408,6 +445,8 @@ export default function IPodClassic() {
     rangeEndTime,
     osScreen,
     osMenuIndex,
+    osOriginalMenuSplit,
+    osNowPlayingLayout,
   ]);
 
   useEffect(() => {
@@ -426,7 +465,10 @@ export default function IPodClassic() {
       return;
     }
 
-    const nextStart = clampSnapshotTime(rangeStartTime ?? state.currentTime, state.duration);
+    const nextStart = clampSnapshotTime(
+      rangeStartTime ?? state.currentTime,
+      state.duration,
+    );
     const nextEnd = clampSnapshotTime(
       Math.max(rangeEndTime ?? state.currentTime + 15, nextStart ?? 0),
       state.duration,
@@ -601,32 +643,34 @@ export default function IPodClassic() {
     [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen],
   );
 
-  const handleHardwarePresetChange = useCallback(
-    (nextPresetId: IpodHardwarePresetId) => {
-      const nextPreset = getIpodClassicPreset(nextPresetId);
-      setHardwarePreset(nextPresetId);
-      setSkinColor(nextPreset.defaultShellColor);
-      setBgColor(nextPreset.defaultBackdropColor);
-    },
-    [],
-  );
+  const handleHardwarePresetChange = useCallback((nextPresetId: IpodHardwarePresetId) => {
+    const nextPreset = getIpodClassicPreset(nextPresetId);
+    setHardwarePreset(nextPresetId);
+    setSkinColor(nextPreset.defaultShellColor);
+    setBgColor(nextPreset.defaultBackdropColor);
+  }, []);
 
-  const handleInteractionModelChange = useCallback((nextModel: IpodInteractionModel) => {
-    clearSoftNotice();
-    setInteractionModel(nextModel);
-    if (nextModel === "ipod-os") {
-      setOsScreen("menu");
-      return;
-    }
-    setOsScreen("now-playing");
-  }, [clearSoftNotice]);
+  const handleInteractionModelChange = useCallback(
+    (nextModel: IpodInteractionModel) => {
+      clearSoftNotice();
+      setInteractionModel(nextModel);
+      if (nextModel !== "direct") {
+        setOsScreen("menu");
+        return;
+      }
+      setOsScreen("now-playing");
+    },
+    [clearSoftNotice],
+  );
 
   const handleSelectionKindChange = useCallback(
     (nextKind: SnapshotSelectionKind) => {
       setSelectionKind(nextKind);
       if (nextKind === "range") {
         setRangeStartTime((prev) => prev ?? state.currentTime);
-        setRangeEndTime((prev) => prev ?? Math.min(state.duration, state.currentTime + 15));
+        setRangeEndTime(
+          (prev) => prev ?? Math.min(state.duration, state.currentTime + 15),
+        );
       }
     },
     [state.currentTime, state.duration],
@@ -659,19 +703,16 @@ export default function IPodClassic() {
     [],
   );
 
-  const buildExportSlug = useCallback(
-    () => {
-      const screenContext = interactionModel === "ipod-os" ? osScreen : "now-playing";
-      return [
-        hardwarePreset,
-        interactionModel,
-        screenContext,
-        selectionKind,
-        slugifyExportSegment(state.title),
-      ].join("-");
-    },
-    [hardwarePreset, interactionModel, osScreen, selectionKind, state.title],
-  );
+  const buildExportSlug = useCallback(() => {
+    const screenContext = interactionModel === "direct" ? "now-playing" : osScreen;
+    return [
+      hardwarePreset,
+      interactionModel,
+      screenContext,
+      selectionKind,
+      slugifyExportSegment(state.title),
+    ].join("-");
+  }, [hardwarePreset, interactionModel, osScreen, selectionKind, state.title]);
 
   const completeSuccessfulExport = useCallback(
     (exportId: number, notice: string) => {
@@ -962,6 +1003,8 @@ export default function IPodClassic() {
         rangeEndTime: selectionKind === "range" ? rangeEndTime : null,
         osScreen,
         menuIndex: osMenuIndex,
+        osOriginalMenuSplit,
+        osNowPlayingLayout,
       },
       playback: {
         currentTime: state.currentTime,
@@ -983,6 +1026,8 @@ export default function IPodClassic() {
       skinColor,
       state,
       viewMode,
+      osOriginalMenuSplit,
+      osNowPlayingLayout,
     ],
   );
 
@@ -998,9 +1043,15 @@ export default function IPodClassic() {
       osScreen={osScreen}
       osMenuItems={CLASSIC_OS_MENU_ITEMS}
       osMenuIndex={osMenuIndex}
+      osOriginalMenuSplit={osOriginalMenuSplit}
+      onOsOriginalMenuSplitChange={setOsOriginalMenuSplit}
+      osNowPlayingLayout={osNowPlayingLayout}
+      onOsNowPlayingLayoutChange={setOsNowPlayingLayout}
       isEditable={
         !isExportCapturing &&
-        (isAuthenticInteraction ? isOsNowPlayingEditable && osScreen === "now-playing" : isFlatView)
+        (isAuthenticInteraction
+          ? isOsNowPlayingEditable && osScreen === "now-playing"
+          : isFlatView)
       }
       exportSafe={isExportCapturing}
       titlePreview={isPreviewView && !isExportCapturing}
@@ -1026,7 +1077,9 @@ export default function IPodClassic() {
       onNextPress={handleNextButtonPress}
       onPlayPausePress={handlePlayPauseButtonPress}
       disabled={
-        isExportCapturing || isAsciiView || (!isFlatView && !isFocusView && !isAuthenticInteraction)
+        isExportCapturing ||
+        isAsciiView ||
+        (!isFlatView && !isFocusView && !isAuthenticInteraction)
       }
       exportSafe={isExportCapturing}
     />
@@ -1051,6 +1104,8 @@ export default function IPodClassic() {
     setRangeEndTime(snapshot.playback.rangeEndTime);
     setOsScreen(snapshot.ui.osScreen);
     setOsMenuIndex(snapshot.ui.menuIndex);
+    setOsOriginalMenuSplit(snapshot.ui.osOriginalMenuSplit);
+    setOsNowPlayingLayout(snapshot.ui.osNowPlayingLayout);
     setShowSettings(false);
   }, []);
 
@@ -1182,7 +1237,7 @@ export default function IPodClassic() {
               data-testid="toolbox-toggle-button"
               onClick={handleToggleToolbox}
               isActive={isToolboxVisible}
-              className="w-12 h-12 border border-[#D0D4DA] bg-[#F2F2F0]/95 text-black shadow-[0_14px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm"
+              className="w-12 h-12 border border-[#D0D4DA] bg-[#F2F2F0]/95 text-black backdrop-blur-sm"
             />
           )}
 
@@ -1245,11 +1300,9 @@ export default function IPodClassic() {
                         data-testid="interaction-mode-direct-button"
                         aria-pressed={interactionModel === "direct"}
                         onClick={() => handleInteractionModelChange("direct")}
-                        className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
-                          interactionModel === "direct"
-                            ? "border-[#111827] bg-white/90 text-[#111827]"
-                            : "border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80"
-                        }`}
+                        className={getLockedInteractionModeButtonClass(
+                          interactionModel === "direct",
+                        )}
                       >
                         Direct Edit
                       </button>
@@ -1258,15 +1311,30 @@ export default function IPodClassic() {
                         data-testid="interaction-mode-ipod-os-button"
                         aria-pressed={interactionModel === "ipod-os"}
                         onClick={() => handleInteractionModelChange("ipod-os")}
-                        className={`rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors ${
-                          interactionModel === "ipod-os"
-                            ? "border-[#111827] bg-white/90 text-[#111827]"
-                            : "border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80"
-                        }`}
+                        className={getLockedInteractionModeButtonClass(
+                          interactionModel === "ipod-os",
+                        )}
                       >
                         iPod OS
                       </button>
+                      <button
+                        type="button"
+                        data-testid="interaction-mode-ipod-os-original-button"
+                        aria-pressed={interactionModel === "ipod-os-original"}
+                        onClick={() => handleInteractionModelChange("ipod-os-original")}
+                        className={getLockedInteractionModeButtonClass(
+                          interactionModel === "ipod-os-original",
+                          "col-span-2",
+                        )}
+                      >
+                        iPod OS Original
+                      </button>
                     </div>
+                    {interactionModel === "ipod-os-original" ? (
+                      <p className="mt-2 px-1 text-[10px] leading-[1.35] text-[#6B7280]">
+                        Mirrors the standard iPod OS layout.
+                      </p>
+                    ) : null}
                   </div>
 
                   <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
@@ -1528,7 +1596,12 @@ export default function IPodClassic() {
 
                     <div className="mb-3 rounded-lg border border-[#D5D7DA] bg-white/60 px-3 py-2 text-[10px] text-[#4F555D]">
                       <div className="font-semibold text-[#111827]">
-                        {activePreset.label} · {interactionModel === "direct" ? "Direct Edit" : "iPod OS"}
+                        {activePreset.label} ·{" "}
+                        {interactionModel === "direct"
+                          ? "Direct Edit"
+                          : interactionModel === "ipod-os-original"
+                            ? "iPod OS Original"
+                            : "iPod OS"}
                       </div>
                       <div className="mt-0.5">
                         {selectionKind === "range"
@@ -1678,7 +1751,7 @@ export default function IPodClassic() {
 
         {isPreviewView && exportStatus === "idle" && (
           <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
-            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center opacity-0 shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
               <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
                 Marquee Preview
               </div>
@@ -1693,7 +1766,7 @@ export default function IPodClassic() {
 
         {isAsciiView && exportStatus === "idle" && (
           <div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
-            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+            <div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center opacity-0 shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
               <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/45">
                 ASCII Mode
               </div>

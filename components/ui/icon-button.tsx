@@ -30,7 +30,7 @@ export function IconButton({
             ? "border-[#0F1114] bg-[#111315] text-white shadow-[0_12px_20px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14)] scale-[1.04]"
             : contrast
               ? "border-[#0F1114] bg-[#111315] text-white shadow-[0_12px_20px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#191C20] hover:shadow-[0_14px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] hover:scale-[1.03]"
-              : "border-[#CDD2D8] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(237,239,242,0.96))] text-[#111315] shadow-[0_10px_18px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.98),inset_0_-1px_0_rgba(0,0,0,0.06)] hover:border-[#BFC5CC] hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(240,242,245,0.98))] hover:shadow-[0_12px_20px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,1),inset_0_-1px_0_rgba(0,0,0,0.07)] hover:scale-[1.03]"
+              : "border-[#CDD2D8] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(237,239,242,0.96))] text-[#111315] hover:border-[#BFC5CC] hover:bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(240,242,245,0.98))] hover:shadow-[0_12px_20px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,1),inset_0_-1px_0_rgba(0,0,0,0.07)] hover:scale-[1.03]"
         }
         ${className}
       `}

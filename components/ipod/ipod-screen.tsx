@@ -8,10 +8,21 @@ import placeholderLogo from "@/public/placeholder-logo.png";
 import { EditableText } from "./editable-text";
 import { EditableTime } from "./editable-time";
 import { EditableTrackNumber } from "./editable-track-number";
-import { getSurfaceToken, getTextTokenCss, deriveScreenSurround } from "@/lib/color-manifest";
+import {
+  getSurfaceToken,
+  getTextTokenCss,
+  deriveScreenSurround,
+} from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
-import type { IpodInteractionModel, IpodOsScreen } from "@/types/ipod-state";
+import {
+  DEFAULT_OS_NOW_PLAYING_LAYOUT,
+  type IpodInteractionModel,
+  type IpodNowPlayingLayoutElementId,
+  type IpodNowPlayingLayoutPosition,
+  type IpodNowPlayingLayoutState,
+  type IpodOsScreen,
+} from "@/types/ipod-state";
 
 type IpodScreenAction =
   | { type: "UPDATE_TITLE"; payload: string }
@@ -34,6 +45,10 @@ interface IpodScreenProps {
   osScreen?: IpodOsScreen;
   osMenuItems?: readonly { id: string; label: string }[];
   osMenuIndex?: number;
+  osOriginalMenuSplit?: number;
+  onOsOriginalMenuSplitChange?: (nextSplit: number) => void;
+  osNowPlayingLayout?: IpodNowPlayingLayoutState;
+  onOsNowPlayingLayoutChange?: (nextLayout: IpodNowPlayingLayoutState) => void;
   isEditable?: boolean;
   exportSafe?: boolean;
   animateText?: boolean;
@@ -43,6 +58,34 @@ interface IpodScreenProps {
 }
 
 const SCREEN_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+const EMPTY_OS_MENU_ITEMS: readonly { id: string; label: string }[] = [];
+const DEFAULT_LAYOUT_POSITION: IpodNowPlayingLayoutPosition = { x: 0, y: 0 };
+
+type NowPlayingDragState = {
+  elementId: IpodNowPlayingLayoutElementId;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  startPosition: IpodNowPlayingLayoutPosition;
+};
+
+function clampDragOffset(value: number, maxDistance: number): number {
+  return Math.round(Math.min(Math.max(value, -maxDistance), maxDistance));
+}
+
+function getLayoutPosition(
+  layout: IpodNowPlayingLayoutState,
+  elementId: IpodNowPlayingLayoutElementId,
+): IpodNowPlayingLayoutPosition {
+  return layout[elementId] ?? DEFAULT_LAYOUT_POSITION;
+}
+
+function hasSameLayoutPosition(
+  left: IpodNowPlayingLayoutPosition,
+  right: IpodNowPlayingLayoutPosition,
+): boolean {
+  return left.x === right.x && left.y === right.y;
+}
 
 function ScreenBattery() {
   return (
@@ -70,8 +113,10 @@ export function IpodScreen({
   playClick,
   interactionModel = "direct",
   osScreen = "now-playing",
-  osMenuItems = [],
+  osMenuItems = EMPTY_OS_MENU_ITEMS,
   osMenuIndex = 0,
+  osNowPlayingLayout = DEFAULT_OS_NOW_PLAYING_LAYOUT,
+  onOsNowPlayingLayoutChange,
   isEditable = true,
   exportSafe = false,
   animateText = false,
@@ -80,8 +125,17 @@ export function IpodScreen({
   onTitleOverflowChange,
 }: IpodScreenProps) {
   const remainingAnchorRef = useRef<number | null>(null);
+  const screenFrameRef = useRef<HTMLDivElement | null>(null);
+  const osNowPlayingLayoutRef = useRef(osNowPlayingLayout);
+  const nowPlayingDragRef = useRef<NowPlayingDragState | null>(null);
   const screenTokens = preset.screen;
-  const showOsMenu = interactionModel === "ipod-os" && osScreen === "menu";
+  const isStandardOsInteraction =
+    interactionModel === "ipod-os" || interactionModel === "ipod-os-original";
+  const showOsMenu = isStandardOsInteraction && osScreen === "menu";
+  const isNowPlayingLayoutMode =
+    isStandardOsInteraction && !showOsMenu && isEditable && !exportSafe;
+  const shouldApplyNowPlayingLayout = isStandardOsInteraction && !showOsMenu;
+  const isInlineEditingEnabled = isEditable && !isNowPlayingLayoutMode;
   const screenShadow = exportSafe
     ? "0 0 0 1px rgba(60,60,60,0.08)"
     : "0 1px 1px rgba(0,0,0,0.22), 0 7px 10px -9px rgba(0,0,0,0.48)";
@@ -106,6 +160,10 @@ export function IpodScreen({
       onTitleOverflowChange?.(false);
     }
   }, [showOsMenu, onTitleOverflowChange]);
+
+  useEffect(() => {
+    osNowPlayingLayoutRef.current = osNowPlayingLayout;
+  }, [osNowPlayingLayout]);
 
   const setCurrentTime = useCallback(
     (currentTime: number, preserveRemaining = false) => {
@@ -136,6 +194,173 @@ export function IpodScreen({
 
   const menuArtworkSize = Math.max(74, screenTokens.artworkSize - 8);
 
+  const updateOsNowPlayingLayout = useCallback(
+    (
+      elementId: IpodNowPlayingLayoutElementId,
+      nextPosition: IpodNowPlayingLayoutPosition,
+      phase: "move" | "drop",
+    ) => {
+      const currentPosition = getLayoutPosition(osNowPlayingLayoutRef.current, elementId);
+      if (hasSameLayoutPosition(currentPosition, nextPosition)) {
+        return;
+      }
+
+      const nextLayout = { ...osNowPlayingLayoutRef.current };
+      if (nextPosition.x === 0 && nextPosition.y === 0) {
+        delete nextLayout[elementId];
+      } else {
+        nextLayout[elementId] = nextPosition;
+      }
+
+      osNowPlayingLayoutRef.current = nextLayout;
+      onOsNowPlayingLayoutChange?.(nextLayout);
+      console.info("[ipod-os-layout]", {
+        phase,
+        elementId,
+        x: nextPosition.x,
+        y: nextPosition.y,
+      });
+    },
+    [onOsNowPlayingLayoutChange],
+  );
+
+  useEffect(() => {
+    if (!isNowPlayingLayoutMode) {
+      nowPlayingDragRef.current = null;
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const dragState = nowPlayingDragRef.current;
+      const frame = screenFrameRef.current;
+      if (!dragState || !frame || event.pointerId !== dragState.pointerId) {
+        return;
+      }
+
+      const rect = frame.getBoundingClientRect();
+      const maxX = Math.max(24, Math.round(rect.width / 2));
+      const maxY = Math.max(
+        24,
+        Math.round((rect.height - screenTokens.statusBarHeight) / 2),
+      );
+      updateOsNowPlayingLayout(
+        dragState.elementId,
+        {
+          x: clampDragOffset(
+            dragState.startPosition.x + event.clientX - dragState.startClientX,
+            maxX,
+          ),
+          y: clampDragOffset(
+            dragState.startPosition.y + event.clientY - dragState.startClientY,
+            maxY,
+          ),
+        },
+        "move",
+      );
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const dragState = nowPlayingDragRef.current;
+      if (!dragState || event.pointerId !== dragState.pointerId) {
+        return;
+      }
+
+      const finalPosition = getLayoutPosition(
+        osNowPlayingLayoutRef.current,
+        dragState.elementId,
+      );
+      console.info("[ipod-os-layout]", {
+        phase: "drop",
+        elementId: dragState.elementId,
+        x: finalPosition.x,
+        y: finalPosition.y,
+      });
+      nowPlayingDragRef.current = null;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [isNowPlayingLayoutMode, screenTokens.statusBarHeight, updateOsNowPlayingLayout]);
+
+  const startNowPlayingDrag = useCallback(
+    (elementId: IpodNowPlayingLayoutElementId) =>
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isNowPlayingLayoutMode || event.button !== 0) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        playClick();
+        nowPlayingDragRef.current = {
+          elementId,
+          pointerId: event.pointerId,
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          startPosition: getLayoutPosition(osNowPlayingLayoutRef.current, elementId),
+        };
+      },
+    [isNowPlayingLayoutMode, playClick],
+  );
+
+  const renderNowPlayingElement = useCallback(
+    (
+      elementId: IpodNowPlayingLayoutElementId,
+      children: React.ReactNode,
+      options?: {
+        className?: string;
+        style?: React.CSSProperties;
+        testId?: string;
+      },
+    ) => {
+      const position = shouldApplyNowPlayingLayout
+        ? getLayoutPosition(osNowPlayingLayout, elementId)
+        : DEFAULT_LAYOUT_POSITION;
+      return (
+        <div
+          className={[
+            options?.className,
+            isNowPlayingLayoutMode
+              ? "cursor-move touch-none rounded-[2px] outline outline-1 outline-dashed outline-[#5AA0DF]/65"
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          style={{
+            ...options?.style,
+            transform:
+              position.x === 0 && position.y === 0
+                ? undefined
+                : `translate(${position.x}px, ${position.y}px)`,
+          }}
+          data-testid={options?.testId}
+          data-layout-element={elementId}
+          data-layout-x={position.x}
+          data-layout-y={position.y}
+          onPointerDown={
+            isNowPlayingLayoutMode ? startNowPlayingDrag(elementId) : undefined
+          }
+        >
+          {children}
+        </div>
+      );
+    },
+    [
+      isNowPlayingLayoutMode,
+      osNowPlayingLayout,
+      shouldApplyNowPlayingLayout,
+      startNowPlayingDrag,
+    ],
+  );
+
   return (
     <div
       className="relative z-10 mx-auto shrink-0 p-[1px]"
@@ -149,16 +374,17 @@ export function IpodScreen({
       data-export-layer="screen"
       data-testid="ipod-screen"
     >
-        <div
-          className="pointer-events-none absolute inset-[1px]"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 18%, rgba(0,0,0,0.06) 100%)",
-            borderRadius: Math.max(1, screenTokens.outerRadius - 1),
-          }}
-          aria-hidden="true"
+      <div
+        className="pointer-events-none absolute inset-[1px]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0) 18%, rgba(0,0,0,0.06) 100%)",
+          borderRadius: Math.max(1, screenTokens.outerRadius - 1),
+        }}
+        aria-hidden="true"
       />
       <div
+        ref={screenFrameRef}
         className="relative h-full w-full overflow-hidden border"
         style={{
           backgroundColor: getSurfaceToken("screen.content.bg"),
@@ -215,7 +441,11 @@ export function IpodScreen({
                     }}
                   >
                     <span>{item.label}</span>
-                    {isActive ? <span aria-hidden="true">›</span> : <span aria-hidden="true" />}
+                    {isActive ? (
+                      <span aria-hidden="true">›</span>
+                    ) : (
+                      <span aria-hidden="true" />
+                    )}
                   </div>
                 );
               })}
@@ -300,46 +530,47 @@ export function IpodScreen({
               data-testid="screen-content"
             >
               <div className="flex h-full items-start justify-start">
-                <div
-                  className="relative cursor-pointer border border-[#B8B8B8] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
-                  style={{
-                    width: screenTokens.artworkSize,
-                    height: screenTokens.artworkSize,
-                    boxShadow: artworkShadow,
-                  }}
-                  data-export-layer="artwork"
-                >
-                  {exportSafe ? (
-                    <img
-                      src={state.artwork || placeholderLogo.src}
-                      data-export-src={state.artwork || placeholderLogo.src}
-                      alt="Album artwork"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <ImageUpload
-                      currentImage={state.artwork}
-                      onImageChange={(artwork) => {
-                        if (!isEditable) return;
-                        dispatch({ type: "UPDATE_ARTWORK", payload: artwork });
-                        playClick();
-                      }}
-                      disabled={!isEditable}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
+                {renderNowPlayingElement(
+                  "artwork",
+                  <div
+                    className="relative cursor-pointer border border-[#B8B8B8] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
+                    style={{
+                      width: screenTokens.artworkSize,
+                      height: screenTokens.artworkSize,
+                      boxShadow: artworkShadow,
+                    }}
+                    data-export-layer="artwork"
+                  >
+                    {exportSafe ? (
+                      <img
+                        src={state.artwork || placeholderLogo.src}
+                        data-export-src={state.artwork || placeholderLogo.src}
+                        alt="Album artwork"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageUpload
+                        currentImage={state.artwork}
+                        onImageChange={(artwork) => {
+                          if (!isInlineEditingEnabled) return;
+                          dispatch({ type: "UPDATE_ARTWORK", payload: artwork });
+                          playClick();
+                        }}
+                        disabled={!isInlineEditingEnabled}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>,
+                  { testId: "os-layout-artwork" },
+                )}
               </div>
 
               <div
                 className="z-20 flex min-w-0 flex-col items-start pr-[2px] text-left"
                 data-testid="track-meta"
               >
-                <div
-                  className="relative z-20 w-full min-w-0"
-                  data-testid="track-title"
-                  style={{ marginBottom: screenTokens.titleMarginBottom }}
-                >
+                {renderNowPlayingElement(
+                  "title",
                   <div
                     className="min-w-0 font-semibold leading-[1.05] tracking-[-0.02em]"
                     style={{ color: titleColor, fontSize: screenTokens.titleFontSize }}
@@ -347,7 +578,7 @@ export function IpodScreen({
                     <EditableText
                       value={state.title}
                       onChange={(val) => dispatch({ type: "UPDATE_TITLE", payload: val })}
-                      disabled={!isEditable}
+                      disabled={!isInlineEditingEnabled}
                       className="max-w-full min-w-0"
                       editLabel="Edit title"
                       dataTestId="track-title-text"
@@ -357,35 +588,41 @@ export function IpodScreen({
                       onOverflowChange={onTitleOverflowChange}
                       singleLine={!titlePreview && !animateText}
                     />
-                  </div>
-                </div>
+                  </div>,
+                  {
+                    className: "relative z-20 w-full min-w-0",
+                    style: { marginBottom: screenTokens.titleMarginBottom },
+                    testId: "track-title",
+                  },
+                )}
 
-                <div
-                  className="relative z-20 w-full min-w-0"
-                  data-testid="track-artist"
-                  style={{ marginBottom: screenTokens.artistMarginBottom }}
-                >
+                {renderNowPlayingElement(
+                  "artist",
                   <div
                     className="min-w-0 font-medium leading-[1.1] tracking-[-0.01em]"
                     style={{ color: artistColor, fontSize: screenTokens.artistFontSize }}
                   >
                     <EditableText
                       value={state.artist}
-                      onChange={(val) => dispatch({ type: "UPDATE_ARTIST", payload: val })}
-                      disabled={!isEditable}
+                      onChange={(val) =>
+                        dispatch({ type: "UPDATE_ARTIST", payload: val })
+                      }
+                      disabled={!isInlineEditingEnabled}
                       className="max-w-full min-w-0"
                       editLabel="Edit artist"
                       dataTestId="track-artist-text"
                       singleLine
                     />
-                  </div>
-                </div>
+                  </div>,
+                  {
+                    className: "relative z-20 w-full min-w-0",
+                    style: { marginBottom: screenTokens.artistMarginBottom },
+                    testId: "track-artist",
+                  },
+                )}
 
-                <div
-                  className="relative z-20 w-full min-w-0"
-                  data-testid="track-album"
-                  style={{ marginBottom: screenTokens.albumMarginBottom }}
-                >
+                {renderNowPlayingElement(
+                  "album",
                   <div
                     className="min-w-0 font-medium leading-[1.08] tracking-[-0.01em]"
                     style={{ color: albumColor, fontSize: screenTokens.albumFontSize }}
@@ -393,115 +630,146 @@ export function IpodScreen({
                     <EditableText
                       value={state.album}
                       onChange={(val) => dispatch({ type: "UPDATE_ALBUM", payload: val })}
-                      disabled={!isEditable}
+                      disabled={!isInlineEditingEnabled}
                       className="max-w-full min-w-0"
                       editLabel="Edit album"
                       dataTestId="track-album-text"
                       singleLine
                     />
-                  </div>
-                </div>
+                  </div>,
+                  {
+                    className: "relative z-20 w-full min-w-0",
+                    style: { marginBottom: screenTokens.albumMarginBottom },
+                    testId: "track-album",
+                  },
+                )}
 
-                <div className="relative z-20" style={{ marginBottom: screenTokens.metaMarginBottom }}>
+                {renderNowPlayingElement(
+                  "rating",
                   <StarRating
                     rating={state.rating}
                     onChange={(rating) => {
-                      if (!isEditable) return;
+                      if (!isInlineEditingEnabled) return;
                       dispatch({ type: "UPDATE_RATING", payload: rating });
                       playClick();
                     }}
-                    disabled={!isEditable}
+                    disabled={!isInlineEditingEnabled}
                     fontSize={Math.max(7.6, screenTokens.metaFontSize - 0.2)}
-                  />
-                </div>
+                  />,
+                  {
+                    className: "relative z-20",
+                    style: { marginBottom: screenTokens.metaMarginBottom },
+                    testId: "os-layout-rating",
+                  },
+                )}
 
+                {renderNowPlayingElement(
+                  "track-info",
+                  <div
+                    className="font-medium leading-none tracking-[0.01em]"
+                    style={{
+                      color: trackInfoColor,
+                      fontSize: screenTokens.metaFontSize,
+                    }}
+                  >
+                    <EditableTrackNumber
+                      trackNumber={state.trackNumber}
+                      totalTracks={state.totalTracks}
+                      onTrackNumberChange={(num) =>
+                        dispatch({ type: "UPDATE_TRACK_NUMBER", payload: num })
+                      }
+                      onTotalTracksChange={(num) =>
+                        dispatch({ type: "UPDATE_TOTAL_TRACKS", payload: num })
+                      }
+                      disabled={!isInlineEditingEnabled}
+                    />
+                  </div>,
+                  { testId: "os-layout-track-info" },
+                )}
+              </div>
+            </div>
+
+            {renderNowPlayingElement(
+              "progress",
+              <>
+                <ProgressBar
+                  currentTime={state.currentTime}
+                  duration={state.duration}
+                  onSeek={(currentTime) => {
+                    if (!isInlineEditingEnabled) return;
+                    remainingAnchorRef.current = null;
+                    setCurrentTime(currentTime, false);
+                    playClick();
+                  }}
+                  disabled={!isInlineEditingEnabled}
+                  trackHeight={screenTokens.progressHeight >= 33 ? 6 : 5}
+                />
                 <div
-                  className="font-medium leading-none tracking-[0.01em]"
+                  className="mt-[3px] flex items-center justify-between font-semibold leading-none tracking-[-0.02em] text-black"
                   style={{
-                    color: trackInfoColor,
-                    fontSize: screenTokens.metaFontSize,
+                    fontVariantNumeric: "tabular-nums",
+                    fontFamily: SCREEN_FONT_FAMILY,
+                    fontSize: Math.max(8, screenTokens.metaFontSize + 1),
                   }}
                 >
-                  <EditableTrackNumber
-                    trackNumber={state.trackNumber}
-                    totalTracks={state.totalTracks}
-                    onTrackNumberChange={(num) =>
-                      dispatch({ type: "UPDATE_TRACK_NUMBER", payload: num })
-                    }
-                    onTotalTracksChange={(num) =>
-                      dispatch({ type: "UPDATE_TOTAL_TRACKS", payload: num })
-                    }
-                    disabled={!isEditable}
-                  />
+                  {renderNowPlayingElement(
+                    "elapsed-time",
+                    <EditableTime
+                      value={state.currentTime}
+                      onChange={(time) => {
+                        if (!isInlineEditingEnabled) return;
+                        setCurrentTime(time, true);
+                      }}
+                      disabled={!isInlineEditingEnabled}
+                      editLabel="Edit elapsed time"
+                    />,
+                    {
+                      testId: "elapsed-time",
+                      style: { zIndex: 1 },
+                    },
+                  )}
+                  {renderNowPlayingElement(
+                    "remaining-time",
+                    <div className="flex items-center gap-[1px] text-black">
+                      <EditableTime
+                        value={Math.max(state.duration - state.currentTime, 0)}
+                        isRemaining
+                        onChange={(remaining) => {
+                          if (!isInlineEditingEnabled) return;
+                          setRemainingTime(remaining);
+                        }}
+                        disabled={!isInlineEditingEnabled}
+                        editLabel="Edit remaining time"
+                      />
+                    </div>,
+                    {
+                      testId: "remaining-time",
+                      style: { zIndex: 1 },
+                    },
+                  )}
                 </div>
-              </div>
-            </div>
-
-            <div
-              className="absolute left-0 right-0"
-              style={{
-                bottom: screenTokens.progressBottom,
-                height: screenTokens.progressHeight,
-                paddingInline: screenTokens.progressPaddingX,
-                paddingTop: screenTokens.progressPaddingTop,
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,248,246,0.96) 100%)",
-              }}
-              data-testid="screen-progress"
-              data-export-duration={state.duration}
-            >
-              <ProgressBar
-                currentTime={state.currentTime}
-                duration={state.duration}
-                onSeek={(currentTime) => {
-                  if (!isEditable) return;
-                  remainingAnchorRef.current = null;
-                  setCurrentTime(currentTime, false);
-                  playClick();
-                }}
-                disabled={!isEditable}
-                trackHeight={screenTokens.progressHeight >= 33 ? 6 : 5}
-              />
-              <div
-                className="mt-[3px] flex items-center justify-between font-semibold leading-none tracking-[-0.02em] text-black"
-                style={{
-                  fontVariantNumeric: "tabular-nums",
-                  fontFamily: SCREEN_FONT_FAMILY,
-                  fontSize: Math.max(8, screenTokens.metaFontSize + 1),
-                }}
-              >
-                <div data-testid="elapsed-time" data-export-time-value={state.currentTime}>
-                  <EditableTime
-                    value={state.currentTime}
-                    onChange={(time) => {
-                      if (!isEditable) return;
-                      setCurrentTime(time, true);
-                    }}
-                    disabled={!isEditable}
-                    editLabel="Edit elapsed time"
-                  />
-                </div>
-                <div
-                  className="text-black flex items-center gap-[1px]"
-                  data-testid="remaining-time"
-                >
-                  <EditableTime
-                    value={Math.max(state.duration - state.currentTime, 0)}
-                    isRemaining
-                    onChange={(remaining) => {
-                      if (!isEditable) return;
-                      setRemainingTime(remaining);
-                    }}
-                    disabled={!isEditable}
-                    editLabel="Edit remaining time"
-                  />
-                </div>
-              </div>
-            </div>
+              </>,
+              {
+                className: "absolute left-0 right-0",
+                style: {
+                  bottom: screenTokens.progressBottom,
+                  height: screenTokens.progressHeight,
+                  paddingInline: screenTokens.progressPaddingX,
+                  paddingTop: screenTokens.progressPaddingTop,
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,248,246,0.96) 100%)",
+                },
+                testId: "screen-progress",
+              },
+            )}
           </>
         )}
 
-        <div className="pointer-events-none absolute inset-0" style={glassOverlay} aria-hidden="true" />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={glassOverlay}
+          aria-hidden="true"
+        />
         <div
           className="pointer-events-none absolute left-[11px] top-[9px] h-[32%] w-[48%] rounded-[18px] opacity-25"
           style={{
