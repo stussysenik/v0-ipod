@@ -4,16 +4,66 @@
   "description": "Canonical color token manifest for iPod Classic anniversary tribute. All color decisions must be auditable through dcal.",
 
   "authenticCaseColors": [
-    { "label": "White (1st-3rd Gen)", "hex": "#FFFFFF", "family": "white", "generation": "1-3" },
-    { "label": "White (4th Gen)", "hex": "#F7F7F7", "family": "white", "generation": "4" },
-    { "label": "White (5th Gen)", "hex": "#F5F5F0", "family": "white", "generation": "5" },
-    { "label": "Black (5th Gen)", "hex": "#1A1A1A", "family": "black", "generation": "5" },
-    { "label": "Silver (Classic 6th)", "hex": "#C0C0C0", "family": "silver", "generation": "6" },
-    { "label": "Black (Classic 6th)", "hex": "#1C1C1E", "family": "black", "generation": "6" },
-    { "label": "Charcoal (7th Gen)", "hex": "#2D2F34", "family": "black", "generation": "7" },
-    { "label": "Black (7th Gen)", "hex": "#1A1B1F", "family": "black", "generation": "7" },
-    { "label": "U2 Special Edition", "hex": "#111111", "family": "u2", "generation": "u2" },
-    { "label": "(PRODUCT)RED", "hex": "#CC0000", "family": "red", "generation": "special" }
+    {
+      "label": "White (1st-3rd Gen)",
+      "hex": "#FFFFFF",
+      "family": "white",
+      "generation": "1-3"
+    },
+    {
+      "label": "White (4th Gen)",
+      "hex": "#F7F7F7",
+      "family": "white",
+      "generation": "4"
+    },
+    {
+      "label": "White (5th Gen)",
+      "hex": "#F5F5F0",
+      "family": "white",
+      "generation": "5"
+    },
+    {
+      "label": "Black (5th Gen)",
+      "hex": "#1A1A1A",
+      "family": "black",
+      "generation": "5"
+    },
+    {
+      "label": "Silver (Classic 6th)",
+      "hex": "#C0C0C0",
+      "family": "silver",
+      "generation": "6"
+    },
+    {
+      "label": "Black (Classic 6th)",
+      "hex": "#1C1C1E",
+      "family": "black",
+      "generation": "6"
+    },
+    {
+      "label": "Charcoal (7th Gen)",
+      "hex": "#2D2F34",
+      "family": "black",
+      "generation": "7"
+    },
+    {
+      "label": "Black (7th Gen)",
+      "hex": "#1A1B1F",
+      "family": "black",
+      "generation": "7"
+    },
+    {
+      "label": "U2 Special Edition",
+      "hex": "#111111",
+      "family": "u2",
+      "generation": "u2"
+    },
+    {
+      "label": "(PRODUCT)RED",
+      "hex": "#CC0000",
+      "family": "red",
+      "generation": "special"
+    }
   ],
 
   "authenticFinishes": [

@@ -36,7 +36,8 @@ function sRGBLinearize(c: number): number {
 
 function relativeLuminance(hex: string, opacity = 1): number {
   const [r, g, b] = parseHex(hex);
-  const L = 0.2126 * sRGBLinearize(r) + 0.7152 * sRGBLinearize(g) + 0.0722 * sRGBLinearize(b);
+  const L =
+    0.2126 * sRGBLinearize(r) + 0.7152 * sRGBLinearize(g) + 0.0722 * sRGBLinearize(b);
   // For semi-transparent foreground on white (#FFFFFF, L=1)
   if (opacity < 1) {
     return L * opacity + 1 * (1 - opacity);
@@ -63,8 +64,8 @@ function srgbToXyz(hex: string): [number, number, number] {
   const bl = sRGBLinearize(b);
   // sRGB to XYZ matrix (D65)
   const x = 0.4124564 * rl + 0.3575761 * gl + 0.1804375 * bl;
-  const y = 0.2126729 * rl + 0.7151522 * gl + 0.0721750 * bl;
-  const z = 0.0193339 * rl + 0.1191920 * gl + 0.9503041 * bl;
+  const y = 0.2126729 * rl + 0.7151522 * gl + 0.072175 * bl;
+  const z = 0.0193339 * rl + 0.119192 * gl + 0.9503041 * bl;
   return [x, y, z];
 }
 
@@ -137,7 +138,12 @@ interface TextToken {
 }
 
 interface Manifest {
-  authenticCaseColors: Array<{ label: string; hex: string; family: string; generation: string }>;
+  authenticCaseColors: Array<{
+    label: string;
+    hex: string;
+    family: string;
+    generation: string;
+  }>;
   surfaceTokens: Record<string, SurfaceToken>;
   textTokens: Record<string, TextToken>;
   relationships: {
@@ -307,7 +313,9 @@ function main() {
     const catResults = results.filter((r) => r.category === cat);
     const catFails = catResults.filter((r) => !r.pass);
 
-    console.log(`\n## ${cat.toUpperCase()} (${catResults.length - catFails.length}/${catResults.length} pass)`);
+    console.log(
+      `\n## ${cat.toUpperCase()} (${catResults.length - catFails.length}/${catResults.length} pass)`,
+    );
     console.log("─".repeat(60));
 
     for (const r of catResults) {

@@ -27,7 +27,8 @@ export function StarRating({
           className="appearance-none p-0 leading-none focus:outline-none focus-visible:ring-1 focus-visible:ring-black/30"
           style={{
             fontSize,
-            color: star <= rating ? getTextTokenCss("screen.artist") : INACTIVE_STAR_COLOR,
+            color:
+              star <= rating ? getTextTokenCss("screen.artist") : INACTIVE_STAR_COLOR,
           }}
         >
           ★

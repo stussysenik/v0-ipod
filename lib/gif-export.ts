@@ -289,9 +289,7 @@ export async function encodeGifFrames(
   // If all frames are identical, log a warning (the pre-capture delay
   // should prevent this, but we detect it as a safety net)
   if (!hasMotion && allFrames.length >= 2) {
-    console.warn(
-      "[gif-export] Static frames detected — animation may not be visible",
-    );
+    console.warn("[gif-export] Static frames detected — animation may not be visible");
   }
 
   // 1.5.3: Build a single global palette from sample frames

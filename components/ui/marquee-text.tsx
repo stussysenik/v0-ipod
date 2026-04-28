@@ -58,9 +58,7 @@ export function MarqueeText({
     measure();
 
     const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => measure())
-        : null;
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => measure()) : null;
 
     resizeObserver?.observe(container);
     resizeObserver?.observe(measurementCopy);

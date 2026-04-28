@@ -54,7 +54,8 @@ export function IPodDeviceShell({
       <div
         className="pointer-events-none absolute left-1/2 top-[522px] h-[42px] w-[196px] -translate-x-1/2 rounded-full opacity-50 blur-[18px]"
         style={{
-          background: "radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 78%)",
+          background:
+            "radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 78%)",
         }}
         aria-hidden="true"
       />

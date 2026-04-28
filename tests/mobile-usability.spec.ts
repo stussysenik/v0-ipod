@@ -43,7 +43,9 @@ test.describe("Mobile usability", () => {
     await page.getByTestId("toolbox-toggle-button").click();
     await expect
       .poll(async () =>
-        page.getByTestId("toolbox-panel").evaluate((el) => !el.className.includes("invisible")),
+        page
+          .getByTestId("toolbox-panel")
+          .evaluate((el) => !el.className.includes("invisible")),
       )
       .toBe(true);
     await expect(page.getByTestId("export-button")).toContainText("Flat View Only");
@@ -52,11 +54,15 @@ test.describe("Mobile usability", () => {
     await page.getByTestId("toolbox-toggle-button").tap();
     await expect
       .poll(async () =>
-        page.getByTestId("toolbox-panel").evaluate((el) => !el.className.includes("invisible")),
+        page
+          .getByTestId("toolbox-panel")
+          .evaluate((el) => !el.className.includes("invisible")),
       )
       .toBe(true);
     await page.getByTestId("preview-view-button").tap();
-    await expect(page.getByTestId("gif-export-button")).toContainText("Export Animated GIF");
+    await expect(page.getByTestId("gif-export-button")).toContainText(
+      "Export Animated GIF",
+    );
   });
 
   test("mobile upload opens immediate file path and updates artwork", async ({

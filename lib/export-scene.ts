@@ -1,9 +1,4 @@
-export type ExportPresetId =
-  | "product"
-  | "square"
-  | "portrait"
-  | "story"
-  | "landscape";
+export type ExportPresetId = "product" | "square" | "portrait" | "story" | "landscape";
 
 export interface ExportPresetConfig {
   id: ExportPresetId;

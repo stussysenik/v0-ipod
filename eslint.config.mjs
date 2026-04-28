@@ -14,7 +14,6 @@ const eslintConfig = [
       "test-results/**",
       "scripts/**",
       "ipod-classic.tsx",
-      "components/ipod-form.tsx",
     ],
   },
   ...nextConfig,

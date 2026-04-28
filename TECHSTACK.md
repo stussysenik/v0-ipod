@@ -4,6 +4,7 @@
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
+| Package Manager | Bun | 1.1.x | Default dependency and script runner |
 | Framework | Next.js | 15.2.6 | App routing, SSR, bundling |
 | UI | React | 19 | Component rendering |
 | Language | TypeScript | 5.x | Type safety |
@@ -49,7 +50,9 @@ No external state library. All state is local to `IPodClassic` component and pas
 
 | Tool | Purpose |
 |------|---------|
-| ESLint | Linting (next config + prettier plugin) |
+| Bun | Default install and script runner |
+| OXC / Oxlint | Default linting |
+| ESLint | Legacy Next-specific lint fallback |
 | Prettier | Code formatting |
 | PostCSS | CSS processing for Tailwind |
 | PWA (@ducanh2912/next-pwa) | Offline-capable progressive web app |

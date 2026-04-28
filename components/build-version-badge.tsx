@@ -6,11 +6,11 @@ interface BuildVersionBadgeProps {
   initialVersion: string;
 }
 
-interface NextDataWindow extends Window {
+type NextDataCarrier = Window & {
   __NEXT_DATA__?: {
     buildId?: string;
   };
-}
+};
 
 function normalizeVersion(raw: string): string {
   const trimmed = raw.trim();
@@ -27,8 +27,7 @@ export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
       return;
     }
 
-    const nextData = window as NextDataWindow;
-    const runtimeBuildId = nextData.__NEXT_DATA__?.buildId;
+    const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
     if (runtimeBuildId) {
       setVersion(normalizeVersion(runtimeBuildId));
     }

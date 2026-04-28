@@ -53,9 +53,15 @@ test.describe("Fidelity regressions", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.getByTestId("three-d-view-button")).toContainText(/WIP|Experimental/i);
-    await expect(page.getByTestId("focus-view-button")).toContainText(/WIP|Experimental/i);
-    await expect(page.getByTestId("ascii-view-button")).toContainText(/WIP|Experimental/i);
+    await expect(page.getByTestId("three-d-view-button")).toContainText(
+      /WIP|Experimental/i,
+    );
+    await expect(page.getByTestId("focus-view-button")).toContainText(
+      /WIP|Experimental/i,
+    );
+    await expect(page.getByTestId("ascii-view-button")).toContainText(
+      /WIP|Experimental/i,
+    );
 
     await page.getByTestId("ascii-view-button").click();
     await expect(page.getByTestId("gif-export-button")).toBeHidden();

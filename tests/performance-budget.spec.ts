@@ -72,11 +72,18 @@ test.describe("Performance Budget Gates", () => {
 
     // Inject PerformanceObserver for longtask entries before navigation
     await page.addInitScript(() => {
-      (window as Record<string, unknown>).__longTasks = [];
+      const longTaskWindow = window as Window & {
+        __longTasks?: Array<{
+          name: string;
+          duration: number;
+          startTime: number;
+        }>;
+      };
+      longTaskWindow.__longTasks = [];
       try {
         const observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            (window as Record<string, unknown[]>).__longTasks.push({
+            longTaskWindow.__longTasks?.push({
               name: entry.name,
               duration: entry.duration,
               startTime: entry.startTime,

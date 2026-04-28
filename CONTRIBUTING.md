@@ -179,9 +179,7 @@ git checkout -b docs/architecture-diagrams
 ### 3. Install Dependencies
 
 ```bash
-npm install
-# or: bun install
-# or: pnpm install
+bun install
 ```
 
 ### 4. Make Changes
@@ -194,15 +192,16 @@ npm install
 
 ```bash
 # Run all validation checks
-npm run validate
+bun run validate
 
 # Or run individually:
-npm run lint           # Check for linting errors
-npm run lint:fix       # Auto-fix linting errors
-npm run format:check   # Check code formatting
-npm run format         # Auto-format code
-npm run type-check     # TypeScript type checking
-npm test              # Run Playwright tests
+bun run lint           # Check OXC lint errors
+bun run lint:fix       # Auto-fix OXC lint errors
+bun run lint:eslint    # Run the legacy Next/ESLint ruleset
+bun run format:check   # Check code formatting
+bun run format         # Auto-format code
+bun run type-check     # TypeScript type checking
+bun run test           # Run Playwright tests
 ```
 
 ### 6. Commit Changes
@@ -329,10 +328,10 @@ We use **Prettier** with the following configuration:
 **Auto-format before committing:**
 
 ```bash
-npm run format
+bun run format
 ```
 
-### ESLint Rules
+### Lint Rules
 
 Key rules enforced:
 
@@ -350,19 +349,19 @@ Key rules enforced:
 
 ```bash
 # Run all tests
-npm test
+bun run test
 
 # Run with UI
-npm run test:ui
+bun run test:ui
 
 # Debug mode
-npm run test:debug
+bun run test:debug
 
 # Specific test file
-npx playwright test tests/interactions.spec.ts
+bunx playwright test tests/interactions.spec.ts
 
 # Specific test by name
-npx playwright test -g "should export PNG"
+bunx playwright test -g "should export PNG"
 ```
 
 ### Writing Tests
@@ -446,10 +445,10 @@ flowchart LR
 Before submitting a PR, ensure:
 
 - [ ] **Semantic commits**: All commits follow conventional format
-- [ ] **Tests pass**: `npm test` succeeds
-- [ ] **Linting**: `npm run lint` has no errors
-- [ ] **Formatting**: `npm run format:check` passes
-- [ ] **Type checking**: `npm run type-check` succeeds
+- [ ] **Tests pass**: `bun run test` succeeds
+- [ ] **Linting**: `bun run lint` has no errors
+- [ ] **Formatting**: `bun run format:check` passes
+- [ ] **Type checking**: `bun run type-check` succeeds
 - [ ] **Documentation**: Updated relevant docs (README, ARCHITECTURE, etc.)
 - [ ] **Testing**: Added/updated tests for changes
 - [ ] **Mobile tested**: Verified on mobile viewport (if UI change)

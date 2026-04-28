@@ -5,15 +5,13 @@ import { fileURLToPath } from "node:url";
 const command = process.argv[2];
 
 if (!command || (command !== "dev" && command !== "start")) {
-  console.error('Usage: node scripts/run-next.mjs <dev|start>');
+  console.error("Usage: node scripts/run-next.mjs <dev|start>");
   process.exit(1);
 }
 
 const basePort = Number(process.env.PORT) || 4001;
 const strictPort =
-  process.env.PORT_STRICT === "1" ||
-  command === "start" ||
-  process.env.PORT != null;
+  process.env.PORT_STRICT === "1" || command === "start" || process.env.PORT != null;
 
 function probePort(port) {
   return new Promise((resolve) => {

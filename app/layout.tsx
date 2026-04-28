@@ -76,7 +76,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-deploy-version={deployVersion}>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+      >
         <ServiceWorkerCleanup deployVersion={deployVersion} />
         {children}
         <BuildVersionBadge initialVersion={deployVersion} />

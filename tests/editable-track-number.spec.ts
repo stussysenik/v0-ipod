@@ -8,12 +8,8 @@ test.describe("EditableTrackNumber Component", () => {
 
   test("displays initial track number format", async ({ page }) => {
     await expect(page.getByTestId("track-number-container")).toContainText("7");
-    await expect(page.getByTestId("track-number-container")).toContainText(
-      "of",
-    );
-    await expect(page.getByTestId("track-number-container")).toContainText(
-      "16",
-    );
+    await expect(page.getByTestId("track-number-container")).toContainText("of");
+    await expect(page.getByTestId("track-number-container")).toContainText("16");
   });
 
   test("track number becomes editable on click", async ({ page }) => {

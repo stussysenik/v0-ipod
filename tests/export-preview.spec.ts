@@ -19,7 +19,9 @@ async function openThemePanel(page: Page): Promise<void> {
 }
 
 test.describe("Export state fidelity", () => {
-  test("flat export filenames encode preset and interaction context", async ({ page }) => {
+  test("flat export filenames encode preset and interaction context", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     await openThemePanel(page);

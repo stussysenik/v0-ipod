@@ -64,16 +64,16 @@
 ### Testing
 
 - [ ] Tests added/updated for new features or bug fixes
-- [ ] All tests pass locally (`npm test`)
+- [ ] All tests pass locally (`bun run test`)
 - [ ] Tested on multiple browsers (Chrome, Firefox, Safari)
 - [ ] Tested on mobile viewport (if UI change)
 
 ### Validation
 
-- [ ] Linter passes (`npm run lint`)
-- [ ] Prettier formatting applied (`npm run format`)
-- [ ] TypeScript type checking passes (`npm run type-check`)
-- [ ] Full validation passes (`npm run validate`)
+- [ ] Linter passes (`bun run lint`)
+- [ ] Prettier formatting applied (`bun run format`)
+- [ ] TypeScript type checking passes (`bun run type-check`)
+- [ ] Full validation passes (`bun run validate`)
 
 ### Documentation
 

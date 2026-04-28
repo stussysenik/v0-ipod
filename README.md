@@ -140,7 +140,7 @@ sequenceDiagram
 
 ### Prerequisites
 
-- **Node.js** 18+ (or use [bun](https://bun.sh) / pnpm)
+- **[Bun](https://bun.sh)** 1.1+
 - **Git** for cloning the repository
 
 ### Installation
@@ -151,27 +151,25 @@ git clone https://github.com/stussysenik/v0-ipod.git
 cd v0-ipod
 
 # Install dependencies
-npm install
-# or: bun install
-# or: pnpm install
+bun install
 
 # Start development server
-npm run dev
+bun run dev
 ```
 
 The app will be available at **`http://localhost:4001`**
 
 > **💡 Tip**: Override the port if needed:
 > ```bash
-> PORT=4010 npm run dev
-> PORT=4010 npm run start
+> PORT=4010 bun run dev
+> PORT=4010 bun run start
 > ```
 
 ### Build for Production
 
 ```bash
-npm run build
-npm run start
+bun run build
+bun run start
 ```
 
 ---
@@ -266,16 +264,16 @@ graph TD
 
 ```bash
 # Run all tests
-npx playwright test
+bun run test
 
 # Run tests with UI mode
-npx playwright test --ui
+bun run test:ui
 
 # Run tests in debug mode
-npx playwright test --debug
+bun run test:debug
 
 # Run specific test file
-npx playwright test tests/interactions.spec.ts
+bunx playwright test tests/interactions.spec.ts
 ```
 
 ### Test Coverage
@@ -294,18 +292,19 @@ npx playwright test tests/interactions.spec.ts
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start development server on port 4001 |
-| `npm run build` | Build production bundle |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix linting issues |
-| `npm run format` | Format code with Prettier |
-| `npm run format:check` | Check formatting without changes |
-| `npm run type-check` | Run TypeScript type checking |
-| `npm run validate` | Run lint + format check + type check |
-| `npm test` | Run Playwright tests |
-| `npm run test:ui` | Run tests with UI |
-| `npm run test:debug` | Run tests in debug mode |
+| `bun run dev` | Start development server on port 4001 |
+| `bun run build` | Build production bundle |
+| `bun run start` | Start production server |
+| `bun run lint` | Run OXC (`oxlint`) |
+| `bun run lint:fix` | Auto-fix OXC lint issues |
+| `bun run lint:eslint` | Run the legacy Next/ESLint ruleset |
+| `bun run format` | Format code with Prettier |
+| `bun run format:check` | Check formatting without changes |
+| `bun run type-check` | Run TypeScript type checking |
+| `bun run validate` | Run lint + format check + type check |
+| `bun run test` | Run Playwright tests |
+| `bun run test:ui` | Run tests with UI |
+| `bun run test:debug` | Run tests in debug mode |
 
 ---
 
@@ -337,7 +336,7 @@ We welcome contributions! Please follow these steps:
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feat/your-feature`
 3. **Make your changes** using [semantic commits](./CONTRIBUTING.md#semantic-commits)
-4. **Run validation**: `npm run validate`
+4. **Run validation**: `bun run validate`
 5. **Push and create a PR**
 
 See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines including:
@@ -352,10 +351,10 @@ See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines including:
 
 ### Port Already in Use
 
-If `npm run dev` fails because port 4001 is occupied:
+If `bun run dev` fails because port 4001 is occupied:
 
 ```bash
-PORT=4010 npm run dev
+PORT=4010 bun run dev
 ```
 
 ### Export Not Working on Mobile

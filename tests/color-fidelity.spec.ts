@@ -39,7 +39,10 @@ test.describe("Color Fidelity — Manifest Compliance", () => {
 
     // Verify the screen background contains the expected gradient colors
     const bgStyle = await screenEl.evaluate((el) => {
-      return window.getComputedStyle(el).background || window.getComputedStyle(el).backgroundImage;
+      return (
+        window.getComputedStyle(el).background ||
+        window.getComputedStyle(el).backgroundImage
+      );
     });
 
     // The screen surround should have the dark gradient defined in manifest
@@ -76,7 +79,9 @@ test.describe("Color Fidelity — Manifest Compliance", () => {
     }
   });
 
-  test("default backdrop color matches manifest backdrop.default token", async ({ page }) => {
+  test("default backdrop color matches manifest backdrop.default token", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -97,7 +102,10 @@ test.describe("Color Fidelity — Manifest Compliance", () => {
   test("all authentic case colors are valid hex values", async () => {
     const hexRe = /^#[0-9A-Fa-f]{6}$/;
     for (const color of manifest.authenticCaseColors) {
-      expect(hexRe.test(color.hex), `${color.label}: ${color.hex} should be valid hex`).toBe(true);
+      expect(
+        hexRe.test(color.hex),
+        `${color.label}: ${color.hex} should be valid hex`,
+      ).toBe(true);
     }
   });
 
@@ -114,7 +122,10 @@ test.describe("Color Fidelity — Manifest Compliance", () => {
     for (const finish of manifest.authenticFinishes) {
       const swatch = page.locator(`button[title^="${finish.label} (${finish.year})"]`);
       const count = await swatch.count();
-      expect(count, `Swatch for "${finish.label} (${finish.year})" should exist`).toBeGreaterThanOrEqual(1);
+      expect(
+        count,
+        `Swatch for "${finish.label} (${finish.year})" should exist`,
+      ).toBeGreaterThanOrEqual(1);
     }
   });
 });

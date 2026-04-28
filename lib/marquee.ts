@@ -30,10 +30,7 @@ export function getMarqueeGapWidth(contentWidth: number, textLength: number): nu
 
 export function getMarqueeCycleDistance(metrics: MarqueeMetrics): number {
   // Single-pass: container width (start position) + content width (exit distance)
-  return Math.max(
-    metrics.containerWidth + metrics.contentWidth,
-    metrics.containerWidth,
-  );
+  return Math.max(metrics.containerWidth + metrics.contentWidth, metrics.containerWidth);
 }
 
 export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics): number {
@@ -62,8 +59,7 @@ export function getMarqueeFrame(
   }
 
   // Calculate offset and translate from right to left
-  const travelPx =
-    ((elapsedMs - MARQUEE_DELAY_MS) * MARQUEE_SPEED_PX_PER_SECOND) / 1000;
+  const travelPx = ((elapsedMs - MARQUEE_DELAY_MS) * MARQUEE_SPEED_PX_PER_SECOND) / 1000;
   const offsetInCycle = Math.floor(travelPx % cycleDistance);
   const translateX = metrics.containerWidth - offsetInCycle;
 

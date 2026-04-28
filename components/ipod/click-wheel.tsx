@@ -47,12 +47,16 @@ export function ClickWheel({
     ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
     : "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
   const wheelBorder = derived?.border ?? getSurfaceToken("wheel.border");
-  const wheelGradientFrom = derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
+  const wheelGradientFrom =
+    derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
   const wheelGradientVia = derived?.gradient.via ?? getSurfaceToken("wheel.gradient.via");
   const wheelGradientTo = derived?.gradient.to ?? getSurfaceToken("wheel.gradient.to");
-  const wheelCenterBorder = derived?.centerBorder ?? getSurfaceToken("wheel.center.border");
-  const wheelCenterFrom = derived?.centerGradient.from ?? getSurfaceToken("wheel.center.from");
-  const wheelCenterVia = derived?.centerGradient.via ?? getSurfaceToken("wheel.center.via");
+  const wheelCenterBorder =
+    derived?.centerBorder ?? getSurfaceToken("wheel.center.border");
+  const wheelCenterFrom =
+    derived?.centerGradient.from ?? getSurfaceToken("wheel.center.from");
+  const wheelCenterVia =
+    derived?.centerGradient.via ?? getSurfaceToken("wheel.center.via");
   const wheelCenterTo = derived?.centerGradient.to ?? getSurfaceToken("wheel.center.to");
   const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
   const wheelTokens = preset.wheel;
@@ -76,7 +80,11 @@ export function ClickWheel({
     const handlePointerDown = (event: PointerEvent) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
       const target = event.target as HTMLElement;
-      if (target.closest('[data-testid="click-wheel-center"]') || target.closest('button')) return;
+      if (
+        target.closest('[data-testid="click-wheel-center"]') ||
+        target.closest("button")
+      )
+        return;
       activePointerId = event.pointerId;
       lastAngle = calculateAngle(event.clientX, event.clientY);
       wheel.setPointerCapture?.(event.pointerId);
@@ -200,7 +208,10 @@ export function ClickWheel({
           <svg
             viewBox="0 0 24 16"
             fill="currentColor"
-            style={{ width: wheelTokens.playPauseIconSize * 1.5, height: wheelTokens.playPauseIconSize }}
+            style={{
+              width: wheelTokens.playPauseIconSize * 1.5,
+              height: wheelTokens.playPauseIconSize,
+            }}
           >
             <polygon points="1,1 10,8 1,15" />
             <rect x="13" y="1" width="3.5" height="14" rx="0.5" />
@@ -227,7 +238,10 @@ export function ClickWheel({
           <svg
             viewBox="0 0 24 16"
             fill="currentColor"
-            style={{ width: wheelTokens.sideIconSize * 1.4, height: wheelTokens.sideIconSize }}
+            style={{
+              width: wheelTokens.sideIconSize * 1.4,
+              height: wheelTokens.sideIconSize,
+            }}
           >
             <rect x="1" y="1" width="2.5" height="14" rx="0.5" />
             <polygon points="14,1 5,8 14,15" />
@@ -253,7 +267,10 @@ export function ClickWheel({
           <svg
             viewBox="0 0 24 16"
             fill="currentColor"
-            style={{ width: wheelTokens.sideIconSize * 1.4, height: wheelTokens.sideIconSize }}
+            style={{
+              width: wheelTokens.sideIconSize * 1.4,
+              height: wheelTokens.sideIconSize,
+            }}
           >
             <polygon points="1,1 10,8 1,15" />
             <polygon points="10,1 19,8 10,15" />
@@ -264,7 +281,9 @@ export function ClickWheel({
 
       <div
         className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-100 ${
-          disabled ? "cursor-default" : "cursor-pointer active:scale-[0.96] active:shadow-none"
+          disabled
+            ? "cursor-default"
+            : "cursor-pointer active:scale-[0.96] active:shadow-none"
         }`}
         style={{
           width: wheelTokens.centerSize,

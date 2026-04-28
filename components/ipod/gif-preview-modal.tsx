@@ -1,15 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Pause,
-  Play,
-  Repeat,
-  RotateCcw,
-  X,
-  MonitorUp,
-  Loader2,
-} from "lucide-react";
+import { Pause, Play, Repeat, RotateCcw, X, MonitorUp, Loader2 } from "lucide-react";
 import { getExportPreset, type ExportPresetId } from "@/lib/export-scene";
 
 declare global {
@@ -142,7 +134,15 @@ export function GifPreviewModal({
         playbackTimerRef.current = null;
       }
     };
-  }, [frameDelayMs, isLooping, isPlaying, isPreparing, open, totalFrames, currentFrameIndex]);
+  }, [
+    frameDelayMs,
+    isLooping,
+    isPlaying,
+    isPreparing,
+    open,
+    totalFrames,
+    currentFrameIndex,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -186,7 +186,9 @@ export function GifPreviewModal({
             {isPreparing ? (
               <div className="flex flex-col items-center gap-3 text-[#111827]">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-sm font-semibold">Preparing preview {progressPercent}%</p>
+                <p className="text-sm font-semibold">
+                  Preparing preview {progressPercent}%
+                </p>
               </div>
             ) : error ? (
               <div className="max-w-sm text-center text-[#111827]">
@@ -293,7 +295,9 @@ export function GifPreviewModal({
             <div className="flex items-center justify-between text-xs font-semibold text-[#374151]">
               <span>Frame</span>
               <span data-testid="gif-preview-frame-readout">
-                {totalFrames === 0 ? "0 / 0" : `${currentFrameIndex + 1} / ${totalFrames}`}
+                {totalFrames === 0
+                  ? "0 / 0"
+                  : `${currentFrameIndex + 1} / ${totalFrames}`}
               </span>
             </div>
             <input
