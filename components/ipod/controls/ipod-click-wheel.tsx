@@ -50,9 +50,15 @@ export function IpodClickWheel({
 }: IpodClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const derived = skinColor ? deriveWheelColors(skinColor) : null;
-  const wheelShadow = exportSafe
-    ? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
-    : "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
+  const isWhite =
+    skinColor?.toLowerCase() === "#ffffff" || skinColor?.toLowerCase() === "#f2f2f2";
+
+  const wheelShadow = isWhite
+    ? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
+    : exportSafe
+      ? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
+      : "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
+
   const wheelBorder = derived?.border ?? getSurfaceToken("wheel.border");
   const wheelGradientFrom =
     derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
@@ -67,6 +73,22 @@ export function IpodClickWheel({
   const wheelCenterTo = derived?.centerGradient.to ?? getSurfaceToken("wheel.center.to");
   const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
   const wheelTokens = preset.wheel;
+
+  const wheelSurfaceStyle = isWhite
+    ? {
+        backgroundColor: "#e8e8e8",
+        backgroundImage:
+          "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, transparent 60%)",
+      }
+    : {
+        backgroundImage: `linear-gradient(180deg, ${wheelGradientFrom}, ${wheelGradientVia}, ${wheelGradientTo})`,
+      };
+
+  const centerShadow = isWhite
+    ? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
+    : exportSafe
+      ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
+      : "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
 
   useEffect(() => {
     const wheel = wheelRef.current;
@@ -159,8 +181,8 @@ export function IpodClickWheel({
       <div
         className="absolute inset-0 rounded-full border"
         style={{
-          borderColor: wheelBorder,
-          backgroundImage: `linear-gradient(180deg, ${wheelGradientFrom}, ${wheelGradientVia}, ${wheelGradientTo})`,
+          borderColor: isWhite ? "#d1d1d1" : wheelBorder,
+          ...wheelSurfaceStyle,
           boxShadow: wheelShadow,
         }}
         data-export-layer="wheel"
@@ -329,9 +351,7 @@ export function IpodClickWheel({
           height: wheelTokens.centerSize,
           borderColor: wheelCenterBorder,
           backgroundImage: `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
-          boxShadow: exportSafe
-            ? "0 0 0 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(0,0,0,0.1)"
-            : "0 4px 12px -2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.15)",
+          boxShadow: centerShadow,
         }}
         data-export-layer="wheel-center"
         data-testid="click-wheel-center"

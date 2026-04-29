@@ -9,6 +9,7 @@ interface IpodProgressBarProps {
   onSeek: (time: number) => void;
   disabled?: boolean;
   trackHeight?: number;
+  variant?: "experimental" | "classic";
 }
 
 export function IpodProgressBar({
@@ -17,10 +18,13 @@ export function IpodProgressBar({
   onSeek,
   disabled = false,
   trackHeight = 7,
+  variant = "classic",
 }: IpodProgressBarProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [activePointerId, setActivePointerId] = useState<number | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+
+  const isClassic = variant === "classic";
 
   const handleDrag = useCallback(
     (clientX: number) => {
@@ -113,6 +117,19 @@ export function IpodProgressBar({
             mixBlendMode: "screen",
           }}
         />
+        {isClassic && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-[14px] h-[14px] z-10"
+            style={{
+              left: `${progress}%`,
+              backgroundColor: "#f0f0f0",
+              border: "1px solid #999",
+              transform: "translateY(-50%) rotate(45deg)",
+              boxShadow: "-1px 1px 3px rgba(0,0,0,0.3)",
+              marginTop: "-1px",
+            }}
+          />
+        )}
       </div>
     </div>
   );
