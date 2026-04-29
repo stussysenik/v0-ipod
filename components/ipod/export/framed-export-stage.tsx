@@ -9,9 +9,15 @@ import {
   type ExportPresetId,
 } from "@/lib/export/export-scene";
 import { IPodDeviceShell } from "@/components/ipod/device/ipod-device-shell";
+import {
+  getIpodClassicPreset,
+  DEFAULT_HARDWARE_PRESET_ID,
+} from "@/lib/ipod-classic-presets";
+import type { IpodHardwarePresetId } from "@/types/ipod-state";
 
 interface FramedExportStageProps {
   presetId: ExportPresetId;
+  hardwarePresetId?: IpodHardwarePresetId;
   backgroundColor: string;
   skinColor: string;
   screen: React.ReactNode;
@@ -26,6 +32,7 @@ export const FramedExportStage = forwardRef<HTMLDivElement, FramedExportStagePro
   function FramedExportStage(
     {
       presetId,
+      hardwarePresetId = DEFAULT_HARDWARE_PRESET_ID,
       backgroundColor,
       skinColor,
       screen,
@@ -39,6 +46,7 @@ export const FramedExportStage = forwardRef<HTMLDivElement, FramedExportStagePro
   ) {
     const preset = getExportPreset(presetId);
     const scale = getExportSceneScale(presetId);
+    const hardwarePreset = getIpodClassicPreset(hardwarePresetId);
 
     return (
       <div
@@ -60,6 +68,7 @@ export const FramedExportStage = forwardRef<HTMLDivElement, FramedExportStagePro
           }}
         >
           <IPodDeviceShell
+            preset={hardwarePreset}
             skinColor={skinColor}
             screen={screen}
             wheel={wheel}

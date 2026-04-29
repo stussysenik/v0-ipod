@@ -23,8 +23,10 @@ export function IpodDevice({
 
   return (
     <div
-      className="relative flex h-[620px] w-[370px] flex-col items-center border border-white/45 transition-all duration-300"
+      className="relative flex flex-col items-center border border-white/45 transition-all duration-300"
       style={{
+        width: preset.shell.width,
+        height: preset.shell.height,
         backgroundColor: skinColor,
         borderColor: exportSafe ? "rgba(96,102,110,0.24)" : undefined,
         boxShadow: shellShadow,

@@ -74,7 +74,7 @@ export function IpodProgressBar({
       <div
         ref={progressRef}
         data-testid="progress-track"
-        className={`relative w-full overflow-hidden border ${
+        className={`relative w-full border ${
           disabled ? "cursor-default" : "cursor-pointer"
         }`}
         onPointerDown={handlePointerDown}
@@ -83,44 +83,35 @@ export function IpodProgressBar({
         onPointerCancel={handlePointerCancel}
         style={{
           height: visualTrackHeight,
-          borderRadius: 3,
-          borderColor: "#d5d5d5",
-          borderTopColor: "#c5c5c5",
-          borderBottomColor: "#e0e0e0",
-          background:
-            "linear-gradient(to bottom, #ffffff 0%, #fdfdfd 5%, #f5f5f5 15%, #ebebeb 50%, #e8e8e8 70%, #f2f2f2 100%)",
-          boxShadow:
-            "inset 0 1px 2px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(255,255,255,0.8)",
+          borderRadius: 2,
+          borderColor: "#b8b8b8",
+          borderTopColor: "#9e9e9e",
+          background: "linear-gradient(to bottom, #fdfdfd, #f1f1f1 40%, #e5e5e5)",
+          boxShadow: "inset 0 1px 1px rgba(0,0,0,.15)",
           touchAction: "none",
         }}
       >
         <div
-          className="absolute inset-0 overflow-hidden"
+          data-testid="progress-fill"
+          className="absolute inset-y-0 left-0"
           style={{
-            borderRadius: 2,
+            width: `${visibleProgress}%`,
+            background:
+              "linear-gradient(to bottom, #b8e0ff 0%, #7fc1ff 15%, #3a9cf5 50%, #1e7fd8 51%, #5aa8f0 100%)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
+            maxWidth: "100%",
+            borderRadius: "1px 0 0 1px",
           }}
-        >
-          <div
-            data-testid="progress-fill"
-            className="absolute inset-y-[1px] left-0"
-            style={{
-              width: `${visibleProgress}%`,
-              borderRight: "1px solid #4a8fd6",
-              background:
-                "linear-gradient(to bottom, #ffffff 0%, #e8f2ff 8%, #b3d4f5 20%, #7fb4eb 45%, #5a9fe5 60%, #3f8de0 80%, #6aaee9 100%)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
-              borderRadius: "2px 0 0 2px",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 z-10"
-            style={{
-              height: "50%",
-              background:
-                "linear-gradient(to bottom, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0) 100%)",
-            }}
-          />
-        </div>
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-[5px]"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(255,255,255,0.75), rgba(255,255,255,0.15))",
+            borderRadius: "1px 1px 0 0",
+            mixBlendMode: "screen",
+          }}
+        />
       </div>
     </div>
   );

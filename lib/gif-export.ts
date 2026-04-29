@@ -6,9 +6,6 @@ const EXPORT_ATTRIBUTE = "data-exporting";
 /** Default capture scale — 2x for Instagram-quality output */
 const GIF_CAPTURE_SCALE_HIGH = 2;
 
-/** Maximum retry rounds for static-frame detection */
-const MAX_STATIC_RETRIES = 3;
-
 const waitForNextPaint = () =>
   new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve())),

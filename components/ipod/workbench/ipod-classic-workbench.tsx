@@ -26,7 +26,7 @@ const ThreeDIpod = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[620px] flex items-center justify-center">
+      <div className="w-full flex-1 min-h-[400px] flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
       </div>
     ),
@@ -87,11 +87,7 @@ const OKLCH_BG_L = BACKGROUND_OKLCH_CONFIG.lightness;
 const OKLCH_BG_C = BACKGROUND_OKLCH_CONFIG.chroma;
 const OKLCH_CASE_STEPS = CASE_OKLCH_CONFIG.steps;
 const OKLCH_BG_STEPS = BACKGROUND_OKLCH_CONFIG.steps;
-const SHELL_WIDTH = 370;
-const SHELL_HEIGHT = 620;
 const SHELL_PADDING = 48;
-const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
-const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | "gif";
 
@@ -356,7 +352,15 @@ export default function IpodClassicWorkbench() {
     if (nextEnd !== rangeEndTime) {
       setRangeEndTime(nextEnd);
     }
-  }, [selectionKind, rangeStartTime, rangeEndTime, state.currentTime, state.duration]);
+  }, [
+    selectionKind,
+    rangeStartTime,
+    rangeEndTime,
+    state.currentTime,
+    state.duration,
+    setRangeStartTime,
+    setRangeEndTime,
+  ]);
 
   useEffect(() => {
     setRangeStartDraft(selectionKind === "range" ? formatTimecode(rangeStartTime) : "");
@@ -533,7 +537,7 @@ export default function IpodClassicWorkbench() {
       }
       setRangeEndTime(clampSnapshotTime(parsed, state.duration));
     },
-    [rangeEndTime, rangeStartTime, state.duration],
+    [rangeEndTime, rangeStartTime, state.duration, setRangeStartTime, setRangeEndTime],
   );
 
   const formatExportId = useCallback(
@@ -758,7 +762,7 @@ export default function IpodClassicWorkbench() {
         // User cancelled or API unavailable
       }
     },
-    [saveCustomColor],
+    [saveCustomColor, setBgColor, setSkinColor],
   );
 
   const handleOsMenuSelect = useCallback(() => {
@@ -780,7 +784,7 @@ export default function IpodClassicWorkbench() {
       default:
         showSoftNotice(`${activeItem.label} is queued for the fuller OS pass`);
     }
-  }, [isCompactToolbox, osMenuIndex, showSoftNotice]);
+  }, [isCompactToolbox, osMenuIndex, showSoftNotice, setOsScreen]);
 
   const handleNowPlayingCenterClick = useCallback(() => {
     dispatch({ type: "TOGGLE_OS_NOW_PLAYING_EDITABLE" });
@@ -790,7 +794,7 @@ export default function IpodClassicWorkbench() {
     if (!isAuthenticInteraction) return;
     dispatch({ type: "SET_OS_NOW_PLAYING_EDITABLE", payload: false });
     setOsScreen("menu");
-  }, [isAuthenticInteraction]);
+  }, [isAuthenticInteraction, setOsScreen]);
 
   const handlePreviousButtonPress = useCallback(() => {
     if (isAuthenticInteraction && osScreen === "menu") {
@@ -814,7 +818,7 @@ export default function IpodClassicWorkbench() {
       return;
     }
     showSoftNotice("Playback remains visual in this build");
-  }, [isAuthenticInteraction, osScreen, showSoftNotice]);
+  }, [isAuthenticInteraction, osScreen, showSoftNotice, setOsScreen]);
 
   const screenComponent = isAsciiView ? (
     <IpodAsciiScene state={state} />
@@ -940,6 +944,9 @@ export default function IpodClassicWorkbench() {
     setShowSettings((prev) => !prev);
   }, [clearSoftNotice]);
 
+  const frameWidth = activePreset.shell.width + SHELL_PADDING * 2;
+  const frameHeight = activePreset.shell.height + SHELL_PADDING * 2;
+
   const previewScale = useMemo(() => {
     if (isExportCapturing || viewportSize.width === 0 || viewportSize.height === 0) {
       return 1;
@@ -950,15 +957,15 @@ export default function IpodClassicWorkbench() {
     const availableWidth = Math.max(viewportSize.width - horizontalReserve, 260);
     const availableHeight = Math.max(viewportSize.height - verticalReserve, 320);
     const fitScale = Math.min(
-      availableWidth / PREVIEW_FRAME_WIDTH,
-      availableHeight / PREVIEW_FRAME_HEIGHT,
+      availableWidth / frameWidth,
+      availableHeight / frameHeight,
       1,
     );
 
     if (viewMode === "focus") {
       const maxScale = Math.min(
-        availableWidth / PREVIEW_FRAME_WIDTH,
-        availableHeight / PREVIEW_FRAME_HEIGHT,
+        availableWidth / frameWidth,
+        availableHeight / frameHeight,
         1.28,
       );
       return Math.min(maxScale, fitScale * 1.3);
@@ -971,10 +978,12 @@ export default function IpodClassicWorkbench() {
     viewportSize.width,
     viewportSize.height,
     viewMode,
+    frameWidth,
+    frameHeight,
   ]);
 
-  const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
-  const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
+  const scaledFrameWidth = frameWidth * previewScale;
+  const scaledFrameHeight = frameHeight * previewScale;
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
@@ -1566,8 +1575,8 @@ export default function IpodClassicWorkbench() {
             <div
               className="origin-top-left"
               style={{
-                width: `${PREVIEW_FRAME_WIDTH}px`,
-                height: `${PREVIEW_FRAME_HEIGHT}px`,
+                width: `${frameWidth}px`,
+                height: `${frameHeight}px`,
                 transform: `scale(${previewScale})`,
               }}
             >

@@ -28,40 +28,45 @@ export function IpodArtworkPanel({
   onArtworkChange,
 }: IpodArtworkPanelProps) {
   return (
-    <div className="flex h-full items-start justify-start">
+    <div className="flex h-full items-center justify-start">
       {renderElement(
         "artwork",
-        <div
-          className="relative cursor-pointer border border-[#B8B8B8] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
-          style={{
-            width: screenTokens.artworkSize,
-            height: screenTokens.artworkSize,
-            boxShadow: artworkShadow,
-          }}
-          data-export-layer="artwork"
-        >
-          {exportSafe ? (
-            <img
-              src={state.artwork || PLACEHOLDER_LOGO_SRC}
-              data-export-src={state.artwork || PLACEHOLDER_LOGO_SRC}
-              alt="Album artwork"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <ImageUpload
-              currentImage={state.artwork}
-              onImageChange={(artwork) => {
-                if (!isInlineEditingEnabled) {
-                  return;
-                }
+        <div className="relative" style={{ perspective: 600 }}>
+          <div
+            className="relative cursor-pointer border border-[#B8B8B8] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
+            style={{
+              width: screenTokens.artworkSize,
+              height: screenTokens.artworkSize,
+              boxShadow: artworkShadow,
+              zIndex: 10,
+              transform: "rotateY(20deg) scale(0.95)",
+              transformOrigin: "left center",
+            }}
+            data-export-layer="artwork"
+          >
+            {exportSafe ? (
+              <img
+                src={state.artwork || PLACEHOLDER_LOGO_SRC}
+                data-export-src={state.artwork || PLACEHOLDER_LOGO_SRC}
+                alt="Album artwork"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <ImageUpload
+                currentImage={state.artwork}
+                onImageChange={(artwork) => {
+                  if (!isInlineEditingEnabled) {
+                    return;
+                  }
 
-                onArtworkChange(artwork);
-                playClick();
-              }}
-              disabled={!isInlineEditingEnabled}
-              className="h-full w-full object-cover"
-            />
-          )}
+                  onArtworkChange(artwork);
+                  playClick();
+                }}
+                disabled={!isInlineEditingEnabled}
+                className="h-full w-full object-cover"
+              />
+            )}
+          </div>
         </div>,
         { testId: "os-layout-artwork" },
       )}

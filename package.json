@@ -7,6 +7,7 @@
     "dev": "node scripts/run-next.mjs dev",
     "build": "next build",
     "start": "node scripts/run-next.mjs start",
+    "cursor:harness": "node scripts/cursor-harness.mjs",
     "lint": "oxlint . --nextjs-plugin --react-plugin --jsx-a11y-plugin --ignore-pattern '.next/**' --ignore-pattern 'node_modules/**' --ignore-pattern 'public/**' --ignore-pattern 'scripts/**' --ignore-pattern 'ipod-classic.tsx'",
     "lint:fix": "oxlint . --fix --nextjs-plugin --react-plugin --jsx-a11y-plugin --ignore-pattern '.next/**' --ignore-pattern 'node_modules/**' --ignore-pattern 'public/**' --ignore-pattern 'scripts/**' --ignore-pattern 'ipod-classic.tsx'",
     "lint:eslint": "eslint . --ext .ts,.tsx",
@@ -23,6 +24,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@cursor/sdk": "^1.0.7",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",

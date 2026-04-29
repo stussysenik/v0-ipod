@@ -158,6 +158,25 @@ bun run dev
 
 The app will be available at **`http://localhost:4001`**
 
+### Cursor Harness
+
+This repo also includes a small local Cursor SDK harness based on the official
+`cursor/cookbook` quickstart example.
+
+```bash
+# add your Cursor API key to .env.local or export it in your shell
+echo 'CURSOR_API_KEY="crsr_..."' >> .env.local
+
+# ask Cursor to inspect this workspace
+bun run cursor:harness -- "Summarize the export pipeline in this repo"
+```
+
+Optional flags:
+
+- `--model composer-2`
+- `--cwd /absolute/path/to/workspace`
+- `--force` to allow local execution with uncommitted changes
+
 > **💡 Tip**: Override the port if needed:
 > ```bash
 > PORT=4010 bun run dev

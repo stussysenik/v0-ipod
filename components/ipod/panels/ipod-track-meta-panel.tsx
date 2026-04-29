@@ -50,13 +50,13 @@ export function IpodTrackMetaPanel({
 
   return (
     <div
-      className="z-20 flex min-w-0 flex-col items-start pr-[2px] text-left"
+      className="z-20 flex h-full w-full min-w-0 flex-col justify-center pr-[2px] text-left"
       data-testid="track-meta"
     >
       {renderElement(
         "title",
         <div
-          className="min-w-0 font-semibold leading-[1.05] tracking-[-0.02em]"
+          className="min-w-0 font-bold leading-[1.05] tracking-[-0.02em]"
           style={{ color: titleColor, fontSize: screenTokens.titleFontSize }}
         >
           <EditableText
@@ -83,7 +83,7 @@ export function IpodTrackMetaPanel({
       {renderElement(
         "artist",
         <div
-          className="min-w-0 font-medium leading-[1.1] tracking-[-0.01em]"
+          className="min-w-0 font-medium leading-[1.25] tracking-[-0.01em]"
           style={{ color: artistColor, fontSize: screenTokens.artistFontSize }}
         >
           <EditableText
@@ -106,7 +106,7 @@ export function IpodTrackMetaPanel({
       {renderElement(
         "album",
         <div
-          className="min-w-0 font-medium leading-[1.08] tracking-[-0.01em]"
+          className="min-w-0 font-medium leading-[1.25] tracking-[-0.01em]"
           style={{ color: albumColor, fontSize: screenTokens.albumFontSize }}
         >
           <EditableText
@@ -139,7 +139,7 @@ export function IpodTrackMetaPanel({
             playClick();
           }}
           disabled={!isInlineEditingEnabled}
-          fontSize={Math.max(7.6, screenTokens.metaFontSize - 0.2)}
+          fontSize={Math.max(10, screenTokens.metaFontSize + 2)}
         />,
         {
           className: "relative z-20",

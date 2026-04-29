@@ -117,6 +117,7 @@ function PhysicalAssemblyShowcase({
       }}
     >
       <IPodDeviceShell
+        preset={activePreset}
         skinColor={model.presentation.skinColor}
         exportSafe={exportSafe}
         showShadowLayer={showShadowLayer}

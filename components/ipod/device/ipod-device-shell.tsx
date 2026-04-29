@@ -5,6 +5,7 @@ import {
   BASE_EXPORT_SCENE_HEIGHT,
   BASE_EXPORT_SCENE_WIDTH,
 } from "@/lib/export/export-scene";
+import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
 /**
  * Physical enclosure for the iPod device.
@@ -14,6 +15,7 @@ import {
  * wheel behavior. Those concerns are passed in as composed child assemblies.
  */
 interface IPodDeviceShellProps {
+  preset: IpodClassicPresetDefinition;
   skinColor: string;
   screen: React.ReactNode;
   wheel: React.ReactNode;
@@ -31,6 +33,7 @@ interface IPodDeviceShellProps {
  * - "wheel" is the composed input assembly inserted into the enclosure
  */
 export function IPodDeviceShell({
+  preset,
   skinColor,
   screen,
   wheel,
@@ -63,7 +66,7 @@ export function IPodDeviceShell({
     >
       {/* Ground contact shadows anchor the device in the preview scene. */}
       <div
-        className="pointer-events-none absolute left-1/2 top-[510px] h-[88px] w-[248px] -translate-x-1/2 rounded-full opacity-70 blur-[30px]"
+        className="pointer-events-none absolute left-1/2 bottom-[118px] h-[88px] w-[248px] -translate-x-1/2 rounded-full opacity-70 blur-[30px]"
         style={{
           background:
             "radial-gradient(circle, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.16) 42%, rgba(0,0,0,0) 74%)",
@@ -71,7 +74,7 @@ export function IPodDeviceShell({
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute left-1/2 top-[522px] h-[42px] w-[196px] -translate-x-1/2 rounded-full opacity-50 blur-[18px]"
+        className="pointer-events-none absolute left-1/2 bottom-[152px] h-[42px] w-[196px] -translate-x-1/2 rounded-full opacity-50 blur-[18px]"
         style={{
           background:
             "radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 78%)",
@@ -80,17 +83,25 @@ export function IPodDeviceShell({
       />
       <div className="relative p-12">
         <div
-          className="relative flex h-[620px] w-[370px] flex-col items-center justify-between overflow-hidden rounded-[36px] border border-white/45 p-6 transition-all duration-300"
+          className="relative flex flex-col items-center justify-between overflow-hidden border border-white/45 transition-all duration-300"
           style={{
             ...shellSurfaceStyle,
+            width: preset.shell.width,
+            height: preset.shell.height,
+            borderRadius: preset.shell.radius,
+            paddingLeft: preset.shell.paddingX,
+            paddingRight: preset.shell.paddingX,
+            paddingTop: preset.shell.paddingTop,
+            paddingBottom: preset.shell.paddingBottom,
             boxShadow: shellShadow,
           }}
           data-export-layer="shell"
         >
           {(showShadowLayer || exportSafe) && (
             <div
-              className="absolute inset-0 rounded-[36px]"
+              className="absolute inset-0"
               style={{
+                borderRadius: preset.shell.radius,
                 boxShadow:
                   "0 20px 34px -24px rgba(0,0,0,0.42), 0 42px 58px -44px rgba(0,0,0,0.34)",
               }}
@@ -99,8 +110,9 @@ export function IPodDeviceShell({
             />
           )}
           <div
-            className="pointer-events-none absolute inset-[3px] rounded-[33px]"
+            className="pointer-events-none absolute inset-[3px]"
             style={{
+              borderRadius: preset.shell.innerRadius,
               boxShadow:
                 "inset 0 0 0 1px rgba(255,255,255,0.1), inset 0 -14px 24px rgba(0,0,0,0.035)",
             }}

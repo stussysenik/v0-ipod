@@ -2,7 +2,6 @@ import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import {
   DEFAULT_OS_NOW_PLAYING_LAYOUT,
-  DEFAULT_OS_ORIGINAL_MENU_SPLIT,
   DEFAULT_SELECTION_KIND,
   SONG_SNAPSHOT_SCHEMA_VERSION,
   type IpodNowPlayingLayoutState,

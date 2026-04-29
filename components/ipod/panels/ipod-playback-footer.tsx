@@ -39,9 +39,10 @@ export function IpodPlaybackFooter({
         fontVariantNumeric: "tabular-nums",
         fontFamily: "Arial, sans-serif",
         fontSize: timeFontSize,
+        letterSpacing: "-0.3px",
       }}
     >
-      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
+      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
         {renderElement(
           "elapsed-time",
           <EditableTime
@@ -49,7 +50,7 @@ export function IpodPlaybackFooter({
             onChange={onElapsedTimeChange}
             disabled={!isInlineEditingEnabled}
             editLabel="Edit elapsed time"
-            className="block w-full text-right"
+            className="block w-full text-left"
           />,
           {
             testId: "elapsed-time",
@@ -57,7 +58,7 @@ export function IpodPlaybackFooter({
           },
         )}
       </div>
-      <div className="min-w-0 flex-1 px-1.5">
+      <div className="min-w-0 flex-1 px-[3px]">
         <IpodProgressBar
           currentTime={state.currentTime}
           duration={state.duration}
@@ -76,17 +77,17 @@ export function IpodPlaybackFooter({
           )}
         />
       </div>
-      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
+      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
         {renderElement(
           "remaining-time",
-          <div className="flex items-center text-black">
+          <div className="flex items-center justify-end text-black">
             <EditableTime
               value={Math.max(state.duration - state.currentTime, 0)}
               isRemaining
               onChange={onRemainingTimeChange}
               disabled={!isInlineEditingEnabled}
               editLabel="Edit remaining time"
-              className="block w-full text-left"
+              className="block w-full text-right"
             />
           </div>,
           {
@@ -101,7 +102,7 @@ export function IpodPlaybackFooter({
       style: {
         bottom: screenTokens.progressBottom,
         height: screenTokens.progressHeight,
-        paddingInline: screenTokens.progressPaddingX,
+        paddingInline: Math.max(0, screenTokens.progressPaddingX - 4),
         paddingTop: screenTokens.progressPaddingTop,
         background: screenChromeTokens.progress.footerBackground,
         display: "flex",
