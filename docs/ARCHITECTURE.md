@@ -19,6 +19,18 @@ This document provides a comprehensive technical overview of the v0-ipod project
 
 ## 🎯 System Overview
 
+### Design-System Foundation
+
+- `DESIGN.md` is now the project-local design contract and overrides the global
+  manifest for this repository.
+- `tokens/shared-ui.json` is the shared primitive token seed.
+- `components/ui/*` is reserved for primitives intended for reuse beyond the
+  iPod artifact.
+- `components/ipod/*` remains the product assembly layer for hardware fidelity,
+  scene composition, and editor behavior.
+- See `docs/DESIGN-SYSTEM-FOUNDATION.md` for the full primitive audit and the
+  Storybook-ready candidate list.
+
 ```mermaid
 graph TB
     subgraph "Client Layer"
@@ -248,19 +260,18 @@ interface ThreeDIPodProps {
 
 ---
 
-#### **ASCIIIPod** (`components/ipod/ascii-ipod.tsx`)
+#### **IpodAsciiScene** (`components/ipod/scenes/ipod-ascii-scene.tsx`)
 
 **Responsibilities:**
-- ASCII art representation of iPod
+- Alternate now-playing scene for ASCII view mode
 - Terminal-style text rendering
-- Metadata formatting for monospace display
+- Metadata and progress formatting for monospace display
 
 **Props:**
 
 ```typescript
-interface ASCIIIPodProps {
-  metadata: SongMetadata;
-  caseColor: string;
+interface IpodAsciiSceneProps {
+  state: SongMetadata;
 }
 ```
 
@@ -286,7 +297,7 @@ interface ASCIIIPodProps {
 └─────────────────────────────┘
 ```
 
-**Ref:** `components/ipod/ascii-ipod.tsx:1`
+**Ref:** `components/ipod/scenes/ipod-ascii-scene.tsx:1`
 
 ---
 

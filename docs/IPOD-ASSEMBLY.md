@@ -28,12 +28,13 @@ engineers who approach the project like a product assembly.
 
 ## Current Provenance
 
-The current implementation already contains the beginnings of this split:
+The current implementation now reads much closer to the intended split:
 
-- [components/ipod/ipod-classic.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/ipod-classic.tsx:243) is the top-level workbench, even though the filename still reads like a hardware part.
-- [components/ipod/ipod-device-shell.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/ipod-device-shell.tsx:1) is the physical outer enclosure.
-- [components/ipod/click-wheel.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/click-wheel.tsx:1) is the hardware control assembly.
-- [components/ipod/ipod-screen.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/ipod-screen.tsx:1) currently combines display chrome and screen scenes in one file.
+- [components/ipod/workbench/ipod-classic-workbench.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/workbench/ipod-classic-workbench.tsx:1) is the top-level workbench.
+- [components/ipod/device/ipod-device-shell.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/device/ipod-device-shell.tsx:1) is the physical outer enclosure.
+- [components/ipod/controls/ipod-click-wheel.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/controls/ipod-click-wheel.tsx:1) is the hardware control assembly.
+- [components/ipod/display/ipod-screen.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/display/ipod-screen.tsx:1) hosts display chrome and screen-scene composition.
+- Root files such as [components/ipod/ipod-classic.tsx](/Users/s3nik/Desktop/v0-ipod/components/ipod/ipod-classic.tsx:1) remain only as compatibility shims.
 
 Visual provenance and token provenance currently live in:
 
@@ -41,6 +42,12 @@ Visual provenance and token provenance currently live in:
 - [lib/design-system.ts](/Users/s3nik/Desktop/v0-ipod/lib/design-system.ts:1)
 - [lib/ipod-classic-presets.ts](/Users/s3nik/Desktop/v0-ipod/lib/ipod-classic-presets.ts:1)
 - [docs/research/Enhancing iPod Classic Visual Realism.pdf](/Users/s3nik/Desktop/v0-ipod/docs/research/Enhancing%20iPod%20Classic%20Visual%20Realism.pdf)
+
+The shared design-system boundary now lives alongside that product provenance:
+
+- [DESIGN.md](/Users/s3nik/Desktop/v0-ipod/DESIGN.md:1)
+- [docs/DESIGN-SYSTEM-FOUNDATION.md](/Users/s3nik/Desktop/v0-ipod/docs/DESIGN-SYSTEM-FOUNDATION.md:1)
+- [tokens/shared-ui.json](/Users/s3nik/Desktop/v0-ipod/tokens/shared-ui.json:1)
 
 ## Recommended Mental Model
 
@@ -62,20 +69,21 @@ Treat the UI like a CAD assembly:
   - click wheel, progress control, rating control
 - `editor`
   - fixed editor, editable text, editable time
+- `export`
+  - framed export stage, GIF preview surface
 
-## Target Refactor Direction
+## Supporting Taxonomy
 
-The intended long-term split for the current `ipod-screen.tsx` file is:
+The support surface now follows the same architectural categories:
 
-- `ipod-display`
-  - display surround
-  - glass overlay
-  - status bar
-- `ipod-menu-scene`
-- `ipod-now-playing-scene`
-  - artwork panel
-  - track metadata panel
-  - playback footer
+- `components/ipod/scenes`
+  - menu, now playing, and ASCII scene variants
+- `components/ipod/controls`
+  - click wheel, progress, and rating controls
+- `components/ipod/editors`
+  - fixed editor, editable metadata/time, artwork upload, and color inputs
+- `components/ipod/export`
+  - framed export stage and GIF preview surfaces
 
 This document is intentionally plain Markdown. MDX is not required yet because
 the repository does not currently ship a docs site or Storybook layer that
