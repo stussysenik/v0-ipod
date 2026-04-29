@@ -1,10 +1,12 @@
 "use client";
 
+import { screenChromeTokens } from "@/lib/design-system";
+
 export function IpodGlassOverlay({ exportSafe = false }: { exportSafe?: boolean }) {
   const glassOverlay = {
     background: exportSafe
-      ? "linear-gradient(152deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.018) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.006) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.025) 100%)"
-      : "linear-gradient(152deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.022) 18%, rgba(255,255,255,0) 40%), linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.03) 100%)",
+      ? screenChromeTokens.frame.glassOverlayExport
+      : screenChromeTokens.frame.glassOverlayLive,
   };
 
   return (

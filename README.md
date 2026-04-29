@@ -15,7 +15,7 @@
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=next.js&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
-**[🎵 Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)** • **[📖 Docs](#documentation)** • **[🤝 Contributing](./CONTRIBUTING.md)** • **[🏗️ Architecture](./ARCHITECTURE.md)**
+**[🎵 Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)** • **[📖 Docs](#documentation)** • **[🤝 Contributing](./docs/CONTRIBUTING.md)** • **[🏗️ Architecture](./docs/ARCHITECTURE.md)**
 
 *Drag & drop your song and create an iPod-like digital footprint*
 
@@ -173,6 +173,148 @@ bun run start
 
 ---
 
+## 🧭 Design Workflow
+
+This repository now uses **Storybook as the default review surface** for shared
+UI, tokens, and the physical iPod assembly.
+
+Use the **app page** when you need full integration behavior:
+
+- metadata editing flow
+- persistence and snapshot behavior
+- export behavior
+- broader UX validation across the whole workbench
+
+Use **Storybook** when you want to change a visual system input or a component
+and inspect it in isolation first.
+
+### What Is A Story?
+
+A **story** is a small isolated example of a component or visual surface.
+
+Examples:
+
+- an `IconButton` in default, hover, focus, and disabled states
+- the iPod status bar by itself
+- the full physical iPod assembly with real screen and click-wheel parts
+- a token manifest board that lets you inspect source values before changing
+  component code
+
+Stories are not the app. They are focused review fixtures for one component,
+one assembly, or one source-of-truth surface at a time.
+
+### Storybook Commands
+
+```bash
+# Run Storybook locally for day-to-day work
+bun run storybook
+
+# Build the static Storybook site
+bun run build-storybook
+
+# Run Storybook-linked tests
+bun run storybook:test
+
+# Run build + Storybook tests together
+bun run storybook:validate
+```
+
+How to use them:
+
+- Use `bun run storybook` while actively designing or refactoring.
+- Use `bun run build-storybook` to make sure the Storybook site compiles cleanly.
+- Use `bun run storybook:test` to verify story interactions and test coverage.
+- Use `bun run storybook:validate` before landing larger Storybook-related changes.
+
+`bun run build-storybook` is **not** the main daily command. It is the static
+verification/build command. The main interactive command is `bun run storybook`.
+
+### Source Of Truth Map
+
+There are three main design ownership layers in this repo:
+
+1. `tokens/*`
+   Shared reusable UI tokens.
+   Today this is mainly `tokens/shared-ui.json`.
+
+2. `scripts/*.json`
+   Product-owned iPod manifests.
+   These are not shared design-system primitives. They hold iPod-specific color,
+   finish, chrome, and surface data.
+
+3. `components/*`
+   The actual implementation layer.
+   `components/ui/*` is shared UI.
+   `components/ipod/*` is product-owned iPod assembly code.
+
+### Practical Loop
+
+If you want to change a shared primitive:
+
+1. Edit `tokens/shared-ui.json` if the styling change is semantic and reusable.
+2. Open `tokens/shared-ui/Manifest` in Storybook.
+3. Open the affected `components/ui/*` story, for example `components/ui/IconButton`.
+4. Adjust the component only if the token change is not enough.
+5. Run `bun run build-storybook` when the change is ready to verify.
+
+If you want to change the physical iPod finish, screen chrome, or wheel:
+
+1. Edit the owning product source:
+   `scripts/color-manifest.json`, `scripts/design-system.json`, or a
+   `components/ipod/*` file.
+2. Open the matching Storybook entry first:
+   `scripts/color-manifest/ProductFinishes`,
+   `components/ipod/display/IpodStatusBar`,
+   `components/ipod/display/IpodScreen`,
+   `components/ipod/controls/IpodClickWheel`,
+   `components/ipod/device/PhysicalIpod`.
+3. Review the isolated element first, then the full physical assembly story.
+4. Open the app workbench only after the Storybook pass looks right.
+
+### Storybook Sidebar Shape
+
+The Storybook tree mirrors repository ownership on purpose:
+
+- `Foundations/*`
+- `tokens/*`
+- `components/ui/*`
+- `components/ipod/*`
+- `scripts/*`
+
+That means you should be able to move from a Storybook entry to the owning file
+without translation.
+
+Recommended first-read order inside Storybook:
+
+1. `Foundations/Start Here`
+2. `tokens/shared-ui/Manifest`
+3. `components/ipod/device/PhysicalIpod`
+4. the relevant isolated component story
+5. `scripts/color-manifest/ProductFinishes` when tuning finish direction
+
+Important:
+
+- changing Storybook controls does **not** persist anything globally
+- changing the real source file does
+
+If you tweak a color in Storybook controls, you are only previewing a temporary
+runtime state for that story. If you edit `tokens/shared-ui.json`,
+`scripts/color-manifest.json`, `scripts/design-system.json`, or the owning
+`components/*` file, every consumer of that source updates globally.
+
+### Figma / Tokens Studio
+
+If design work happens in Figma:
+
+- shared primitive changes still start in repository token files
+- Storybook is used to review the result in code
+- Tokens Studio syncs to the repository JSON
+
+The repository stays authoritative. Figma sync is downstream collaboration, not
+a parallel source of truth.
+
+---
+
 ## 🎯 User Workflow
 
 ```mermaid
@@ -277,6 +419,7 @@ bun run build
 | `bun run dev` | Start development server on port 4001 |
 | `bun run build` | Build production bundle |
 | `bun run start` | Start production server |
+| `bun run clean:next` | Remove `.next` if a stale local build causes runtime issues |
 | `bun run lint` | Run OXC (`oxlint`) |
 | `bun run lint:fix` | Auto-fix OXC lint issues |
 | `bun run lint:eslint` | Run the legacy Next/ESLint ruleset |
@@ -284,6 +427,10 @@ bun run build
 | `bun run format:check` | Check formatting without changes |
 | `bun run type-check` | Run TypeScript type checking |
 | `bun run validate` | Run lint + format check + type check |
+| `bun run storybook` | Start Storybook locally on port 6006 |
+| `bun run build-storybook` | Build the static Storybook site |
+| `bun run storybook:test` | Run Storybook-linked Vitest coverage |
+| `bun run storybook:validate` | Run Storybook build + Storybook tests |
 
 ---
 
@@ -302,9 +449,18 @@ Full spectrum color picker with infinite color possibilities
 
 ## 📖 Documentation
 
-- **[Contributing Guide](./CONTRIBUTING.md)**: Learn about semantic commits and development workflow
-- **[Architecture Deep-Dive](./ARCHITECTURE.md)**: Technical implementation details and system design
-- **[Pull Request Template](./.github/PULL_REQUEST_TEMPLATE.md)**: Contribution guidelines
+This README is the central starting point. Use the documents below for deeper
+detail:
+
+- **[Design-System Foundation](./docs/DESIGN-SYSTEM-FOUNDATION.md)**: component ownership, token boundaries, Storybook workflow
+- **[Architecture](./docs/ARCHITECTURE.md)**: system structure and implementation detail
+- **[Contributing](./docs/CONTRIBUTING.md)**: contribution workflow and expectations
+- **[Docs Index](./docs/DOCS.md)**: entry point to the rest of the repository docs
+- **[Vision](./docs/VISION.md)**: product direction and intent
+- **[Roadmap](./docs/ROADMAP.md)**: planned work
+- **[Tech Stack](./docs/TECHSTACK.md)**: stack overview
+- **[iPod Assembly Notes](./docs/IPOD-ASSEMBLY.md)**: product-specific assembly context
+- **[Pull Request Template](./.github/PULL_REQUEST_TEMPLATE.md)**: contribution guidelines
 
 ---
 
@@ -314,7 +470,7 @@ We welcome contributions! Please follow these steps:
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feat/your-feature`
-3. **Make your changes** using [semantic commits](./CONTRIBUTING.md#semantic-commits)
+3. **Make your changes** using [semantic commits](./docs/CONTRIBUTING.md#semantic-commits)
 4. **Run validation**: `bun run validate`
 5. **Push and create a PR**
 

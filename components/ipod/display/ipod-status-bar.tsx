@@ -2,6 +2,7 @@
 
 import { getSurfaceToken, getTextTokenCss } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
+import { screenChromeTokens } from "@/lib/design-system";
 import { ScreenBattery } from "@/components/ipod/display/screen-battery";
 
 interface IpodStatusBarProps {
@@ -17,7 +18,7 @@ export function IpodStatusBar({ screenTokens, showOsMenu }: IpodStatusBarProps) 
         height: screenTokens.statusBarHeight,
         paddingInline: screenTokens.statusBarPaddingX,
         backgroundImage: `linear-gradient(180deg, ${getSurfaceToken("screen.statusbar.bg.from")}, ${getSurfaceToken("screen.statusbar.bg.to")})`,
-        borderColor: "#9B9B9B",
+        borderColor: screenChromeTokens.statusBar.divider,
       }}
     >
       <div
@@ -28,7 +29,14 @@ export function IpodStatusBar({ screenTokens, showOsMenu }: IpodStatusBarProps) 
         }}
         data-testid="screen-status-label"
       >
-        {!showOsMenu && <span className="text-[7px] text-[#3B79C4]">▶</span>}
+        {!showOsMenu && (
+          <span
+            className="text-[7px]"
+            style={{ color: screenChromeTokens.statusBar.playIndicator }}
+          >
+            ▶
+          </span>
+        )}
         <span>{showOsMenu ? "RE:MIX" : "Now Playing"}</span>
       </div>
       <ScreenBattery />

@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useRef, useCallback } from "react";
+import { screenChromeTokens } from "@/lib/design-system";
 
 interface IpodProgressBarProps {
   currentTime: number;
@@ -82,11 +83,9 @@ export function IpodProgressBar({
         style={{
           height: trackHeight,
           borderRadius: Math.max(1, Math.round(trackHeight / 3)),
-          borderColor: "#AEAEAB",
-          background:
-            "linear-gradient(180deg, rgba(251,251,249,1) 0%, rgba(238,238,234,1) 100%)",
-          boxShadow:
-            "inset 0 1px 0 rgba(255,255,255,0.42), inset 0 1px 2px rgba(0,0,0,0.08)",
+          borderColor: screenChromeTokens.progress.trackBorder,
+          background: screenChromeTokens.progress.trackBackground,
+          boxShadow: screenChromeTokens.progress.trackInsetShadow,
           touchAction: "none",
         }}
       >
@@ -95,9 +94,8 @@ export function IpodProgressBar({
           className="absolute inset-y-0 left-0"
           style={{
             width: `${progress}%`,
-            backgroundImage:
-              "linear-gradient(180deg, rgba(123,195,246,1) 0%, rgba(63,145,222,1) 100%)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.26)",
+            backgroundImage: screenChromeTokens.progress.fillBackground,
+            boxShadow: screenChromeTokens.progress.fillHighlight,
           }}
         />
       </div>

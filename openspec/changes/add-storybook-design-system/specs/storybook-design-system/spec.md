@@ -9,6 +9,15 @@ The system SHALL introduce Storybook only after the repository has defined a sta
 - **THEN** Storybook SHALL document stabilized shared primitives first
 - **AND** it SHALL reflect the local design-system contract rather than inventing a parallel one
 
+### Requirement: Shared Primitive Tokens Remain Repository-Owned
+The system SHALL keep repository token files as the source of truth for shared primitive styling, with design-tool sync layered on top of that contract.
+
+#### Scenario: Updating A Shared Primitive Token
+- **GIVEN** a contributor needs to change a shared primitive token
+- **WHEN** they perform that change through the documented workflow
+- **THEN** the authoritative token update SHALL land in repository-managed token files
+- **AND** any Tokens Studio or Figma workflow SHALL sync with that repository source rather than replace it
+
 ### Requirement: Storybook Separates Shared DS Stories From Product Showcase Stories
 The system SHALL distinguish reusable design-system stories from iPod-specific product showcase stories.
 
@@ -17,6 +26,7 @@ The system SHALL distinguish reusable design-system stories from iPod-specific p
 - **WHEN** they inspect the story hierarchy
 - **THEN** shared DS primitives SHALL be separated from product showcase artifacts
 - **AND** product stories SHALL not imply unintended reuse scope
+- **AND** Storybook-only infrastructure surfaces SHALL not be presented as reusable primitives
 
 ### Requirement: Storybook Verifies Component States
 The system SHALL use Storybook to verify important interactive and visual states for shared primitives.

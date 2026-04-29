@@ -1,0 +1,108 @@
+import { Meta, Title, Subtitle } from "@storybook/addon-docs/blocks";
+
+<Meta title="Foundations/Start Here" />
+
+<Title>Start Here</Title>
+<Subtitle>Use Storybook in this order: tokens, full product, then the individual pieces.</Subtitle>
+
+This repository treats the iPod assembly as the product and the shared primitive
+layer as a narrower design system.
+
+Storybook exists to make that boundary legible, not to flatten the entire
+application into generic components.
+
+## Recommended Review Order
+
+1. `tokens/shared-ui/Manifest`
+2. `components/ipod/device/PhysicalIpod`
+3. the relevant isolated `components/ipod/*` or `components/ui/*` story
+4. `scripts/color-manifest/ProductFinishes` when you are tuning product finish direction
+5. the full app workbench only after Storybook looks right
+
+## Lanes
+
+- `tokens/*` mirrors code-owned token sources.
+- `scripts/*` mirrors product color and manifest sources.
+- `components/ui/*` mirrors shared primitive files.
+- `components/ipod/*` mirrors product-owned files and assemblies.
+
+## What To Change Where
+
+- Change `tokens/shared-ui.json` when the work is truly shared UI.
+- Review shared token and primitive changes in `tokens/*` and `components/ui/*`.
+- Review finish palettes in `scripts/color-manifest/*`.
+- Review screen chrome, wheel behavior, and physical assembly work in `components/ipod/*`.
+- Use the app workbench after Storybook review when you need the full authoring flow, persistence flow, export flow, or end-to-end UX.
+
+## Why `tokens` vs `scripts`
+
+- `tokens/*` is for shared reusable design tokens.
+- `scripts/color-manifest.json` is product-owned iPod color data, not a shared design-system token set.
+- `scripts/design-system.json` is product chrome data for the iPod assembly, again not shared UI.
+
+The short rule:
+
+- If a value should style reusable UI outside the iPod artifact, put it in `tokens/*`.
+- If a value exists because this project is specifically an iPod, keep it in the product manifest layer.
+
+## Practical Loop
+
+If you want to change shared button or primitive styling:
+
+1. Edit `tokens/shared-ui.json`.
+2. Check `tokens/shared-ui/Manifest`.
+3. Check the affected `components/ui/*` stories.
+4. Sync the JSON into Tokens Studio / Figma if design needs it.
+
+If you want to change physical shell, wheel, screen chrome, or finish behavior:
+
+1. Edit `scripts/color-manifest.json`, `scripts/design-system.json`, or the owning `components/ipod/*` file.
+2. Check the matching `scripts/*` or `components/ipod/*` stories.
+3. Check `components/ipod/device/PhysicalIpod`.
+4. Only then open the full app workbench for end-to-end confirmation.
+
+## What Changes Globally
+
+Changing a control inside Storybook does **not** update the application globally.
+Storybook controls are temporary runtime args for the current story only.
+
+Global changes happen when you edit the real source of truth:
+
+- `tokens/shared-ui.json` for shared primitives
+- `scripts/color-manifest.json` for iPod product color data
+- `scripts/design-system.json` for iPod screen chrome data
+- `components/*` when behavior or structure must change
+
+Once those files change, every consumer of that source updates across the app and Storybook on rebuild or hot reload.
+
+## Coverage Today
+
+Current shared-token coverage:
+
+- `tokens/shared-ui.json` currently drives `components/ui/icon-button.tsx`
+
+Current product color coverage:
+
+- `scripts/color-manifest.json` currently drives the click wheel, screen surround, status bar background, track meta text colors, star rating active color, and 3D wheel color derivation
+
+Current product chrome coverage:
+
+- `scripts/design-system.json` now drives the screen frame shadow, glass overlay, status bar battery chrome, status bar divider, status play indicator, progress footer, and progress track/fill styling
+
+## Source Of Truth
+
+- Shared primitive tokens live in `tokens/shared-ui.json`.
+- Code reads those tokens through `lib/shared-ui-tokens.ts`.
+- Product fidelity tokens stay in `scripts/color-manifest.json` and `scripts/design-system.json`.
+
+## Figma And Tokens Studio
+
+Use Tokens Studio to sync with the repository token JSON instead of maintaining a separate design-only token graph.
+That keeps design exploration possible while preserving code review as the approval path for shared primitive token changes.
+
+## Expected Loop
+
+1. Change a shared primitive token or component in code.
+2. Review the affected primitive state coverage in Storybook.
+3. Sync the token JSON with Tokens Studio / Figma.
+4. Validate with `bun run build-storybook` and `bun run storybook:test`.

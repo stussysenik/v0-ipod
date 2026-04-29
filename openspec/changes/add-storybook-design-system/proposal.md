@@ -9,6 +9,8 @@ Adding Storybook before the design-system foundation would force Storybook to in
 - Add Storybook configuration and scripts for this repository.
 - Document reusable DS primitives first, with a separate showcase path for product-specific iPod artifacts where useful.
 - Add Storybook documentation, controls, and state coverage expectations for shared components.
+- Define a code-first token workflow where `tokens/shared-ui.json` remains the shared primitive source of truth and Tokens Studio/Figma syncs to that repository data instead of creating a parallel token authority.
+- Establish Storybook as the review and iteration surface for shared primitives, while keeping design-token changes mechanically traceable through repository files and typed adapters.
 - Define the verification workflow for Storybook-driven DS work, including visual regression or snapshot coverage where appropriate.
 - Treat this change as dependent on the design-system foundation contract and primitive audit.
 
@@ -20,4 +22,6 @@ Adding Storybook before the design-system foundation would force Storybook to in
   - `package.json`
   - Storybook stories under `components/ui/**/*`
   - selected showcase stories for `components/ipod/**/*`
+  - `tokens/shared-ui.json`
+  - `lib/shared-ui-tokens.ts`
   - DS docs and contributor workflow docs

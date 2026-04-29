@@ -1,6 +1,6 @@
 "use client";
 
-import placeholderLogo from "@/public/placeholder-logo.png";
+import { PLACEHOLDER_LOGO_SRC } from "@/lib/ipod-assets";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
@@ -86,7 +86,7 @@ export function IpodMenuScene({
               }}
             >
               <img
-                src={state.artwork || placeholderLogo.src}
+                src={state.artwork || PLACEHOLDER_LOGO_SRC}
                 alt="Album artwork"
                 className="h-full w-full object-cover"
               />
@@ -111,8 +111,8 @@ export function IpodMenuScene({
             data-export-layer="artwork"
           >
             <img
-              src={state.artwork || placeholderLogo.src}
-              data-export-src={state.artwork || placeholderLogo.src}
+              src={state.artwork || PLACEHOLDER_LOGO_SRC}
+              data-export-src={state.artwork || PLACEHOLDER_LOGO_SRC}
               alt="Album artwork"
               className="h-full w-full object-cover"
             />

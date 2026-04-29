@@ -35,3 +35,6 @@ next-env.d.ts
 
 # local test assets
 IMG_5875.PNG
+
+*storybook.log
+storybook-static

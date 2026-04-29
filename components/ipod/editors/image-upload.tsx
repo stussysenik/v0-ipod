@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useId, useRef } from "react";
-import placeholderLogo from "@/public/placeholder-logo.png";
+import { PLACEHOLDER_LOGO_SRC } from "@/lib/ipod-assets";
 
 interface ImageUploadProps {
   currentImage: string;
@@ -55,7 +55,7 @@ export function ImageUpload({
         className={`${disabled ? "cursor-default" : "cursor-pointer"} touch-manipulation ${className}`}
       >
         <img
-          src={currentImage || placeholderLogo.src}
+          src={currentImage || PLACEHOLDER_LOGO_SRC}
           alt="Album artwork"
           data-testid="artwork-image"
           className="w-full h-full object-cover"

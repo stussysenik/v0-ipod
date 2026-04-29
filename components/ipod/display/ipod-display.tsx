@@ -2,6 +2,7 @@
 
 import { getSurfaceToken, deriveScreenSurround } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
+import { screenChromeTokens } from "@/lib/design-system";
 import { IpodGlassOverlay } from "./ipod-glass-overlay";
 import { IpodStatusBar } from "./ipod-status-bar";
 
@@ -25,8 +26,8 @@ export function IpodDisplay({
   const screenTokens = preset.screen;
   const surround = skinColor ? deriveScreenSurround(skinColor) : null;
   const screenShadow = exportSafe
-    ? "0 0 0 1px rgba(60,60,60,0.08)"
-    : "0 1px 1px rgba(0,0,0,0.22), 0 7px 10px -9px rgba(0,0,0,0.48)";
+    ? screenChromeTokens.frame.exportShadow
+    : screenChromeTokens.frame.liveShadow;
 
   return (
     <div

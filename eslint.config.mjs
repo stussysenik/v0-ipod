@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import nextConfig from "eslint-config-next";
 import prettier from "eslint-config-prettier";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
@@ -36,22 +39,21 @@ const eslintConfig = [
       // setState in effects is needed for hydration-safe localStorage reads
       "react-hooks/set-state-in-effect": "off",
     },
-  },
-  // Three.js / R3F components use imperative patterns (geometry, textures)
+  }, // Three.js / R3F components use imperative patterns (geometry, textures)
   {
     files: ["components/three/three-d-ipod.tsx", "components/three/post-processing.tsx"],
     rules: {
       "react-hooks/purity": "off",
       "react-hooks/immutability": "off",
     },
-  },
-  // image-upload uses raw <img> for html-to-image export compatibility
+  }, // image-upload uses raw <img> for html-to-image export compatibility
   {
     files: ["components/ipod/editors/image-upload.tsx"],
     rules: {
       "@next/next/no-img-element": "off",
     },
   },
+  ...storybook.configs["flat/recommended"],
 ];
 
 export default eslintConfig;

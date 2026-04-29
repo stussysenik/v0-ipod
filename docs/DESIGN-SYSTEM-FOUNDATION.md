@@ -81,6 +81,46 @@ Product showcase artifacts for later Storybook lanes:
 - `HexColorInput`
 - workbench and export surfaces
 
+## Storybook Workflow
+
+- `Foundations/*` documents repository rules, token ownership, and contributor workflow.
+- `tokens/*` mirrors repository token files such as `tokens/shared-ui.json`.
+- `scripts/*` mirrors repository manifest files such as `scripts/color-manifest.json`.
+- `components/ui/*` mirrors shared primitive files.
+- `components/ipod/*` mirrors product-owned files and assemblies.
+- `components/ipod/device/PhysicalIpod` is the default Storybook surface for hardware-shell, screen, and click-wheel review.
+
+## Token Sync Workflow
+
+1. Update shared primitive tokens in `tokens/shared-ui.json`.
+2. Read those tokens through `lib/shared-ui-tokens.ts`.
+3. Review the resulting primitive behavior in Storybook before widening usage in the app.
+4. Sync Tokens Studio / Figma against the repository token JSON so design stays aligned with code.
+5. Treat repository token files and code review as the approval path for shared primitive token changes.
+
+## Going-Forward Rule
+
+- Default to Storybook for token edits, shared primitive work, and physical iPod assembly review.
+- Default to the full app workbench for end-to-end authoring behavior, persistence, export, and broader integration checks.
+- Keep Storybook titles aligned with repository paths so contributors can jump from sidebar to file ownership without translation.
+
+## Working Method
+
+- For shared UI:
+  edit `tokens/shared-ui.json` → review `tokens/*` → review `components/ui/*`
+- For product finish and chrome:
+  edit `scripts/color-manifest.json` or `scripts/design-system.json` → review `scripts/*` → review `components/ipod/*`
+- For product assembly behavior:
+  edit the owning `components/ipod/*` file → review the matching element story → review `components/ipod/device/PhysicalIpod`
+- Use the app page only after Storybook review when you need export, persistence, or full workbench confirmation.
+
+## Storybook Validation
+
+- Run `bun run storybook` for local primitive and showcase iteration.
+- Run `bun run build-storybook` to verify the static docs build.
+- Run `bun run storybook:test` for Storybook/Vitest coverage.
+- Run `bun run storybook:validate` before landing Storybook-specific changes when you need the full verification pass.
+
 ## Ready-To-Unblock Outcome
 
 The repository now has:

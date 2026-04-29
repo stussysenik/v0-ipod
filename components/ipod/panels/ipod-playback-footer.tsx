@@ -3,6 +3,7 @@
 import { IpodProgressBar } from "@/components/ipod/controls/ipod-progress-bar";
 import { EditableTime } from "@/components/ipod/editors/editable-time";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
+import { screenChromeTokens } from "@/lib/design-system";
 import type { SongMetadata } from "@/types/ipod";
 import type { RenderNowPlayingElement } from "@/components/ipod/scenes/ipod-scene-types";
 
@@ -90,8 +91,7 @@ export function IpodPlaybackFooter({
         height: screenTokens.progressHeight,
         paddingInline: screenTokens.progressPaddingX,
         paddingTop: screenTokens.progressPaddingTop,
-        background:
-          "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(248,248,246,0.96) 100%)",
+        background: screenChromeTokens.progress.footerBackground,
       },
       testId: "screen-progress",
     },

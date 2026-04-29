@@ -1,10 +1,10 @@
 "use client";
 
 import { ImageUpload } from "@/components/ipod/editors/image-upload";
-import placeholderLogo from "@/public/placeholder-logo.png";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { RenderNowPlayingElement } from "@/components/ipod/scenes/ipod-scene-types";
+import { PLACEHOLDER_LOGO_SRC } from "@/lib/ipod-assets";
 
 interface IpodArtworkPanelProps {
   screenTokens: IpodClassicPresetDefinition["screen"];
@@ -42,8 +42,8 @@ export function IpodArtworkPanel({
         >
           {exportSafe ? (
             <img
-              src={state.artwork || placeholderLogo.src}
-              data-export-src={state.artwork || placeholderLogo.src}
+              src={state.artwork || PLACEHOLDER_LOGO_SRC}
+              data-export-src={state.artwork || PLACEHOLDER_LOGO_SRC}
               alt="Album artwork"
               className="h-full w-full object-cover"
             />
