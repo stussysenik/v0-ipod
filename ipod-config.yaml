@@ -2,111 +2,111 @@
 # Based on reference image: ipod-6th-classic-gen.png
 # Colors: Silver & Black variants
 
-default_preset: "classic-6g-black"
+default_preset: 'classic-6g-black'
 
 # iPod 6th Gen Color Palette
 colors:
   # Background/stage color - clean white
-  background: "#FFFFFF"
-  
+  background: '#FFFFFF'
+
   # iPod Case Colors - Authentic 6th Gen finishes
   case:
     # Silver iPod - Light anodized aluminum
-    silver: "#C8C9CB"
-    # Black iPod - Deep black anodized aluminum  
-    black: "#1A1A1A"
+    silver: '#C8C9CB'
+    # Black iPod - Deep black anodized aluminum
+    black: '#1A1A1A'
     # Dark grey variant
-    charcoal: "#2D2D2E"
-  
+    charcoal: '#2D2D2E'
+
   # Click Wheel Colors
   wheel:
     # Light wheel for Silver iPod
     light:
-      surface: "#F5F5F7"
-      border: "#D1D1D6"
-      label: "#8E8E93"
-      center: "#E5E5EA"
-      center_border: "#D1D1D6"
-    
+      surface: '#F5F5F7'
+      border: '#D1D1D6'
+      label: '#8E8E93'
+      center: '#E5E5EA'
+      center_border: '#D1D1D6'
+
     # Dark wheel for Black iPod
     dark:
-      surface: "#1C1C1E"
-      border: "#2C2C2E"
-      label: "#FFFFFF"
-      center: "#2C2C2E"
-      center_border: "#3A3A3C"
+      surface: '#1C1C1E'
+      border: '#2C2C2E'
+      label: '#FFFFFF'
+      center: '#2C2C2E'
+      center_border: '#3A3A3C'
 
 # iPod 6th Generation Presets
 presets:
   classic-6g-black:
-    label: "iPod Classic Black"
-    description: "6th Generation Black - Dark click wheel"
-    generation: "6G"
+    label: 'iPod Classic Black'
+    description: '6th Generation Black - Dark click wheel'
+    generation: '6G'
     year: 2008
-    case_color: "${colors.case.black}"
-    background_color: "${colors.background}"
-    wheel_style: "dark"
+    case_color: '${colors.case.black}'
+    background_color: '${colors.background}'
+    wheel_style: 'dark'
     wheel_colors:
-      surface: "#1C1C1E"
-      border: "#2C2C2E" 
-      label: "#FFFFFF"
-      center: "#2C2C2E"
-      center_border: "#3A3A3C"
-    
+      surface: '#1C1C1E'
+      border: '#2C2C2E'
+      label: '#FFFFFF'
+      center: '#2C2C2E'
+      center_border: '#3A3A3C'
+
   classic-6g-silver:
-    label: "iPod Classic Silver"
-    description: "6th Generation Silver - Light click wheel"
-    generation: "6G"
+    label: 'iPod Classic Silver'
+    description: '6th Generation Silver - Light click wheel'
+    generation: '6G'
     year: 2008
-    case_color: "${colors.case.silver}"
-    background_color: "${colors.background}"
-    wheel_style: "light"
+    case_color: '${colors.case.silver}'
+    background_color: '${colors.background}'
+    wheel_style: 'light'
     wheel_colors:
-      surface: "#F5F5F7"
-      border: "#D1D1D6"
-      label: "#8E8E93"
-      center: "#E5E5EA"
-      center_border: "#D1D1D6"
+      surface: '#F5F5F7'
+      border: '#D1D1D6'
+      label: '#8E8E93'
+      center: '#E5E5EA'
+      center_border: '#D1D1D6'
 
 # UI Configuration
 ui:
   # Default to Black iPod (as per image reference)
-  default_case_color: "${colors.case.black}"
-  default_background_color: "${colors.background}"
-  
+  default_case_color: '${colors.case.black}'
+  default_background_color: '${colors.background}'
+
   # Theme toggle options
   themes:
-    - id: "silver"
-      label: "Silver"
-      icon: "sun"
-      case_color: "${colors.case.silver}"
-      wheel_style: "light"
-    - id: "black"
-      label: "Black"
-      icon: "moon"
-      case_color: "${colors.case.black}"
-      wheel_style: "dark"
+    - id: 'silver'
+      label: 'Silver'
+      icon: 'sun'
+      case_color: '${colors.case.silver}'
+      wheel_style: 'light'
+    - id: 'black'
+      label: 'Black'
+      icon: 'moon'
+      case_color: '${colors.case.black}'
+      wheel_style: 'dark'
 
 # Carbon Design System - Toolbar styling
 carbon:
   toolbar:
-    background: "#FFFFFF"
-    border: "#E0E0E0"
-    elevation: "0 2px 6px rgba(0,0,0,0.1)"
+    background: '#FFFFFF'
+    border: '#E0E0E0'
+    elevation: '0 2px 6px rgba(0,0,0,0.1)'
   buttons:
     primary:
-      background: "#000000"
-      text: "#FFFFFF"
+      background: '#000000'
+      text: '#FFFFFF'
     secondary:
-      background: "#F4F4F4"
-      text: "#161616"
+      background: '#F4F4F4'
+      text: '#161616'
     ghost:
-      background: "transparent"
-      text: "#161616"
+      background: 'transparent'
+      text: '#161616'
   inputs:
-    border: "#8D8D8D"
-    focus: "#0F62FE"
-    background: "#FFFFFF"
+    border: '#8D8D8D'
+    focus: '#0F62FE'
+    background: '#FFFFFF'
 
 # Export settings
 export:

@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  getMarqueeCycleDurationMs,
-  getMarqueeFrame,
-  getMarqueeGapWidth,
-} from "@/lib/marquee";
+import { getMarqueeCycleDurationMs, getMarqueeFrame, getMarqueeGapWidth } from "@/lib/marquee";
 
 interface MarqueeTextProps {
 	text: string;
@@ -56,8 +52,10 @@ export function MarqueeText({
 
 		measure();
 
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => measure()) : null;
+		const resizeObserver =
+			typeof ResizeObserver !== "undefined"
+				? new ResizeObserver(() => measure())
+				: null;
 
 		resizeObserver?.observe(container);
 		resizeObserver?.observe(measurementCopy);
@@ -69,8 +67,8 @@ export function MarqueeText({
 		};
 	}, [text, preview, captureReady]);
 
-  const overflow = measurements.contentWidth > measurements.containerWidth + 1;
-  const shouldAnimate = (preview || captureReady) && overflow;
+	const overflow = measurements.contentWidth > measurements.containerWidth + 1;
+	const shouldAnimate = (preview || captureReady) && overflow;
 
 	useEffect(() => {
 		onOverflowChange?.(overflow);
@@ -80,14 +78,14 @@ export function MarqueeText({
 		const track = trackRef.current;
 		if (!track) return;
 
-    if (!shouldAnimate) {
-      track.style.transform = "translateX(0px)";
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      return;
-    }
+		if (!shouldAnimate) {
+			track.style.transform = "translateX(0px)";
+			if (animationFrameRef.current !== null) {
+				cancelAnimationFrame(animationFrameRef.current);
+				animationFrameRef.current = null;
+			}
+			return;
+		}
 
 		let startTime: number | null = null;
 
@@ -101,60 +99,62 @@ export function MarqueeText({
 
 		animationFrameRef.current = requestAnimationFrame(animate);
 
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      track.style.transform = "translateX(0px)";
-    };
-  }, [measurements, shouldAnimate]);
+		return () => {
+			if (animationFrameRef.current !== null) {
+				cancelAnimationFrame(animationFrameRef.current);
+				animationFrameRef.current = null;
+			}
+			track.style.transform = "translateX(0px)";
+		};
+	}, [measurements, shouldAnimate]);
 
-  return (
-    <div
-      ref={containerRef}
-      className={`relative block w-full overflow-hidden ${className}`}
-      style={{
-        maskImage: overflow
-          ? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
-          : "none",
-        WebkitMaskImage: overflow
-          ? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
-          : "none",
-      }}
-      data-testid={dataTestId}
-      data-marquee-container="true"
-      data-marquee-active={shouldAnimate ? "true" : "false"}
-      data-marquee-overflow={overflow ? "true" : "false"}
-      data-marquee-viewport-width={measurements.containerWidth || undefined}
-      data-marquee-content-width={measurements.contentWidth || undefined}
-      data-marquee-cycle-duration-ms={
-        shouldAnimate ? getMarqueeCycleDurationMs(measurements) : undefined
-      }
-    >
-      <span
-        ref={measurementRef}
-        className="invisible absolute left-0 top-0 inline-block whitespace-nowrap"
-        aria-hidden="true"
-      >
-        {text}
-      </span>
-      <div
-        ref={trackRef}
-        className={`flex w-max items-center whitespace-nowrap will-change-transform ${
-          !overflow ? "w-full" : ""
-        }`}
-        style={{ transform: "translateX(0px)" }}
-        data-marquee-track="true"
-      >
-        <span
-          className={`inline-block whitespace-nowrap ${
-            !overflow && !shouldAnimate ? "w-full min-w-0 max-w-full truncate" : ""
-          }`}
-        >
-          {text}
-        </span>
-      </div>
-    </div>
-  );
+	return (
+		<div
+			ref={containerRef}
+			className={`relative block w-full overflow-hidden ${className}`}
+			style={{
+				maskImage: overflow
+					? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
+					: "none",
+				WebkitMaskImage: overflow
+					? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
+					: "none",
+			}}
+			data-testid={dataTestId}
+			data-marquee-container="true"
+			data-marquee-active={shouldAnimate ? "true" : "false"}
+			data-marquee-overflow={overflow ? "true" : "false"}
+			data-marquee-viewport-width={measurements.containerWidth || undefined}
+			data-marquee-content-width={measurements.contentWidth || undefined}
+			data-marquee-cycle-duration-ms={
+				shouldAnimate ? getMarqueeCycleDurationMs(measurements) : undefined
+			}
+		>
+			<span
+				ref={measurementRef}
+				className="invisible absolute left-0 top-0 inline-block whitespace-nowrap"
+				aria-hidden="true"
+			>
+				{text}
+			</span>
+			<div
+				ref={trackRef}
+				className={`flex w-max items-center whitespace-nowrap will-change-transform ${
+					!overflow ? "w-full" : ""
+				}`}
+				style={{ transform: "translateX(0px)" }}
+				data-marquee-track="true"
+			>
+				<span
+					className={`inline-block whitespace-nowrap ${
+						!overflow && !shouldAnimate
+							? "w-full min-w-0 max-w-full truncate"
+							: ""
+					}`}
+				>
+					{text}
+				</span>
+			</div>
+		</div>
+	);
 }

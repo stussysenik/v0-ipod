@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import type { SongMetadata } from "@/types/ipod";
 
 interface IpodAsciiSceneProps {
-  state: SongMetadata;
+	state: SongMetadata;
 }
 
 const COLS = 30;
@@ -34,9 +34,9 @@ function renderStars(rating: number): string {
 }
 
 export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
-  const remaining = Math.max(state.duration - state.currentTime, 0);
-  const elapsed = formatTime(state.currentTime, false);
-  const remainingStr = formatTime(remaining, true);
+	const remaining = Math.max(state.duration - state.currentTime, 0);
+	const elapsed = formatTime(state.currentTime, false);
+	const remainingStr = formatTime(remaining, true);
 
 	const ascii = useMemo(() => {
 		const filledCount =

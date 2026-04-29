@@ -7,9 +7,9 @@ interface ServiceWorkerCleanupProps {
 }
 
 type NextDataCarrier = Window & {
-  __NEXT_DATA__?: {
-    buildId?: string;
-  };
+	__NEXT_DATA__?: {
+		buildId?: string;
+	};
 };
 
 function resolveDeployVersion(explicitDeployVersion?: string): string {
@@ -21,10 +21,10 @@ function resolveDeployVersion(explicitDeployVersion?: string): string {
 		return explicitDeployVersion ?? "dev";
 	}
 
-  const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
-  if (runtimeBuildId) {
-    return runtimeBuildId;
-  }
+	const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
+	if (runtimeBuildId) {
+		return runtimeBuildId;
+	}
 
 	return explicitDeployVersion ?? "dev";
 }
@@ -43,12 +43,14 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 			let hadCaches = false;
 			const effectiveDeployVersion = resolveDeployVersion(deployVersion);
 
-      try {
-        const storageKey = "ipodSnapshotDeployVersion";
-        const previousVersion = localStorage.getItem(storageKey);
-        versionChanged = !!previousVersion && previousVersion !== effectiveDeployVersion;
-        localStorage.setItem(storageKey, effectiveDeployVersion);
-      } catch {}
+			try {
+				const storageKey = "ipodSnapshotDeployVersion";
+				const previousVersion = localStorage.getItem(storageKey);
+				versionChanged =
+					!!previousVersion &&
+					previousVersion !== effectiveDeployVersion;
+				localStorage.setItem(storageKey, effectiveDeployVersion);
+			} catch {}
 
 			try {
 				if ("serviceWorker" in navigator) {

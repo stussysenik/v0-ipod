@@ -7,9 +7,9 @@ interface BuildVersionBadgeProps {
 }
 
 type NextDataCarrier = Window & {
-  __NEXT_DATA__?: {
-    buildId?: string;
-  };
+	__NEXT_DATA__?: {
+		buildId?: string;
+	};
 };
 
 function normalizeVersion(raw: string): string {
@@ -27,11 +27,11 @@ export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
 			return;
 		}
 
-    const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
-    if (runtimeBuildId) {
-      setVersion(normalizeVersion(runtimeBuildId));
-    }
-  }, [version]);
+		const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
+		if (runtimeBuildId) {
+			setVersion(normalizeVersion(runtimeBuildId));
+		}
+	}, [version]);
 
 	const label = useMemo(() => {
 		if (version === "dev") {
@@ -40,11 +40,11 @@ export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
 		return `build ${version}`;
 	}, [version]);
 
-  return (
-    <div className="fixed left-4 bottom-4 z-50 pointer-events-none select-none">
-      <div className="rounded-full border border-black/15 bg-white/78 px-3 py-1 font-mono text-[11px] tracking-[0.02em] text-black/70 opacity-0 shadow-[0_4px_14px_rgba(0,0,0,0.12)] backdrop-blur-sm">
-        {label}
-      </div>
-    </div>
-  );
+	return (
+		<div className="fixed left-4 bottom-4 z-50 pointer-events-none select-none">
+			<div className="rounded-full border border-black/15 bg-white/78 px-3 py-1 font-mono text-[11px] tracking-[0.02em] text-black/70 opacity-0 shadow-[0_4px_14px_rgba(0,0,0,0.12)] backdrop-blur-sm">
+				{label}
+			</div>
+		</div>
+	);
 }

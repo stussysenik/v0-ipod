@@ -39,53 +39,53 @@ export function ImageUpload({
 	const isLocalImage = currentImage?.startsWith("/");
 	const needsCrossOrigin = currentImage && !isDataUrl && !isLocalImage;
 
-  return (
-    <>
-      <label
-        htmlFor={inputId}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-        className={`${disabled ? "cursor-default" : "cursor-pointer"} touch-manipulation ${className}`}
-      >
-        <img
-          src={currentImage || PLACEHOLDER_LOGO_SRC}
-          alt="Album artwork"
-          data-testid="artwork-image"
-          className="w-full h-full object-cover"
-          {...(needsCrossOrigin ? { crossOrigin: "anonymous" } : {})}
-        />
-      </label>
-      <input
-        id={inputId}
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleChange}
-        disabled={disabled}
-        data-testid="artwork-input"
-        aria-hidden="true"
-        tabIndex={-1}
-        style={{
-          position: "absolute",
-          width: "1px",
-          height: "1px",
-          margin: "-1px",
-          padding: 0,
-          border: 0,
-          overflow: "hidden",
-          clip: "rect(0 0 0 0)",
-          clipPath: "inset(50%)",
-          whiteSpace: "nowrap",
-          pointerEvents: "none",
-        }}
-      />
-    </>
-  );
+	return (
+		<>
+			<label
+				htmlFor={inputId}
+				role="button"
+				tabIndex={disabled ? -1 : 0}
+				onKeyDown={(e) => {
+					if (disabled) return;
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						inputRef.current?.click();
+					}
+				}}
+				className={`${disabled ? "cursor-default" : "cursor-pointer"} touch-manipulation ${className}`}
+			>
+				<img
+					src={currentImage || PLACEHOLDER_LOGO_SRC}
+					alt="Album artwork"
+					data-testid="artwork-image"
+					className="w-full h-full object-cover"
+					{...(needsCrossOrigin ? { crossOrigin: "anonymous" } : {})}
+				/>
+			</label>
+			<input
+				id={inputId}
+				ref={inputRef}
+				type="file"
+				accept="image/*"
+				onChange={handleChange}
+				disabled={disabled}
+				data-testid="artwork-input"
+				aria-hidden="true"
+				tabIndex={-1}
+				style={{
+					position: "absolute",
+					width: "1px",
+					height: "1px",
+					margin: "-1px",
+					padding: 0,
+					border: 0,
+					overflow: "hidden",
+					clip: "rect(0 0 0 0)",
+					clipPath: "inset(50%)",
+					whiteSpace: "nowrap",
+					pointerEvents: "none",
+				}}
+			/>
+		</>
+	);
 }

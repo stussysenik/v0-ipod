@@ -8,107 +8,115 @@ import type { SongMetadata } from "@/types/ipod";
 import type { RenderNowPlayingElement } from "@/components/ipod/scenes/ipod-scene-types";
 
 interface IpodPlaybackFooterProps {
-  screenTokens: IpodClassicPresetDefinition["screen"];
-  state: SongMetadata;
-  renderElement: RenderNowPlayingElement;
-  isInlineEditingEnabled: boolean;
-  onSeek: (currentTime: number) => void;
-  onElapsedTimeChange: (currentTime: number) => void;
-  onRemainingTimeChange: (remainingTime: number) => void;
-  playClick: () => void;
+	screenTokens: IpodClassicPresetDefinition["screen"];
+	state: SongMetadata;
+	renderElement: RenderNowPlayingElement;
+	isInlineEditingEnabled: boolean;
+	onSeek: (currentTime: number) => void;
+	onElapsedTimeChange: (currentTime: number) => void;
+	onRemainingTimeChange: (remainingTime: number) => void;
+	playClick: () => void;
 }
 
 export function IpodPlaybackFooter({
-  screenTokens,
-  state,
-  renderElement,
-  isInlineEditingEnabled,
-  onSeek,
-  onElapsedTimeChange,
-  onRemainingTimeChange,
-  playClick,
+	screenTokens,
+	state,
+	renderElement,
+	isInlineEditingEnabled,
+	onSeek,
+	onElapsedTimeChange,
+	onRemainingTimeChange,
+	playClick,
 }: IpodPlaybackFooterProps) {
-  const timeFontSize = Math.max(9, screenTokens.metaFontSize + 1);
-  const timeWidth = Math.max(28, Math.round(timeFontSize * 3.2));
+	const timeFontSize = Math.max(9, screenTokens.metaFontSize + 1);
+	const timeWidth = Math.max(28, Math.round(timeFontSize * 3.2));
 
-  return renderElement(
-    "progress",
-    <div
-      className="flex w-full items-center justify-between font-bold leading-none text-black"
-      style={{
-        fontVariantNumeric: "tabular-nums",
-        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-        fontSize: timeFontSize,
-        letterSpacing: "-0.01em",
-      }}
-    >
-      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
-        {renderElement(
-          "elapsed-time",
-          <EditableTime
-            value={state.currentTime}
-            onChange={onElapsedTimeChange}
-            disabled={!isInlineEditingEnabled}
-            editLabel="Edit elapsed time"
-            className="block w-full text-left"
-          />,
-          {
-            testId: "elapsed-time",
-            style: { zIndex: 1 },
-          },
-        )}
-      </div>
-      <div className="min-w-0 flex-1 px-[6px]">
-        <IpodProgressBar
-          currentTime={state.currentTime}
-          duration={state.duration}
-          onSeek={(currentTime) => {
-            if (!isInlineEditingEnabled) {
-              return;
-            }
+	return renderElement(
+		"progress",
+		<div
+			className="flex w-full items-center justify-between font-bold leading-none text-black"
+			style={{
+				fontVariantNumeric: "tabular-nums",
+				fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+				fontSize: timeFontSize,
+				letterSpacing: "-0.01em",
+			}}
+		>
+			<div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
+				{renderElement(
+					"elapsed-time",
+					<EditableTime
+						value={state.currentTime}
+						onChange={onElapsedTimeChange}
+						disabled={!isInlineEditingEnabled}
+						editLabel="Edit elapsed time"
+						className="block w-full text-left"
+					/>,
+					{
+						testId: "elapsed-time",
+						style: { zIndex: 1 },
+					},
+				)}
+			</div>
+			<div className="min-w-0 flex-1 px-[6px]">
+				<IpodProgressBar
+					currentTime={state.currentTime}
+					duration={state.duration}
+					onSeek={(currentTime) => {
+						if (!isInlineEditingEnabled) {
+							return;
+						}
 
-            onSeek(currentTime);
-            playClick();
-          }}
-          disabled={!isInlineEditingEnabled}
-          trackHeight={Math.min(
-            13,
-            Math.max(8, Math.round(screenTokens.progressHeight * 0.42)),
-          )}
-        />
-      </div>
-      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
-        {renderElement(
-          "remaining-time",
-          <div className="flex items-center justify-end text-black">
-            <EditableTime
-              value={Math.max(state.duration - state.currentTime, 0)}
-              isRemaining
-              onChange={onRemainingTimeChange}
-              disabled={!isInlineEditingEnabled}
-              editLabel="Edit remaining time"
-              className="block w-full text-right"
-            />
-          </div>,
-          {
-            testId: "remaining-time",
-            style: { zIndex: 1 },
-          },
-        )}
-      </div>
-    </div>,
-    {
-      className: "absolute left-0 right-0",
-      style: {
-        bottom: screenTokens.progressBottom,
-        height: screenTokens.progressHeight,
-        paddingInline: screenTokens.statusBarPaddingX + 2,
-        paddingTop: screenTokens.progressPaddingTop,
-        background: screenChromeTokens.progress.footerBackground,
-        display: "flex",
-        alignItems: "center",
-      },
-      testId: "screen-progress",
-    },
-  );
+						onSeek(currentTime);
+						playClick();
+					}}
+					disabled={!isInlineEditingEnabled}
+					trackHeight={Math.min(
+						13,
+						Math.max(
+							8,
+							Math.round(
+								screenTokens.progressHeight * 0.42,
+							),
+						),
+					)}
+				/>
+			</div>
+			<div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
+				{renderElement(
+					"remaining-time",
+					<div className="flex items-center justify-end text-black">
+						<EditableTime
+							value={Math.max(
+								state.duration - state.currentTime,
+								0,
+							)}
+							isRemaining
+							onChange={onRemainingTimeChange}
+							disabled={!isInlineEditingEnabled}
+							editLabel="Edit remaining time"
+							className="block w-full text-right"
+						/>
+					</div>,
+					{
+						testId: "remaining-time",
+						style: { zIndex: 1 },
+					},
+				)}
+			</div>
+		</div>,
+		{
+			className: "absolute left-0 right-0",
+			style: {
+				bottom: screenTokens.progressBottom,
+				height: screenTokens.progressHeight,
+				paddingInline: screenTokens.statusBarPaddingX + 2,
+				paddingTop: screenTokens.progressPaddingTop,
+				background: screenChromeTokens.progress.footerBackground,
+				display: "flex",
+				alignItems: "center",
+			},
+			testId: "screen-progress",
+		},
+	);
 }

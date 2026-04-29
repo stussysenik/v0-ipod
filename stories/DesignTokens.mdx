@@ -16,25 +16,30 @@ Figma sync imports into Variables.
 ## Primitives
 
 export const PrimitiveSwatches = () => (
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-    {Object.entries(tokens.Primitives.color).map(([name, token]) => (
-      <div key={name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 8,
-            background: token.$value,
-            border: "1px solid rgba(0,0,0,0.08)",
-          }}
-        />
-        <div style={{ fontFamily: "ui-monospace, SFMono-Regular, monospace", fontSize: 12 }}>
-          <div style={{ fontWeight: 600 }}>color.{name}</div>
-          <div style={{ opacity: 0.7 }}>{token.$value}</div>
-        </div>
-      </div>
-    ))}
-  </div>
+	<div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+		{Object.entries(tokens.Primitives.color).map(([name, token]) => (
+			<div key={name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+				<div
+					style={{
+						width: 48,
+						height: 48,
+						borderRadius: 8,
+						background: token.$value,
+						border: "1px solid rgba(0,0,0,0.08)",
+					}}
+				/>
+				<div
+					style={{
+						fontFamily: "ui-monospace, SFMono-Regular, monospace",
+						fontSize: 12,
+					}}
+				>
+					<div style={{ fontWeight: 600 }}>color.{name}</div>
+					<div style={{ opacity: 0.7 }}>{token.$value}</div>
+				</div>
+			</div>
+		))}
+	</div>
 );
 
 <PrimitiveSwatches />
@@ -42,56 +47,72 @@ export const PrimitiveSwatches = () => (
 ## Semantic — light / dark pairs
 
 export const SemanticTable = () => (
-  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-    <thead>
-      <tr style={{ textAlign: "left" }}>
-        <th style={{ padding: "6px 0" }}>token</th>
-        <th>light</th>
-        <th>dark</th>
-      </tr>
-    </thead>
-    <tbody>
-      {Object.entries(tokens.Semantic.color).map(([name, token]) => (
-        <tr key={name} style={{ borderTop: "1px solid #E5E7EB" }}>
-          <td style={{ padding: "8px 0", fontFamily: "ui-monospace, monospace", fontWeight: 600 }}>
-            color.{name}
-          </td>
-          <td>
-            <span
-              style={{
-                display: "inline-block",
-                width: 16,
-                height: 16,
-                borderRadius: 4,
-                background: token.$value.light,
-                border: "1px solid rgba(0,0,0,0.08)",
-                verticalAlign: "middle",
-              }}
-            />
-            <span style={{ marginLeft: 8, fontFamily: "ui-monospace, monospace" }}>
-              {token.$value.light}
-            </span>
-          </td>
-          <td>
-            <span
-              style={{
-                display: "inline-block",
-                width: 16,
-                height: 16,
-                borderRadius: 4,
-                background: token.$value.dark,
-                border: "1px solid rgba(0,0,0,0.08)",
-                verticalAlign: "middle",
-              }}
-            />
-            <span style={{ marginLeft: 8, fontFamily: "ui-monospace, monospace" }}>
-              {token.$value.dark}
-            </span>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+	<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+		<thead>
+			<tr style={{ textAlign: "left" }}>
+				<th style={{ padding: "6px 0" }}>token</th>
+				<th>light</th>
+				<th>dark</th>
+			</tr>
+		</thead>
+		<tbody>
+			{Object.entries(tokens.Semantic.color).map(([name, token]) => (
+				<tr key={name} style={{ borderTop: "1px solid #E5E7EB" }}>
+					<td
+						style={{
+							padding: "8px 0",
+							fontFamily: "ui-monospace, monospace",
+							fontWeight: 600,
+						}}
+					>
+						color.{name}
+					</td>
+					<td>
+						<span
+							style={{
+								display: "inline-block",
+								width: 16,
+								height: 16,
+								borderRadius: 4,
+								background: token.$value.light,
+								border: "1px solid rgba(0,0,0,0.08)",
+								verticalAlign: "middle",
+							}}
+						/>
+						<span
+							style={{
+								marginLeft: 8,
+								fontFamily: "ui-monospace, monospace",
+							}}
+						>
+							{token.$value.light}
+						</span>
+					</td>
+					<td>
+						<span
+							style={{
+								display: "inline-block",
+								width: 16,
+								height: 16,
+								borderRadius: 4,
+								background: token.$value.dark,
+								border: "1px solid rgba(0,0,0,0.08)",
+								verticalAlign: "middle",
+							}}
+						/>
+						<span
+							style={{
+								marginLeft: 8,
+								fontFamily: "ui-monospace, monospace",
+							}}
+						>
+							{token.$value.dark}
+						</span>
+					</td>
+				</tr>
+			))}
+		</tbody>
+	</table>
 );
 
 <SemanticTable />
@@ -99,26 +120,35 @@ export const SemanticTable = () => (
 ## Component tokens
 
 export const ComponentSwatches = () => (
-  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-    {Object.entries(tokens.Component.ipod.shell).map(([name, token]) => (
-      <div key={name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 8,
-            background: token.$value,
-            border: "1px solid rgba(0,0,0,0.08)",
-          }}
-        />
-        <div style={{ fontFamily: "ui-monospace, SFMono-Regular, monospace", fontSize: 12 }}>
-          <div style={{ fontWeight: 600 }}>ipod.shell.{name}</div>
-          <div style={{ opacity: 0.7 }}>{token.$value}</div>
-          {token.$description && <div style={{ opacity: 0.5 }}>{token.$description}</div>}
-        </div>
-      </div>
-    ))}
-  </div>
+	<div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+		{Object.entries(tokens.Component.ipod.shell).map(([name, token]) => (
+			<div key={name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+				<div
+					style={{
+						width: 48,
+						height: 48,
+						borderRadius: 8,
+						background: token.$value,
+						border: "1px solid rgba(0,0,0,0.08)",
+					}}
+				/>
+				<div
+					style={{
+						fontFamily: "ui-monospace, SFMono-Regular, monospace",
+						fontSize: 12,
+					}}
+				>
+					<div style={{ fontWeight: 600 }}>ipod.shell.{name}</div>
+					<div style={{ opacity: 0.7 }}>{token.$value}</div>
+					{token.$description && (
+						<div style={{ opacity: 0.5 }}>
+							{token.$description}
+						</div>
+					)}
+				</div>
+			</div>
+		))}
+	</div>
 );
 
 <ComponentSwatches />

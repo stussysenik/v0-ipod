@@ -142,7 +142,7 @@ jobs:
         run: |
           echo "Bundle size analysis:"
           du -sh .next/static/chunks/*.js | sort -rh | head -10
-          
+
           # Fail if main chunk > 200KB
           MAIN_CHUNK=$(find .next/static/chunks -name "main-*.js" -exec ls -lh {} \; | awk '{print $5}' | sed 's/K//')
           if [ "$MAIN_CHUNK" -gt 200 ]; then

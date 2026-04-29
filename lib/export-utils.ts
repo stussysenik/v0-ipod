@@ -364,28 +364,29 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
 				return [];
 			}
 
-    const containerWidth =
-      parseNumericDataAttribute(container.dataset.marqueeViewportWidth) ??
-      Math.ceil(container.clientWidth);
-    const contentWidth =
-      parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
-      Math.ceil(track.scrollWidth);
+			const containerWidth =
+				parseNumericDataAttribute(container.dataset.marqueeViewportWidth) ??
+				Math.ceil(container.clientWidth);
+			const contentWidth =
+				parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
+				Math.ceil(track.scrollWidth);
 
 			if (containerWidth <= 0 || contentWidth <= 0) {
 				return [];
 			}
 
-    return [
-      {
-        track,
-        metrics: {
-          containerWidth: Math.ceil(containerWidth),
-          contentWidth: Math.ceil(contentWidth),
-          gapWidth: 0,
-        },
-      },
-    ];
-  });
+			return [
+				{
+					track,
+					metrics: {
+						containerWidth: Math.ceil(containerWidth),
+						contentWidth: Math.ceil(contentWidth),
+						gapWidth: 0,
+					},
+				},
+			];
+		},
+	);
 }
 
 function formatExportTime(seconds: number, isRemaining: boolean): string {
@@ -1072,21 +1073,26 @@ export async function exportAnimatedGif(
 		await waitForMs(100);
 		await waitForNextPaint();
 
-    const targetWidth = Math.ceil(exportNode.offsetWidth || exportNode.clientWidth || 1);
-    const targetHeight = Math.ceil(
-      exportNode.offsetHeight || exportNode.clientHeight || 1,
-    );
-    const detectedCycleDurationMs = applyAnimationFrameToClone(exportNode, 0);
-    const captureDurationMs = Math.max(detectedCycleDurationMs, GIF_DEFAULT_DURATION_MS);
-    const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
-    const uncappedFrameCount = Math.max(
-      1,
-      Math.ceil(captureDurationMs / requestedFrameDelayMs),
-    );
-    const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
-    const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
-    const captureScale =
-      frameCount > 180 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
+		const targetWidth = Math.ceil(
+			exportNode.offsetWidth || exportNode.clientWidth || 1,
+		);
+		const targetHeight = Math.ceil(
+			exportNode.offsetHeight || exportNode.clientHeight || 1,
+		);
+		const detectedCycleDurationMs = applyAnimationFrameToClone(exportNode, 0);
+		const captureDurationMs = Math.max(
+			detectedCycleDurationMs,
+			GIF_DEFAULT_DURATION_MS,
+		);
+		const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
+		const uncappedFrameCount = Math.max(
+			1,
+			Math.ceil(captureDurationMs / requestedFrameDelayMs),
+		);
+		const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
+		const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
+		const captureScale =
+			frameCount > 180 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
 
 		onStatusChange?.("encoding");
 

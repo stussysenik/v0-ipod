@@ -2,7 +2,6 @@
 
 import { Loader2, MonitorUp, Pause, Play, Repeat, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, Repeat, RotateCcw, X, MonitorUp, Loader2 } from "lucide-react";
 import { getExportPreset, type ExportPresetId } from "@/lib/export/export-scene";
 
 declare global {
@@ -127,21 +126,13 @@ export function GifPreviewModal({
 			});
 		}, frameDelayMs);
 
-    return () => {
-      if (playbackTimerRef.current !== null) {
-        window.clearTimeout(playbackTimerRef.current);
-        playbackTimerRef.current = null;
-      }
-    };
-  }, [
-    frameDelayMs,
-    isLooping,
-    isPlaying,
-    isPreparing,
-    open,
-    totalFrames,
-    currentFrameIndex,
-  ]);
+		return () => {
+			if (playbackTimerRef.current !== null) {
+				window.clearTimeout(playbackTimerRef.current);
+				playbackTimerRef.current = null;
+			}
+		};
+	}, [frameDelayMs, isLooping, isPlaying, isPreparing, open, totalFrames, currentFrameIndex]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -173,39 +164,48 @@ export function GifPreviewModal({
 		return null;
 	}
 
-  return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-      <div className="grid w-full max-w-6xl gap-4 rounded-[28px] border border-white/30 bg-[#F2F1ED] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.35)] md:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-black/10 bg-[#E7E5DF] p-4">
-          <div
-            className="flex max-h-[75vh] w-full items-center justify-center"
-            style={{ aspectRatio: `${preset.width} / ${preset.height}` }}
-            data-testid="gif-preview-stage"
-          >
-            {isPreparing ? (
-              <div className="flex flex-col items-center gap-3 text-[#111827]">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-sm font-semibold">
-                  Preparing preview {progressPercent}%
-                </p>
-              </div>
-            ) : error ? (
-              <div className="max-w-sm text-center text-[#111827]">
-                <p className="text-lg font-semibold">Preview failed</p>
-                <p className="mt-2 text-sm text-[#4B5563]">{error}</p>
-              </div>
-            ) : currentFrameSrc ? (
-              <img
-                src={currentFrameSrc}
-                alt="GIF preview frame"
-                className="max-h-[75vh] max-w-full rounded-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
-                data-testid="gif-preview-image"
-              />
-            ) : (
-              <p className="text-sm font-semibold text-[#111827]">Preview is empty</p>
-            )}
-          </div>
-        </div>
+	return (
+		<div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
+			<div className="grid w-full max-w-6xl gap-4 rounded-[28px] border border-white/30 bg-[#F2F1ED] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.35)] md:grid-cols-[minmax(0,1fr)_280px]">
+				<div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-black/10 bg-[#E7E5DF] p-4">
+					<div
+						className="flex max-h-[75vh] w-full items-center justify-center"
+						style={{
+							aspectRatio: `${preset.width} / ${preset.height}`,
+						}}
+						data-testid="gif-preview-stage"
+					>
+						{isPreparing ? (
+							<div className="flex flex-col items-center gap-3 text-[#111827]">
+								<Loader2 className="h-8 w-8 animate-spin" />
+								<p className="text-sm font-semibold">
+									Preparing preview{" "}
+									{progressPercent}%
+								</p>
+							</div>
+						) : error ? (
+							<div className="max-w-sm text-center text-[#111827]">
+								<p className="text-lg font-semibold">
+									Preview failed
+								</p>
+								<p className="mt-2 text-sm text-[#4B5563]">
+									{error}
+								</p>
+							</div>
+						) : currentFrameSrc ? (
+							<img
+								src={currentFrameSrc}
+								alt="GIF preview frame"
+								className="max-h-[75vh] max-w-full rounded-[22px] shadow-[0_24px_60px_rgba(0,0,0,0.28)]"
+								data-testid="gif-preview-image"
+							/>
+						) : (
+							<p className="text-sm font-semibold text-[#111827]">
+								Preview is empty
+							</p>
+						)}
+					</div>
+				</div>
 
 				<div className="flex flex-col gap-3 rounded-[24px] border border-black/10 bg-white/80 p-4">
 					<div className="flex items-start justify-between gap-3">
@@ -295,31 +295,36 @@ export function GifPreviewModal({
 						</button>
 					</div>
 
-          <div className="space-y-2 rounded-2xl border border-black/10 bg-[#F6F5F1] p-3">
-            <div className="flex items-center justify-between text-xs font-semibold text-[#374151]">
-              <span>Frame</span>
-              <span data-testid="gif-preview-frame-readout">
-                {totalFrames === 0
-                  ? "0 / 0"
-                  : `${currentFrameIndex + 1} / ${totalFrames}`}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={Math.max(totalFrames - 1, 0)}
-              step={1}
-              value={Math.min(currentFrameIndex, Math.max(totalFrames - 1, 0))}
-              onChange={(event) => {
-                beginPerfInteraction();
-                setCurrentFrameIndex(Number(event.target.value));
-                setIsPlaying(false);
-              }}
-              className="w-full"
-              data-testid="gif-preview-scrubber"
-              disabled={isPreparing || totalFrames === 0}
-            />
-          </div>
+					<div className="space-y-2 rounded-2xl border border-black/10 bg-[#F6F5F1] p-3">
+						<div className="flex items-center justify-between text-xs font-semibold text-[#374151]">
+							<span>Frame</span>
+							<span data-testid="gif-preview-frame-readout">
+								{totalFrames === 0
+									? "0 / 0"
+									: `${currentFrameIndex + 1} / ${totalFrames}`}
+							</span>
+						</div>
+						<input
+							type="range"
+							min={0}
+							max={Math.max(totalFrames - 1, 0)}
+							step={1}
+							value={Math.min(
+								currentFrameIndex,
+								Math.max(totalFrames - 1, 0),
+							)}
+							onChange={(event) => {
+								beginPerfInteraction();
+								setCurrentFrameIndex(
+									Number(event.target.value),
+								);
+								setIsPlaying(false);
+							}}
+							className="w-full"
+							data-testid="gif-preview-scrubber"
+							disabled={isPreparing || totalFrames === 0}
+						/>
+					</div>
 
 					{error ? (
 						<button

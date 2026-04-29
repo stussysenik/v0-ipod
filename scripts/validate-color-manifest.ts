@@ -35,14 +35,13 @@ function sRGBLinearize(c: number): number {
 // ── Relative luminance (WCAG 2.1) ──
 
 function relativeLuminance(hex: string, opacity = 1): number {
-  const [r, g, b] = parseHex(hex);
-  const L =
-    0.2126 * sRGBLinearize(r) + 0.7152 * sRGBLinearize(g) + 0.0722 * sRGBLinearize(b);
-  // For semi-transparent foreground on white (#FFFFFF, L=1)
-  if (opacity < 1) {
-    return L * opacity + 1 * (1 - opacity);
-  }
-  return L;
+	const [r, g, b] = parseHex(hex);
+	const L = 0.2126 * sRGBLinearize(r) + 0.7152 * sRGBLinearize(g) + 0.0722 * sRGBLinearize(b);
+	// For semi-transparent foreground on white (#FFFFFF, L=1)
+	if (opacity < 1) {
+		return L * opacity + 1 * (1 - opacity);
+	}
+	return L;
 }
 
 // ── Contrast ratio (WCAG 2.1) ──
@@ -58,15 +57,15 @@ function contrastRatio(hex1: string, hex2: string, opacity1 = 1): number {
 // ── CIE XYZ conversion (D65 illuminant) ──
 
 function srgbToXyz(hex: string): [number, number, number] {
-  const [r, g, b] = parseHex(hex);
-  const rl = sRGBLinearize(r);
-  const gl = sRGBLinearize(g);
-  const bl = sRGBLinearize(b);
-  // sRGB to XYZ matrix (D65)
-  const x = 0.4124564 * rl + 0.3575761 * gl + 0.1804375 * bl;
-  const y = 0.2126729 * rl + 0.7151522 * gl + 0.072175 * bl;
-  const z = 0.0193339 * rl + 0.119192 * gl + 0.9503041 * bl;
-  return [x, y, z];
+	const [r, g, b] = parseHex(hex);
+	const rl = sRGBLinearize(r);
+	const gl = sRGBLinearize(g);
+	const bl = sRGBLinearize(b);
+	// sRGB to XYZ matrix (D65)
+	const x = 0.4124564 * rl + 0.3575761 * gl + 0.1804375 * bl;
+	const y = 0.2126729 * rl + 0.7151522 * gl + 0.072175 * bl;
+	const z = 0.0193339 * rl + 0.119192 * gl + 0.9503041 * bl;
+	return [x, y, z];
 }
 
 // ── CIE Lab conversion (D65 reference white) ──
@@ -138,24 +137,24 @@ interface TextToken {
 }
 
 interface Manifest {
-  authenticCaseColors: Array<{
-    label: string;
-    hex: string;
-    family: string;
-    generation: string;
-  }>;
-  surfaceTokens: Record<string, SurfaceToken>;
-  textTokens: Record<string, TextToken>;
-  relationships: {
-    contrastPairs: ContrastPair[];
-    perceptualRules: PerceptualRule[];
-    greyRampRules: {
-      adjacentStopMinDeltaE00: number;
-      undertoneVsNeutralMinDeltaE00: number;
-      undertoneVsNeutralMaxDeltaE00: number;
-      authenticCaseMaxDeltaE00FromReference: number;
-    };
-  };
+	authenticCaseColors: Array<{
+		label: string;
+		hex: string;
+		family: string;
+		generation: string;
+	}>;
+	surfaceTokens: Record<string, SurfaceToken>;
+	textTokens: Record<string, TextToken>;
+	relationships: {
+		contrastPairs: ContrastPair[];
+		perceptualRules: PerceptualRule[];
+		greyRampRules: {
+			adjacentStopMinDeltaE00: number;
+			undertoneVsNeutralMinDeltaE00: number;
+			undertoneVsNeutralMaxDeltaE00: number;
+			authenticCaseMaxDeltaE00FromReference: number;
+		};
+	};
 }
 
 // ── Validation ──
@@ -315,10 +314,10 @@ function main() {
 		const catResults = results.filter((r) => r.category === cat);
 		const catFails = catResults.filter((r) => !r.pass);
 
-    console.log(
-      `\n## ${cat.toUpperCase()} (${catResults.length - catFails.length}/${catResults.length} pass)`,
-    );
-    console.log("─".repeat(60));
+		console.log(
+			`\n## ${cat.toUpperCase()} (${catResults.length - catFails.length}/${catResults.length} pass)`,
+		);
+		console.log("─".repeat(60));
 
 		for (const r of catResults) {
 			const icon = r.pass ? "  PASS" : "  FAIL";

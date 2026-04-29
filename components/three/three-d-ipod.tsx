@@ -73,22 +73,22 @@ function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps
 			0.06,
 		);
 
-    // Subtle floating animation for screen glow
-    if (screenGroupRef.current) {
-      const time = state.clock.elapsedTime;
-      screenGroupRef.current.children.forEach((child) => {
-        if (
-          child instanceof THREE.Mesh &&
-          child.material instanceof THREE.MeshPhysicalMaterial
-        ) {
-          // Subtle pulsing backlight effect
-          const baseIntensity = 0.3;
-          const pulse = Math.sin(time * 0.5) * 0.1;
-          child.material.emissiveIntensity = baseIntensity + pulse;
-        }
-      });
-    }
-  });
+		// Subtle floating animation for screen glow
+		if (screenGroupRef.current) {
+			const time = state.clock.elapsedTime;
+			screenGroupRef.current.children.forEach((child) => {
+				if (
+					child instanceof THREE.Mesh &&
+					child.material instanceof THREE.MeshPhysicalMaterial
+				) {
+					// Subtle pulsing backlight effect
+					const baseIntensity = 0.3;
+					const pulse = Math.sin(time * 0.5) * 0.1;
+					child.material.emissiveIntensity = baseIntensity + pulse;
+				}
+			});
+		}
+	});
 
 	// Dimensions
 	const args = {
@@ -455,10 +455,10 @@ function SceneCapture({
 			}
 		};
 
-    onCapture(captureHighRes);
-    // Signal that the scene is ready for capture
-    onReady?.();
-  }, [gl, scene, camera, onCapture, onReady, modelResetRef]);
+		onCapture(captureHighRes);
+		// Signal that the scene is ready for capture
+		onReady?.();
+	}, [gl, scene, camera, onCapture, onReady, modelResetRef]);
 
 	return null;
 }

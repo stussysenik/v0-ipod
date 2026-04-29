@@ -26,60 +26,57 @@ export function getMarqueeGapWidth(contentWidth: number, textLength: number): nu
 }
 
 export function getMarqueeScrollDistance(metrics: MarqueeMetrics): number {
-  return Math.max(0, metrics.contentWidth - metrics.containerWidth);
+	return Math.max(0, metrics.contentWidth - metrics.containerWidth);
 }
 
 export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics): number {
-  const scrollDistance = getMarqueeScrollDistance(metrics);
-  if (scrollDistance <= 0) return 0;
+	const scrollDistance = getMarqueeScrollDistance(metrics);
+	if (scrollDistance <= 0) return 0;
 
-  const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-  // Cycle: Delay(Start) -> Scroll Left -> Delay(End) -> Scroll Right
-  return 2 * MARQUEE_DELAY_MS + 2 * scrollTime;
+	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
+	// Cycle: Delay(Start) -> Scroll Left -> Delay(End) -> Scroll Right
+	return 2 * MARQUEE_DELAY_MS + 2 * scrollTime;
 }
 
-export function getMarqueeFrame(
-  metrics: MarqueeMetrics,
-  elapsedMs: number,
-): MarqueeFrame {
-  const overflow = hasMarqueeOverflow(metrics);
-  const scrollDistance = getMarqueeScrollDistance(metrics);
+export function getMarqueeFrame(metrics: MarqueeMetrics, elapsedMs: number): MarqueeFrame {
+	const overflow = hasMarqueeOverflow(metrics);
+	const scrollDistance = getMarqueeScrollDistance(metrics);
 
-  if (!overflow || scrollDistance <= 0) {
-    return {
-      overflow,
-      translateX: 0,
-      cycleDistance: 0,
-      cycleDurationMs: 0,
-    };
-  }
+	if (!overflow || scrollDistance <= 0) {
+		return {
+			overflow,
+			translateX: 0,
+			cycleDistance: 0,
+			cycleDurationMs: 0,
+		};
+	}
 
-  const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-  const cycleDurationMs = 2 * MARQUEE_DELAY_MS + 2 * scrollTime;
-  const timeInCycle = elapsedMs % cycleDurationMs;
+	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
+	const cycleDurationMs = 2 * MARQUEE_DELAY_MS + 2 * scrollTime;
+	const timeInCycle = elapsedMs % cycleDurationMs;
 
-  let translateX = 0;
+	let translateX = 0;
 
-  if (timeInCycle <= MARQUEE_DELAY_MS) {
-    // Phase 1: Hold at start
-    translateX = 0;
-  } else if (timeInCycle <= MARQUEE_DELAY_MS + scrollTime) {
-    // Phase 2: Scroll Left
-    const progress = (timeInCycle - MARQUEE_DELAY_MS) / scrollTime;
-    translateX = -scrollDistance * progress;
-  } else if (timeInCycle <= 2 * MARQUEE_DELAY_MS + scrollTime) {
-    // Phase 3: Hold at end
-    translateX = -scrollDistance;
-  } else {
-    // Phase 4: Scroll Right
-    const progress = (timeInCycle - (2 * MARQUEE_DELAY_MS + scrollTime)) / scrollTime;
-    translateX = -scrollDistance * (1 - progress);
-  }
+	if (timeInCycle <= MARQUEE_DELAY_MS) {
+		// Phase 1: Hold at start
+		translateX = 0;
+	} else if (timeInCycle <= MARQUEE_DELAY_MS + scrollTime) {
+		// Phase 2: Scroll Left
+		const progress = (timeInCycle - MARQUEE_DELAY_MS) / scrollTime;
+		translateX = -scrollDistance * progress;
+	} else if (timeInCycle <= 2 * MARQUEE_DELAY_MS + scrollTime) {
+		// Phase 3: Hold at end
+		translateX = -scrollDistance;
+	} else {
+		// Phase 4: Scroll Right
+		const progress = (timeInCycle - (2 * MARQUEE_DELAY_MS + scrollTime)) / scrollTime;
+		translateX = -scrollDistance * (1 - progress);
+	}
 
-  return {
-    overflow,
-    translateX,
-    cycleDistance: scrollDistance,
-    cycleDurationMs,
-  };
+	return {
+		overflow,
+		translateX,
+		cycleDistance: scrollDistance,
+		cycleDurationMs,
+	};
 }

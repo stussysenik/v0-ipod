@@ -1,27 +1,27 @@
 {
-  "name": "pi-research",
-  "version": "0.1.0",
-  "description": "Repo-local Kimi research agent for provenance briefs, fidelity critiques, and implementation handoff prep.",
-  "author": {
-    "name": "v0-ipod",
-    "email": "local@example.invalid",
-    "url": "https://example.invalid/v0-ipod"
-  },
-  "license": "MIT",
-  "keywords": ["research", "design", "provenance", "kimi", "nvidia-nim"],
-  "skills": "./skills/",
-  "interface": {
-    "displayName": "Pi Research",
-    "shortDescription": "Kimi-powered research briefs for provenance and visual fidelity work.",
-    "longDescription": "A repo-local research agent that uses NVIDIA NIM with Kimi K2.5 for provenance audits, reference packs, visual fidelity critiques, and implementation brief generation. It is research-only and does not modify product code directly.",
-    "developerName": "v0-ipod",
-    "category": "Research",
-    "capabilities": ["Interactive", "Research"],
-    "defaultPrompt": [
-      "Prepare an iPod finish provenance audit.",
-      "Critique the current UI for visual fidelity.",
-      "Generate a narrow implementation brief."
-    ],
-    "brandColor": "#20242B"
-  }
+	"name": "pi-research",
+	"version": "0.1.0",
+	"description": "Repo-local Kimi research agent for provenance briefs, fidelity critiques, and implementation handoff prep.",
+	"author": {
+		"name": "v0-ipod",
+		"email": "local@example.invalid",
+		"url": "https://example.invalid/v0-ipod"
+	},
+	"license": "MIT",
+	"keywords": ["research", "design", "provenance", "kimi", "nvidia-nim"],
+	"skills": "./skills/",
+	"interface": {
+		"displayName": "Pi Research",
+		"shortDescription": "Kimi-powered research briefs for provenance and visual fidelity work.",
+		"longDescription": "A repo-local research agent that uses NVIDIA NIM with Kimi K2.5 for provenance audits, reference packs, visual fidelity critiques, and implementation brief generation. It is research-only and does not modify product code directly.",
+		"developerName": "v0-ipod",
+		"category": "Research",
+		"capabilities": ["Interactive", "Research"],
+		"defaultPrompt": [
+			"Prepare an iPod finish provenance audit.",
+			"Critique the current UI for visual fidelity.",
+			"Generate a narrow implementation brief."
+		],
+		"brandColor": "#20242B"
+	}
 }

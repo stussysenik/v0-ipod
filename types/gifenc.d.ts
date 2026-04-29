@@ -1,8 +1,6 @@
 declare module "gifenc" {
-  export type GifPaletteColor =
-    | [number, number, number]
-    | [number, number, number, number];
-  export type GifPalette = GifPaletteColor[];
+	export type GifPaletteColor = [number, number, number] | [number, number, number, number];
+	export type GifPalette = GifPaletteColor[];
 
 	export interface GIFEncoderOptions {
 		auto?: boolean;

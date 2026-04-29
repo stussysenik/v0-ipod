@@ -46,29 +46,29 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "iPod Snapshot",
-  description: "iPod Snapshot - Classic simulator and export studio",
-  manifest: "/manifest.webmanifest",
-  generator: "v0.app",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "iPod Snapshot",
-  },
-  icons: {
-    icon: [
-      {
-        url: `/icon.svg?v=${deployVersion}`,
-        type: "image/svg+xml",
-      },
-      {
-        url: `/icon-192x192.png?v=${deployVersion}`,
-        sizes: "192x192",
-        type: "image/png",
-      },
-    ],
-    apple: `/apple-icon.png?v=${deployVersion}`,
-  },
+	title: "iPod Snapshot",
+	description: "iPod Snapshot - Classic simulator and export studio",
+	manifest: "/manifest.webmanifest",
+	generator: "v0.app",
+	appleWebApp: {
+		capable: true,
+		statusBarStyle: "black-translucent",
+		title: "iPod Snapshot",
+	},
+	icons: {
+		icon: [
+			{
+				url: `/icon.svg?v=${deployVersion}`,
+				type: "image/svg+xml",
+			},
+			{
+				url: `/icon-192x192.png?v=${deployVersion}`,
+				sizes: "192x192",
+				type: "image/png",
+			},
+		],
+		apple: `/apple-icon.png?v=${deployVersion}`,
+	},
 };
 
 export default function RootLayout({
@@ -76,32 +76,32 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" data-deploy-version={deployVersion}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-      >
-        <ServiceWorkerCleanup deployVersion={deployVersion} />
-        {children}
-        <BuildVersionBadge initialVersion={deployVersion} />
-        <Toaster
-          position="bottom-center"
-          richColors={false}
-          closeButton={false}
-          visibleToasts={2}
-          duration={2200}
-          toastOptions={{
-            style: {
-              border: "1px solid rgba(0,0,0,0.14)",
-              background: "rgba(247,247,245,0.94)",
-              color: "rgba(0,0,0,0.82)",
-              boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
-              backdropFilter: "blur(8px)",
-            },
-          }}
-        />
-        <Analytics />
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en" data-deploy-version={deployVersion}>
+			<body
+				className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+			>
+				<ServiceWorkerCleanup deployVersion={deployVersion} />
+				{children}
+				<BuildVersionBadge initialVersion={deployVersion} />
+				<Toaster
+					position="bottom-center"
+					richColors={false}
+					closeButton={false}
+					visibleToasts={2}
+					duration={2200}
+					toastOptions={{
+						style: {
+							border: "1px solid rgba(0,0,0,0.14)",
+							background: "rgba(247,247,245,0.94)",
+							color: "rgba(0,0,0,0.82)",
+							boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
+							backdropFilter: "blur(8px)",
+						},
+					}}
+				/>
+				<Analytics />
+			</body>
+		</html>
+	);
 }
