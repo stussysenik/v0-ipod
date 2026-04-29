@@ -8,7 +8,7 @@
     },
     "statusBar": {
       "divider": "#969696",
-      "playIndicator": "#3B79C4",
+      "playIndicator": "#3786bb",
       "battery": {
         "width": 16,
         "height": 8,
@@ -17,11 +17,11 @@
         "gap": 1,
         "borderRadius": 1.5,
         "fillInset": 1,
-        "fillWidthRatio": 0.74,
+        "fillWidthRatio": 1,
         "border": "#747474",
         "background": "#F7F7F5",
-        "fillFrom": "#D8F76E",
-        "fillTo": "#94D23E",
+        "fillFrom": "#83cf73",
+        "fillTo": "#44a439",
         "highlight": "rgba(255,255,255,0.58)"
       }
     },
