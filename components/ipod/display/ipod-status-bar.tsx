@@ -11,6 +11,8 @@ interface IpodStatusBarProps {
 }
 
 export function IpodStatusBar({ screenTokens, showOsMenu }: IpodStatusBarProps) {
+  const statusBarTokens = screenChromeTokens.statusBar;
+
   return (
     <div
       className="flex items-center justify-between border-b"
@@ -29,17 +31,28 @@ export function IpodStatusBar({ screenTokens, showOsMenu }: IpodStatusBarProps) 
         }}
         data-testid="screen-status-label"
       >
-        {!showOsMenu && (
-          <span
-            className="text-[7px]"
-            style={{ color: screenChromeTokens.statusBar.playIndicator }}
-          >
-            ▶
-          </span>
-        )}
         <span>{showOsMenu ? "RE:MIX" : "Now Playing"}</span>
       </div>
-      <ScreenBattery />
+      <div className="flex items-center gap-[3px]">
+        {!showOsMenu && (
+          <svg
+            aria-hidden="true"
+            className="shrink-0"
+            viewBox="0 0 10 9"
+            style={{ width: 9, height: 8.5 }}
+          >
+            <path
+              d="M1.2 0.75L8.35 4.5L1.2 8.25V0.75Z"
+              fill={statusBarTokens.playIndicator}
+              stroke="rgba(255,255,255,0.42)"
+              strokeWidth="0.45"
+              strokeLinejoin="round"
+            />
+            <path d="M2.2 1.7L6.95 4.2L2.2 4.2V1.7Z" fill="rgba(255,255,255,0.28)" />
+          </svg>
+        )}
+        <ScreenBattery level={1} />
+      </div>
     </div>
   );
 }
