@@ -28,31 +28,20 @@ export function IpodPlaybackFooter({
   onRemainingTimeChange,
   playClick,
 }: IpodPlaybackFooterProps) {
+  const timeFontSize = Math.max(8, screenTokens.metaFontSize + 1);
+  const timeWidth = Math.max(26, Math.round(timeFontSize * 2.8));
+
   return renderElement(
     "progress",
-    <>
-      <IpodProgressBar
-        currentTime={state.currentTime}
-        duration={state.duration}
-        onSeek={(currentTime) => {
-          if (!isInlineEditingEnabled) {
-            return;
-          }
-
-          onSeek(currentTime);
-          playClick();
-        }}
-        disabled={!isInlineEditingEnabled}
-        trackHeight={screenTokens.progressHeight >= 33 ? 6 : 5}
-      />
-      <div
-        className="mt-[3px] flex items-center justify-between font-semibold leading-none tracking-[-0.02em] text-black"
-        style={{
-          fontVariantNumeric: "tabular-nums",
-          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-          fontSize: Math.max(8, screenTokens.metaFontSize + 1),
-        }}
-      >
+    <div
+      className="flex w-full items-center justify-between font-bold leading-none text-black"
+      style={{
+        fontVariantNumeric: "tabular-nums",
+        fontFamily: "Arial, sans-serif",
+        fontSize: timeFontSize,
+      }}
+    >
+      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
         {renderElement(
           "elapsed-time",
           <EditableTime
@@ -60,21 +49,44 @@ export function IpodPlaybackFooter({
             onChange={onElapsedTimeChange}
             disabled={!isInlineEditingEnabled}
             editLabel="Edit elapsed time"
+            className="block w-full text-right"
           />,
           {
             testId: "elapsed-time",
             style: { zIndex: 1 },
           },
         )}
+      </div>
+      <div className="min-w-0 flex-1 px-1.5">
+        <IpodProgressBar
+          currentTime={state.currentTime}
+          duration={state.duration}
+          onSeek={(currentTime) => {
+            if (!isInlineEditingEnabled) {
+              return;
+            }
+
+            onSeek(currentTime);
+            playClick();
+          }}
+          disabled={!isInlineEditingEnabled}
+          trackHeight={Math.min(
+            14,
+            Math.max(8, Math.round(screenTokens.progressHeight * 0.45)),
+          )}
+        />
+      </div>
+      <div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
         {renderElement(
           "remaining-time",
-          <div className="flex items-center gap-[1px] text-black">
+          <div className="flex items-center text-black">
             <EditableTime
               value={Math.max(state.duration - state.currentTime, 0)}
               isRemaining
               onChange={onRemainingTimeChange}
               disabled={!isInlineEditingEnabled}
               editLabel="Edit remaining time"
+              className="block w-full text-left"
             />
           </div>,
           {
@@ -83,7 +95,7 @@ export function IpodPlaybackFooter({
           },
         )}
       </div>
-    </>,
+    </div>,
     {
       className: "absolute left-0 right-0",
       style: {
@@ -92,6 +104,8 @@ export function IpodPlaybackFooter({
         paddingInline: screenTokens.progressPaddingX,
         paddingTop: screenTokens.progressPaddingTop,
         background: screenChromeTokens.progress.footerBackground,
+        display: "flex",
+        alignItems: "center",
       },
       testId: "screen-progress",
     },
