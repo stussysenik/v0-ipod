@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 interface BuildVersionBadgeProps {
-  initialVersion: string;
+	initialVersion: string;
 }
 
 type NextDataCarrier = Window & {
@@ -13,19 +13,19 @@ type NextDataCarrier = Window & {
 };
 
 function normalizeVersion(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "unknown";
-  if (trimmed === "dev") return "dev";
-  return trimmed.slice(0, 12);
+	const trimmed = raw.trim();
+	if (!trimmed) return "unknown";
+	if (trimmed === "dev") return "dev";
+	return trimmed.slice(0, 12);
 }
 
 export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
-  const [version, setVersion] = useState(() => normalizeVersion(initialVersion));
+	const [version, setVersion] = useState(() => normalizeVersion(initialVersion));
 
-  useEffect(() => {
-    if (version !== "dev" && version !== "unknown") {
-      return;
-    }
+	useEffect(() => {
+		if (version !== "dev" && version !== "unknown") {
+			return;
+		}
 
     const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
     if (runtimeBuildId) {
@@ -33,12 +33,12 @@ export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
     }
   }, [version]);
 
-  const label = useMemo(() => {
-    if (version === "dev") {
-      return "build dev";
-    }
-    return `build ${version}`;
-  }, [version]);
+	const label = useMemo(() => {
+		if (version === "dev") {
+			return "build dev";
+		}
+		return `build ${version}`;
+	}, [version]);
 
   return (
     <div className="fixed left-4 bottom-4 z-50 pointer-events-none select-none">

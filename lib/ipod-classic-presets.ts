@@ -1,4 +1,8 @@
-import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR } from "@/lib/color-manifest";
+// iPod Classic 6th Generation Colors (from reference image)
+// Silver: Light anodized aluminum with light wheel
+// Black: Deep black with dark wheel
+import { getRevisionNotes } from "./ipod-revision-data";
+
 import type { IpodHardwarePresetId } from "@/types/ipod-state";
 
 interface ShellPresetTokens {
@@ -13,58 +17,59 @@ interface ShellPresetTokens {
 }
 
 interface ScreenPresetTokens {
-  frameWidth: number;
-  frameHeight: number;
-  outerRadius: number;
-  innerRadius: number;
-  statusBarHeight: number;
-  statusBarPaddingX: number;
-  contentHeight: number;
-  contentPaddingX: number;
-  contentPaddingTop: number;
-  contentGapX: number;
-  artworkSize: number;
-  artworkColumnWidth: number;
-  progressHeight: number;
-  progressBottom: number;
-  progressPaddingX: number;
-  progressPaddingTop: number;
-  titleFontSize: number;
-  artistFontSize: number;
-  albumFontSize: number;
-  metaFontSize: number;
-  titleMarginBottom: number;
-  artistMarginBottom: number;
-  albumMarginBottom: number;
-  metaMarginBottom: number;
+	frameWidth: number;
+	frameHeight: number;
+	outerRadius: number;
+	innerRadius: number;
+	statusBarHeight: number;
+	statusBarPaddingX: number;
+	contentHeight: number;
+	contentPaddingX: number;
+	contentPaddingTop: number;
+	contentGapX: number;
+	artworkSize: number;
+	artworkColumnWidth: number;
+	progressHeight: number;
+	progressBottom: number;
+	progressPaddingX: number;
+	progressPaddingTop: number;
+	titleFontSize: number;
+	artistFontSize: number;
+	albumFontSize: number;
+	metaFontSize: number;
+	titleMarginBottom: number;
+	artistMarginBottom: number;
+	albumMarginBottom: number;
+	metaMarginBottom: number;
 }
 
 interface WheelPresetTokens {
-  size: number;
-  centerSize: number;
-  menuTopInset: string;
-  sideInset: string;
-  bottomInset: string;
-  labelFontSize: number;
-  labelTracking: string;
-  sideIconSize: number;
-  playPauseIconSize: number;
+	size: number;
+	centerSize: number;
+	menuTopInset: string;
+	sideInset: string;
+	bottomInset: string;
+	labelFontSize: number;
+	labelTracking: string;
+	sideIconSize: number;
+	playPauseIconSize: number;
 }
 
 export interface IpodClassicPresetDefinition {
-  id: IpodHardwarePresetId;
-  label: string;
-  shortLabel: string;
-  yearLabel: string;
-  notes: string;
-  defaultShellColor: string;
-  defaultBackdropColor: string;
-  shell: ShellPresetTokens;
-  screen: ScreenPresetTokens;
-  wheel: WheelPresetTokens;
+	id: IpodHardwarePresetId;
+	label: string;
+	shortLabel: string;
+	yearLabel: string;
+	notes: string;
+	defaultShellColor: string;
+	defaultBackdropColor: string;
+	shell: ShellPresetTokens;
+	screen: ScreenPresetTokens;
+	wheel: WheelPresetTokens;
 }
 
-export const DEFAULT_HARDWARE_PRESET_ID: IpodHardwarePresetId = "classic-2007";
+// Default to black iPod Classic 2008 (6th generation)
+export const DEFAULT_HARDWARE_PRESET_ID: IpodHardwarePresetId = "classic-2008-black";
 
 export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
   {
@@ -239,8 +244,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 
 const PRESET_LOOKUP = new Map(IPOD_CLASSIC_PRESETS.map((preset) => [preset.id, preset]));
 
-export function getIpodClassicPreset(
-  presetId: IpodHardwarePresetId,
-): IpodClassicPresetDefinition {
-  return PRESET_LOOKUP.get(presetId) ?? PRESET_LOOKUP.get(DEFAULT_HARDWARE_PRESET_ID)!;
+export function getIpodClassicPreset(presetId: IpodHardwarePresetId): IpodClassicPresetDefinition {
+	return PRESET_LOOKUP.get(presetId) ?? PRESET_LOOKUP.get(DEFAULT_HARDWARE_PRESET_ID)!;
 }

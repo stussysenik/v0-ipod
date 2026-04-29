@@ -6,6 +6,9 @@ import {
   SONG_SNAPSHOT_SCHEMA_VERSION,
 } from "@/types/ipod-state";
 import { DEFAULT_HARDWARE_PRESET_ID } from "@/lib/ipod-classic-presets";
+import { DEFAULT_SELECTION_KIND, SONG_SNAPSHOT_SCHEMA_VERSION } from "@/types/ipod-state";
+
+import type { SongSnapshot } from "@/types/ipod-state";
 
 export const TEST_SONG_SNAPSHOT: SongSnapshot = {
   schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,

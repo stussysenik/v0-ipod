@@ -1,65 +1,53 @@
-# Pull Request
+## Summary
 
-## 📦 Type of Change
+<!-- One-line summary of the change -->
 
-<!-- Select one by placing an 'x' inside the brackets: [x] -->
+## What Changed
 
-- [ ] `feat`: ✨ New feature
-- [ ] `fix`: 🐛 Bug fix
-- [ ] `docs`: 📝 Documentation update
-- [ ] `style`: 💄 Code style (formatting, no logic change)
-- [ ] `refactor`: ♻️ Code refactoring
-- [ ] `perf`: ⚡ Performance improvement
-- [ ] `test`: 🧪 Tests added/updated
-- [ ] `chore`: 🔧 Build/tooling/dependencies
-- [ ] `ci`: 👷 CI/CD changes
+<!-- Describe what changed and why -->
 
----
+## Type of Change
 
-## 📝 Description
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Performance improvement
+- [ ] Code refactoring
+- [ ] Dependency update
 
-<!-- Provide a clear and concise description of your changes -->
+## Testing
 
+<!-- How was this tested? -->
 
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] E2E tests added/updated
+- [ ] Manual testing performed
 
----
+## Screenshots/Videos
 
-## 🔗 Related Issues
+<!-- For UI changes -->
 
-<!-- Reference related issues using GitHub keywords -->
-<!-- Example: Closes #123, Fixes #456, Relates to #789 -->
+## Checklist
 
-
-
----
-
-## 🎯 Motivation and Context
-
-<!-- Why is this change required? What problem does it solve? -->
-
-
-
----
-
-## 📸 Screenshots / Videos
-
-<!-- If applicable, add screenshots or videos to demonstrate the changes -->
-<!-- For UI changes, include before/after screenshots -->
-
-
-
----
-
-## ✅ Checklist
-
-<!-- Mark completed items with an 'x': [x] -->
+### Pre-Review (Author)
+- [ ] `bun run validate` passes locally
+- [ ] `bun run test` passes
+- [ ] `bun run build` succeeds
+- [ ] No `console.log` or debug code
+- [ ] Commit messages follow Conventional Commits
 
 ### Code Quality
+- [ ] No `any` types
+- [ ] Error handling in place
+- [ ] Edge cases handled
+- [ ] No silent failures
 
-- [ ] Follows [semantic commit conventions](./CONTRIBUTING.md#semantic-commit-conventions)
-- [ ] All commits are properly formatted and descriptive
-- [ ] Code follows project style guidelines
-- [ ] No breaking changes (or marked with `!` and `BREAKING CHANGE:`)
+### Performance
+- [ ] No unnecessary re-renders
+- [ ] Images optimized
+- [ ] No large dependencies added
 
 ### Validation
 
@@ -73,7 +61,7 @@
 - [ ] Prettier formatting applied (`bun run format`)
 - [ ] Full validation passes (`bun run validate`)
 
-### Documentation
+## Additional Notes
 
 - [ ] README.md updated (if needed)
 - [ ] ARCHITECTURE.md updated (if significant technical change)

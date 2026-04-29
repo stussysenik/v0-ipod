@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
+
 // No lucide imports — all wheel icons are hand-crafted SVGs matching real iPod hardware
-import { getSurfaceToken, deriveWheelColors } from "@/lib/color-manifest";
+import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
+
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
 const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -94,8 +96,8 @@ export function IpodClickWheel({
     const wheel = wheelRef.current;
     if (!wheel || disabled) return;
 
-    let activePointerId: number | null = null;
-    let lastAngle = 0;
+		let activePointerId: number | null = null;
+		let lastAngle = 0;
 
     // Rotation is derived from pointer angle around the wheel center so the
     // interaction reads like a physical scrub gesture rather than a slider.
@@ -122,50 +124,50 @@ export function IpodClickWheel({
       event.preventDefault();
     };
 
-    const handlePointerMove = (event: PointerEvent) => {
-      if (activePointerId !== event.pointerId) return;
-      event.preventDefault();
+		const handlePointerMove = (event: PointerEvent) => {
+			if (activePointerId !== event.pointerId) return;
+			event.preventDefault();
 
-      const currentAngle = calculateAngle(event.clientX, event.clientY);
-      let delta = currentAngle - lastAngle;
+			const currentAngle = calculateAngle(event.clientX, event.clientY);
+			let delta = currentAngle - lastAngle;
 
-      if (delta > 180) delta -= 360;
-      if (delta < -180) delta += 360;
+			if (delta > 180) delta -= 360;
+			if (delta < -180) delta += 360;
 
-      if (Math.abs(delta) > 15) {
-        const direction = delta > 0 ? 1 : -1;
-        onSeek(direction);
-        playClick();
-        lastAngle = currentAngle;
-      }
-    };
+			if (Math.abs(delta) > 15) {
+				const direction = delta > 0 ? 1 : -1;
+				onSeek(direction);
+				playClick();
+				lastAngle = currentAngle;
+			}
+		};
 
-    const handlePointerEnd = (event: PointerEvent) => {
-      if (activePointerId !== event.pointerId) return;
-      activePointerId = null;
-      wheel.releasePointerCapture?.(event.pointerId);
-    };
+		const handlePointerEnd = (event: PointerEvent) => {
+			if (activePointerId !== event.pointerId) return;
+			activePointerId = null;
+			wheel.releasePointerCapture?.(event.pointerId);
+		};
 
-    wheel.addEventListener("pointerdown", handlePointerDown, { passive: false });
-    wheel.addEventListener("pointermove", handlePointerMove, { passive: false });
-    wheel.addEventListener("pointerup", handlePointerEnd);
-    wheel.addEventListener("pointercancel", handlePointerEnd);
-    wheel.addEventListener("lostpointercapture", handlePointerEnd);
+		wheel.addEventListener("pointerdown", handlePointerDown, { passive: false });
+		wheel.addEventListener("pointermove", handlePointerMove, { passive: false });
+		wheel.addEventListener("pointerup", handlePointerEnd);
+		wheel.addEventListener("pointercancel", handlePointerEnd);
+		wheel.addEventListener("lostpointercapture", handlePointerEnd);
 
-    return () => {
-      wheel.removeEventListener("pointerdown", handlePointerDown);
-      wheel.removeEventListener("pointermove", handlePointerMove);
-      wheel.removeEventListener("pointerup", handlePointerEnd);
-      wheel.removeEventListener("pointercancel", handlePointerEnd);
-      wheel.removeEventListener("lostpointercapture", handlePointerEnd);
-    };
-  }, [onSeek, playClick, disabled]);
+		return () => {
+			wheel.removeEventListener("pointerdown", handlePointerDown);
+			wheel.removeEventListener("pointermove", handlePointerMove);
+			wheel.removeEventListener("pointerup", handlePointerEnd);
+			wheel.removeEventListener("pointercancel", handlePointerEnd);
+			wheel.removeEventListener("lostpointercapture", handlePointerEnd);
+		};
+	}, [onSeek, playClick, disabled]);
 
-  const handleControlPress = (callback?: () => void) => {
-    if (disabled) return;
-    playClick();
-    callback?.();
-  };
+	const handleControlPress = (callback?: () => void) => {
+		if (disabled) return;
+		playClick();
+		callback?.();
+	};
 
   return (
     <div
@@ -226,29 +228,29 @@ export function IpodClickWheel({
           }}
         />
 
-        {/* Button Labels */}
-        <button
-          type="button"
-          data-testid="click-wheel-menu-button"
-          className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent px-2 py-1 uppercase font-sans leading-none"
-          style={{
-            top: wheelTokens.menuTopInset,
-            color: wheelLabelColor,
-            fontSize: wheelTokens.labelFontSize,
-            fontWeight: 700,
-            letterSpacing: wheelTokens.labelTracking,
-            fontFamily: WHEEL_FONT_FAMILY,
-          }}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            handleControlPress(onMenuPress);
-          }}
-          disabled={disabled}
-          aria-label="Menu"
-        >
-          Menu
-        </button>
+				{/* Button Labels */}
+				<button
+					aria-label="Menu"
+					className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent px-2 py-1 uppercase font-sans leading-none"
+					data-testid="click-wheel-menu-button"
+					disabled={disabled}
+					style={{
+						top: wheelTokens.menuTopInset,
+						color: wheelLabelColor,
+						fontSize: wheelTokens.labelFontSize,
+						fontWeight: 700,
+						letterSpacing: wheelTokens.labelTracking,
+						fontFamily: WHEEL_FONT_FAMILY,
+					}}
+					type="button"
+					onClick={(event) => {
+						event.stopPropagation();
+						handleControlPress(onMenuPress);
+					}}
+					onPointerDown={(event) => event.stopPropagation()}
+				>
+					Menu
+				</button>
 
         <button
           type="button"

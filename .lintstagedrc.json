@@ -1,0 +1,7 @@
+{
+	"*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+	"*.{js,jsx}": ["eslint --fix", "prettier --write"],
+	"*.{json,css,md}": ["prettier --write"],
+	"tailwind.config.ts": ["bun run tokens:extract", "git add design-tokens/tokens.json"],
+	"app/globals.css": ["bun run tokens:extract", "git add design-tokens/tokens.json"]
+}

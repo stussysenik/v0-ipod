@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+
 import {
   BASE_EXPORT_SCENE_HEIGHT,
   BASE_EXPORT_SCENE_WIDTH,
@@ -80,3 +81,5 @@ export const FramedExportStage = forwardRef<HTMLDivElement, FramedExportStagePro
     );
   },
 );
+FramedExportStageInner.displayName = "FramedExportStage";
+export const FramedExportStage = FramedExportStageInner;

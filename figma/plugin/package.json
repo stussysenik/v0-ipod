@@ -1,0 +1,15 @@
+{
+	"name": "ipod-dev-bridge-plugin",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Custom Figma plugin for the iPod Dev Mode Bridge",
+	"scripts": {
+		"build": "bun run build.mjs",
+		"watch": "bun run build.mjs --watch"
+	},
+	"devDependencies": {
+		"@figma/plugin-typings": "^1.100.0",
+		"esbuild": "^0.24.0",
+		"typescript": "^5"
+	}
+}

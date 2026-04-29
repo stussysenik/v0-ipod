@@ -30,8 +30,8 @@ interface CLIOptions {
 function parseArgs(): CLIOptions {
   const args = process.argv.slice(2);
 
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
-    console.log(`
+	if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+		console.log(`
 MinerU PDF Extraction CLI
 
 Usage:
@@ -188,8 +188,8 @@ async function main() {
   console.log("Checking MinerU service...");
   const isHealthy = await checkServiceHealth(options.serviceUrl);
 
-  if (!isHealthy) {
-    console.error(`
+	if (!isHealthy) {
+		console.error(`
 Error: MinerU service is not running at ${options.serviceUrl}
 
 Please start the service first:

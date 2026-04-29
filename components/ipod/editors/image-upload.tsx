@@ -4,40 +4,40 @@ import React, { useId, useRef } from "react";
 import { PLACEHOLDER_LOGO_SRC } from "@/lib/ipod-assets";
 
 interface ImageUploadProps {
-  currentImage: string;
-  onImageChange: (image: string) => void;
-  className?: string;
-  disabled?: boolean;
+	currentImage: string;
+	onImageChange: (image: string) => void;
+	className?: string;
+	disabled?: boolean;
 }
 
 export function ImageUpload({
-  currentImage,
-  onImageChange,
-  className = "",
-  disabled = false,
+	currentImage,
+	onImageChange,
+	className = "",
+	disabled = false,
 }: ImageUploadProps) {
-  const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
+	const inputId = useId();
+	const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (disabled) return;
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result;
-        if (typeof result === "string") {
-          onImageChange(result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (disabled) return;
+		const file = e.target.files?.[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.addEventListener("load", (e) => {
+				const result = e.target?.result;
+				if (typeof result === "string") {
+					onImageChange(result);
+				}
+			});
+			reader.readAsDataURL(file);
+		}
+	};
 
-  // Only use crossOrigin for external URLs, not for data URLs or local images
-  const isDataUrl = currentImage?.startsWith("data:");
-  const isLocalImage = currentImage?.startsWith("/");
-  const needsCrossOrigin = currentImage && !isDataUrl && !isLocalImage;
+	// Only use crossOrigin for external URLs, not for data URLs or local images
+	const isDataUrl = currentImage?.startsWith("data:");
+	const isLocalImage = currentImage?.startsWith("/");
+	const needsCrossOrigin = currentImage && !isDataUrl && !isLocalImage;
 
   return (
     <>

@@ -1,0 +1,25 @@
+{
+	"mcpServers": {
+		"v0": {
+			"command": "npx",
+			"args": ["-y", "v0-mcp@latest"],
+			"env": {
+				"V0_API_KEY": "${V0_API_KEY}"
+			}
+		},
+		"vercel-deploy": {
+			"command": "npx",
+			"args": ["-y", "@vercel/mcp-deploy@latest"],
+			"env": {
+				"VERCEL_TOKEN": "${VERCEL_TOKEN}"
+			}
+		},
+		"github": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-github"],
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+			}
+		}
+	}
+}

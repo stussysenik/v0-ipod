@@ -1,10 +1,10 @@
-# 🤝 Contributing to v0-ipod
+# Contributing to iPod Snapshot
 
-Thank you for your interest in contributing to the iPod Digital Clone project! This guide will help you get started with our development workflow and conventions.
+> "Talk is cheap. Show me the code." - Linus Torvalds
 
----
+This document outlines the contribution guidelines for the iPod Snapshot project. We follow principles inspired by the Linux kernel development process, adapted for modern AI-assisted development workflows.
 
-## 📋 Table of Contents
+## Quick Reference
 
 - [Semantic Commit Conventions](#semantic-commit-conventions)
 - [Development Workflow](#development-workflow)
@@ -13,121 +13,68 @@ Thank you for your interest in contributing to the iPod Digital Clone project! T
 - [Pull Request Process](#pull-request-process)
 - [Project Structure](#project-structure)
 
----
+## Core Principles
 
-## 🎯 Semantic Commit Conventions
+### IPO-Ready from Day One
+We write production-grade code that could withstand public scrutiny:
+- Zero tolerance for technical debt
+- Explicit over implicit
+- Fail fast, fail loud
+- Optimize for reading, not writing
 
-We use **Conventional Commits** format for all commits to enable automated versioning and changelog generation.
+## Philosophy
 
-### Format
+### 1. Code Quality Over Everything
 
-```
-<type>(<scope>): <subject>
+We don't merge broken code. Period. Every contribution must:
+- Pass all static analysis checks
+- Follow type safety strictly (no `any` types)
+- Maintain test coverage
+- Not introduce new warnings
 
-<body>
+### 2. AI-Assisted, Human-Verified
 
-<footer>
-```
+This project embraces AI-assisted development but requires human judgment:
+- AI generates, humans review
+- Every line must be understood by a human
+- No blind copy-pasting from AI outputs
+- "Grill me" mode encouraged for critical review
 
-### Commit Types
+### 3. Small, Atomic Commits
 
-| Type | Description | Version Bump |
-|------|-------------|--------------|
-| `feat` | New feature | Minor (0.x.0) |
-| `fix` | Bug fix | Patch (0.0.x) |
-| `docs` | Documentation only | None |
-| `style` | Code style (formatting, no logic change) | None |
-| `refactor` | Code restructuring (no feature/fix) | None |
-| `perf` | Performance improvement | Patch |
-| `test` | Add/update tests | None |
-| `chore` | Build, tooling, dependencies | None |
-| `ci` | CI/CD changes | None |
+Large changes are the enemy of review:
+- One logical change per commit
+- Maximum ~200 lines per commit (soft limit)
+- Commit messages explain the *why*, not the *what*
 
-### Breaking Changes
+## Development Workflow
 
-Add `BREAKING CHANGE:` in the footer or append `!` after the type/scope:
+### Prerequisites
 
-```
-feat(export)!: change PNG export to return WebP format
-
-BREAKING CHANGE: PNG export now returns WebP format by default.
-Use the new `format` option to request PNG explicitly.
-```
-
-### Examples
-
-#### ✅ Good Examples
+We use **Nix** for reproducible development environments:
 
 ```bash
-# Feature addition
-feat(export): add WebP format support for PNG exports
+# Enter development shell
+nix develop
 
-Implements WebP encoding alongside PNG with quality slider.
-Adds format selection radio buttons in export dialog.
+# Or with legacy nix-shell
+nix-shell
 
-Closes #123
-
----
-
-# Bug fix
-fix(marquee): prevent text overflow in ASCII mode
-
-The marquee calculation didn't account for terminal width
-constraints, causing wrapped text artifacts.
-
----
-
-# Documentation
-docs(readme): add Mermaid architecture diagrams
-
-Visualize export pipeline and component hierarchy for
-easier onboarding.
-
----
-
-# Performance improvement
-perf(gif): optimize frame capture with RAF batching
-
-Reduces GIF export time by ~40% through requestAnimationFrame
-batching instead of sequential captures.
-
-Benchmark results:
-- Before: 2.8s average
-- After: 1.7s average
-- Improvement: 39.3%
-
----
-
-# Refactoring
-refactor(storage): extract localStorage logic to dedicated module
-
-Separates concerns and improves testability. No functional changes.
-
----
-
-# Multiple scopes
-feat(ipod,export): add snapshot export capability
-
-Allows exporting saved snapshots directly without loading.
-Updates export utilities to accept pre-serialized state.
-
----
-
-# Breaking change
-feat(colors)!: migrate to OKLCH color space
-
-BREAKING CHANGE: Color values now use OKLCH instead of RGB.
-Existing saved colors will be automatically converted on first load.
+# Or with direnv (recommended)
+direnv allow
 ```
 
-#### ❌ Bad Examples
+No Docker required. No "works on my machine".
+
+### Setup
 
 ```bash
-# Too vague
-fix: bug fix
+# Clone and enter
+git clone <repo-url>
+cd ipod-snapshot
 
-# No type
-add marquee preview
+# Install dependencies
+bun install
 
 # Wrong scope format
 feat(Export Utils): add webp
@@ -204,128 +151,154 @@ bun run type-check     # TypeScript type checking
 bun run build          # Verify the production build
 ```
 
-### 6. Commit Changes
+### Making Changes
 
-```bash
-# Stage your changes
-git add .
+1. **Create a branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-# Commit with semantic message
-git commit -m "feat(export): add WebP format support"
+2. **Make your changes**
+   - Follow the code style (enforced by Prettier/ESLint)
+   - Add tests if applicable
+   - Update documentation
 
-# Or use interactive commit for detailed message:
-git commit
+3. **Run validation**
+   ```bash
+   npm run validate
+   ```
+   This runs: lint + format-check + type-check
+
+4. **Commit with meaningful messages**
+   ```bash
+   git commit -m "component: Brief description
+   
+   Explain the problem this solves and the approach taken.
+   Reference any related issues."
+   ```
+
+### Commit Message Format
+
+```
+component: Brief summary (50 chars or less)
+
+More detailed explanation if needed. Wrap at 72 characters.
+Explain the problem and solution approach.
+
+- Bullet points for multiple changes
+- Keep each line under 72 characters
+
+Fixes #123
+References #456
 ```
 
-### 7. Push and Create PR
+**Components:**
+- `ipod:` - iPod component changes
+- `3d:` - Three.js/3D related
+- `ui:` - General UI components
+- `lib:` - Utility functions
+- `config:` - Configuration changes
+- `docs:` - Documentation
+- `test:` - Test additions/changes
+- `style:` - Code style changes (formatting)
+- `refactor:` - Refactoring without behavior changes
+- `perf:` - Performance improvements
+- `fix:` - Bug fixes
+- `feat:` - New features
 
-```bash
-# Push to your fork
-git push origin feat/webp-export
+## Code Standards
 
-# Create a pull request on GitHub
-# Use our PR template (auto-populated)
-```
+### TypeScript Strictness
 
----
+We enable all strict TypeScript options:
+- `noUnusedLocals` - Clean up dead code
+- `noUncheckedIndexedAccess` - Handle undefined in index access
+- `exactOptionalPropertyTypes` - Distinguish undefined from missing
+- `verbatimModuleSyntax` - Explicit type imports
 
-## 🎨 Code Style Guidelines
+**No `any` types allowed.** Use `unknown` and type guards instead.
 
-### TypeScript
+### Static Analysis
 
-- **Strict mode**: All TypeScript strict checks enabled
-- **Type safety**: Avoid `any`, use proper types or `unknown`
-- **Interfaces over types**: Prefer `interface` for object shapes
-- **Explicit return types**: For public functions and exports
+ESLint configuration enforces:
+- All unused variables must be prefixed with `_`
+- Consistent type imports (`import type { ... }`)
+- Prefer `const` over `let`
+- No `var` declarations
+- Prefer template literals over string concatenation
+- Import ordering and grouping
+- Unicorn rules for modern JavaScript
 
-```typescript
-// ✅ Good
-interface SongMetadata {
-  title: string;
-  artist: string;
-  duration: number;
-}
+### Code Style
 
-function formatDuration(seconds: number): string {
-  // Implementation
-}
+Enforced by Prettier and EditorConfig:
+- 2 spaces indentation
+- Double quotes for strings
+- Trailing commas
+- 90 character line width
+- LF line endings
+- Final newline
 
-// ❌ Bad
-type SongMetadata = {
-  title: any;
-  artist: any;
-}
+### File Naming
 
-function formatDuration(seconds) {
-  // Implementation
-}
-```
+- Components: `kebab-case.tsx` (e.g., `ipod-classic.tsx`)
+- Utilities: `kebab-case.ts` (e.g., `color-manifest.ts`)
+- Tests: `*.spec.ts` or `*.test.ts`
+- Styles: `*.css` or `*.module.css`
 
-### Component Structure
+## AI-Assisted Development Guidelines
 
-```typescript
-// 1. Imports (grouped and sorted)
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { formatDuration } from "@/lib/utils";
+### When Using AI Tools
 
-// 2. Types/Interfaces
-interface IPodScreenProps {
-  metadata: SongMetadata;
-  onEdit: (key: string, value: string) => void;
-}
+1. **Review every suggestion**
+   - AI makes mistakes. It's your job to catch them.
+   - Don't accept changes you don't understand.
 
-// 3. Component
-export function IPodScreen({ metadata, onEdit }: IPodScreenProps) {
-  // 3a. Hooks
-  const [isEditing, setIsEditing] = useState(false);
+2. **Use "Grill Me" mode**
+   - Activate critical review: "grill me on this approach"
+   - Challenge assumptions the AI makes
+   - Ask for alternatives
 
-  // 3b. Derived state
-  const formattedDuration = formatDuration(metadata.duration);
+3. **Validate AI output**
+   - Run the type checker
+   - Run the linter
+   - Run tests
+   - Test manually in browser
 
-  // 3c. Event handlers
-  const handleEdit = (key: string, value: string) => {
-    onEdit(key, value);
-    setIsEditing(false);
-  };
+4. **Maintain authorship**
+   - You're responsible for code you commit
+   - AI is a tool, not a substitute for understanding
 
-  // 3d. Effects
-  useEffect(() => {
-    // Side effects
-  }, [metadata]);
+### AI Skill References
 
-  // 3e. Render
-  return (
-    <div className="ipod-screen">
-      {/* JSX */}
-    </div>
-  );
-}
-```
+This project uses several AI skills:
+- `aiden-react` - React performance (Million.js patterns)
+- `vercel-react-best-practices` - Vercel's React rules
+- `emil-design-eng` - UI/animation quality
+- `impeccable` - Design excellence commands
+- `grill-me` - Critical review mode
 
-### Naming Conventions
+Reference these when working with AI assistants.
 
-- **Components**: PascalCase (`IPodScreen`, `ClickWheel`)
-- **Functions**: camelCase (`formatDuration`, `exportAsPNG`)
-- **Constants**: UPPER_SNAKE_CASE (`MAX_SNAPSHOT_COUNT`)
-- **Files**: kebab-case (`ipod-screen.tsx`, `export-utils.ts`)
-- **CSS Classes**: kebab-case with BEM (`.ipod-screen__title`)
+## Design Guidelines
 
-### Formatting
+### UI/UX Standards
 
-We use **Prettier** with the following configuration:
+Follow the Impeccable skill guidelines:
+- Use `/audit` for accessibility checks
+- Use `/polish` for final passes
+- Use `/typeset` for typography fixes
+- Avoid "AI slop" aesthetics
+- Maintain consistent spacing
+- Support reduced motion
 
-```json
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": false,
-  "tabWidth": 2,
-  "printWidth": 80
-}
-```
+### Performance Requirements
 
-**Auto-format before committing:**
+- First Contentful Paint: < 1.5s
+- No layout shifts during load
+- 60fps for animations
+- Properly optimized images
+- Minimal JavaScript for initial load
 
 ```bash
 bun run format
@@ -361,7 +334,7 @@ viewports before opening a PR.
 
 ---
 
-## 🔍 Pull Request Process
+> "Given enough eyeballs, all bugs are shallow." - Linus's Law
 
 ```mermaid
 flowchart LR

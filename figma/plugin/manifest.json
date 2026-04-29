@@ -1,0 +1,15 @@
+{
+	"name": "iPod Dev Bridge",
+	"id": "ipod-dev-bridge",
+	"api": "1.0.0",
+	"main": "dist/code.js",
+	"ui": "dist/ui.html",
+	"editorType": ["figma"],
+	"capabilities": [],
+	"enableProposedApi": false,
+	"networkAccess": {
+		"allowedDomains": ["ws://localhost:7733", "http://localhost:7733"],
+		"devAllowedDomains": ["ws://localhost:*", "http://localhost:*"]
+	},
+	"documentAccess": "dynamic-page"
+}

@@ -1,0 +1,26 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Commit message format check
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -n1 "$COMMIT_MSG_FILE")
+
+# Conventional Commit pattern
+PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .{1,100}$"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo "❌ Invalid commit message format"
+  echo ""
+  echo "Expected format: <type>[optional scope]: <description>"
+  echo ""
+  echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+  echo ""
+  echo "Examples:"
+  echo "  feat: add user authentication"
+  echo "  fix(api): resolve null pointer exception"
+  echo "  docs(readme): update installation instructions"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Commit message format valid"

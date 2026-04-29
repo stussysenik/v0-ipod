@@ -1,7 +1,8 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
+
 import type React from "react";
-import { useState, useRef, useCallback } from "react";
 
 interface IpodProgressBarProps {
   currentTime: number;
@@ -38,35 +39,35 @@ export function IpodProgressBar({
     [duration, onSeek],
   );
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    setIsDragging(true);
-    setActivePointerId(e.pointerId);
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-    handleDrag(e.clientX);
-  };
+	const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (disabled) return;
+		setIsDragging(true);
+		setActivePointerId(e.pointerId);
+		e.currentTarget.setPointerCapture?.(e.pointerId);
+		handleDrag(e.clientX);
+	};
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    if (!isDragging || activePointerId !== e.pointerId) return;
-    handleDrag(e.clientX);
-  };
+	const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (disabled) return;
+		if (!isDragging || activePointerId !== e.pointerId) return;
+		handleDrag(e.clientX);
+	};
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    if (activePointerId !== e.pointerId) return;
-    setIsDragging(false);
-    setActivePointerId(null);
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-  };
+	const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (disabled) return;
+		if (activePointerId !== e.pointerId) return;
+		setIsDragging(false);
+		setActivePointerId(null);
+		e.currentTarget.releasePointerCapture?.(e.pointerId);
+	};
 
-  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    if (activePointerId !== e.pointerId) return;
-    setIsDragging(false);
-    setActivePointerId(null);
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-  };
+	const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+		if (disabled) return;
+		if (activePointerId !== e.pointerId) return;
+		setIsDragging(false);
+		setActivePointerId(null);
+		e.currentTarget.releasePointerCapture?.(e.pointerId);
+	};
 
   const safeDuration = Math.max(duration, 1);
   const progress = Math.min(Math.max((currentTime / safeDuration) * 100, 0), 100);

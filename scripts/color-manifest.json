@@ -1,7 +1,7 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.0.0",
-  "description": "Canonical color token manifest for iPod Classic anniversary tribute. All color decisions must be auditable through dcal.",
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"version": "1.0.0",
+	"description": "Canonical color token manifest for iPod Classic anniversary tribute. All color decisions must be auditable through dcal.",
 
   "authenticCaseColors": [
     {
@@ -66,324 +66,449 @@
     }
   ],
 
-  "authenticFinishes": [
-    {
-      "id": "white-1g",
-      "label": "White",
-      "generation": "1st–3rd Gen",
-      "year": 2001,
-      "hex": "#FFFFFF",
-      "wheelVariant": "light",
-      "notes": "Original polycarbonate white, 2001–2004"
-    },
-    {
-      "id": "white-4g",
-      "label": "White",
-      "generation": "4th Gen (Click Wheel)",
-      "year": 2004,
-      "hex": "#F7F7F7",
-      "wheelVariant": "light",
-      "notes": "Slightly warm white, first Click Wheel model"
-    },
-    {
-      "id": "white-5g",
-      "label": "White",
-      "generation": "5th Gen (Video)",
-      "year": 2005,
-      "hex": "#F5F5F0",
-      "wheelVariant": "light",
-      "notes": "Warm ivory white, thinner profile"
-    },
-    {
-      "id": "black-5g",
-      "label": "Black",
-      "generation": "5th Gen (Video)",
-      "year": 2005,
-      "hex": "#1A1A1A",
-      "wheelVariant": "dark",
-      "notes": "First black iPod, anodized aluminum back"
-    },
-    {
-      "id": "silver-6g",
-      "label": "Silver",
-      "generation": "Classic 6th Gen",
-      "year": 2007,
-      "hex": "#C0C0C0",
-      "wheelVariant": "light",
-      "notes": "Anodized aluminum front, thinner 80/160GB"
-    },
-    {
-      "id": "black-6g",
-      "label": "Black",
-      "generation": "Classic 6th Gen",
-      "year": 2007,
-      "hex": "#1C1C1E",
-      "wheelVariant": "dark",
-      "notes": "Deep black anodized aluminum, 160GB"
-    },
-    {
-      "id": "charcoal-7g",
-      "label": "Charcoal",
-      "generation": "Classic 7th Gen",
-      "year": 2008,
-      "hex": "#2D2F34",
-      "wheelVariant": "dark",
-      "notes": "Space grey predecessor, late 2008 revision"
-    },
-    {
-      "id": "black-7g",
-      "label": "Black",
-      "generation": "Classic 7th Gen",
-      "year": 2009,
-      "hex": "#1A1B1F",
-      "wheelVariant": "dark",
-      "notes": "Final black Classic, 160GB, last iPod Classic"
-    },
-    {
-      "id": "u2-special",
-      "label": "U2 Special Edition",
-      "generation": "U2 Edition",
-      "year": 2004,
-      "hex": "#111111",
-      "wheelVariant": "dark",
-      "notes": "Black case, red click wheel accent"
-    },
-    {
-      "id": "product-red",
-      "label": "(PRODUCT)RED",
-      "generation": "Special Edition",
-      "year": 2006,
-      "hex": "#CC0000",
-      "wheelVariant": "dark",
-      "notes": "AIDS charity edition, red anodized aluminum"
-    }
-  ],
+	"authenticFinishes": [
+		{
+			"id": "white-1g",
+			"label": "White",
+			"generation": "1st–3rd Gen",
+			"year": 2001,
+			"hex": "#FFFFFF",
+			"wheelVariant": "light",
+			"notes": "Original polycarbonate white, 2001–2004"
+		},
+		{
+			"id": "white-4g",
+			"label": "White",
+			"generation": "4th Gen (Click Wheel)",
+			"year": 2004,
+			"hex": "#F7F7F7",
+			"wheelVariant": "light",
+			"notes": "Slightly warm white, first Click Wheel model"
+		},
+		{
+			"id": "white-5g",
+			"label": "White",
+			"generation": "5th Gen (Video)",
+			"year": 2005,
+			"hex": "#F5F5F0",
+			"wheelVariant": "light",
+			"notes": "Warm ivory white, thinner profile"
+		},
+		{
+			"id": "black-5g",
+			"label": "Black",
+			"generation": "5th Gen (Video)",
+			"year": 2005,
+			"hex": "#1A1A1A",
+			"wheelVariant": "dark",
+			"notes": "First black iPod, anodized aluminum back"
+		},
+		{
+			"id": "silver-6g",
+			"label": "Silver",
+			"generation": "Classic 6th Gen",
+			"year": 2007,
+			"hex": "#C0C0C0",
+			"wheelVariant": "light",
+			"notes": "Anodized aluminum front, thinner 80/160GB"
+		},
+		{
+			"id": "black-6g",
+			"label": "Black",
+			"generation": "Classic 6th Gen",
+			"year": 2007,
+			"hex": "#1C1C1E",
+			"wheelVariant": "dark",
+			"notes": "Deep black anodized aluminum, 160GB"
+		},
+		{
+			"id": "charcoal-7g",
+			"label": "Charcoal",
+			"generation": "Classic 7th Gen",
+			"year": 2008,
+			"hex": "#2D2F34",
+			"wheelVariant": "dark",
+			"notes": "Space grey predecessor, late 2008 revision"
+		},
+		{
+			"id": "black-7g",
+			"label": "Black",
+			"generation": "Classic 7th Gen",
+			"year": 2009,
+			"hex": "#1A1B1F",
+			"wheelVariant": "dark",
+			"notes": "Final black Classic, 160GB, last iPod Classic"
+		},
+		{
+			"id": "u2-special",
+			"label": "U2 Special Edition",
+			"generation": "U2 Edition",
+			"year": 2004,
+			"hex": "#111111",
+			"wheelVariant": "dark",
+			"notes": "Black case, red click wheel accent"
+		},
+		{
+			"id": "product-red",
+			"label": "(PRODUCT)RED",
+			"generation": "Special Edition",
+			"year": 2006,
+			"hex": "#CC0000",
+			"wheelVariant": "dark",
+			"notes": "AIDS charity edition, red anodized aluminum"
+		}
+	],
 
-  "surfaceTokens": {
-    "shell.default": { "hex": "#FBFBF8", "role": "shell", "family": "neutral" },
-    "backdrop.default": { "hex": "#FEFFFF", "role": "backdrop", "family": "neutral" },
+	"surfaceTokens": {
+		"shell.default": {
+			"hex": "#1A1A1A",
+			"role": "shell",
+			"family": "black",
+			"note": "iPod 6G Black case"
+		},
+		"shell.silver": {
+			"hex": "#C8C9CB",
+			"role": "shell",
+			"family": "silver",
+			"note": "iPod 6G Silver case"
+		},
+		"backdrop.default": {
+			"hex": "#FFFFFF",
+			"role": "backdrop",
+			"family": "neutral",
+			"note": "Stage background"
+		},
 
-    "wheel.border": { "hex": "#DADCDD", "role": "wheel", "family": "neutral" },
-    "wheel.gradient.from": { "hex": "#FAFAF8", "role": "wheel", "family": "neutral" },
-    "wheel.gradient.via": { "hex": "#F3F3F0", "role": "wheel", "family": "neutral" },
-    "wheel.gradient.to": { "hex": "#EAEAE6", "role": "wheel", "family": "neutral" },
+		"wheel.dark.surface": {
+			"hex": "#1C1C1E",
+			"role": "wheel",
+			"family": "black",
+			"note": "Dark wheel surface - iPod 6G Black"
+		},
+		"wheel.dark.border": {
+			"hex": "#2C2C2E",
+			"role": "wheel",
+			"family": "black",
+			"note": "Dark wheel border"
+		},
+		"wheel.dark.label": {
+			"hex": "#FFFFFF",
+			"role": "text",
+			"family": "black",
+			"note": "Dark wheel labels"
+		},
+		"wheel.dark.center": {
+			"hex": "#2C2C2E",
+			"role": "wheel-center",
+			"family": "black",
+			"note": "Dark wheel center"
+		},
+		"wheel.dark.center_border": {
+			"hex": "#3A3A3C",
+			"role": "wheel-center",
+			"family": "black",
+			"note": "Dark center border"
+		},
 
-    "wheel.center.border": {
-      "hex": "#E3E5E6",
-      "role": "wheel-center",
-      "family": "neutral"
-    },
-    "wheel.center.from": {
-      "hex": "#FBFBFA",
-      "role": "wheel-center",
-      "family": "neutral"
-    },
-    "wheel.center.via": { "hex": "#F4F4F2", "role": "wheel-center", "family": "neutral" },
-    "wheel.center.to": { "hex": "#E8E8E4", "role": "wheel-center", "family": "neutral" },
+		"wheel.light.surface": {
+			"hex": "#F5F5F7",
+			"role": "wheel",
+			"family": "silver",
+			"note": "Light wheel surface - iPod 6G Silver"
+		},
+		"wheel.light.border": {
+			"hex": "#D1D1D6",
+			"role": "wheel",
+			"family": "silver",
+			"note": "Light wheel border"
+		},
+		"wheel.light.label": {
+			"hex": "#8E8E93",
+			"role": "text",
+			"family": "silver",
+			"note": "Light wheel labels"
+		},
+		"wheel.light.center": {
+			"hex": "#E5E5EA",
+			"role": "wheel-center",
+			"family": "silver",
+			"note": "Light wheel center"
+		},
+		"wheel.light.center_border": {
+			"hex": "#D1D1D6",
+			"role": "wheel-center",
+			"family": "silver",
+			"note": "Light center border"
+		},
 
-    "wheel.label": { "hex": "#808791", "role": "text", "family": "cool" },
+		"wheel.border": {
+			"hex": "#2C2C2E",
+			"role": "wheel",
+			"family": "black",
+			"note": "Default wheel border (legacy)"
+		},
+		"wheel.gradient.from": {
+			"hex": "#1C1C1E",
+			"role": "wheel",
+			"family": "black",
+			"note": "Default wheel gradient from (legacy)"
+		},
+		"wheel.gradient.via": {
+			"hex": "#202022",
+			"role": "wheel",
+			"family": "black",
+			"note": "Default wheel gradient via (legacy)"
+		},
+		"wheel.gradient.to": {
+			"hex": "#252527",
+			"role": "wheel",
+			"family": "black",
+			"note": "Default wheel gradient to (legacy)"
+		},
+		"wheel.center.border": {
+			"hex": "#3A3A3C",
+			"role": "wheel-center",
+			"family": "black",
+			"note": "Default wheel center border (legacy)"
+		},
+		"wheel.center.from": {
+			"hex": "#2C2C2E",
+			"role": "wheel-center",
+			"family": "black",
+			"note": "Default wheel center from (legacy)"
+		},
+		"wheel.center.via": {
+			"hex": "#303032",
+			"role": "wheel-center",
+			"family": "black",
+			"note": "Default wheel center via (legacy)"
+		},
+		"wheel.center.to": {
+			"hex": "#353537",
+			"role": "wheel-center",
+			"family": "black",
+			"note": "Default wheel center to (legacy)"
+		},
+		"wheel.label": {
+			"hex": "#FFFFFF",
+			"role": "text",
+			"family": "cool",
+			"note": "Default wheel labels (legacy)"
+		},
 
-    "screen.surround.top": {
-      "hex": "#0D0D0D",
-      "role": "screen-surround",
-      "family": "neutral"
-    },
-    "screen.surround.mid": {
-      "hex": "#181818",
-      "role": "screen-surround",
-      "family": "neutral"
-    },
-    "screen.surround.bottom": {
-      "hex": "#060606",
-      "role": "screen-surround",
-      "family": "neutral"
-    },
-    "screen.border": { "hex": "#525252", "role": "border", "family": "neutral" },
+		"screen.surround.top": {
+			"hex": "#0D0D0D",
+			"role": "screen-surround",
+			"family": "neutral"
+		},
+		"screen.surround.mid": {
+			"hex": "#181818",
+			"role": "screen-surround",
+			"family": "neutral"
+		},
+		"screen.surround.bottom": {
+			"hex": "#060606",
+			"role": "screen-surround",
+			"family": "neutral"
+		},
+		"screen.border": { "hex": "#525252", "role": "border", "family": "neutral" },
 
-    "screen.statusbar.bg.from": {
-      "hex": "#F1F1F1",
-      "role": "screen-content",
-      "family": "neutral"
-    },
-    "screen.statusbar.bg.to": {
-      "hex": "#CDCDCD",
-      "role": "screen-content",
-      "family": "neutral"
-    },
-    "screen.content.bg": {
-      "hex": "#FFFFFF",
-      "role": "screen-content",
-      "family": "neutral"
-    }
-  },
+		"screen.statusbar.bg.from": {
+			"hex": "#F1F1F1",
+			"role": "screen-content",
+			"family": "neutral"
+		},
+		"screen.statusbar.bg.to": {
+			"hex": "#CDCDCD",
+			"role": "screen-content",
+			"family": "neutral"
+		},
+		"screen.content.bg": {
+			"hex": "#FFFFFF",
+			"role": "screen-content",
+			"family": "neutral"
+		}
+	},
 
-  "textTokens": {
-    "screen.title": { "hex": "#000000", "role": "text", "against": "screen.content.bg" },
-    "screen.artist": { "hex": "#595959", "role": "text", "against": "screen.content.bg" },
-    "screen.album": { "hex": "#757575", "role": "text", "against": "screen.content.bg" },
-    "screen.trackInfo": {
-      "hex": "#868686",
-      "role": "text",
-      "against": "screen.content.bg"
-    },
-    "screen.statusbar.text": {
-      "hex": "#000000",
-      "role": "text",
-      "against": "screen.statusbar.bg.from",
-      "opacity": 0.85
-    }
-  },
+	"textTokens": {
+		"screen.title": {
+			"hex": "#000000",
+			"role": "text",
+			"against": "screen.content.bg"
+		},
+		"screen.artist": {
+			"hex": "#595959",
+			"role": "text",
+			"against": "screen.content.bg"
+		},
+		"screen.album": {
+			"hex": "#757575",
+			"role": "text",
+			"against": "screen.content.bg"
+		},
+		"screen.trackInfo": {
+			"hex": "#868686",
+			"role": "text",
+			"against": "screen.content.bg"
+		},
+		"screen.statusbar.text": {
+			"hex": "#000000",
+			"role": "text",
+			"against": "screen.statusbar.bg.from",
+			"opacity": 0.85
+		}
+	},
 
-  "greyFamilies": {
-    "neutral": {
-      "label": "Neutral",
-      "oklchHue": 0,
-      "oklchChroma": 0,
-      "description": "Pure achromatic"
-    },
-    "warm": {
-      "label": "Warm",
-      "oklchHue": 85,
-      "oklchChroma": 0.008,
-      "description": "Yellow undertone"
-    },
-    "cool": {
-      "label": "Cool",
-      "oklchHue": 260,
-      "oklchChroma": 0.008,
-      "description": "Blue undertone"
-    },
-    "greige": {
-      "label": "Greige",
-      "oklchHue": 100,
-      "oklchChroma": 0.006,
-      "description": "Yellow-green muted"
-    },
-    "sage": {
-      "label": "Sage",
-      "oklchHue": 135,
-      "oklchChroma": 0.01,
-      "description": "Green undertone"
-    },
-    "lavender": {
-      "label": "Lavender",
-      "oklchHue": 290,
-      "oklchChroma": 0.012,
-      "description": "Blue-violet undertone"
-    }
-  },
+	"greyFamilies": {
+		"neutral": {
+			"label": "Neutral",
+			"oklchHue": 0,
+			"oklchChroma": 0,
+			"description": "Pure achromatic"
+		},
+		"warm": {
+			"label": "Warm",
+			"oklchHue": 85,
+			"oklchChroma": 0.008,
+			"description": "Yellow undertone"
+		},
+		"cool": {
+			"label": "Cool",
+			"oklchHue": 260,
+			"oklchChroma": 0.008,
+			"description": "Blue undertone"
+		},
+		"greige": {
+			"label": "Greige",
+			"oklchHue": 100,
+			"oklchChroma": 0.006,
+			"description": "Yellow-green muted"
+		},
+		"sage": {
+			"label": "Sage",
+			"oklchHue": 135,
+			"oklchChroma": 0.01,
+			"description": "Green undertone"
+		},
+		"lavender": {
+			"label": "Lavender",
+			"oklchHue": 290,
+			"oklchChroma": 0.012,
+			"description": "Blue-violet undertone"
+		}
+	},
 
-  "greyLightnessStops": [
-    1.0, 0.975, 0.95, 0.925, 0.9, 0.88, 0.84, 0.8, 0.76, 0.72, 0.68, 0.63, 0.58, 0.53,
-    0.48, 0.42, 0.37, 0.32, 0.27, 0.22, 0.15, 0.08, 0.0
-  ],
+	"greyLightnessStops": [
+		1.0, 0.975, 0.95, 0.925, 0.9, 0.88, 0.84, 0.8, 0.76, 0.72, 0.68, 0.63, 0.58, 0.53,
+		0.48, 0.42, 0.37, 0.32, 0.27, 0.22, 0.15, 0.08, 0.0
+	],
 
-  "oklchPalettes": {
-    "case": {
-      "lightness": 0.72,
-      "chroma": 0.15,
-      "steps": 18,
-      "hueOffset": 0
-    },
-    "background": {
-      "lightness": 0.88,
-      "chroma": 0.07,
-      "steps": 14,
-      "hueOffset": 30
-    }
-  },
+	"oklchPalettes": {
+		"case": {
+			"lightness": 0.72,
+			"chroma": 0.15,
+			"steps": 18,
+			"hueOffset": 0
+		},
+		"background": {
+			"lightness": 0.88,
+			"chroma": 0.07,
+			"steps": 14,
+			"hueOffset": 30
+		}
+	},
 
-  "curatedFavorites": {
-    "case": [
-      { "label": "Bright White", "hex": "#FBFBF8" },
-      { "label": "Pearl Gray", "hex": "#E4E4E6" },
-      { "label": "Silver", "hex": "#D9DADC" },
-      { "label": "Brushed Steel", "hex": "#C7C9CD" },
-      { "label": "Gunmetal", "hex": "#535861" },
-      { "label": "Black", "hex": "#1B1B1F" }
-    ],
-    "background": [
-      { "label": "Paper White", "hex": "#F3F3EE" },
-      { "label": "Studio Warm", "hex": "#E5E5E5" },
-      { "label": "Cloud Gray", "hex": "#DBDCDD" },
-      { "label": "Slate", "hex": "#A9AFB6" },
-      { "label": "Night Graphite", "hex": "#5F6772" }
-    ]
-  },
+	"curatedFavorites": {
+		"case": [
+			{ "label": "Bright White", "hex": "#FBFBF8" },
+			{ "label": "Pearl Gray", "hex": "#E4E4E6" },
+			{ "label": "Silver", "hex": "#D9DADC" },
+			{ "label": "Brushed Steel", "hex": "#C7C9CD" },
+			{ "label": "Gunmetal", "hex": "#535861" },
+			{ "label": "Black", "hex": "#1B1B1F" }
+		],
+		"background": [
+			{ "label": "Paper White", "hex": "#F3F3EE" },
+			{ "label": "Studio Warm", "hex": "#E5E5E5" },
+			{ "label": "Cloud Gray", "hex": "#DBDCDD" },
+			{ "label": "Slate", "hex": "#A9AFB6" },
+			{ "label": "Night Graphite", "hex": "#5F6772" }
+		]
+	},
 
-  "relationships": {
-    "contrastPairs": [
-      {
-        "description": "Title on screen content",
-        "fg": "screen.title",
-        "bg": "screen.content.bg",
-        "minRatio": 4.5,
-        "level": "AA"
-      },
-      {
-        "description": "Artist on screen content",
-        "fg": "screen.artist",
-        "bg": "screen.content.bg",
-        "minRatio": 4.5,
-        "level": "AA"
-      },
-      {
-        "description": "Album on screen content",
-        "fg": "screen.album",
-        "bg": "screen.content.bg",
-        "minRatio": 4.5,
-        "level": "AA"
-      },
-      {
-        "description": "Track info on screen content",
-        "fg": "screen.trackInfo",
-        "bg": "screen.content.bg",
-        "minRatio": 3.0,
-        "level": "AA-large"
-      },
-      {
-        "description": "Wheel label on wheel surface",
-        "fg": "wheel.label",
-        "bg": "wheel.gradient.via",
-        "minRatio": 3.0,
-        "level": "AA-large"
-      },
-      {
-        "description": "Status bar text on status bg",
-        "fg": "screen.statusbar.text",
-        "bg": "screen.statusbar.bg.from",
-        "minRatio": 4.5,
-        "level": "AA"
-      }
-    ],
-    "perceptualRules": [
-      {
-        "description": "Backdrop distinct from shell",
-        "a": "shell.default",
-        "b": "backdrop.default",
-        "metric": "deltaE00",
-        "minValue": 3.0
-      },
-      {
-        "description": "Shell-to-wheel coherence",
-        "a": "shell.default",
-        "b": "wheel.gradient.via",
-        "metric": "deltaE00",
-        "maxValue": 3.0
-      },
-      {
-        "description": "Screen surround contrast to shell",
-        "a": "screen.surround.mid",
-        "b": "shell.default",
-        "metric": "contrastRatio",
-        "minValue": 3.0
-      }
-    ],
-    "greyRampRules": {
-      "adjacentStopMinDeltaE00": 2.0,
-      "undertoneVsNeutralMinDeltaE00": 1.0,
-      "undertoneVsNeutralMaxDeltaE00": 4.0,
-      "authenticCaseMaxDeltaE00FromReference": 1.0
-    }
-  }
+	"relationships": {
+		"contrastPairs": [
+			{
+				"description": "Title on screen content",
+				"fg": "screen.title",
+				"bg": "screen.content.bg",
+				"minRatio": 4.5,
+				"level": "AA"
+			},
+			{
+				"description": "Artist on screen content",
+				"fg": "screen.artist",
+				"bg": "screen.content.bg",
+				"minRatio": 4.5,
+				"level": "AA"
+			},
+			{
+				"description": "Album on screen content",
+				"fg": "screen.album",
+				"bg": "screen.content.bg",
+				"minRatio": 4.5,
+				"level": "AA"
+			},
+			{
+				"description": "Track info on screen content",
+				"fg": "screen.trackInfo",
+				"bg": "screen.content.bg",
+				"minRatio": 3.0,
+				"level": "AA-large"
+			},
+			{
+				"description": "Wheel label on wheel surface",
+				"fg": "wheel.label",
+				"bg": "wheel.gradient.via",
+				"minRatio": 3.0,
+				"level": "AA-large"
+			},
+			{
+				"description": "Status bar text on status bg",
+				"fg": "screen.statusbar.text",
+				"bg": "screen.statusbar.bg.from",
+				"minRatio": 4.5,
+				"level": "AA"
+			}
+		],
+		"perceptualRules": [
+			{
+				"description": "Backdrop distinct from shell",
+				"a": "shell.default",
+				"b": "backdrop.default",
+				"metric": "deltaE00",
+				"minValue": 3.0
+			},
+			{
+				"description": "Shell-to-wheel coherence",
+				"a": "shell.default",
+				"b": "wheel.gradient.via",
+				"metric": "deltaE00",
+				"maxValue": 3.0
+			},
+			{
+				"description": "Screen surround contrast to shell",
+				"a": "screen.surround.mid",
+				"b": "shell.default",
+				"metric": "contrastRatio",
+				"minValue": 3.0
+			}
+		],
+		"greyRampRules": {
+			"adjacentStopMinDeltaE00": 2.0,
+			"undertoneVsNeutralMinDeltaE00": 1.0,
+			"undertoneVsNeutralMaxDeltaE00": 4.0,
+			"authenticCaseMaxDeltaE00FromReference": 1.0
+		}
+	}
 }

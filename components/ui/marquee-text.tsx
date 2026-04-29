@@ -8,78 +8,77 @@ import {
 } from "@/lib/marquee";
 
 interface MarqueeTextProps {
-  text: string;
-  className?: string;
-  dataTestId?: string;
-  preview?: boolean;
-  captureReady?: boolean;
-  onOverflowChange?: (overflow: boolean) => void;
+	text: string;
+	className?: string;
+	dataTestId?: string;
+	preview?: boolean;
+	captureReady?: boolean;
+	onOverflowChange?: (overflow: boolean) => void;
 }
 
 interface MarqueeMeasurements {
-  containerWidth: number;
-  contentWidth: number;
-  gapWidth: number;
+	containerWidth: number;
+	contentWidth: number;
+	gapWidth: number;
 }
 
 const EMPTY_MEASUREMENTS: MarqueeMeasurements = {
-  containerWidth: 0,
-  contentWidth: 0,
-  gapWidth: 0,
+	containerWidth: 0,
+	contentWidth: 0,
+	gapWidth: 0,
 };
 
 export function MarqueeText({
-  text,
-  className = "",
-  dataTestId,
-  preview = false,
-  captureReady = false,
-  onOverflowChange,
+	text,
+	className = "",
+	dataTestId,
+	preview = false,
+	captureReady = false,
+	onOverflowChange,
 }: MarqueeTextProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const measurementRef = useRef<HTMLSpanElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const [measurements, setMeasurements] =
-    useState<MarqueeMeasurements>(EMPTY_MEASUREMENTS);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const trackRef = useRef<HTMLDivElement>(null);
+	const measurementRef = useRef<HTMLSpanElement>(null);
+	const animationFrameRef = useRef<number | null>(null);
+	const [measurements, setMeasurements] = useState<MarqueeMeasurements>(EMPTY_MEASUREMENTS);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    const measurementCopy = measurementRef.current;
-    if (!container || !measurementCopy) return;
+	useEffect(() => {
+		const container = containerRef.current;
+		const measurementCopy = measurementRef.current;
+		if (!container || !measurementCopy) return;
 
-    const measure = () => {
-      const containerWidth = Math.ceil(container.clientWidth);
-      const contentWidth = Math.ceil(measurementCopy.scrollWidth);
-      const gapWidth = getMarqueeGapWidth(contentWidth, text.length);
-      setMeasurements({ containerWidth, contentWidth, gapWidth });
-    };
+		const measure = () => {
+			const containerWidth = Math.ceil(container.clientWidth);
+			const contentWidth = Math.ceil(measurementCopy.scrollWidth);
+			const gapWidth = getMarqueeGapWidth(contentWidth, text.length);
+			setMeasurements({ containerWidth, contentWidth, gapWidth });
+		};
 
-    measure();
+		measure();
 
     const resizeObserver =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => measure()) : null;
 
-    resizeObserver?.observe(container);
-    resizeObserver?.observe(measurementCopy);
-    window.addEventListener("resize", measure);
+		resizeObserver?.observe(container);
+		resizeObserver?.observe(measurementCopy);
+		window.addEventListener("resize", measure);
 
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [text, preview, captureReady]);
+		return () => {
+			resizeObserver?.disconnect();
+			window.removeEventListener("resize", measure);
+		};
+	}, [text, preview, captureReady]);
 
   const overflow = measurements.contentWidth > measurements.containerWidth + 1;
   const shouldAnimate = (preview || captureReady) && overflow;
 
-  useEffect(() => {
-    onOverflowChange?.(overflow);
-  }, [onOverflowChange, overflow]);
+	useEffect(() => {
+		onOverflowChange?.(overflow);
+	}, [onOverflowChange, overflow]);
 
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
+	useEffect(() => {
+		const track = trackRef.current;
+		if (!track) return;
 
     if (!shouldAnimate) {
       track.style.transform = "translateX(0px)";
@@ -90,19 +89,17 @@ export function MarqueeText({
       return;
     }
 
-    let startTime: number | null = null;
+		let startTime: number | null = null;
 
-    const animate = (timestamp: number) => {
-      if (startTime === null) {
-        startTime = timestamp;
-      }
+		const animate = (timestamp: number) => {
+			startTime ??= timestamp;
 
-      const frame = getMarqueeFrame(measurements, timestamp - startTime);
-      track.style.transform = `translateX(${frame.translateX}px)`;
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
+			const frame = getMarqueeFrame(measurements, timestamp - startTime);
+			track.style.transform = `translateX(${frame.translateX}px)`;
+			animationFrameRef.current = requestAnimationFrame(animate);
+		};
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+		animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
       if (animationFrameRef.current !== null) {

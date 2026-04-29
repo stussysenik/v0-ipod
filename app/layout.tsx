@@ -1,46 +1,48 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
+
 import { BuildVersionBadge } from "@/components/build-version-badge";
+import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
+
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 function resolveDeployVersion(): string {
-  const explicitVersion = process.env.NEXT_PUBLIC_DEPLOY_VERSION?.trim();
-  if (explicitVersion) {
-    return explicitVersion;
-  }
+	const explicitVersion = process.env.NEXT_PUBLIC_DEPLOY_VERSION?.trim();
+	if (explicitVersion) {
+		return explicitVersion;
+	}
 
-  const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
-  const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.slice(-6);
-  const deploymentUrlToken = process.env.VERCEL_URL?.replace(/\.vercel\.app$/i, "")
-    .split("-")
-    .at(-1);
-  const deploymentStamp = deploymentId || deploymentUrlToken;
+	const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+	const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.slice(-6);
+	const deploymentUrlToken = process.env.VERCEL_URL?.replace(/\.vercel\.app$/i, "")
+		.split("-")
+		.at(-1);
+	const deploymentStamp = deploymentId ?? deploymentUrlToken;
 
-  const parts = [commit, deploymentStamp].filter(
-    (part): part is string => !!part && part.trim().length > 0,
-  );
+	const parts = [commit, deploymentStamp].filter(
+		(part): part is string => !!part && part.trim().length > 0,
+	);
 
-  if (parts.length === 0) {
-    return "dev";
-  }
+	if (parts.length === 0) {
+		return "dev";
+	}
 
-  return parts.join("-");
+	return parts.join("-");
 }
 
 const deployVersion = resolveDeployVersion();
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+	themeColor: "#000000",
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 1,
+	userScalable: false,
 };
 
 export const metadata: Metadata = {
@@ -70,9 +72,9 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
   return (
     <html lang="en" data-deploy-version={deployVersion}>

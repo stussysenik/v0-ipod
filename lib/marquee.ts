@@ -4,28 +4,25 @@ export const MARQUEE_MIN_GAP_PX = 40;
 export const MARQUEE_GAP_CHAR_WIDTH = 4.5;
 
 export interface MarqueeMetrics {
-  containerWidth: number;
-  contentWidth: number;
-  gapWidth: number;
+	containerWidth: number;
+	contentWidth: number;
+	gapWidth: number;
 }
 
 export interface MarqueeFrame {
-  overflow: boolean;
-  translateX: number;
-  cycleDistance: number;
-  cycleDurationMs: number;
+	overflow: boolean;
+	translateX: number;
+	cycleDistance: number;
+	cycleDurationMs: number;
 }
 
 export function hasMarqueeOverflow(metrics: MarqueeMetrics): boolean {
-  return metrics.contentWidth > metrics.containerWidth + 1;
+	return metrics.contentWidth > metrics.containerWidth + 1;
 }
 
 export function getMarqueeGapWidth(contentWidth: number, textLength: number): number {
-  const averageCharWidth = contentWidth / Math.max(textLength, 1);
-  return Math.max(
-    MARQUEE_MIN_GAP_PX,
-    Math.round(averageCharWidth * MARQUEE_GAP_CHAR_WIDTH),
-  );
+	const averageCharWidth = contentWidth / Math.max(textLength, 1);
+	return Math.max(MARQUEE_MIN_GAP_PX, Math.round(averageCharWidth * MARQUEE_GAP_CHAR_WIDTH));
 }
 
 export function getMarqueeScrollDistance(metrics: MarqueeMetrics): number {
