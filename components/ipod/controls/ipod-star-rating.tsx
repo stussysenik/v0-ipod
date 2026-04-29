@@ -2,7 +2,7 @@
 
 import { getTextTokenCss } from "@/lib/color-manifest";
 
-interface StarRatingProps {
+interface IpodStarRatingProps {
   rating: number;
   onChange: (rating: number) => void;
   disabled?: boolean;
@@ -11,12 +11,12 @@ interface StarRatingProps {
 
 const INACTIVE_STAR_COLOR = "#BDBDBD";
 
-export function StarRating({
+export function IpodStarRating({
   rating,
   onChange,
   disabled = false,
   fontSize = 9,
-}: StarRatingProps) {
+}: IpodStarRatingProps) {
   return (
     <div className="flex items-center gap-[1px]" style={{ lineHeight: 1 }}>
       {[1, 2, 3, 4, 5].map((star) => (

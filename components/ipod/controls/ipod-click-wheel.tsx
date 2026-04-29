@@ -14,7 +14,7 @@ const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
  * responsible for rotational input and discrete hardware button presses while
  * remaining visually tied to the active hardware preset.
  */
-interface ClickWheelProps {
+interface IpodClickWheelProps {
   preset: IpodClassicPresetDefinition;
   skinColor?: string;
   playClick: () => void;
@@ -33,7 +33,7 @@ interface ClickWheelProps {
 /**
  * Render the iPod click wheel as a self-contained hardware control assembly.
  */
-export function ClickWheel({
+export function IpodClickWheel({
   preset,
   skinColor,
   playClick,
@@ -47,7 +47,7 @@ export function ClickWheel({
   style,
   disabled = false,
   exportSafe = false,
-}: ClickWheelProps) {
+}: IpodClickWheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null);
   const derived = skinColor ? deriveWheelColors(skinColor) : null;
   const wheelShadow = exportSafe

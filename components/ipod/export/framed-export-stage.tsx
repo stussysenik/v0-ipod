@@ -2,13 +2,13 @@
 
 import { forwardRef } from "react";
 import {
-  type ExportPresetId,
-  getExportPreset,
-  getExportSceneScale,
   BASE_EXPORT_SCENE_HEIGHT,
   BASE_EXPORT_SCENE_WIDTH,
-} from "@/lib/export-scene";
-import { IPodDeviceShell } from "./ipod-device-shell";
+  getExportPreset,
+  getExportSceneScale,
+  type ExportPresetId,
+} from "@/lib/export/export-scene";
+import { IPodDeviceShell } from "@/components/ipod/device/ipod-device-shell";
 
 interface FramedExportStageProps {
   presetId: ExportPresetId;

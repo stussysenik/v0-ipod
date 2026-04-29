@@ -46,7 +46,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "iPod Snapshot",
   description: "iPod Snapshot - Classic simulator and export studio",
-  manifest: `/manifest.webmanifest?v=${deployVersion}`,
+  manifest: "/manifest.webmanifest",
   generator: "v0.app",
   appleWebApp: {
     capable: true,

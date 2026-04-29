@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useFixedEditor } from "./fixed-editor";
-import { MarqueeText } from "../ui/marquee-text";
+import { MarqueeText } from "@/components/ui/marquee-text";
 
 interface EditableTextProps {
   value: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageUpload } from "@/components/ipod/image-upload";
+import { ImageUpload } from "@/components/ipod/editors/image-upload";
 import placeholderLogo from "@/public/placeholder-logo.png";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";

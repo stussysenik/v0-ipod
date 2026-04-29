@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play, Repeat, RotateCcw, X, MonitorUp, Loader2 } from "lucide-react";
-import { getExportPreset, type ExportPresetId } from "@/lib/export-scene";
+import { getExportPreset, type ExportPresetId } from "@/lib/export/export-scene";
 
 declare global {
   interface Window {

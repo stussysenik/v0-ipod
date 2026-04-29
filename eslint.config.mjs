@@ -49,7 +49,7 @@ const eslintConfig = [
   },
   // image-upload uses raw <img> for html-to-image export compatibility
   {
-    files: ["components/ipod/image-upload.tsx"],
+    files: ["components/ipod/editors/image-upload.tsx"],
     rules: {
       "@next/next/no-img-element": "off",
     },

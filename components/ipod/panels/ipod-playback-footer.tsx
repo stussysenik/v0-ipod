@@ -1,7 +1,7 @@
 "use client";
 
-import { ProgressBar } from "@/components/ipod/progress-bar";
-import { EditableTime } from "@/components/ipod/editable-time";
+import { IpodProgressBar } from "@/components/ipod/controls/ipod-progress-bar";
+import { EditableTime } from "@/components/ipod/editors/editable-time";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import type { RenderNowPlayingElement } from "@/components/ipod/scenes/ipod-scene-types";
@@ -30,7 +30,7 @@ export function IpodPlaybackFooter({
   return renderElement(
     "progress",
     <>
-      <ProgressBar
+      <IpodProgressBar
         currentTime={state.currentTime}
         duration={state.duration}
         onSeek={(currentTime) => {

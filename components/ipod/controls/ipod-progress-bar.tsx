@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useRef, useCallback } from "react";
 
-interface ProgressBarProps {
+interface IpodProgressBarProps {
   currentTime: number;
   duration: number;
   onSeek: (time: number) => void;
@@ -11,13 +11,13 @@ interface ProgressBarProps {
   trackHeight?: number;
 }
 
-export function ProgressBar({
+export function IpodProgressBar({
   currentTime,
   duration,
   onSeek,
   disabled = false,
   trackHeight = 7,
-}: ProgressBarProps) {
+}: IpodProgressBarProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [activePointerId, setActivePointerId] = useState<number | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);

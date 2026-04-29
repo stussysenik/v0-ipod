@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { SongMetadata } from "@/types/ipod";
 
-interface AsciiIpodProps {
+interface IpodAsciiSceneProps {
   state: SongMetadata;
 }
 
@@ -32,7 +32,7 @@ function renderStars(rating: number): string {
   return "*".repeat(filled) + ".".repeat(5 - filled);
 }
 
-export function AsciiIpod({ state }: AsciiIpodProps) {
+export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
   const remaining = Math.max(state.duration - state.currentTime, 0);
   const elapsed = formatTime(state.currentTime, false);
   const remainingStr = formatTime(remaining, true);

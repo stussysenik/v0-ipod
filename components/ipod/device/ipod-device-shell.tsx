@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from "@/lib/export-scene";
+import {
+  BASE_EXPORT_SCENE_HEIGHT,
+  BASE_EXPORT_SCENE_WIDTH,
+} from "@/lib/export/export-scene";
 
 /**
  * Physical enclosure for the iPod device.

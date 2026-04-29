@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { isHexColor } from "@/lib/storage";
+import { isHexColor } from "@/lib/ipod-state/storage";
 
 interface HexColorInputProps {
   value: string;

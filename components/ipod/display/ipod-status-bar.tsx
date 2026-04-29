@@ -2,7 +2,7 @@
 
 import { getSurfaceToken, getTextTokenCss } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
-import { ScreenBattery } from "@/components/ipod/screen-battery";
+import { ScreenBattery } from "@/components/ipod/display/screen-battery";
 
 interface IpodStatusBarProps {
   screenTokens: IpodClassicPresetDefinition["screen"];

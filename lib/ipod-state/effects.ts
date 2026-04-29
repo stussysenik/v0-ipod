@@ -8,7 +8,7 @@ import {
   saveMetadata,
   saveSongSnapshot,
   saveUiState,
-} from "@/lib/storage";
+} from "@/lib/ipod-state/storage";
 import type { ExportStatus } from "@/lib/export-utils";
 import type { IpodWorkbenchModel, SongSnapshot } from "./model";
 import { buildPersistedUiState, buildSongSnapshot } from "./update";

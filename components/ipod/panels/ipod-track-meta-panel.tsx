@@ -1,8 +1,8 @@
 "use client";
 
-import { StarRating } from "@/components/ipod/star-rating";
-import { EditableText } from "@/components/ipod/editable-text";
-import { EditableTrackNumber } from "@/components/ipod/editable-track-number";
+import { IpodStarRating } from "@/components/ipod/controls/ipod-star-rating";
+import { EditableText } from "@/components/ipod/editors/editable-text";
+import { EditableTrackNumber } from "@/components/ipod/editors/editable-track-number";
 import { getTextTokenCss } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
@@ -128,7 +128,7 @@ export function IpodTrackMetaPanel({
 
       {renderElement(
         "rating",
-        <StarRating
+        <IpodStarRating
           rating={state.rating}
           onChange={(rating) => {
             if (!isInlineEditingEnabled) {
