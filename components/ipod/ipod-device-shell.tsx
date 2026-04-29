@@ -3,6 +3,13 @@
 import { useMemo } from "react";
 import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from "@/lib/export-scene";
 
+/**
+ * Physical enclosure for the iPod device.
+ *
+ * This component is intentionally limited to the outer body and its material
+ * treatment. It should not own playback logic, screen scene logic, or click
+ * wheel behavior. Those concerns are passed in as composed child assemblies.
+ */
 interface IPodDeviceShellProps {
   skinColor: string;
   screen: React.ReactNode;
@@ -12,6 +19,14 @@ interface IPodDeviceShellProps {
   dataTestId?: string;
 }
 
+/**
+ * Render the outer shell assembly around the display and click wheel.
+ *
+ * Naming note:
+ * - "shell" refers to the enclosure only
+ * - "screen" is the composed display assembly inserted into the enclosure
+ * - "wheel" is the composed input assembly inserted into the enclosure
+ */
 export function IPodDeviceShell({
   skinColor,
   screen,
@@ -43,6 +58,7 @@ export function IPodDeviceShell({
       }}
       data-testid={dataTestId}
     >
+      {/* Ground contact shadows anchor the device in the preview scene. */}
       <div
         className="pointer-events-none absolute left-1/2 top-[510px] h-[88px] w-[248px] -translate-x-1/2 rounded-full opacity-70 blur-[30px]"
         style={{
@@ -103,6 +119,7 @@ export function IPodDeviceShell({
             }}
             aria-hidden="true"
           />
+          {/* Child assemblies stay above the finish overlays so they read as parts. */}
           <div className="relative z-10 w-full">{screen}</div>
           <div className="relative z-10 -mt-4 flex flex-1 items-center justify-center">
             {wheel}

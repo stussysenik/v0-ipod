@@ -24,6 +24,13 @@ import {
   type IpodOsScreen,
 } from "@/types/ipod-state";
 
+/**
+ * Screen-level state mutations exposed by the parent workbench.
+ *
+ * The display assembly renders and edits these values, but the source of truth
+ * remains in the parent orchestrator so persistence, export, and interaction
+ * modes all operate on one shared song snapshot.
+ */
 type IpodScreenAction =
   | { type: "UPDATE_TITLE"; payload: string }
   | { type: "UPDATE_ARTIST"; payload: string }
@@ -35,6 +42,14 @@ type IpodScreenAction =
   | { type: "UPDATE_TRACK_NUMBER"; payload: number }
   | { type: "UPDATE_TOTAL_TRACKS"; payload: number };
 
+/**
+ * Display assembly props.
+ *
+ * Naming note for future refactors:
+ * this file currently mixes display chrome and screen scenes. Long-term, the
+ * physical "display" should be separate from scene-specific content such as
+ * "menu" and "now playing".
+ */
 interface IpodScreenProps {
   preset: IpodClassicPresetDefinition;
   skinColor?: string;
@@ -87,6 +102,13 @@ function hasSameLayoutPosition(
   return left.x === right.x && left.y === right.y;
 }
 
+/**
+ * Battery glyph used inside the screen status bar.
+ *
+ * This is a display-chrome primitive, not device battery state. The fill is
+ * intentionally static because the app is presenting a composed artwork scene
+ * rather than simulating an operating system with live power telemetry.
+ */
 function ScreenBattery() {
   return (
     <div className="flex items-center gap-px" aria-hidden="true">
@@ -105,6 +127,18 @@ function ScreenBattery() {
   );
 }
 
+/**
+ * Render the active display scene inside the iPod front face.
+ *
+ * Current responsibilities:
+ * - display surround, glass, and status bar chrome
+ * - scene switching between menu and now playing
+ * - direct editing for metadata fields
+ * - drag layout mode for authentic OS composition experiments
+ *
+ * This scope is larger than ideal, so the component is documented explicitly
+ * until it is split into display, scene, and panel subassemblies.
+ */
 export function IpodScreen({
   preset,
   skinColor,
@@ -393,6 +427,7 @@ export function IpodScreen({
           fontFamily: SCREEN_FONT_FAMILY,
         }}
       >
+        {/* Status bar is display chrome shared across all screen scenes. */}
         <div
           className="flex items-center justify-between border-b"
           style={{
@@ -417,107 +452,111 @@ export function IpodScreen({
         </div>
 
         {showOsMenu ? (
-          <div
-            className="grid animate-in slide-in-from-left-2 duration-200"
-            style={{
-              height: screenTokens.frameHeight - screenTokens.statusBarHeight - 2,
-              gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",
-            }}
-            data-testid="ipod-os-menu"
-          >
-            <div className="border-r border-[#AEB4BC] bg-[#FBFBF9] py-[6px]">
-              {osMenuItems.map((item, index) => {
-                const isActive = index === osMenuIndex;
-                return (
+          <>
+            {/* Menu scene: left navigation list plus right-side preview pane. */}
+            <div
+              className="grid animate-in slide-in-from-left-2 duration-200"
+              style={{
+                height: screenTokens.frameHeight - screenTokens.statusBarHeight - 2,
+                gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",
+              }}
+              data-testid="ipod-os-menu"
+            >
+              <div className="border-r border-[#AEB4BC] bg-[#FBFBF9] py-[6px]">
+                {osMenuItems.map((item, index) => {
+                  const isActive = index === osMenuIndex;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 px-[8px] py-[3.5px] text-[10px] font-semibold leading-[1.15]"
+                      data-testid={isActive ? "ipod-os-selected-menu-item" : undefined}
+                      style={{
+                        color: isActive ? "#FFFFFF" : "#111111",
+                        background: isActive
+                          ? "linear-gradient(180deg, rgba(104,181,242,1) 0%, rgba(49,137,211,1) 100%)"
+                          : "transparent",
+                      }}
+                    >
+                      <span>{item.label}</span>
+                      {isActive ? (
+                        <span aria-hidden="true">›</span>
+                      ) : (
+                        <span aria-hidden="true" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-center bg-[#F4F4F0] p-[8px]">
+                {osMenuItems[osMenuIndex]?.id === "about" ? (
                   <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-2 px-[8px] py-[3.5px] text-[10px] font-semibold leading-[1.15]"
-                    data-testid={isActive ? "ipod-os-selected-menu-item" : undefined}
-                    style={{
-                      color: isActive ? "#FFFFFF" : "#111111",
-                      background: isActive
-                        ? "linear-gradient(180deg, rgba(104,181,242,1) 0%, rgba(49,137,211,1) 100%)"
-                        : "transparent",
-                    }}
+                    className="flex flex-col items-center justify-center text-center"
+                    style={{ fontFamily: SCREEN_FONT_FAMILY }}
+                    data-testid="about-panel"
                   >
-                    <span>{item.label}</span>
-                    {isActive ? (
-                      <span aria-hidden="true">›</span>
-                    ) : (
-                      <span aria-hidden="true" />
-                    )}
+                    <div className="text-[9px] font-bold tracking-[0.04em] text-[#333]">
+                      RE:MIX
+                    </div>
+                    <div className="mt-[3px] text-[7px] font-medium text-[#666]">
+                      STUSSY SENIK
+                    </div>
+                    <div className="mt-[1px] text-[6.5px] font-normal text-[#999]">
+                      &copy; 2026
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center justify-center bg-[#F4F4F0] p-[8px]">
-              {osMenuItems[osMenuIndex]?.id === "about" ? (
-                <div
-                  className="flex flex-col items-center justify-center text-center"
-                  style={{ fontFamily: SCREEN_FONT_FAMILY }}
-                  data-testid="about-panel"
-                >
-                  <div className="text-[9px] font-bold tracking-[0.04em] text-[#333]">
-                    RE:MIX
+                ) : osMenuItems[osMenuIndex]?.id === "now-playing" ? (
+                  <div
+                    className="flex w-full flex-col items-center gap-[4px]"
+                    style={{ fontFamily: SCREEN_FONT_FAMILY }}
+                    data-testid="now-playing-preview"
+                  >
+                    <div
+                      className="overflow-hidden border border-[#C8C9CA] bg-white"
+                      style={{
+                        width: menuArtworkSize - 16,
+                        height: menuArtworkSize - 16,
+                        boxShadow: artworkShadow,
+                      }}
+                    >
+                      <img
+                        src={state.artwork || placeholderLogo.src}
+                        alt="Album artwork"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="w-full text-center">
+                      <div className="truncate text-[8px] font-bold leading-[1.2] text-[#111]">
+                        {state.title}
+                      </div>
+                      <div className="truncate text-[7px] font-medium leading-[1.2] text-[#555]">
+                        {state.artist}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-[3px] text-[7px] font-medium text-[#666]">
-                    STUSSY SENIK
-                  </div>
-                  <div className="mt-[1px] text-[6.5px] font-normal text-[#999]">
-                    &copy; 2026
-                  </div>
-                </div>
-              ) : osMenuItems[osMenuIndex]?.id === "now-playing" ? (
-                <div
-                  className="flex w-full flex-col items-center gap-[4px]"
-                  style={{ fontFamily: SCREEN_FONT_FAMILY }}
-                  data-testid="now-playing-preview"
-                >
+                ) : (
                   <div
                     className="overflow-hidden border border-[#C8C9CA] bg-white"
                     style={{
-                      width: menuArtworkSize - 16,
-                      height: menuArtworkSize - 16,
+                      width: menuArtworkSize,
+                      height: menuArtworkSize,
                       boxShadow: artworkShadow,
                     }}
+                    data-export-layer="artwork"
                   >
                     <img
                       src={state.artwork || placeholderLogo.src}
+                      data-export-src={state.artwork || placeholderLogo.src}
                       alt="Album artwork"
                       className="h-full w-full object-cover"
                     />
                   </div>
-                  <div className="w-full text-center">
-                    <div className="truncate text-[8px] font-bold leading-[1.2] text-[#111]">
-                      {state.title}
-                    </div>
-                    <div className="truncate text-[7px] font-medium leading-[1.2] text-[#555]">
-                      {state.artist}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="overflow-hidden border border-[#C8C9CA] bg-white"
-                  style={{
-                    width: menuArtworkSize,
-                    height: menuArtworkSize,
-                    boxShadow: artworkShadow,
-                  }}
-                  data-export-layer="artwork"
-                >
-                  <img
-                    src={state.artwork || placeholderLogo.src}
-                    data-export-src={state.artwork || placeholderLogo.src}
-                    alt="Album artwork"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           <>
+            {/* Now Playing scene: artwork and track metadata occupy the main viewport. */}
             <div
               className="grid animate-in slide-in-from-right-2 duration-200"
               style={{
@@ -689,6 +728,7 @@ export function IpodScreen({
               </div>
             </div>
 
+            {/* Playback footer stays anchored as a separate scene region. */}
             {renderNowPlayingElement(
               "progress",
               <>
@@ -765,6 +805,7 @@ export function IpodScreen({
           </>
         )}
 
+        {/* Glass overlays are purely optical and should not carry UI semantics. */}
         <div
           className="pointer-events-none absolute inset-0"
           style={glassOverlay}

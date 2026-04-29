@@ -1,5 +1,10 @@
 # iPod Snapshot Docs
 
+## Assembly Vocabulary
+
+For the physical-part naming model and provenance notes, start with
+[`docs/IPOD-ASSEMBLY.md`](./IPOD-ASSEMBLY.md).
+
 ## Interaction Architecture
 
 Core interaction state lives in `components/ipod-classic.tsx`:

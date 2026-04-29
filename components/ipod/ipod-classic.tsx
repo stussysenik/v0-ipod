@@ -240,6 +240,14 @@ function clampSnapshotTime(value: number | null, duration: number): number | nul
   return Math.min(Math.max(Math.floor(value), 0), duration);
 }
 
+/**
+ * Top-level authoring workbench for the iPod experience.
+ *
+ * Despite the current filename, this component is more than a device render.
+ * It owns the shared song snapshot, presentation mode switches, export flow,
+ * and composition of the physical device assemblies. In the long-term naming
+ * model, this would be closer to `IpodWorkbench` than a hardware part.
+ */
 export default function IPodClassic() {
   const [state, dispatch] = useReducer(songReducer, initialState);
   const hasRestoredRef = useRef(false);
@@ -1034,6 +1042,8 @@ export default function IPodClassic() {
   const screenComponent = isAsciiView ? (
     <AsciiIpod state={state} />
   ) : (
+    // The display assembly receives shared state from the workbench and renders
+    // the active screen scene within the physical device composition.
     <IpodScreen
       preset={activePreset}
       state={state}
@@ -1061,6 +1071,8 @@ export default function IPodClassic() {
   );
 
   const wheelComponent = (
+    // The click wheel is treated as a hardware control assembly, even though
+    // the handlers ultimately mutate workbench state.
     <ClickWheel
       preset={activePreset}
       playClick={playClick}

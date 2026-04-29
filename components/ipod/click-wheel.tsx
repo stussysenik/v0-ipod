@@ -7,6 +7,13 @@ import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
 const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
+/**
+ * Interactive click wheel assembly.
+ *
+ * This is a physical control surface, not an application-level toolbar. It is
+ * responsible for rotational input and discrete hardware button presses while
+ * remaining visually tied to the active hardware preset.
+ */
 interface ClickWheelProps {
   preset: IpodClassicPresetDefinition;
   skinColor?: string;
@@ -23,6 +30,9 @@ interface ClickWheelProps {
   exportSafe?: boolean;
 }
 
+/**
+ * Render the iPod click wheel as a self-contained hardware control assembly.
+ */
 export function ClickWheel({
   preset,
   skinColor,
@@ -68,6 +78,8 @@ export function ClickWheel({
     let activePointerId: number | null = null;
     let lastAngle = 0;
 
+    // Rotation is derived from pointer angle around the wheel center so the
+    // interaction reads like a physical scrub gesture rather than a slider.
     const calculateAngle = (clientX: number, clientY: number) => {
       const rect = wheel.getBoundingClientRect();
       const center = {
@@ -146,7 +158,7 @@ export function ClickWheel({
         ...style,
       }}
     >
-      {/* Wheel Surface */}
+      {/* Wheel surface, labels, and center button form one hardware subassembly. */}
       <div
         className="absolute inset-0 rounded-full border"
         style={{
