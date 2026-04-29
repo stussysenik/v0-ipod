@@ -1,9 +1,9 @@
-import IPodClassic from "@/components/ipod/ipod-classic";
+import IpodWorkbench from "@/components/ipod/workbench/ipod-workbench";
 
 export default function Home() {
   return (
     <main>
-      <IPodClassic />
+      <IpodWorkbench />
     </main>
   );
 }

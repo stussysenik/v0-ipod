@@ -17,18 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ExportStatus } from "@/lib/export-utils";
-import {
-  loadMetadata,
-  saveMetadata,
-  loadUiState,
-  saveUiState,
-  loadExportCounter,
-  saveExportCounter,
-  loadSongSnapshot,
-  saveSongSnapshot,
-} from "@/lib/storage";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
-import defaultArtwork from "@/public/default-artwork.png";
 import { IconButton } from "@/components/ui/icon-button";
 import dynamic from "next/dynamic";
 const ThreeDIpod = dynamic(
@@ -47,41 +36,50 @@ import { FixedEditorProvider } from "./fixed-editor";
 import { IpodScreen } from "./ipod-screen";
 import { AsciiIpod } from "./ascii-ipod";
 import { ClickWheel } from "./click-wheel";
+import { IpodDevice } from "./device/ipod-device";
 import { GreyPalettePicker } from "./grey-palette-picker";
 import { HexColorInput } from "./hex-color-input";
-import type { SongMetadata } from "@/types/ipod";
 import {
-  DEFAULT_INTERACTION_MODEL,
-  DEFAULT_MENU_INDEX,
-  DEFAULT_OS_NOW_PLAYING_LAYOUT,
-  DEFAULT_OS_SCREEN,
-  DEFAULT_OS_ORIGINAL_MENU_SPLIT,
-  DEFAULT_SELECTION_KIND,
-  SONG_SNAPSHOT_SCHEMA_VERSION,
+  BG_CUSTOM_COLORS_KEY,
+  CASE_CUSTOM_COLORS_KEY,
+  exportWorkbenchGif,
+  exportWorkbenchPng,
+  loadCustomColors,
+  loadPersistedExportCounter,
+  loadPersistedSongSnapshot,
+  loadPersistedWorkbenchModel,
+  persistCustomColors,
+  persistWorkbenchModel,
+  playClickAudio,
+  savePersistedExportCounter,
+  savePersistedSongSnapshot,
+  saveWorkbenchSnapshot,
+} from "@/lib/ipod-state/effects";
+import {
+  createInitialIpodWorkbenchModel,
   type IpodInteractionModel,
+  type IpodHardwarePresetId,
   type IpodNowPlayingLayoutState,
   type IpodOsScreen,
   type IpodViewMode,
   type SnapshotSelectionKind,
-  type SongSnapshot,
-  type IpodHardwarePresetId,
-} from "@/types/ipod-state";
+} from "@/lib/ipod-state/model";
+import {
+  getExportScreenContext,
+  isAsciiViewMode,
+  isAuthenticInteractionModel,
+  isPngExportViewMode,
+  isPreviewViewMode,
+} from "@/lib/ipod-state/selectors";
+import { clampSnapshotTime, ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import {
   AUTHENTIC_CASE_COLORS,
   BACKGROUND_OKLCH_CONFIG,
   CASE_OKLCH_CONFIG,
-  DEFAULT_BACKDROP_COLOR,
-  DEFAULT_SHELL_COLOR,
 } from "@/lib/color-manifest";
-import {
-  DEFAULT_HARDWARE_PRESET_ID,
-  IPOD_CLASSIC_PRESETS,
-  getIpodClassicPreset,
-} from "@/lib/ipod-classic-presets";
+import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { formatTimecode, parseTimecode } from "@/lib/time-utils";
 
-const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
-const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
 const MAX_CUSTOM_COLORS = 6;
 const OKLCH_CASE_L = CASE_OKLCH_CONFIG.lightness;
 const OKLCH_CASE_C = CASE_OKLCH_CONFIG.chroma;
@@ -137,18 +135,6 @@ function getLockedInteractionModeButtonClass(
     .join(" ");
 }
 
-const initialState: SongMetadata = {
-  title: "Chamakay",
-  artist: "Blood Orange",
-  album: "Cupid Deluxe",
-  artwork: defaultArtwork.src,
-  duration: 252,
-  currentTime: 47,
-  rating: 4,
-  trackNumber: 2,
-  totalTracks: 12,
-};
-
 const supportsOklch = () =>
   typeof CSS !== "undefined" &&
   typeof CSS.supports === "function" &&
@@ -186,60 +172,6 @@ const buildOklchPalette = (
     };
   });
 
-type Action =
-  | { type: "UPDATE_TITLE"; payload: string }
-  | { type: "UPDATE_ARTIST"; payload: string }
-  | { type: "UPDATE_ALBUM"; payload: string }
-  | { type: "UPDATE_ARTWORK"; payload: string }
-  | { type: "UPDATE_CURRENT_TIME"; payload: number }
-  | { type: "UPDATE_DURATION"; payload: number }
-  | { type: "UPDATE_RATING"; payload: number }
-  | { type: "UPDATE_TRACK_NUMBER"; payload: number }
-  | { type: "UPDATE_TOTAL_TRACKS"; payload: number }
-  | { type: "RESTORE_ALL"; payload: SongMetadata };
-
-function songReducer(state: SongMetadata, action: Action): SongMetadata {
-  switch (action.type) {
-    case "UPDATE_TITLE":
-      return { ...state, title: action.payload };
-    case "UPDATE_ARTIST":
-      return { ...state, artist: action.payload };
-    case "UPDATE_ALBUM":
-      return { ...state, album: action.payload };
-    case "UPDATE_ARTWORK":
-      return { ...state, artwork: action.payload };
-    case "UPDATE_CURRENT_TIME":
-      return {
-        ...state,
-        currentTime: Math.max(0, Math.min(action.payload, state.duration)),
-      };
-    case "UPDATE_DURATION":
-      return {
-        ...state,
-        duration: action.payload,
-        currentTime: Math.min(state.currentTime, action.payload),
-      };
-    case "UPDATE_RATING":
-      return { ...state, rating: action.payload };
-    case "UPDATE_TRACK_NUMBER":
-      return {
-        ...state,
-        trackNumber: Math.max(1, Math.min(action.payload, state.totalTracks)),
-      };
-    case "UPDATE_TOTAL_TRACKS":
-      return { ...state, totalTracks: Math.max(1, action.payload) };
-    case "RESTORE_ALL":
-      return action.payload;
-    default:
-      return state;
-  }
-}
-
-function clampSnapshotTime(value: number | null, duration: number): number | null {
-  if (value === null) return null;
-  return Math.min(Math.max(Math.floor(value), 0), duration);
-}
-
 /**
  * Top-level authoring workbench for the iPod experience.
  *
@@ -249,47 +181,16 @@ function clampSnapshotTime(value: number | null, duration: number): number | nul
  * model, this would be closer to `IpodWorkbench` than a hardware part.
  */
 export default function IPodClassic() {
-  const [state, dispatch] = useReducer(songReducer, initialState);
-  const hasRestoredRef = useRef(false);
-  const hasRestoredUiRef = useRef(false);
-
-  // Hydration-safe: restore persisted metadata after mount
-  useEffect(() => {
-    if (hasRestoredRef.current) return;
-    hasRestoredRef.current = true;
-    const saved = loadMetadata();
-    if (saved) {
-      dispatch({ type: "RESTORE_ALL", payload: { ...initialState, ...saved } });
-    }
-  }, []);
+  const [model, dispatch] = useReducer(
+    ipodWorkbenchReducer,
+    undefined,
+    createInitialIpodWorkbenchModel,
+  );
+  const [isModelHydrated, setIsModelHydrated] = useState(false);
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [activeExportKind, setActiveExportKind] = useState<ExportKind | null>(null);
 
-  // View State: 'flat' (Standard 2D), 'preview' (Animated marquee), '3d' (R3F), 'focus' (Close-up)
-  const [viewMode, setViewMode] = useState<IpodViewMode>("flat");
-  const [hardwarePreset, setHardwarePreset] = useState<IpodHardwarePresetId>(
-    DEFAULT_HARDWARE_PRESET_ID,
-  );
-  const [interactionModel, setInteractionModel] = useState<IpodInteractionModel>(
-    DEFAULT_INTERACTION_MODEL,
-  );
-  const [selectionKind, setSelectionKind] =
-    useState<SnapshotSelectionKind>(DEFAULT_SELECTION_KIND);
-  const [rangeStartTime, setRangeStartTime] = useState<number | null>(null);
-  const [rangeEndTime, setRangeEndTime] = useState<number | null>(null);
-  const [osScreen, setOsScreen] = useState<IpodOsScreen>(DEFAULT_OS_SCREEN);
-  const [osMenuIndex, setOsMenuIndex] = useState(DEFAULT_MENU_INDEX);
-  const [osOriginalMenuSplit, setOsOriginalMenuSplit] = useState(
-    DEFAULT_OS_ORIGINAL_MENU_SPLIT,
-  );
-  const [osNowPlayingLayout, setOsNowPlayingLayout] = useState<IpodNowPlayingLayoutState>(
-    DEFAULT_OS_NOW_PLAYING_LAYOUT,
-  );
-  const [isOsNowPlayingEditable, setIsOsNowPlayingEditable] = useState(false);
-
   // Customization State
-  const [skinColor, setSkinColor] = useState(DEFAULT_SHELL_COLOR);
-  const [bgColor, setBgColor] = useState(DEFAULT_BACKDROP_COLOR);
   const [showSettings, setShowSettings] = useState(false);
   const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
   const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
@@ -310,12 +211,26 @@ export default function IPodClassic() {
   >([]);
   const [rangeStartDraft, setRangeStartDraft] = useState("");
   const [rangeEndDraft, setRangeEndDraft] = useState("");
+  const state = model.metadata;
+  const selectionKind = model.playback.selectionKind;
+  const rangeStartTime = model.playback.rangeStartTime;
+  const rangeEndTime = model.playback.rangeEndTime;
+  const viewMode = model.presentation.viewMode;
+  const hardwarePreset = model.presentation.hardwarePreset;
+  const skinColor = model.presentation.skinColor;
+  const bgColor = model.presentation.bgColor;
+  const interactionModel = model.interaction.interactionModel;
+  const osScreen = model.interaction.osScreen;
+  const osMenuIndex = model.interaction.menuIndex;
+  const osOriginalMenuSplit = model.interaction.osOriginalMenuSplit;
+  const osNowPlayingLayout = model.interaction.osNowPlayingLayout;
+  const isOsNowPlayingEditable = model.interaction.isNowPlayingEditable;
   const isFlatView = viewMode === "flat";
   const isFocusView = viewMode === "focus";
-  const isPreviewView = viewMode === "preview";
-  const isAsciiView = viewMode === "ascii";
-  const canPngExport = isFlatView || isFocusView;
-  const isAuthenticInteraction = interactionModel !== "direct";
+  const isPreviewView = isPreviewViewMode(viewMode);
+  const isAsciiView = isAsciiViewMode(viewMode);
+  const canPngExport = isPngExportViewMode(viewMode);
+  const isAuthenticInteraction = isAuthenticInteractionModel(interactionModel);
   const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
   const activePreset = useMemo(
@@ -328,6 +243,27 @@ export default function IPodClassic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const softNoticeTimerRef = useRef<number | null>(null);
   const toolsRef = useRef<HTMLDivElement>(null);
+  const setSkinColor = useCallback((nextColor: string) => {
+    dispatch({ type: "SET_SKIN_COLOR", payload: nextColor });
+  }, []);
+  const setBgColor = useCallback((nextColor: string) => {
+    dispatch({ type: "SET_BG_COLOR", payload: nextColor });
+  }, []);
+  const setRangeStartTime = useCallback((nextValue: number | null) => {
+    dispatch({ type: "SET_RANGE_START_TIME", payload: nextValue });
+  }, []);
+  const setRangeEndTime = useCallback((nextValue: number | null) => {
+    dispatch({ type: "SET_RANGE_END_TIME", payload: nextValue });
+  }, []);
+  const setOsScreen = useCallback((nextScreen: IpodOsScreen) => {
+    dispatch({ type: "SET_OS_SCREEN", payload: nextScreen });
+  }, []);
+  const setOsNowPlayingLayout = useCallback((nextLayout: IpodNowPlayingLayoutState) => {
+    dispatch({ type: "SET_OS_NOW_PLAYING_LAYOUT", payload: nextLayout });
+  }, []);
+  const setOsOriginalMenuSplit = useCallback((nextSplit: number) => {
+    dispatch({ type: "SET_OS_ORIGINAL_MENU_SPLIT", payload: nextSplit });
+  }, []);
 
   useEffect(() => {
     setHasEyeDropper("EyeDropper" in window);
@@ -374,88 +310,21 @@ export default function IPodClassic() {
   }, []);
 
   useEffect(() => {
-    if (hasRestoredUiRef.current) return;
-    hasRestoredUiRef.current = true;
-    const savedUi = loadUiState();
-    if (!savedUi) return;
-    if (savedUi.skinColor) {
-      setSkinColor(savedUi.skinColor);
-    }
-    if (savedUi.bgColor) {
-      setBgColor(savedUi.bgColor);
-    }
-    if (savedUi.viewMode) {
-      setViewMode(savedUi.viewMode);
-    }
-    if (savedUi.hardwarePreset) {
-      setHardwarePreset(savedUi.hardwarePreset);
-    }
-    if (savedUi.interactionModel) {
-      setInteractionModel(savedUi.interactionModel);
-    }
-    if (savedUi.selectionKind) {
-      setSelectionKind(savedUi.selectionKind);
-    }
-    if (savedUi.rangeStartTime !== undefined) {
-      setRangeStartTime(savedUi.rangeStartTime);
-    }
-    if (savedUi.rangeEndTime !== undefined) {
-      setRangeEndTime(savedUi.rangeEndTime);
-    }
-    if (savedUi.osScreen) {
-      setOsScreen(savedUi.osScreen);
-    }
-    if (typeof savedUi.menuIndex === "number") {
-      setOsMenuIndex(savedUi.menuIndex);
-    }
-    if (typeof savedUi.osOriginalMenuSplit === "number") {
-      setOsOriginalMenuSplit(savedUi.osOriginalMenuSplit);
-    }
-    if (savedUi.osNowPlayingLayout) {
-      setOsNowPlayingLayout(savedUi.osNowPlayingLayout);
-    }
-  }, []);
-
-  useEffect(() => {
-    setExportCounter(loadExportCounter());
-  }, []);
-
-  // Persist song metadata on every change (skip until restored)
-  useEffect(() => {
-    if (!hasRestoredRef.current) return;
-    saveMetadata(state);
-  }, [state]);
-
-  useEffect(() => {
-    if (!hasRestoredUiRef.current) return;
-    saveUiState({
-      skinColor,
-      bgColor,
-      viewMode,
-      hardwarePreset,
-      interactionModel,
-      selectionKind,
-      rangeStartTime,
-      rangeEndTime,
-      osScreen,
-      menuIndex: osMenuIndex,
-      osOriginalMenuSplit,
-      osNowPlayingLayout,
+    dispatch({
+      type: "RESTORE_MODEL",
+      payload: loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel()),
     });
-  }, [
-    skinColor,
-    bgColor,
-    viewMode,
-    hardwarePreset,
-    interactionModel,
-    selectionKind,
-    rangeStartTime,
-    rangeEndTime,
-    osScreen,
-    osMenuIndex,
-    osOriginalMenuSplit,
-    osNowPlayingLayout,
-  ]);
+    setIsModelHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    setExportCounter(loadPersistedExportCounter());
+  }, []);
+
+  useEffect(() => {
+    if (!isModelHydrated) return;
+    persistWorkbenchModel(model);
+  }, [isModelHydrated, model]);
 
   useEffect(() => {
     if (isFlatView && !isAuthenticInteraction) return;
@@ -535,43 +404,20 @@ export default function IPodClassic() {
   }, [viewportSize.width, isCompactToolbox]);
 
   useEffect(() => {
-    try {
-      const storedCase = localStorage.getItem(CASE_CUSTOM_COLORS_KEY);
-      const storedBg = localStorage.getItem(BG_CUSTOM_COLORS_KEY);
-      if (storedCase) {
-        setSavedCaseColors(JSON.parse(storedCase));
-      }
-      if (storedBg) {
-        setSavedBgColors(JSON.parse(storedBg));
-      }
-    } catch {
-      setSavedCaseColors([]);
-      setSavedBgColors([]);
-    }
+    setSavedCaseColors(loadCustomColors(CASE_CUSTOM_COLORS_KEY));
+    setSavedBgColors(loadCustomColors(BG_CUSTOM_COLORS_KEY));
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(CASE_CUSTOM_COLORS_KEY, JSON.stringify(savedCaseColors));
-    } catch {
-      // Ignore storage failures
-    }
+    persistCustomColors(CASE_CUSTOM_COLORS_KEY, savedCaseColors);
   }, [savedCaseColors]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(BG_CUSTOM_COLORS_KEY, JSON.stringify(savedBgColors));
-    } catch {
-      // Ignore storage failures
-    }
+    persistCustomColors(BG_CUSTOM_COLORS_KEY, savedBgColors);
   }, [savedBgColors]);
 
   const playClick = useCallback(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/click.mp3");
-    }
-    audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
+    playClickAudio(audioRef);
   }, []);
 
   const clearSoftNotice = useCallback(() => {
@@ -634,9 +480,12 @@ export default function IPodClassic() {
   );
 
   const cycleOsMenu = useCallback((direction: number) => {
-    setOsMenuIndex((prev) => {
-      const total = CLASSIC_OS_MENU_ITEMS.length;
-      return (prev + direction + total) % total;
+    dispatch({
+      type: "CYCLE_OS_MENU",
+      payload: {
+        direction,
+        total: CLASSIC_OS_MENU_ITEMS.length,
+      },
     });
   }, []);
 
@@ -652,37 +501,20 @@ export default function IPodClassic() {
   );
 
   const handleHardwarePresetChange = useCallback((nextPresetId: IpodHardwarePresetId) => {
-    const nextPreset = getIpodClassicPreset(nextPresetId);
-    setHardwarePreset(nextPresetId);
-    setSkinColor(nextPreset.defaultShellColor);
-    setBgColor(nextPreset.defaultBackdropColor);
+    dispatch({ type: "SET_HARDWARE_PRESET", payload: nextPresetId });
   }, []);
 
   const handleInteractionModelChange = useCallback(
     (nextModel: IpodInteractionModel) => {
       clearSoftNotice();
-      setInteractionModel(nextModel);
-      if (nextModel !== "direct") {
-        setOsScreen("menu");
-        return;
-      }
-      setOsScreen("now-playing");
+      dispatch({ type: "SET_INTERACTION_MODEL", payload: nextModel });
     },
     [clearSoftNotice],
   );
 
-  const handleSelectionKindChange = useCallback(
-    (nextKind: SnapshotSelectionKind) => {
-      setSelectionKind(nextKind);
-      if (nextKind === "range") {
-        setRangeStartTime((prev) => prev ?? state.currentTime);
-        setRangeEndTime(
-          (prev) => prev ?? Math.min(state.duration, state.currentTime + 15),
-        );
-      }
-    },
-    [state.currentTime, state.duration],
-  );
+  const handleSelectionKindChange = useCallback((nextKind: SnapshotSelectionKind) => {
+    dispatch({ type: "SET_SELECTION_KIND", payload: nextKind });
+  }, []);
 
   const commitRangeInput = useCallback(
     (target: "start" | "end", draftValue: string) => {
@@ -712,7 +544,7 @@ export default function IPodClassic() {
   );
 
   const buildExportSlug = useCallback(() => {
-    const screenContext = interactionModel === "direct" ? "now-playing" : osScreen;
+    const screenContext = getExportScreenContext(interactionModel, osScreen);
     return [
       hardwarePreset,
       interactionModel,
@@ -726,7 +558,7 @@ export default function IPodClassic() {
     (exportId: number, notice: string) => {
       const nextCounter = exportId + 1;
       setExportCounter(nextCounter);
-      saveExportCounter(nextCounter);
+      savePersistedExportCounter(nextCounter);
       showSoftNotice(notice);
     },
     [showSoftNotice],
@@ -768,16 +600,10 @@ export default function IPodClassic() {
     setIsExportCapturing(true);
 
     try {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
       console.info("[export] starting flat export", { filename });
-      const { exportImage } = await import("@/lib/export-utils");
-      const result = await exportImage(exportTargetRef.current, {
+      const result = await exportWorkbenchPng(exportTargetRef.current, {
         filename,
         backgroundColor: bgColor,
-        pixelRatio: 4,
-        constrainedFrame: true,
         onStatusChange: setExportStatus,
       });
       console.info("[export] finished", result);
@@ -847,15 +673,10 @@ export default function IPodClassic() {
     setIsExportCapturing(true);
 
     try {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
       console.info("[gif-export] starting preview export", { filename });
-      const { exportAnimatedGif } = await import("@/lib/export-utils");
-      const result = await exportAnimatedGif(exportTargetRef.current, {
+      const result = await exportWorkbenchGif(exportTargetRef.current, {
         filename,
         backgroundColor: bgColor,
-        constrainedFrame: true,
         onStatusChange: setExportStatus,
       });
       console.info("[gif-export] finished", result);
@@ -963,12 +784,12 @@ export default function IPodClassic() {
   }, [isCompactToolbox, osMenuIndex, showSoftNotice]);
 
   const handleNowPlayingCenterClick = useCallback(() => {
-    setIsOsNowPlayingEditable((prev) => !prev);
+    dispatch({ type: "TOGGLE_OS_NOW_PLAYING_EDITABLE" });
   }, []);
 
   const handleMenuButtonPress = useCallback(() => {
     if (!isAuthenticInteraction) return;
-    setIsOsNowPlayingEditable(false);
+    dispatch({ type: "SET_OS_NOW_PLAYING_EDITABLE", payload: false });
     setOsScreen("menu");
   }, [isAuthenticInteraction]);
 
@@ -996,49 +817,6 @@ export default function IPodClassic() {
     showSoftNotice("Playback remains visual in this build");
   }, [isAuthenticInteraction, osScreen, showSoftNotice]);
 
-  const buildSongSnapshot = useCallback(
-    (): SongSnapshot => ({
-      schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
-      metadata: state,
-      ui: {
-        skinColor,
-        bgColor,
-        viewMode,
-        hardwarePreset,
-        interactionModel,
-        selectionKind,
-        rangeStartTime: selectionKind === "range" ? rangeStartTime : null,
-        rangeEndTime: selectionKind === "range" ? rangeEndTime : null,
-        osScreen,
-        menuIndex: osMenuIndex,
-        osOriginalMenuSplit,
-        osNowPlayingLayout,
-      },
-      playback: {
-        currentTime: state.currentTime,
-        duration: state.duration,
-        selectionKind,
-        rangeStartTime: selectionKind === "range" ? rangeStartTime : null,
-        rangeEndTime: selectionKind === "range" ? rangeEndTime : null,
-      },
-    }),
-    [
-      bgColor,
-      hardwarePreset,
-      interactionModel,
-      osMenuIndex,
-      osScreen,
-      rangeEndTime,
-      rangeStartTime,
-      selectionKind,
-      skinColor,
-      state,
-      viewMode,
-      osOriginalMenuSplit,
-      osNowPlayingLayout,
-    ],
-  );
-
   const screenComponent = isAsciiView ? (
     <AsciiIpod state={state} />
   ) : (
@@ -1046,6 +824,7 @@ export default function IPodClassic() {
     // the active screen scene within the physical device composition.
     <IpodScreen
       preset={activePreset}
+      skinColor={skinColor}
       state={state}
       dispatch={dispatch}
       playClick={playClick}
@@ -1075,6 +854,7 @@ export default function IPodClassic() {
     // the handlers ultimately mutate workbench state.
     <ClickWheel
       preset={activePreset}
+      skinColor={skinColor}
       playClick={playClick}
       onSeek={handleWheelSeek}
       onCenterClick={
@@ -1097,30 +877,6 @@ export default function IPodClassic() {
     />
   );
 
-  const applySongSnapshot = useCallback((snapshot: SongSnapshot) => {
-    dispatch({
-      type: "RESTORE_ALL",
-      payload: {
-        ...snapshot.metadata,
-        currentTime: snapshot.playback.currentTime,
-        duration: snapshot.playback.duration,
-      },
-    });
-    setSkinColor(snapshot.ui.skinColor);
-    setBgColor(snapshot.ui.bgColor);
-    setViewMode(snapshot.ui.viewMode);
-    setHardwarePreset(snapshot.ui.hardwarePreset);
-    setInteractionModel(snapshot.ui.interactionModel);
-    setSelectionKind(snapshot.playback.selectionKind);
-    setRangeStartTime(snapshot.playback.rangeStartTime);
-    setRangeEndTime(snapshot.playback.rangeEndTime);
-    setOsScreen(snapshot.ui.osScreen);
-    setOsMenuIndex(snapshot.ui.menuIndex);
-    setOsOriginalMenuSplit(snapshot.ui.osOriginalMenuSplit);
-    setOsNowPlayingLayout(snapshot.ui.osNowPlayingLayout);
-    setShowSettings(false);
-  }, []);
-
   const handleSaveSnapshot = useCallback(() => {
     resetInteractionChrome({
       closeSettings: true,
@@ -1129,9 +885,9 @@ export default function IPodClassic() {
       clearNotice: true,
     });
     playClick();
-    saveSongSnapshot(buildSongSnapshot());
+    saveWorkbenchSnapshot(model);
     showSoftNotice("Snapshot saved");
-  }, [buildSongSnapshot, playClick, showSoftNotice, resetInteractionChrome]);
+  }, [model, playClick, showSoftNotice, resetInteractionChrome]);
 
   const handleLoadSnapshot = useCallback(() => {
     resetInteractionChrome({
@@ -1141,18 +897,20 @@ export default function IPodClassic() {
       clearNotice: true,
     });
     playClick();
-    const persisted = loadSongSnapshot();
+    const persisted = loadPersistedSongSnapshot();
     if (persisted) {
-      applySongSnapshot(persisted);
-      saveSongSnapshot(persisted);
+      dispatch({ type: "APPLY_SONG_SNAPSHOT", payload: persisted });
+      savePersistedSongSnapshot(persisted);
+      setShowSettings(false);
       showSoftNotice("Snapshot loaded");
       return;
     }
 
-    applySongSnapshot(TEST_SONG_SNAPSHOT);
-    saveSongSnapshot(TEST_SONG_SNAPSHOT);
+    dispatch({ type: "APPLY_SONG_SNAPSHOT", payload: TEST_SONG_SNAPSHOT });
+    savePersistedSongSnapshot(TEST_SONG_SNAPSHOT);
+    setShowSettings(false);
     showSoftNotice("Loaded sample snapshot");
-  }, [applySongSnapshot, playClick, showSoftNotice, resetInteractionChrome]);
+  }, [dispatch, playClick, showSoftNotice, resetInteractionChrome]);
 
   const handleViewModeChange = useCallback(
     (nextMode: IpodViewMode) => {
@@ -1162,7 +920,7 @@ export default function IPodClassic() {
         closeToolbox: true,
         clearNotice: true,
       });
-      setViewMode(nextMode);
+      dispatch({ type: "SET_VIEW_MODE", payload: nextMode });
     },
     [resetInteractionChrome],
   );
@@ -1218,9 +976,6 @@ export default function IPodClassic() {
 
   const scaledFrameWidth = PREVIEW_FRAME_WIDTH * previewScale;
   const scaledFrameHeight = PREVIEW_FRAME_HEIGHT * previewScale;
-  const shellShadow = isExportCapturing
-    ? "0 0 0 1px rgba(82,88,97,0.12), 0 14px 20px -22px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
-    : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.04)";
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
   const toolboxDockClass = isCompactToolbox
@@ -1825,42 +1580,13 @@ export default function IPodClassic() {
                   backgroundColor: isExportCapturing ? bgColor : "transparent",
                 }}
               >
-                <div
-                  className="relative flex h-[620px] w-[370px] flex-col items-center border border-white/45 transition-all duration-300"
-                  style={{
-                    backgroundColor: skinColor,
-                    borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
-                    boxShadow: shellShadow,
-                    borderRadius: activePreset.shell.radius,
-                    paddingLeft: activePreset.shell.paddingX,
-                    paddingRight: activePreset.shell.paddingX,
-                    paddingTop: activePreset.shell.paddingTop,
-                    paddingBottom: activePreset.shell.paddingBottom,
-                  }}
-                  data-export-layer="shell"
-                >
-                  <div
-                    className="pointer-events-none absolute inset-[1px]"
-                    aria-hidden="true"
-                    style={{
-                      borderRadius: activePreset.shell.innerRadius,
-                      background:
-                        "radial-gradient(circle at 22% 10%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 18%, rgba(255,255,255,0) 42%, rgba(0,0,0,0.02) 100%)",
-                    }}
-                  />
-                  {/* SCREEN AREA */}
-                  <div className="relative z-10 flex w-full justify-center">
-                    {screenComponent}
-                  </div>
-
-                  {/* CONTROL AREA */}
-                  <div
-                    className="relative z-10 flex justify-center"
-                    style={{ marginTop: activePreset.shell.controlMarginTop }}
-                  >
-                    {wheelComponent}
-                  </div>
-                </div>
+                <IpodDevice
+                  preset={activePreset}
+                  skinColor={skinColor}
+                  exportSafe={isExportCapturing}
+                  screen={screenComponent}
+                  wheel={wheelComponent}
+                />
               </div>
             </div>
           </div>
