@@ -1238,7 +1238,6 @@ try {
 - **React Three Fiber**: [docs.pmnd.rs/react-three-fiber](https://docs.pmnd.rs/react-three-fiber)
 - **html-to-image**: [github.com/bubkoo/html-to-image](https://github.com/bubkoo/html-to-image)
 - **gifenc**: [github.com/mattdesl/gifenc](https://github.com/mattdesl/gifenc)
-- **Playwright**: [playwright.dev/docs/intro](https://playwright.dev/docs/intro)
 
 ---
 

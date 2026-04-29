@@ -61,18 +61,16 @@
 - [ ] Code follows project style guidelines
 - [ ] No breaking changes (or marked with `!` and `BREAKING CHANGE:`)
 
-### Testing
-
-- [ ] Tests added/updated for new features or bug fixes
-- [ ] All tests pass locally (`bun run test`)
-- [ ] Tested on multiple browsers (Chrome, Firefox, Safari)
-- [ ] Tested on mobile viewport (if UI change)
-
 ### Validation
 
 - [ ] Linter passes (`bun run lint`)
-- [ ] Prettier formatting applied (`bun run format`)
 - [ ] TypeScript type checking passes (`bun run type-check`)
+- [ ] Production build passes (`bun run build`)
+- [ ] Tested on mobile viewport (if UI change)
+
+### Formatting
+
+- [ ] Prettier formatting applied (`bun run format`)
 - [ ] Full validation passes (`bun run validate`)
 
 ### Documentation
@@ -126,7 +124,6 @@
 <!-- For reviewers - do not edit -->
 
 - [ ] Code follows project conventions
-- [ ] Tests are comprehensive and pass
 - [ ] Documentation is clear and accurate
 - [ ] No security vulnerabilities introduced
 - [ ] Performance impact considered
@@ -139,7 +136,7 @@
 
 - I have read the [Contributing Guidelines](./CONTRIBUTING.md)
 - My code follows the project's style and semantic commit conventions
-- I have tested my changes thoroughly
+- I have validated my changes appropriately for this repository
 - I have updated relevant documentation
 
 ---

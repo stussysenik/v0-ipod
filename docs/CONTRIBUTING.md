@@ -9,7 +9,7 @@ Thank you for your interest in contributing to the iPod Digital Clone project! T
 - [Semantic Commit Conventions](#semantic-commit-conventions)
 - [Development Workflow](#development-workflow)
 - [Code Style Guidelines](#code-style-guidelines)
-- [Testing](#testing)
+- [Verification](#verification)
 - [Pull Request Process](#pull-request-process)
 - [Project Structure](#project-structure)
 
@@ -151,7 +151,7 @@ Common scopes in this project:
 - `marquee`: Marquee text animation
 - `3d`: Three.js 3D rendering
 - `ui`: UI components (buttons, inputs, etc.)
-- `tests`: Test files
+- `validation`: Verification and quality-gate work
 - `deps`: Dependency updates
 - `config`: Configuration files
 
@@ -186,7 +186,7 @@ bun install
 
 - Write code following our [Code Style Guidelines](#code-style-guidelines)
 - Use semantic commits for each logical change
-- Add tests for new features or bug fixes
+- Record the manual and automated validation you ran
 
 ### 5. Run Validation
 
@@ -201,7 +201,7 @@ bun run lint:eslint    # Run the legacy Next/ESLint ruleset
 bun run format:check   # Check code formatting
 bun run format         # Auto-format code
 bun run type-check     # TypeScript type checking
-bun run test           # Run Playwright tests
+bun run build          # Verify the production build
 ```
 
 ### 6. Commit Changes
@@ -343,86 +343,21 @@ Key rules enforced:
 
 ---
 
-## 🧪 Testing
+## 🔎 Verification
 
-### Running Tests
+This repository currently does not ship with a committed automated test suite.
+Until a new harness is introduced, validate changes with the existing quality
+gates and focused manual checks:
 
 ```bash
-# Run all tests
-bun run test
-
-# Run with UI
-bun run test:ui
-
-# Debug mode
-bun run test:debug
-
-# Specific test file
-bunx playwright test tests/interactions.spec.ts
-
-# Specific test by name
-bunx playwright test -g "should export PNG"
+bun run lint
+bun run format:check
+bun run type-check
+bun run build
 ```
 
-### Writing Tests
-
-We use **Playwright** for end-to-end testing.
-
-#### Test Structure
-
-```typescript
-import { test, expect } from "@playwright/test";
-
-test.describe("Feature Name", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:4001");
-  });
-
-  test("should do something specific", async ({ page }) => {
-    // Arrange: Set up test conditions
-    const button = page.getByRole("button", { name: "Export PNG" });
-
-    // Act: Perform action
-    await button.click();
-
-    // Assert: Verify outcome
-    await expect(page.getByText("Export successful")).toBeVisible();
-  });
-});
-```
-
-#### Test Coverage Expectations
-
-When adding new features:
-
-- ✅ **Happy path**: Normal user flow works
-- ✅ **Edge cases**: Empty states, max values, invalid input
-- ✅ **Error handling**: Failed API calls, network errors
-- ✅ **Mobile**: Touch interactions work on mobile viewports
-
-#### Example Test
-
-```typescript
-test("should save and restore snapshot", async ({ page }) => {
-  // Edit metadata
-  await page.getByLabel("Title").fill("Test Song");
-  await page.getByLabel("Artist").fill("Test Artist");
-
-  // Save snapshot
-  await page.getByRole("button", { name: "Save Snapshot" }).click();
-  await expect(page.getByText("Snapshot saved")).toBeVisible();
-
-  // Modify metadata
-  await page.getByLabel("Title").fill("Different Song");
-
-  // Restore snapshot
-  await page.getByRole("button", { name: "Load Snapshot" }).click();
-
-  // Verify restoration
-  await expect(page.getByLabel("Title")).toHaveValue("Test Song");
-  await expect(page.getByLabel("Artist")).toHaveValue("Test Artist");
-});
-```
+For UI-heavy changes, verify the affected flows manually in desktop and mobile
+viewports before opening a PR.
 
 ---
 
@@ -430,8 +365,8 @@ test("should save and restore snapshot", async ({ page }) => {
 
 ```mermaid
 flowchart LR
-    A[Create PR] --> B{Tests Pass?}
-    B -->|No| C[Fix Tests]
+    A[Create PR] --> B{Validation Passes?}
+    B -->|No| C[Fix Issues]
     C --> B
     B -->|Yes| D{Code Review}
     D -->|Changes Requested| E[Address Feedback]
@@ -445,12 +380,11 @@ flowchart LR
 Before submitting a PR, ensure:
 
 - [ ] **Semantic commits**: All commits follow conventional format
-- [ ] **Tests pass**: `bun run test` succeeds
 - [ ] **Linting**: `bun run lint` has no errors
 - [ ] **Formatting**: `bun run format:check` passes
 - [ ] **Type checking**: `bun run type-check` succeeds
+- [ ] **Production build**: `bun run build` succeeds
 - [ ] **Documentation**: Updated relevant docs (README, ARCHITECTURE, etc.)
-- [ ] **Testing**: Added/updated tests for changes
 - [ ] **Mobile tested**: Verified on mobile viewport (if UI change)
 - [ ] **No breaking changes**: Or clearly marked with `!` and `BREAKING CHANGE:`
 
@@ -465,7 +399,7 @@ Our PR template will guide you through:
 
 ### Review Process
 
-1. **Automated checks**: GitHub Actions runs lint, type-check, and tests
+1. **Validation**: Run the repository quality gates locally
 2. **Code review**: Maintainer reviews code quality and design
 3. **Feedback**: Requested changes or approval
 4. **Merge**: Squash and merge with semantic commit message
@@ -496,7 +430,6 @@ v0-ipod/
 │   ├── export-utils.ts  # Export pipeline logic
 │   ├── storage.ts       # localStorage wrapper
 │   └── utils.ts         # General utilities
-├── tests/               # Playwright E2E tests
 └── public/              # Static assets
 ```
 
@@ -507,9 +440,8 @@ When adding a new feature:
 1. **Create component** in appropriate directory
 2. **Add types** in component file or `lib/types.ts`
 3. **Implement logic** following existing patterns
-4. **Add tests** in `tests/` directory
-5. **Update docs** in README.md and ARCHITECTURE.md
-6. **Export utilities** from index files when applicable
+4. **Update docs** in README.md and ARCHITECTURE.md
+5. **Export utilities** from index files when applicable
 
 ---
 
@@ -521,7 +453,6 @@ When adding a new feature:
 - **Next.js 15**: [nextjs.org](https://nextjs.org)
 - **TypeScript**: [typescriptlang.org](https://www.typescriptlang.org/)
 - **Three.js**: [threejs.org](https://threejs.org)
-- **Playwright**: [playwright.dev](https://playwright.dev)
 - **Tailwind CSS**: [tailwindcss.com](https://tailwindcss.com)
 
 ### Conventional Commits

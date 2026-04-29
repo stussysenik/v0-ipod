@@ -10,8 +10,6 @@ const eslintConfig = [
       ".next/**",
       "node_modules/**",
       "public/**",
-      "playwright-report/**",
-      "test-results/**",
       "scripts/**",
       "ipod-classic.tsx",
     ],

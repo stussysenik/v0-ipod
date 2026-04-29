@@ -56,17 +56,8 @@ Status updates map to toolbar action states (`preparing`, `sharing`, `success`, 
 
 `components/service-worker-cleanup.tsx` unregisters stale service workers and clears caches on app load to reduce stale-asset regressions.
 
-## Regression Coverage
+## Validation Baseline
 
-Playwright suites:
-- `tests/editable-track-number.spec.ts`
-- `tests/interactions.spec.ts`
-- `tests/mobile-usability.spec.ts`
-
-Coverage includes:
-- Theme panel / view switching
-- Upload flow
-- Color persistence
-- Remaining-time-first progress math
-- Export control recovery
-- Mobile tap and touch-seek behavior
+This repository currently ships without a committed automated test suite.
+Use `bun run lint`, `bun run type-check`, `bun run build`, and focused manual
+verification while you rebuild test ownership.

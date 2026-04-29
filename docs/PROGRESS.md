@@ -31,13 +31,9 @@ This pass added the OKLCH grey palette picker, ASCII mode, animated GIF export, 
 
 ## Verification
 
-Automated:
-
-```bash
-npx playwright test tests/interactions.spec.ts tests/mobile-usability.spec.ts --reporter=line
-```
-
-Result: 23/25 passed (2 pre-existing flaky tests).
+Current baseline:
+- The committed Playwright suite has been removed to reset test ownership.
+- Use `bun run lint`, `bun run type-check`, and `bun run build` as the active automated checks.
 
 Manual (Chrome DevTools):
 - All view modes render correctly (2D, 3D, Preview, ASCII, Focus)
@@ -50,7 +46,7 @@ Manual (Chrome DevTools):
 - Stabilized interaction flow for core non-3D experience
 - Hardened mobile usability (tap-to-edit, pointer seek, label-based upload)
 - Improved color picker usability (gesture path, panel hiding, localStorage recents)
-- Standardized Playwright test runtime config
+- Standardized interaction validation workflow
 - Repository cleanup and branding alignment to iPod Snapshot
 
 ## Remaining / Deferred

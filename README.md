@@ -13,7 +13,6 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=next.js&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 **[🎵 Live Demo](https://v0-i-pod-project-bx8feebd81r.vercel.app)** • **[📖 Docs](#documentation)** • **[🤝 Contributing](./CONTRIBUTING.md)** • **[🏗️ Architecture](./ARCHITECTURE.md)**
@@ -213,9 +212,6 @@ v0-ipod/
 │   ├── export-utils.ts              # PNG/GIF export pipeline
 │   ├── storage.ts                   # localStorage persistence
 │   └── utils.ts                     # Utility functions
-├── tests/
-│   ├── interactions.spec.ts         # E2E interaction tests
-│   └── mobile-usability.spec.ts     # Mobile responsiveness tests
 └── public/
     └── manifest.json                # PWA manifest
 ```
@@ -254,37 +250,23 @@ graph TD
 | **Export Pipeline** | html-to-image + html2canvas + gifenc |
 | **State Management** | React useReducer + Context |
 | **Storage** | localStorage API |
-| **Testing** | Playwright (E2E) |
 | **PWA** | @ducanh2912/next-pwa |
 | **Deployment** | Vercel |
 
 ---
 
-## 🧪 Testing
+## 🔎 Verification
+
+This repository currently does not ship with a committed automated test suite.
+Use the existing quality gates plus focused manual checks while rebuilding test
+ownership:
 
 ```bash
-# Run all tests
-bun run test
-
-# Run tests with UI mode
-bun run test:ui
-
-# Run tests in debug mode
-bun run test:debug
-
-# Run specific test file
-bunx playwright test tests/interactions.spec.ts
+bun run lint
+bun run format:check
+bun run type-check
+bun run build
 ```
-
-### Test Coverage
-
-- ✅ Metadata editing and persistence
-- ✅ View mode switching (2D, 3D, Preview, ASCII, Focus)
-- ✅ Color customization and history tracking
-- ✅ Export functionality (PNG and GIF)
-- ✅ Snapshot save/restore
-- ✅ Mobile responsiveness
-- ✅ Touch interactions
 
 ---
 
@@ -302,9 +284,6 @@ bunx playwright test tests/interactions.spec.ts
 | `bun run format:check` | Check formatting without changes |
 | `bun run type-check` | Run TypeScript type checking |
 | `bun run validate` | Run lint + format check + type check |
-| `bun run test` | Run Playwright tests |
-| `bun run test:ui` | Run tests with UI |
-| `bun run test:debug` | Run tests in debug mode |
 
 ---
 
