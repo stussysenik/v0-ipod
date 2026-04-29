@@ -28,8 +28,8 @@ export function IpodPlaybackFooter({
   onRemainingTimeChange,
   playClick,
 }: IpodPlaybackFooterProps) {
-  const timeFontSize = Math.max(8, screenTokens.metaFontSize + 1);
-  const timeWidth = Math.max(26, Math.round(timeFontSize * 2.8));
+  const timeFontSize = Math.max(9, screenTokens.metaFontSize + 1);
+  const timeWidth = Math.max(28, Math.round(timeFontSize * 3.2));
 
   return renderElement(
     "progress",
@@ -37,9 +37,9 @@ export function IpodPlaybackFooter({
       className="flex w-full items-center justify-between font-bold leading-none text-black"
       style={{
         fontVariantNumeric: "tabular-nums",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
         fontSize: timeFontSize,
-        letterSpacing: "-0.3px",
+        letterSpacing: "-0.01em",
       }}
     >
       <div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
@@ -58,7 +58,7 @@ export function IpodPlaybackFooter({
           },
         )}
       </div>
-      <div className="min-w-0 flex-1 px-[3px]">
+      <div className="min-w-0 flex-1 px-[6px]">
         <IpodProgressBar
           currentTime={state.currentTime}
           duration={state.duration}
@@ -72,8 +72,8 @@ export function IpodPlaybackFooter({
           }}
           disabled={!isInlineEditingEnabled}
           trackHeight={Math.min(
-            14,
-            Math.max(8, Math.round(screenTokens.progressHeight * 0.45)),
+            13,
+            Math.max(8, Math.round(screenTokens.progressHeight * 0.42)),
           )}
         />
       </div>
@@ -102,7 +102,7 @@ export function IpodPlaybackFooter({
       style: {
         bottom: screenTokens.progressBottom,
         height: screenTokens.progressHeight,
-        paddingInline: Math.max(0, screenTokens.progressPaddingX - 4),
+        paddingInline: screenTokens.statusBarPaddingX + 2,
         paddingTop: screenTokens.progressPaddingTop,
         background: screenChromeTokens.progress.footerBackground,
         display: "flex",

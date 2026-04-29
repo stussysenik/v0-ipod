@@ -69,6 +69,7 @@ export interface IpodInteractionState {
   osOriginalMenuSplit: number;
   osNowPlayingLayout: IpodNowPlayingLayoutState;
   isNowPlayingEditable: boolean;
+  isPlaying: boolean;
 }
 
 export interface IpodPlaybackSnapshot {
@@ -99,6 +100,7 @@ export interface IpodUiState {
   menuIndex: number;
   osOriginalMenuSplit: number;
   osNowPlayingLayout: IpodNowPlayingLayoutState;
+  isPlaying: boolean;
 }
 
 export interface SongSnapshot {
@@ -138,6 +140,7 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
       osOriginalMenuSplit: DEFAULT_OS_ORIGINAL_MENU_SPLIT,
       osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
       isNowPlayingEditable: false,
+      isPlaying: false,
     },
   };
 }

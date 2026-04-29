@@ -74,6 +74,7 @@ export function IpodProgressBar({
       <div
         ref={progressRef}
         data-testid="progress-track"
+        data-export-duration={duration}
         className={`relative w-full border ${
           disabled ? "cursor-default" : "cursor-pointer"
         }`}
@@ -97,8 +98,8 @@ export function IpodProgressBar({
           style={{
             width: `${visibleProgress}%`,
             background:
-              "linear-gradient(to bottom, #b8e0ff 0%, #7fc1ff 15%, #3a9cf5 50%, #1e7fd8 51%, #5aa8f0 100%)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
+              "linear-gradient(to bottom, #72B9F4 0%, #3D9CF4 48%, #1680E0 52%, #4C9EEB 100%)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.45)",
             maxWidth: "100%",
             borderRadius: "1px 0 0 1px",
           }}

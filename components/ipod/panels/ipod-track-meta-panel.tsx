@@ -93,6 +93,8 @@ export function IpodTrackMetaPanel({
             className="max-w-full min-w-0"
             editLabel="Edit artist"
             dataTestId="track-artist-text"
+            animate={animateText}
+            preview={animateText}
             singleLine
           />
         </div>,
@@ -116,6 +118,8 @@ export function IpodTrackMetaPanel({
             className="max-w-full min-w-0"
             editLabel="Edit album"
             dataTestId="track-album-text"
+            animate={animateText}
+            preview={animateText}
             singleLine
           />
         </div>,

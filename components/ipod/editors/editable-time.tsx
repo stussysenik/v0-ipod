@@ -125,6 +125,7 @@ export function EditableTime({
     <span
       onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
       onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
+      data-export-time-value={value}
       className={`cursor-text ${disabled ? "" : "hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors"} ${className}`}
     >
       {displayValue}

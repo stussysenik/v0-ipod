@@ -63,6 +63,7 @@ export function loadPersistedWorkbenchModel(
       osNowPlayingLayout:
         savedUi?.osNowPlayingLayout ?? fallback.interaction.osNowPlayingLayout,
       isNowPlayingEditable: false,
+      isPlaying: savedUi?.isPlaying ?? fallback.interaction.isPlaying,
     },
   };
 }

@@ -48,6 +48,8 @@ export type IpodWorkbenchAction =
     }
   | { type: "SET_OS_NOW_PLAYING_EDITABLE"; payload: boolean }
   | { type: "TOGGLE_OS_NOW_PLAYING_EDITABLE" }
+  | { type: "SET_IS_PLAYING"; payload: boolean }
+  | { type: "TOGGLE_IS_PLAYING" }
   | { type: "RESTORE_MODEL"; payload: IpodWorkbenchModel }
   | { type: "APPLY_SONG_SNAPSHOT"; payload: SongSnapshot };
 
@@ -66,7 +68,7 @@ function clampSongMetadata(metadata: SongMetadata): SongMetadata {
   return {
     ...metadata,
     duration,
-    currentTime: Math.min(Math.max(Math.floor(metadata.currentTime), 0), duration),
+    currentTime: Math.min(Math.max(metadata.currentTime, 0), duration),
     rating: Math.min(Math.max(Math.floor(metadata.rating), 0), 5),
     trackNumber: Math.min(Math.max(Math.floor(metadata.trackNumber), 1), totalTracks),
     totalTracks,
@@ -113,6 +115,7 @@ function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
       ),
       osNowPlayingLayout:
         model.interaction.osNowPlayingLayout ?? DEFAULT_OS_NOW_PLAYING_LAYOUT,
+      isPlaying: !!model.interaction.isPlaying,
     },
   };
 }
@@ -131,6 +134,7 @@ export function buildPersistedUiState(model: IpodWorkbenchModel): IpodUiState {
     menuIndex: model.interaction.menuIndex,
     osOriginalMenuSplit: model.interaction.osOriginalMenuSplit,
     osNowPlayingLayout: model.interaction.osNowPlayingLayout,
+    isPlaying: model.interaction.isPlaying,
   };
 }
 
@@ -169,6 +173,7 @@ export function applySongSnapshotToModel(
       osOriginalMenuSplit: snapshot.ui.osOriginalMenuSplit,
       osNowPlayingLayout: snapshot.ui.osNowPlayingLayout,
       isNowPlayingEditable: false,
+      isPlaying: snapshot.ui.isPlaying ?? false,
     },
   });
 }
@@ -261,6 +266,7 @@ export function ipodWorkbenchReducer(
           interactionModel: action.payload,
           osScreen: action.payload === "direct" ? "now-playing" : "menu",
           isNowPlayingEditable: false,
+          isPlaying: false,
         },
       });
     case "SET_SELECTION_KIND":
@@ -342,6 +348,22 @@ export function ipodWorkbenchReducer(
         interaction: {
           ...state.interaction,
           isNowPlayingEditable: !state.interaction.isNowPlayingEditable,
+        },
+      });
+    case "SET_IS_PLAYING":
+      return normalizeModel({
+        ...state,
+        interaction: {
+          ...state.interaction,
+          isPlaying: action.payload,
+        },
+      });
+    case "TOGGLE_IS_PLAYING":
+      return normalizeModel({
+        ...state,
+        interaction: {
+          ...state.interaction,
+          isPlaying: !state.interaction.isPlaying,
         },
       });
     case "RESTORE_MODEL":

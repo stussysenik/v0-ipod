@@ -71,7 +71,7 @@ export function MarqueeText({
   }, [text, preview, captureReady]);
 
   const overflow = measurements.contentWidth > measurements.containerWidth + 1;
-  const shouldRenderTrack = preview || captureReady;
+  const shouldAnimate = (preview || captureReady) && overflow;
 
   useEffect(() => {
     onOverflowChange?.(overflow);
@@ -81,7 +81,7 @@ export function MarqueeText({
     const track = trackRef.current;
     if (!track) return;
 
-    if (!preview || !shouldRenderTrack) {
+    if (!shouldAnimate) {
       track.style.transform = "translateX(0px)";
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -111,21 +111,28 @@ export function MarqueeText({
       }
       track.style.transform = "translateX(0px)";
     };
-  }, [measurements, preview, shouldRenderTrack]);
+  }, [measurements, shouldAnimate]);
 
   return (
     <div
       ref={containerRef}
       className={`relative block w-full overflow-hidden ${className}`}
+      style={{
+        maskImage: overflow
+          ? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
+          : "none",
+        WebkitMaskImage: overflow
+          ? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
+          : "none",
+      }}
       data-testid={dataTestId}
       data-marquee-container="true"
-      data-marquee-active={shouldRenderTrack ? "true" : "false"}
+      data-marquee-active={shouldAnimate ? "true" : "false"}
       data-marquee-overflow={overflow ? "true" : "false"}
       data-marquee-viewport-width={measurements.containerWidth || undefined}
       data-marquee-content-width={measurements.contentWidth || undefined}
-      data-marquee-gap-width={measurements.gapWidth || undefined}
       data-marquee-cycle-duration-ms={
-        shouldRenderTrack ? getMarqueeCycleDurationMs(measurements) : undefined
+        shouldAnimate ? getMarqueeCycleDurationMs(measurements) : undefined
       }
     >
       <span
@@ -135,24 +142,22 @@ export function MarqueeText({
       >
         {text}
       </span>
-      {shouldRenderTrack ? (
-        <div
-          ref={trackRef}
-          className="flex w-max items-center whitespace-nowrap will-change-transform"
-          style={{ transform: "translateX(0px)" }}
-          data-marquee-track="true"
-        >
-          <span className="inline-block whitespace-nowrap">{text}</span>
-        </div>
-      ) : (
+      <div
+        ref={trackRef}
+        className={`flex w-max items-center whitespace-nowrap will-change-transform ${
+          !overflow ? "w-full" : ""
+        }`}
+        style={{ transform: "translateX(0px)" }}
+        data-marquee-track="true"
+      >
         <span
-          className={`block w-full min-w-0 max-w-full break-words [overflow-wrap:anywhere] [hyphens:auto] ${
-            preview ? "whitespace-nowrap" : ""
+          className={`inline-block whitespace-nowrap ${
+            !overflow && !shouldAnimate ? "w-full min-w-0 max-w-full truncate" : ""
           }`}
         >
           {text}
         </span>
-      )}
+      </div>
     </div>
   );
 }

@@ -166,11 +166,41 @@ export function IpodClickWheel({
         data-export-layer="wheel"
         data-testid="click-wheel"
       >
+        {/* Fine Wheel Rim Highlight */}
         <div
-          className="pointer-events-none absolute inset-[2px] rounded-full"
+          className="pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            boxShadow:
+              "inset 0 1px 0.5px rgba(255,255,255,0.45), inset 0 -0.5px 0.5px rgba(0,0,0,0.05)",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Subsurface texture for material depth */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-full opacity-[0.02] mix-blend-overlay"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+          aria-hidden="true"
+        />
+
+        <div
+          className="pointer-events-none absolute inset-[1px] rounded-full"
           style={{
             background:
-              "radial-gradient(circle at 38% 26%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 36%, rgba(255,255,255,0) 58%)",
+              "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 70%)",
+          }}
+        />
+
+        {/* Center Button Cavity/Bezel */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            width: wheelTokens.centerSize + 2,
+            height: wheelTokens.centerSize + 2,
+            background: "rgba(0,0,0,0.15)",
+            boxShadow: "inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 1px rgba(255,255,255,0.1)",
           }}
         />
 
@@ -300,8 +330,8 @@ export function IpodClickWheel({
           borderColor: wheelCenterBorder,
           backgroundImage: `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
           boxShadow: exportSafe
-            ? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
-            : "0 2px 6px -2px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(92,96,104,0.06), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -2px 4px rgba(0,0,0,0.04)",
+            ? "0 0 0 1px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -1px 1px rgba(0,0,0,0.1)"
+            : "0 4px 12px -2px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.15)",
         }}
         data-export-layer="wheel-center"
         data-testid="click-wheel-center"
@@ -314,10 +344,18 @@ export function IpodClickWheel({
         }}
       >
         <div
-          className="pointer-events-none absolute inset-[3px] rounded-full"
+          className="pointer-events-none absolute inset-0 rounded-full"
           style={{
             background:
-              "radial-gradient(ellipse 70% 50% at 50% 34%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 44%, rgba(255,255,255,0) 72%)",
+              "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0) 70%)",
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 80%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 60%)",
           }}
           aria-hidden="true"
         />

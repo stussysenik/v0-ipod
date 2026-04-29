@@ -12,11 +12,12 @@ export type ExportStatus =
 
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
-const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v2";
-const MAX_GIF_FRAME_COUNT = 180;
+const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v3";
+const MAX_GIF_FRAME_COUNT = 320;
 const GIF_DELAY_QUANTUM_MS = 10;
 const GIF_CAPTURE_SCALE_HIGH = 2;
 const GIF_CAPTURE_SCALE_BALANCED = 1.5;
+const GIF_DEFAULT_DURATION_MS = 16000;
 const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
 const EXPORT_SHELL_CONTOUR =
   "0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
@@ -371,22 +372,12 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
       return [];
     }
 
-    const leadCopy = track.firstElementChild as HTMLElement | null;
-    const spacer = track.querySelector<HTMLElement>('[data-marquee-spacer="true"]');
     const containerWidth =
       parseNumericDataAttribute(container.dataset.marqueeViewportWidth) ??
       Math.ceil(container.clientWidth);
     const contentWidth =
       parseNumericDataAttribute(container.dataset.marqueeContentWidth) ??
-      Math.ceil(leadCopy?.scrollWidth ?? leadCopy?.getBoundingClientRect().width ?? 0);
-    const gapWidthFromDataset = parseNumericDataAttribute(
-      container.dataset.marqueeGapWidth,
-    );
-    const spacerWidth = Math.ceil(
-      spacer?.getBoundingClientRect().width ?? spacer?.offsetWidth ?? 0,
-    );
-    const gapWidth =
-      gapWidthFromDataset ?? Math.max(spacerWidth - Math.ceil(containerWidth), 0);
+      Math.ceil(track.scrollWidth);
 
     if (containerWidth <= 0 || contentWidth <= 0) {
       return [];
@@ -398,7 +389,7 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
         metrics: {
           containerWidth: Math.ceil(containerWidth),
           contentWidth: Math.ceil(contentWidth),
-          gapWidth: Math.ceil(Math.max(gapWidth, 0)),
+          gapWidth: 0,
         },
       },
     ];
@@ -1079,7 +1070,7 @@ export async function exportAnimatedGif(
       exportNode.offsetHeight || exportNode.clientHeight || 1,
     );
     const detectedCycleDurationMs = applyAnimationFrameToClone(exportNode, 0);
-    const captureDurationMs = Math.max(detectedCycleDurationMs, 4000);
+    const captureDurationMs = Math.max(detectedCycleDurationMs, GIF_DEFAULT_DURATION_MS);
     const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
     const uncappedFrameCount = Math.max(
       1,
@@ -1088,7 +1079,7 @@ export async function exportAnimatedGif(
     const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
     const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
     const captureScale =
-      frameCount > 140 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
+      frameCount > 180 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
 
     onStatusChange?.("encoding");
 

@@ -14,6 +14,8 @@ import {
   Film,
   Eye,
   Terminal,
+  Play,
+  Pause,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ExportStatus } from "@/lib/export-utils";
@@ -65,7 +67,6 @@ import {
   type SnapshotSelectionKind,
 } from "@/lib/ipod-state/model";
 import {
-  getExportScreenContext,
   isAsciiViewMode,
   isAuthenticInteractionModel,
   isPngExportViewMode,
@@ -215,6 +216,7 @@ export default function IpodClassicWorkbench() {
   const skinColor = model.presentation.skinColor;
   const bgColor = model.presentation.bgColor;
   const interactionModel = model.interaction.interactionModel;
+  const isPlaying = model.interaction.isPlaying;
   const osScreen = model.interaction.osScreen;
   const osMenuIndex = model.interaction.menuIndex;
   const osOriginalMenuSplit = model.interaction.osOriginalMenuSplit;
@@ -265,25 +267,27 @@ export default function IpodClassicWorkbench() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!supportsOklch()) return;
-    setOklchReady(true);
-    setOklchCasePalette(
-      buildOklchPalette(
-        OKLCH_CASE_STEPS,
-        OKLCH_CASE_L,
-        OKLCH_CASE_C,
-        CASE_OKLCH_CONFIG.hueOffset,
-      ),
-    );
-    setOklchBgPalette(
-      buildOklchPalette(
-        OKLCH_BG_STEPS,
-        OKLCH_BG_L,
-        OKLCH_BG_C,
-        BACKGROUND_OKLCH_CONFIG.hueOffset,
-      ),
-    );
+    setOklchReady(supportsOklch());
+  }, []);
+
+  useEffect(() => {
+    if (!oklchReady) return;
+    setOklchCasePalette(buildOklchPalette(OKLCH_CASE_STEPS, OKLCH_CASE_L, OKLCH_CASE_C));
+    setOklchBgPalette(buildOklchPalette(OKLCH_BG_STEPS, OKLCH_BG_L, OKLCH_BG_C, 180));
+  }, [oklchReady]);
+
+  useEffect(() => {
+    setSavedCaseColors(loadCustomColors(CASE_CUSTOM_COLORS_KEY));
+    setSavedBgColors(loadCustomColors(BG_CUSTOM_COLORS_KEY));
+  }, []);
+
+  const saveCustomColor = useCallback((target: "case" | "bg", hex: string) => {
+    const key = target === "case" ? CASE_CUSTOM_COLORS_KEY : BG_CUSTOM_COLORS_KEY;
+    const current = loadCustomColors(key);
+    const next = [hex, ...current.filter((c) => c !== hex)].slice(0, MAX_CUSTOM_COLORS);
+    persistCustomColors(key, next);
+    if (target === "case") setSavedCaseColors(next);
+    else setSavedBgColors(next);
   }, []);
 
   useEffect(() => {
@@ -331,6 +335,19 @@ export default function IpodClassicWorkbench() {
   }, [isFlatView, isAuthenticInteraction]);
 
   useEffect(() => {
+    if (!isPlaying) return;
+
+    const intervalId = window.setInterval(() => {
+      dispatch({
+        type: "UPDATE_CURRENT_TIME",
+        payload: (state.currentTime + 1) % (state.duration + 1),
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isPlaying, state.currentTime, state.duration, dispatch]);
+
+  useEffect(() => {
     if (selectionKind !== "range") {
       if (rangeStartTime !== null) setRangeStartTime(null);
       if (rangeEndTime !== null) setRangeEndTime(null);
@@ -371,56 +388,22 @@ export default function IpodClassicWorkbench() {
   }, [selectionKind, rangeEndTime]);
 
   useEffect(() => {
-    if (!showSettings && !isToolboxVisible) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (toolsRef.current?.contains(target)) return;
-      setShowSettings(false);
-      if (isCompactToolbox) {
-        setIsToolboxOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setShowSettings(false);
-        if (isCompactToolbox) {
-          setIsToolboxOpen(false);
-        }
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-
     return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
+      if (softNoticeTimerRef.current !== null) {
+        window.clearTimeout(softNoticeTimerRef.current);
+      }
     };
-  }, [showSettings, isCompactToolbox, isToolboxVisible]);
-
-  useEffect(() => {
-    if (viewportSize.width === 0) return;
-    setIsToolboxOpen(!isCompactToolbox);
-  }, [viewportSize.width, isCompactToolbox]);
-
-  useEffect(() => {
-    setSavedCaseColors(loadCustomColors(CASE_CUSTOM_COLORS_KEY));
-    setSavedBgColors(loadCustomColors(BG_CUSTOM_COLORS_KEY));
   }, []);
 
-  useEffect(() => {
-    persistCustomColors(CASE_CUSTOM_COLORS_KEY, savedCaseColors);
-  }, [savedCaseColors]);
-
-  useEffect(() => {
-    persistCustomColors(BG_CUSTOM_COLORS_KEY, savedBgColors);
-  }, [savedBgColors]);
-
-  const playClick = useCallback(() => {
-    playClickAudio(audioRef);
+  const showSoftNotice = useCallback((message: string) => {
+    if (softNoticeTimerRef.current !== null) {
+      window.clearTimeout(softNoticeTimerRef.current);
+    }
+    setSoftNotice(message);
+    softNoticeTimerRef.current = window.setTimeout(() => {
+      setSoftNotice(null);
+      softNoticeTimerRef.current = null;
+    }, 2400);
   }, []);
 
   const clearSoftNotice = useCallback(() => {
@@ -431,152 +414,58 @@ export default function IpodClassicWorkbench() {
     setSoftNotice(null);
   }, []);
 
-  const showSoftNotice = useCallback(
-    (message: string) => {
-      clearSoftNotice();
-      setSoftNotice(message);
-      softNoticeTimerRef.current = window.setTimeout(() => {
-        setSoftNotice(null);
-        softNoticeTimerRef.current = null;
-      }, 1700);
-    },
-    [clearSoftNotice],
-  );
-
   const resetInteractionChrome = useCallback(
-    (options?: {
-      closeSettings?: boolean;
-      closeEditor?: boolean;
-      closeToolbox?: boolean;
-      clearNotice?: boolean;
-    }) => {
-      if (options?.closeSettings) {
-        setShowSettings(false);
-      }
-      if (options?.clearNotice) {
-        clearSoftNotice();
-      }
-      if (options?.closeEditor) {
-        setEditorResetKey((prev) => prev + 1);
-      }
-      if (options?.closeToolbox && isCompactToolbox) {
-        setIsToolboxOpen(false);
-      }
+    (
+      options: {
+        closeSettings?: boolean;
+        closeEditor?: boolean;
+        closeToolbox?: boolean;
+        clearNotice?: boolean;
+      } = {},
+    ) => {
+      if (options.closeSettings) setShowSettings(false);
+      if (options.closeEditor) setEditorResetKey((prev) => prev + 1);
+      if (options.closeToolbox && isCompactToolbox) setIsToolboxOpen(false);
+      if (options.clearNotice) clearSoftNotice();
     },
-    [clearSoftNotice, isCompactToolbox],
+    [isCompactToolbox, clearSoftNotice],
   );
 
-  useEffect(() => {
-    return () => {
-      clearSoftNotice();
-    };
-  }, [clearSoftNotice]);
-
-  const handleSeek = useCallback(
-    (direction: number) => {
-      dispatch({
-        type: "UPDATE_CURRENT_TIME",
-        payload: state.currentTime + direction * 5,
-      });
-    },
-    [state.currentTime],
-  );
-
-  const cycleOsMenu = useCallback((direction: number) => {
-    dispatch({
-      type: "CYCLE_OS_MENU",
-      payload: {
-        direction,
-        total: CLASSIC_OS_MENU_ITEMS.length,
-      },
-    });
+  const playClick = useCallback(() => {
+    playClickAudio(audioRef);
   }, []);
-
-  const handleWheelSeek = useCallback(
-    (direction: number) => {
-      if (isAuthenticInteraction && osScreen === "menu") {
-        cycleOsMenu(direction > 0 ? 1 : -1);
-        return;
-      }
-      handleSeek(direction);
-    },
-    [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen],
-  );
-
-  const handleHardwarePresetChange = useCallback((nextPresetId: IpodHardwarePresetId) => {
-    dispatch({ type: "SET_HARDWARE_PRESET", payload: nextPresetId });
-  }, []);
-
-  const handleInteractionModelChange = useCallback(
-    (nextModel: IpodInteractionModel) => {
-      clearSoftNotice();
-      dispatch({ type: "SET_INTERACTION_MODEL", payload: nextModel });
-    },
-    [clearSoftNotice],
-  );
-
-  const handleSelectionKindChange = useCallback((nextKind: SnapshotSelectionKind) => {
-    dispatch({ type: "SET_SELECTION_KIND", payload: nextKind });
-  }, []);
-
-  const commitRangeInput = useCallback(
-    (target: "start" | "end", draftValue: string) => {
-      const parsed = parseTimecode(draftValue);
-      if (parsed === null) {
-        if (target === "start") {
-          setRangeStartDraft(formatTimecode(rangeStartTime));
-        } else {
-          setRangeEndDraft(formatTimecode(rangeEndTime));
-        }
-        return;
-      }
-
-      if (target === "start") {
-        setRangeStartTime(clampSnapshotTime(parsed, state.duration));
-        return;
-      }
-      setRangeEndTime(clampSnapshotTime(parsed, state.duration));
-    },
-    [rangeEndTime, rangeStartTime, state.duration, setRangeStartTime, setRangeEndTime],
-  );
-
-  const formatExportId = useCallback(
-    (counter: number) =>
-      String(Math.max(0, Math.floor(counter))).padStart(EXPORT_COUNTER_PAD, "0"),
-    [],
-  );
 
   const buildExportSlug = useCallback(() => {
-    const screenContext = getExportScreenContext(interactionModel, osScreen);
-    return [
-      hardwarePreset,
-      interactionModel,
-      screenContext,
-      selectionKind,
-      slugifyExportSegment(state.title),
-    ].join("-");
-  }, [hardwarePreset, interactionModel, osScreen, selectionKind, state.title]);
+    const artist = slugifyExportSegment(state.artist);
+    const title = slugifyExportSegment(state.title);
+    return `${artist}-${title}`;
+  }, [state.artist, state.title]);
 
-  const completeSuccessfulExport = useCallback(
-    (exportId: number, notice: string) => {
-      const nextCounter = exportId + 1;
-      setExportCounter(nextCounter);
-      savePersistedExportCounter(nextCounter);
-      showSoftNotice(notice);
-    },
-    [showSoftNotice],
-  );
+  const formatExportId = useCallback((id: number) => {
+    return String(id).padStart(EXPORT_COUNTER_PAD, "0");
+  }, []);
 
   const resetExportUi = useCallback(() => {
     setIsExportCapturing(false);
-    window.setTimeout(() => {
-      setExportStatus("idle");
-      setActiveExportKind(null);
-    }, 1500);
+    setActiveExportKind(null);
+    setExportStatus("idle");
   }, []);
 
+  const completeSuccessfulExport = useCallback(
+    (id: number, label: string) => {
+      const nextCounter = id + 1;
+      setExportCounter(nextCounter);
+      savePersistedExportCounter(nextCounter);
+      showSoftNotice(`${label} Exported`);
+      setExportStatus("success");
+      setTimeout(() => {
+        resetExportUi();
+      }, 2000);
+    },
+    [showSoftNotice, resetExportUi],
+  );
+
   const handlePngExportRef = useRef<(() => void) | null>(null);
-  const handleGifExportRef = useRef<(() => void) | null>(null);
 
   const handlePngExport = useCallback(async () => {
     if (exportStatus !== "idle") return;
@@ -588,10 +477,9 @@ export default function IpodClassicWorkbench() {
     });
     if (!canPngExport) {
       playClick();
-      showSoftNotice("Switch to Flat or Focus View to export");
+      showSoftNotice("Switch to Flat or Focus for Image");
       return;
     }
-
     playClick();
     if (!exportTargetRef.current) return;
 
@@ -603,19 +491,16 @@ export default function IpodClassicWorkbench() {
     setIsExportCapturing(true);
 
     try {
-      console.info("[export] starting flat export", { filename });
+      console.info("[png-export] starting capture", { filename });
       const result = await exportWorkbenchPng(exportTargetRef.current, {
         filename,
         backgroundColor: bgColor,
         onStatusChange: setExportStatus,
       });
-      console.info("[export] finished", result);
+      console.info("[png-export] finished", result);
 
       if (result.success) {
-        completeSuccessfulExport(
-          exportId,
-          result.method === "share" ? `Shared #${exportTag}` : `Exported #${exportTag}`,
-        );
+        completeSuccessfulExport(exportId, `Image #${exportTag}`);
       } else {
         toast.error("Export failed", {
           description: result.error,
@@ -624,18 +509,11 @@ export default function IpodClassicWorkbench() {
             onClick: () => handlePngExportRef.current?.(),
           },
         });
+        resetExportUi();
       }
     } catch (error) {
-      console.error("[export] flat export threw", error);
-      setExportStatus("error");
-      toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
-        action: {
-          label: "Retry",
-          onClick: () => handlePngExportRef.current?.(),
-        },
-      });
-    } finally {
+      console.error("[png-export] critical failure", error);
+      toast.error("Critical export error");
       resetExportUi();
     }
   }, [
@@ -651,6 +529,12 @@ export default function IpodClassicWorkbench() {
     resetInteractionChrome,
     showSoftNotice,
   ]);
+
+  useEffect(() => {
+    handlePngExportRef.current = handlePngExport;
+  }, [handlePngExport]);
+
+  const handleGifExportRef = useRef<(() => void) | null>(null);
 
   const handleGifExport = useCallback(async () => {
     if (exportStatus !== "idle") return;
@@ -694,18 +578,11 @@ export default function IpodClassicWorkbench() {
             onClick: () => handleGifExportRef.current?.(),
           },
         });
+        resetExportUi();
       }
     } catch (error) {
-      console.error("[gif-export] preview export threw", error);
-      setExportStatus("error");
-      toast.error("GIF export failed", {
-        description: error instanceof Error ? error.message : "Unknown error",
-        action: {
-          label: "Retry",
-          onClick: () => handleGifExportRef.current?.(),
-        },
-      });
-    } finally {
+      console.error("[gif-export] critical failure", error);
+      toast.error("Critical GIF export error");
       resetExportUi();
     }
   }, [
@@ -724,45 +601,121 @@ export default function IpodClassicWorkbench() {
   ]);
 
   useEffect(() => {
-    handlePngExportRef.current = handlePngExport;
-  }, [handlePngExport]);
-
-  useEffect(() => {
     handleGifExportRef.current = handleGifExport;
   }, [handleGifExport]);
 
-  const saveCustomColor = useCallback((target: "case" | "bg", rawColor: string) => {
-    const color = rawColor.toUpperCase();
-    if (target === "case") {
-      setSavedCaseColors((prev) =>
-        [color, ...prev.filter((c) => c !== color)].slice(0, MAX_CUSTOM_COLORS),
-      );
-      return;
-    }
-    setSavedBgColors((prev) =>
-      [color, ...prev.filter((c) => c !== color)].slice(0, MAX_CUSTOM_COLORS),
-    );
+  const handleHardwarePresetChange = useCallback(
+    (nextPreset: IpodHardwarePresetId) => {
+      resetInteractionChrome({
+        closeSettings: true,
+        closeEditor: true,
+        closeToolbox: true,
+        clearNotice: true,
+      });
+      dispatch({ type: "SET_HARDWARE_PRESET", payload: nextPreset });
+    },
+    [resetInteractionChrome],
+  );
+
+  const handleInteractionModelChange = useCallback(
+    (nextModel: IpodInteractionModel) => {
+      resetInteractionChrome({
+        closeSettings: true,
+        closeEditor: true,
+        closeToolbox: true,
+        clearNotice: true,
+      });
+      dispatch({ type: "SET_INTERACTION_MODEL", payload: nextModel });
+    },
+    [resetInteractionChrome],
+  );
+
+  const handleSelectionKindChange = useCallback((nextKind: SnapshotSelectionKind) => {
+    dispatch({ type: "SET_SELECTION_KIND", payload: nextKind });
   }, []);
+
+  const commitRangeInput = useCallback(
+    (target: "start" | "end", raw: string) => {
+      const seconds = parseTimecode(raw);
+      if (seconds === null) {
+        if (target === "start") setRangeStartDraft(formatTimecode(rangeStartTime));
+        else setRangeEndDraft(formatTimecode(rangeEndTime));
+        return;
+      }
+
+      if (target === "start") setRangeStartTime(seconds);
+      else setRangeEndTime(seconds);
+    },
+    [rangeStartTime, rangeEndTime, setRangeStartTime, setRangeEndTime],
+  );
+
+  const cycleOsMenu = useCallback(
+    (direction: number) => {
+      dispatch({
+        type: "CYCLE_OS_MENU",
+        payload: { direction, total: CLASSIC_OS_MENU_ITEMS.length },
+      });
+      playClick();
+    },
+    [playClick],
+  );
+
+  const handleWheelSeek = useCallback(
+    (delta: number) => {
+      if (isAuthenticInteraction && osScreen === "menu") {
+        cycleOsMenu(delta);
+        return;
+      }
+
+      const step = 2;
+      const nextTime = Math.max(
+        0,
+        Math.min(state.duration, state.currentTime + delta * step),
+      );
+      if (Math.floor(nextTime) !== Math.floor(state.currentTime)) {
+        dispatch({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+        if (Math.abs(delta) > 0.5) playClick();
+      }
+    },
+    [
+      cycleOsMenu,
+      isAuthenticInteraction,
+      osScreen,
+      state.currentTime,
+      state.duration,
+      playClick,
+    ],
+  );
+
+  const handleSeek = useCallback(
+    (direction: number) => {
+      const step = 15;
+      const nextTime = Math.max(
+        0,
+        Math.min(state.duration, state.currentTime + direction * step),
+      );
+      dispatch({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+      playClick();
+    },
+    [state.currentTime, state.duration, playClick],
+  );
 
   const openEyeDropper = useCallback(
     async (target: "case" | "bg") => {
-      if (!("EyeDropper" in window)) return;
+      if (!hasEyeDropper) return;
       try {
-        // @ts-expect-error EyeDropper API not yet in all TS libs
-        const dropper = new window.EyeDropper();
-        const result = await dropper.open();
-        const color = (result.sRGBHex as string).toUpperCase();
-        if (target === "case") {
-          setSkinColor(color);
-        } else {
-          setBgColor(color);
-        }
-        saveCustomColor(target, color);
-      } catch {
-        // User cancelled or API unavailable
+        // @ts-expect-error - EyeDropper is a new experimental API
+        const eyeDropper = new window.EyeDropper();
+        const result = await eyeDropper.open();
+        const hex = result.sRGBHex.toUpperCase();
+        if (target === "case") setSkinColor(hex);
+        else setBgColor(hex);
+        saveCustomColor(target, hex);
+      } catch (e) {
+        console.warn("EyeDropper failed or cancelled", e);
       }
     },
-    [saveCustomColor, setBgColor, setSkinColor],
+    [hasEyeDropper, saveCustomColor, setBgColor, setSkinColor],
   );
 
   const handleOsMenuSelect = useCallback(() => {
@@ -817,8 +770,20 @@ export default function IpodClassicWorkbench() {
       setOsScreen("now-playing");
       return;
     }
-    showSoftNotice("Playback remains visual in this build");
-  }, [isAuthenticInteraction, osScreen, showSoftNotice, setOsScreen]);
+
+    dispatch({ type: "TOGGLE_IS_PLAYING" });
+    playClick();
+
+    const nextIsPlaying = !isPlaying;
+    showSoftNotice(nextIsPlaying ? "Playing" : "Paused");
+  }, [
+    isAuthenticInteraction,
+    osScreen,
+    isPlaying,
+    playClick,
+    showSoftNotice,
+    setOsScreen,
+  ]);
 
   const screenComponent = isAsciiView ? (
     <IpodAsciiScene state={state} />
@@ -846,7 +811,8 @@ export default function IpodClassicWorkbench() {
           : isFlatView)
       }
       exportSafe={isExportCapturing}
-      titlePreview={isPreviewView && !isExportCapturing}
+      titlePreview={isPreviewView || isPlaying}
+      animateText={isPlaying}
       titleCaptureReady={isPreviewView || activeExportKind === "gif"}
       onTitleOverflowChange={setTitleCanMarquee}
     />
@@ -1445,6 +1411,18 @@ export default function IpodClassicWorkbench() {
                 data-testid="ascii-view-button"
                 isActive={viewMode === "ascii"}
                 onClick={() => handleViewModeChange("ascii")}
+              />
+              <IconButton
+                icon={
+                  isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />
+                }
+                label={isPlaying ? "Pause" : "Play"}
+                data-testid="play-pause-toggle-button"
+                onClick={() => {
+                  playClick();
+                  dispatch({ type: "TOGGLE_IS_PLAYING" });
+                }}
+                className={isPlaying ? "bg-blue-100 text-blue-600 border-blue-200" : ""}
               />
             </div>
 

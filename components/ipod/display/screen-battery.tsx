@@ -48,12 +48,11 @@ export function ScreenBattery({
           y2="7"
           gradientUnits="userSpaceOnUse"
         >
-          {/* A multi-stop gradient to simulate the 'full green body' with volume */}
-          <stop offset="0" stopColor="#A4E156" />
-          <stop offset="0.2" stopColor="#BFF37A" />
-          <stop offset="0.45" stopColor="#8EE85E" />
-          <stop offset="0.55" stopColor="#7CD94E" />
-          <stop offset="1" stopColor="#4CB82F" />
+          {/* Authentic Apple 'Battery Green' - vibrant citrus green with sharp transition */}
+          <stop offset="0" stopColor="#96E14B" />
+          <stop offset="0.45" stopColor="#7CD92F" />
+          <stop offset="0.5" stopColor="#5BB81A" />
+          <stop offset="1" stopColor="#45A00D" />
         </linearGradient>
       </defs>
 
@@ -89,7 +88,7 @@ export function ScreenBattery({
         fill="#FFFFFF"
       />
 
-      {/* The Fill - thought-out green body with volume */}
+      {/* The Fill - vibrant citrus green with sharp Apple-style gloss */}
       {fillWidth > 0 && (
         <>
           <rect
@@ -99,13 +98,13 @@ export function ScreenBattery({
             height={fillHeight}
             fill={`url(#${batteryId}-fill)`}
           />
-          {/* Horizontal highlight for 'glassy' depth, matching the industrial feel */}
+          {/* Horizontal highlight for 'glassy' depth - sharp Apple-style gloss */}
           <rect
             x={fillX}
-            y={fillY + 0.5}
+            y={fillY}
             width={fillWidth}
-            height={fillHeight / 2.2}
-            fill="rgba(255,255,255,0.25)"
+            height={fillHeight / 2}
+            fill="rgba(255,255,255,0.42)"
           />
         </>
       )}

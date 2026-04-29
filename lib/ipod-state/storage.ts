@@ -287,6 +287,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
       osOriginalMenuSplit:
         partialUi.osOriginalMenuSplit ?? DEFAULT_OS_ORIGINAL_MENU_SPLIT,
       osNowPlayingLayout: partialUi.osNowPlayingLayout ?? DEFAULT_OS_NOW_PLAYING_LAYOUT,
+      isPlaying: partialUi.isPlaying ?? false,
     };
 
     return {

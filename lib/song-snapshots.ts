@@ -33,6 +33,7 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
     menuIndex: 0,
     osOriginalMenuSplit: DEFAULT_OS_ORIGINAL_MENU_SPLIT,
     osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
+    isPlaying: false,
   },
   playback: {
     currentTime: 5,
