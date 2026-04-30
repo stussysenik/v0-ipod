@@ -145,8 +145,6 @@ bun run validate
 bun run lint           # Check OXC lint errors
 bun run lint:fix       # Auto-fix OXC lint errors
 bun run lint:eslint    # Run the legacy Next/ESLint ruleset
-bun run format:check   # Check code formatting
-bun run format         # Auto-format code
 bun run type-check     # TypeScript type checking
 bun run build          # Verify the production build
 ```
@@ -159,7 +157,7 @@ bun run build          # Verify the production build
    ```
 
 2. **Make your changes**
-   - Follow the code style (enforced by Prettier/ESLint)
+   - Follow the code style (enforced by OXC, ESLint, and EditorConfig)
    - Add tests if applicable
    - Update documentation
 
@@ -167,7 +165,7 @@ bun run build          # Verify the production build
    ```bash
    npm run validate
    ```
-   This runs: lint + format-check + type-check
+   This runs: lint + type-check
 
 4. **Commit with meaningful messages**
    ```bash
@@ -231,7 +229,7 @@ ESLint configuration enforces:
 
 ### Code Style
 
-Enforced by Prettier and EditorConfig:
+Enforced by EditorConfig and the repo's lint rules:
 - 2 spaces indentation
 - Double quotes for strings
 - Trailing commas
@@ -300,10 +298,6 @@ Follow the Impeccable skill guidelines:
 - Properly optimized images
 - Minimal JavaScript for initial load
 
-```bash
-bun run format
-```
-
 ### Lint Rules
 
 Key rules enforced:
@@ -324,7 +318,6 @@ gates and focused manual checks:
 
 ```bash
 bun run lint
-bun run format:check
 bun run type-check
 bun run build
 ```
@@ -354,7 +347,6 @@ Before submitting a PR, ensure:
 
 - [ ] **Semantic commits**: All commits follow conventional format
 - [ ] **Linting**: `bun run lint` has no errors
-- [ ] **Formatting**: `bun run format:check` passes
 - [ ] **Type checking**: `bun run type-check` succeeds
 - [ ] **Production build**: `bun run build` succeeds
 - [ ] **Documentation**: Updated relevant docs (README, ARCHITECTURE, etc.)

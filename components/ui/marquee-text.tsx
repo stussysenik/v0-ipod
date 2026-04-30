@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getMarqueeCycleDurationMs, getMarqueeFrame, getMarqueeGapWidth } from "@/lib/marquee";
+import {
+	getMarqueeCycleDurationMs,
+	getMarqueeFrame,
+	getMarqueeGapWidth,
+} from "@/lib/marquee";
 
 interface MarqueeTextProps {
 	text: string;
@@ -69,6 +73,26 @@ export function MarqueeText({
 
 	const overflow = measurements.contentWidth > measurements.containerWidth + 1;
 	const shouldAnimate = (preview || captureReady) && overflow;
+	const edgeFadeWidth = Math.max(
+		8,
+		Math.min(20, Math.round(measurements.containerWidth * 0.08)),
+	);
+	const edgeFadeShoulder = Math.max(6, Math.round(edgeFadeWidth * 0.68));
+	const marqueeMask = overflow
+		? `linear-gradient(
+			to right,
+			transparent 0,
+			rgba(0, 0, 0, 0.14) ${Math.max(1, Math.round(edgeFadeWidth * 0.22))}px,
+			rgba(0, 0, 0, 0.46) ${Math.max(2, Math.round(edgeFadeWidth * 0.46))}px,
+			rgba(0, 0, 0, 0.8) ${edgeFadeShoulder}px,
+			black ${edgeFadeWidth}px,
+			black calc(100% - ${edgeFadeWidth}px),
+			rgba(0, 0, 0, 0.8) calc(100% - ${edgeFadeShoulder}px),
+			rgba(0, 0, 0, 0.46) calc(100% - ${Math.max(2, Math.round(edgeFadeWidth * 0.46))}px),
+			rgba(0, 0, 0, 0.14) calc(100% - ${Math.max(1, Math.round(edgeFadeWidth * 0.22))}px),
+			transparent 100%
+		)`
+		: "none";
 
 	useEffect(() => {
 		onOverflowChange?.(overflow);
@@ -76,10 +100,13 @@ export function MarqueeText({
 
 	useEffect(() => {
 		const track = trackRef.current;
+		const container = containerRef.current;
 		if (!track) return;
+		if (!container) return;
 
 		if (!shouldAnimate) {
 			track.style.transform = "translateX(0px)";
+			delete container.dataset.marqueeElapsedMs;
 			if (animationFrameRef.current !== null) {
 				cancelAnimationFrame(animationFrameRef.current);
 				animationFrameRef.current = null;
@@ -92,8 +119,12 @@ export function MarqueeText({
 		const animate = (timestamp: number) => {
 			startTime ??= timestamp;
 
-			const frame = getMarqueeFrame(measurements, timestamp - startTime);
+			const elapsedMs = timestamp - startTime;
+			const frame = getMarqueeFrame(measurements, elapsedMs);
 			track.style.transform = `translateX(${frame.translateX}px)`;
+			container.dataset.marqueeElapsedMs = String(
+				Math.max(0, Math.round(elapsedMs)),
+			);
 			animationFrameRef.current = requestAnimationFrame(animate);
 		};
 
@@ -104,6 +135,7 @@ export function MarqueeText({
 				cancelAnimationFrame(animationFrameRef.current);
 				animationFrameRef.current = null;
 			}
+			delete container.dataset.marqueeElapsedMs;
 			track.style.transform = "translateX(0px)";
 		};
 	}, [measurements, shouldAnimate]);
@@ -113,17 +145,14 @@ export function MarqueeText({
 			ref={containerRef}
 			className={`relative block w-full overflow-hidden ${className}`}
 			style={{
-				maskImage: overflow
-					? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
-					: "none",
-				WebkitMaskImage: overflow
-					? "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)"
-					: "none",
+				maskImage: marqueeMask,
+				WebkitMaskImage: marqueeMask,
 			}}
 			data-testid={dataTestId}
 			data-marquee-container="true"
 			data-marquee-active={shouldAnimate ? "true" : "false"}
 			data-marquee-overflow={overflow ? "true" : "false"}
+			data-marquee-mode={shouldAnimate ? "overflow" : undefined}
 			data-marquee-viewport-width={measurements.containerWidth || undefined}
 			data-marquee-content-width={measurements.contentWidth || undefined}
 			data-marquee-cycle-duration-ms={

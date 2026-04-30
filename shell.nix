@@ -12,7 +12,6 @@ pkgs.mkShell {
     nodePackages.typescript
     nodePackages.typescript-language-server
     nodePackages.eslint
-    nodePackages.prettier
     jq
     curl
   ];

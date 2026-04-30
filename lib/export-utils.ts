@@ -1,18 +1,53 @@
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
-import { toBlob, toCanvas, toPng } from "html-to-image";
+import { toBlob, toPng } from "html-to-image";
 
+import {
+	resolveMobileExportDelivery,
+	type ExportCapabilities,
+} from "@/lib/export-delivery";
+import {
+	DEFAULT_GIF_EXPORT_FPS,
+	DEFAULT_MP4_EXPORT_FPS,
+	GIF_CAPTURE_SCALE_BALANCED,
+	GIF_CAPTURE_SCALE_HIGH,
+	MAX_GIF_FRAME_COUNT,
+	MP4_BITRATE_BITS_PER_SECOND,
+	buildAnimatedExportPlan,
+} from "@/lib/export/animated-export";
+import type {
+	EncoderWorkerRequestPayload,
+	EncoderWorkerRequest,
+	EncoderWorkerResponse,
+} from "@/lib/export/export-encoder-protocol";
+import {
+	resolveMp4ExportStrategy,
+	resolveSupportedMp4EncoderConfig,
+} from "@/lib/export/mp4-support";
 import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@/lib/marquee";
 
 export type ExportStatus = "idle" | "preparing" | "encoding" | "sharing" | "success" | "error";
 
+export interface ExportProgress {
+	stage:
+		| "settling"
+		| "cloning"
+		| "capturing"
+		| "encoding"
+		| "finalizing"
+		| "downloading"
+		| "sharing"
+		| "complete"
+		| "error";
+	label: string;
+	detail?: string;
+	progress: number;
+	currentFrame?: number;
+	totalFrames?: number;
+}
+
 const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
 const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v3";
-const MAX_GIF_FRAME_COUNT = 320;
 const GIF_DELAY_QUANTUM_MS = 10;
-const GIF_CAPTURE_SCALE_HIGH = 2;
-const GIF_CAPTURE_SCALE_BALANCED = 1.5;
-const GIF_DEFAULT_DURATION_MS = 16000;
 const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
 const EXPORT_SHELL_CONTOUR =
 	"0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
@@ -23,8 +58,29 @@ type NextDataWindow = Window & {
 	};
 };
 
-type GifPaletteColor = [number, number, number] | [number, number, number, number];
-type GifPalette = GifPaletteColor[];
+type ShareCapableNavigator = Navigator & {
+	canShare?: (data?: ShareData) => boolean;
+	share?: (data?: ShareData) => Promise<void>;
+	userActivation?: {
+		isActive?: boolean;
+		hasBeenActive?: boolean;
+	};
+};
+
+type SavePickerWindow = Window & {
+	showSaveFilePicker?: (options?: {
+		suggestedName?: string;
+		types?: Array<{
+			description?: string;
+			accept: Record<string, string[]>;
+		}>;
+	}) => Promise<{
+		createWritable: () => Promise<{
+			write: (data: Blob) => Promise<void>;
+			close: () => Promise<void>;
+		}>;
+	}>;
+};
 
 const waitForMs = (ms: number) =>
 	new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, ms)));
@@ -290,6 +346,13 @@ function sanitizeDetachedCloneForCapture(
 	for (const node of layeredNodes) {
 		node.style.filter = "none";
 	}
+
+	const allNodes = clone.querySelectorAll<HTMLElement>("*");
+	for (const node of allNodes) {
+		if (node.style.backgroundImage.includes("noiseFilter")) {
+			node.style.backgroundImage = "none";
+		}
+	}
 }
 
 function resolveRuntimeBuildContext() {
@@ -302,10 +365,6 @@ function resolveRuntimeBuildContext() {
 	const deployVersion =
 		document.documentElement.getAttribute("data-deploy-version") ?? "unknown";
 	return { deployVersion, buildId };
-}
-
-function toGifPalette(palette: number[][]): GifPalette {
-	return palette as GifPalette;
 }
 
 function removeExportNode(node: HTMLElement | null): void {
@@ -378,6 +437,10 @@ function getMarqueeCaptureNodes(root: HTMLElement): MarqueeCaptureNode[] {
 			return [
 				{
 					track,
+					initialElapsedMs:
+						parseNumericDataAttribute(
+							container.dataset.marqueeElapsedMs,
+						) ?? 0,
 					metrics: {
 						containerWidth: Math.ceil(containerWidth),
 						contentWidth: Math.ceil(contentWidth),
@@ -396,13 +459,23 @@ function formatExportTime(seconds: number, isRemaining: boolean): string {
 	return `${isRemaining ? "-" : ""}${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function flushAnimatedCloneLayout(root: HTMLElement): void {
+	void root.offsetWidth;
+	const animatedNodes = root.querySelectorAll<HTMLElement>(
+		'[data-marquee-track="true"], [data-testid="progress-fill"], [data-testid="elapsed-time"], [data-testid="remaining-time"]',
+	);
+	for (const node of animatedNodes) {
+		void node.offsetWidth;
+	}
+}
+
 function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): number {
 	// 1. Apply marquee translateX (existing logic)
 	const nodes = getMarqueeCaptureNodes(root);
 	let cycleDurationMs = 0;
 
 	for (const node of nodes) {
-		const frame = getMarqueeFrame(node.metrics, elapsedMs);
+		const frame = getMarqueeFrame(node.metrics, node.initialElapsedMs + elapsedMs);
 		node.track.style.transform = `translateX(${frame.translateX}px)`;
 		cycleDurationMs = Math.max(
 			cycleDurationMs,
@@ -412,24 +485,41 @@ function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): numbe
 
 	// 2. Animate progress bar and timestamps (standard iPod screen)
 	const progressSection = root.querySelector<HTMLElement>('[data-testid="screen-progress"]');
-	const elapsedEl = root.querySelector<HTMLElement>('[data-testid="elapsed-time"]');
-	const remainingEl = root.querySelector<HTMLElement>('[data-testid="remaining-time"]');
+	const elapsedWrapper = root.querySelector<HTMLElement>('[data-testid="elapsed-time"]');
+	const remainingWrapper = root.querySelector<HTMLElement>('[data-testid="remaining-time"]');
+	const elapsedEl =
+		elapsedWrapper?.querySelector<HTMLElement>("[data-export-time-value]") ??
+		elapsedWrapper;
+	const remainingEl =
+		remainingWrapper?.querySelector<HTMLElement>("[data-export-time-value]") ??
+		remainingWrapper;
 	const progressFill = root.querySelector<HTMLElement>('[data-testid="progress-fill"]');
 
-	const duration = parseNumericDataAttribute(
-		progressSection?.dataset.exportDuration ??
-			root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset
-				.exportDuration,
-	);
-	const baseCurrentTime = parseNumericDataAttribute(
-		elapsedEl?.dataset.exportTimeValue ??
-			root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')?.dataset
-				.exportTimeValue,
-	);
+	const baseDuration =
+		parseNumericDataAttribute(root.dataset.exportBaseDuration) ??
+		parseNumericDataAttribute(
+			progressSection?.dataset.exportDuration ??
+				root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')
+					?.dataset.exportDuration,
+		);
+	const baseCurrentTime =
+		parseNumericDataAttribute(root.dataset.exportBaseCurrentTime) ??
+		parseNumericDataAttribute(
+			elapsedEl?.dataset.exportTimeValue ??
+				root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')
+					?.dataset.exportTimeValue,
+		);
 
-	if (duration !== null && duration > 0 && baseCurrentTime !== null) {
-		const simulatedTime = Math.min(baseCurrentTime + elapsedMs / 1000, duration);
-		const progressPct = (simulatedTime / duration) * 100;
+	if (baseDuration !== null && !root.dataset.exportBaseDuration) {
+		root.dataset.exportBaseDuration = String(baseDuration);
+	}
+	if (baseCurrentTime !== null && !root.dataset.exportBaseCurrentTime) {
+		root.dataset.exportBaseCurrentTime = String(baseCurrentTime);
+	}
+
+	if (baseDuration !== null && baseDuration > 0 && baseCurrentTime !== null) {
+		const simulatedTime = Math.min(baseCurrentTime + elapsedMs / 1000, baseDuration);
+		const progressPct = (simulatedTime / baseDuration) * 100;
 
 		if (progressFill) {
 			progressFill.style.width = `${progressPct}%`;
@@ -438,19 +528,24 @@ function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): numbe
 			elapsedEl.textContent = formatExportTime(simulatedTime, false);
 		}
 		if (remainingEl) {
-			remainingEl.textContent = formatExportTime(duration - simulatedTime, true);
+			remainingEl.textContent = formatExportTime(
+				baseDuration - simulatedTime,
+				true,
+			);
 		}
 
 		// 3. Animate ASCII mode <pre> block if present
 		const asciiPre = root.querySelector<HTMLElement>('[data-testid="ascii-pre"]');
 		if (asciiPre) {
 			const PROGRESS_COLS = 27;
-			const filledCount = Math.round((simulatedTime / duration) * PROGRESS_COLS);
+			const filledCount = Math.round(
+				(simulatedTime / baseDuration) * PROGRESS_COLS,
+			);
 			const emptyCount = PROGRESS_COLS - filledCount;
 			const progressBar =
 				"\u2593".repeat(filledCount) + "\u2591".repeat(emptyCount);
 			const elapsedStr = formatExportTime(simulatedTime, false);
-			const remainingStr = formatExportTime(duration - simulatedTime, true);
+			const remainingStr = formatExportTime(baseDuration - simulatedTime, true);
 			const timeInner = 28;
 			const timeGap = Math.max(
 				timeInner - elapsedStr.length - remainingStr.length,
@@ -479,21 +574,14 @@ async function captureGifFrameCanvas(
 		outputHeight: number;
 	},
 ): Promise<HTMLCanvasElement> {
-	const sourceCanvas = await toCanvas(element, {
-		cacheBust: true,
-		pixelRatio: options.pixelRatio ?? 1,
-		backgroundColor: options.backgroundColor,
-		skipFonts: false,
-		includeQueryParams: true,
-		style: {
-			transform: "scale(1)",
-		},
-		filter: (node: Node) => {
-			if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
-				return false;
-			}
-			return true;
-		},
+	const { default: html2canvas } = await import("html2canvas");
+	const sourceCanvas = await html2canvas(element, {
+		backgroundColor: options.backgroundColor ?? null,
+		scale: Math.max(options.pixelRatio ?? 1, 1),
+		useCORS: true,
+		allowTaint: true,
+		logging: false,
+		foreignObjectRendering: false,
 	});
 
 	if (
@@ -677,16 +765,9 @@ async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
 	}
 }
 
-export interface ExportCapabilities {
-	canShare: boolean;
-	canShareFiles: boolean;
-	isIOS: boolean;
-	isMobile: boolean;
-}
-
 export interface ExportResult {
 	success: boolean;
-	method: "share" | "download" | "dataurl" | "manual";
+	method: "share" | "download" | "dataurl" | "manual" | "prompt";
 	capturePath?: string;
 	blobSize?: number;
 	blobDigest?: string;
@@ -700,6 +781,7 @@ interface DownloadAttemptResult {
 
 interface MarqueeCaptureNode {
 	track: HTMLElement;
+	initialElapsedMs: number;
 	metrics: {
 		containerWidth: number;
 		contentWidth: number;
@@ -749,11 +831,266 @@ function openPreparedPopupWindow(): Window | null {
 	}
 }
 
+function buildSavePickerTypes(filename: string, mimeType: string) {
+	const extensionIndex = filename.lastIndexOf(".");
+	const extension =
+		extensionIndex >= 0 ? filename.slice(extensionIndex).toLowerCase() : "";
+	const accept =
+		extension && mimeType
+			? {
+					[mimeType]: [extension],
+				}
+			: mimeType
+				? {
+						[mimeType]: [".bin"],
+					}
+				: {
+						"application/octet-stream": extension ? [extension] : [".bin"],
+					};
+
+	return [
+		{
+			description: mimeType || "Exported file",
+			accept,
+		},
+	];
+}
+
+function supportsInlinePreview(mimeType: string): boolean {
+	return mimeType.startsWith("image/") || mimeType.startsWith("video/");
+}
+
+function getMobilePromptCopy(
+	filename: string,
+	mimeType: string,
+	capabilities: ExportCapabilities,
+) {
+	if (capabilities.canShareFiles) {
+		return {
+			title: "File ready",
+			detail: `Tap Share / Save to hand off ${filename} to your device.`,
+		};
+	}
+
+	if (capabilities.canSaveWithPicker) {
+		return {
+			title: "File ready",
+			detail: `Tap Save to choose where ${filename} should go on your device.`,
+		};
+	}
+
+	if (mimeType.startsWith("image/")) {
+		return {
+			title: "Image ready",
+			detail:
+				"Long-press the preview and choose Save Image if your browser does not show a save action.",
+		};
+	}
+
+	return {
+		title: "File ready",
+		detail:
+			"Open the file, then use your browser's share or download controls to save it.",
+	};
+}
+
+async function saveBlobWithPicker(
+	blob: Blob,
+	filename: string,
+	mimeType: string,
+): Promise<boolean> {
+	if (typeof window === "undefined") {
+		return false;
+	}
+
+	const savePickerWindow = window as SavePickerWindow;
+	if (typeof savePickerWindow.showSaveFilePicker !== "function") {
+		return false;
+	}
+
+	const handle = await savePickerWindow.showSaveFilePicker({
+		suggestedName: filename,
+		types: buildSavePickerTypes(filename, mimeType),
+	});
+	const writable = await handle.createWritable();
+	await writable.write(blob);
+	await writable.close();
+	return true;
+}
+
+async function presentMobileExportPrompt(
+	blob: Blob,
+	options: {
+		filename: string;
+		mimeType: string;
+		capabilities: ExportCapabilities;
+	},
+): Promise<"share" | "download" | "prompt"> {
+	const { filename, mimeType, capabilities } = options;
+	const shareNavigator = navigator as ShareCapableNavigator;
+	const objectUrl = URL.createObjectURL(blob);
+	const copy = getMobilePromptCopy(filename, mimeType, capabilities);
+
+	return new Promise((resolve, reject) => {
+		let settled = false;
+		const hasExplicitSaveAction =
+			capabilities.canShareFiles || capabilities.canSaveWithPicker;
+		const file = new File([blob], filename, { type: mimeType });
+		const overlay = document.createElement("div");
+		const card = document.createElement("div");
+		const title = document.createElement("h2");
+		const detail = document.createElement("p");
+		const actions = document.createElement("div");
+		const preview = supportsInlinePreview(mimeType)
+			? document.createElement(mimeType.startsWith("video/") ? "video" : "img")
+			: null;
+		const cleanup = () => {
+			overlay.remove();
+			URL.revokeObjectURL(objectUrl);
+		};
+
+		const finish = (result: "share" | "download" | "prompt") => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			cleanup();
+			resolve(result);
+		};
+
+		const fail = (error: Error) => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			cleanup();
+			reject(error);
+		};
+
+		const setDetail = (message: string) => {
+			detail.textContent = message;
+		};
+
+		const createButton = (label: string) => {
+			const button = document.createElement("button");
+			button.type = "button";
+			button.textContent = label;
+			button.style.cssText =
+				"border:0;border-radius:999px;padding:12px 16px;background:#111827;color:#fff;" +
+				"font:600 14px/1.2 system-ui,sans-serif;cursor:pointer";
+			return button;
+		};
+
+		overlay.style.cssText =
+			"position:fixed;inset:0;z-index:99999;background:rgba(17,24,39,0.82);" +
+			"display:flex;align-items:center;justify-content:center;padding:20px";
+		card.style.cssText =
+			"width:min(100%,28rem);max-height:min(100%,42rem);overflow:auto;border-radius:28px;" +
+			"background:#f7f6f1;color:#111827;padding:20px;box-shadow:0 24px 48px rgba(0,0,0,0.28)";
+		title.style.cssText = "margin:0;font:700 20px/1.2 system-ui,sans-serif";
+		detail.style.cssText = "margin:10px 0 0;font:500 14px/1.5 system-ui,sans-serif;color:#4b5563";
+		actions.style.cssText = "display:flex;flex-wrap:wrap;gap:12px;margin-top:18px";
+
+		title.textContent = copy.title;
+		detail.textContent = copy.detail;
+
+		if (preview instanceof HTMLImageElement) {
+			preview.src = objectUrl;
+			preview.alt = filename;
+			preview.style.cssText =
+				"display:block;width:100%;max-height:55vh;object-fit:contain;margin-top:16px;" +
+				"border-radius:18px;background:#e5e7eb";
+		} else if (preview instanceof HTMLVideoElement) {
+			preview.src = objectUrl;
+			preview.controls = true;
+			preview.playsInline = true;
+			preview.style.cssText =
+				"display:block;width:100%;max-height:55vh;object-fit:contain;margin-top:16px;" +
+				"border-radius:18px;background:#111827";
+		}
+
+		if (capabilities.canShareFiles) {
+			const shareButton = createButton("Share / Save");
+			shareButton.addEventListener("click", async () => {
+				try {
+					await shareNavigator.share?.({ files: [file] });
+					finish("share");
+				} catch (error) {
+					if (error instanceof Error && error.name === "AbortError") {
+						setDetail("Share was cancelled. You can try again or use another save option.");
+						return;
+					}
+					setDetail("Share failed on this browser. Try another save option below.");
+				}
+			});
+			actions.appendChild(shareButton);
+		}
+
+		if (capabilities.canSaveWithPicker) {
+			const saveButton = createButton("Save");
+			saveButton.addEventListener("click", async () => {
+				try {
+					await saveBlobWithPicker(blob, filename, mimeType);
+					finish("download");
+				} catch (error) {
+					if (error instanceof Error && error.name === "AbortError") {
+						setDetail("Save was cancelled. You can try again or use another option.");
+						return;
+					}
+					setDetail("Save failed on this browser. Try opening the file instead.");
+				}
+			});
+			actions.appendChild(saveButton);
+		}
+
+		if (!hasExplicitSaveAction || !preview) {
+			const openButton = createButton("Open File");
+			openButton.addEventListener("click", () => {
+				const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+				if (opened) {
+					finish("download");
+					return;
+				}
+
+				setDetail("This browser blocked the new tab. Try the other save option or retry.");
+			});
+			actions.appendChild(openButton);
+		}
+
+		const closeButton = createButton("Close");
+		closeButton.style.background = "#d1d5db";
+		closeButton.style.color = "#111827";
+		closeButton.addEventListener("click", () => {
+			if (settled) {
+				cleanup();
+				return;
+			}
+			fail(new Error("Save prompt closed before the export was handed off."));
+		});
+		actions.appendChild(closeButton);
+
+		card.append(title, detail);
+		if (preview) {
+			card.appendChild(preview);
+		}
+		card.appendChild(actions);
+		overlay.appendChild(card);
+		document.body.appendChild(overlay);
+
+		if (!hasExplicitSaveAction && preview) {
+			settled = true;
+			resolve("prompt");
+		}
+	});
+}
+
 /**
  * Detect platform capabilities for export
  */
 export function detectExportCapabilities(): ExportCapabilities {
 	const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+	const shareNavigator = typeof navigator !== "undefined" ? (navigator as ShareCapableNavigator) : null;
+	const savePickerWindow = typeof window !== "undefined" ? (window as SavePickerWindow) : null;
 	const isIOS =
 		/iPad|iPhone|iPod/.test(userAgent) &&
 		!(window as unknown as { MSStream?: unknown }).MSStream;
@@ -761,20 +1098,129 @@ export function detectExportCapabilities(): ExportCapabilities {
 		userAgent,
 	);
 
-	const canShare = typeof navigator !== "undefined" && !!navigator.share;
+	const canShare = !!shareNavigator?.share;
 	// Check if navigator.canShare exists and supports files
 	let canShareFiles = false;
-	if (typeof navigator !== "undefined" && navigator.canShare) {
+	if (shareNavigator?.canShare) {
 		try {
 			// Test with a dummy file to see if files are supported
 			const testFile = new File(["test"], "test.png", { type: "image/png" });
-			canShareFiles = navigator.canShare({ files: [testFile] });
+			canShareFiles = shareNavigator.canShare({ files: [testFile] });
 		} catch {
 			canShareFiles = false;
 		}
 	}
+	const canSaveWithPicker = typeof savePickerWindow?.showSaveFilePicker === "function";
 
-	return { canShare, canShareFiles, isIOS, isMobile };
+	const canEncodeMp4 =
+		typeof VideoEncoder !== "undefined" &&
+		typeof OffscreenCanvas !== "undefined" &&
+		typeof Worker !== "undefined";
+
+	const hasTransientUserActivation = !!shareNavigator?.userActivation?.isActive;
+
+	return {
+		canShare,
+		canShareFiles,
+		canSaveWithPicker,
+		canEncodeMp4,
+		hasTransientUserActivation,
+		isIOS,
+		isMobile,
+	};
+}
+
+export function supportsAnimatedMp4Export(): boolean {
+	return detectExportCapabilities().canEncodeMp4;
+}
+
+export async function probeAnimatedMp4ExportSupport(): Promise<boolean> {
+	if (!supportsAnimatedMp4Export() || typeof VideoEncoder === "undefined") {
+		return false;
+	}
+
+	try {
+		const support = await resolveSupportedMp4EncoderConfig({
+			width: 320,
+			height: 240,
+			bitrate: 2_000_000,
+			framerate: 24,
+		});
+		return support !== null;
+	} catch {
+		return false;
+	}
+}
+
+interface EncoderWorkerSuccessResponse {
+	type: "ok" | "finalized";
+	buffer?: ArrayBuffer;
+	mimeType?: string;
+}
+
+function createExportProgress(progress: ExportProgress): ExportProgress {
+	return {
+		...progress,
+		progress: Math.max(0, Math.min(progress.progress, 1)),
+	};
+}
+
+function createEncoderWorkerClient() {
+	const worker = new Worker(new URL("./export/export-encoder.worker.ts", import.meta.url), {
+		type: "module",
+	});
+	let nextId = 0;
+	const pending = new Map<
+		number,
+		{
+			resolve: (response: EncoderWorkerSuccessResponse) => void;
+			reject: (error: Error) => void;
+		}
+	>();
+
+	const rejectAll = (error: Error) => {
+		for (const request of pending.values()) {
+			request.reject(error);
+		}
+		pending.clear();
+	};
+
+	worker.onmessage = (event: MessageEvent<EncoderWorkerResponse>) => {
+		const response = event.data;
+		const request = pending.get(response.id);
+		if (!request) {
+			return;
+		}
+		pending.delete(response.id);
+
+		if (response.type === "error") {
+			request.reject(new Error(response.error));
+			return;
+		}
+
+		request.resolve(response);
+	};
+
+	worker.onerror = (event) => {
+		rejectAll(new Error(event.message || "Animated export worker crashed"));
+	};
+
+	const call = (message: EncoderWorkerRequestPayload, transfer?: Transferable[]) =>
+		new Promise<EncoderWorkerSuccessResponse>((resolve, reject) => {
+			const id = nextId;
+			nextId += 1;
+			pending.set(id, { resolve, reject });
+			const request = { ...message, id } as EncoderWorkerRequest;
+			worker.postMessage(request, transfer ?? []);
+		});
+
+	return {
+		call,
+		close() {
+			rejectAll(new Error("Animated export worker closed"));
+			worker.terminate();
+		},
+	};
 }
 
 /**
@@ -896,10 +1342,14 @@ export async function captureToDataUrl(
 }
 
 /**
- * Share image file using Web Share API (iOS/Android native share sheet)
+ * Share a file using the system share sheet when file sharing is available.
  */
-export async function shareImageFile(blob: Blob, filename: string): Promise<boolean> {
-	const file = new File([blob], filename, { type: "image/png" });
+export async function shareBlobFile(
+	blob: Blob,
+	filename: string,
+	mimeType = blob.type || "application/octet-stream",
+): Promise<boolean> {
+	const file = new File([blob], filename, { type: mimeType });
 
 	// iOS ONLY supports files-only share - no title or text!
 	// Adding title or text will cause the share to fail on iOS Safari
@@ -1023,21 +1473,28 @@ export async function exportAnimatedGif(
 		backgroundColor?: string;
 		constrainedFrame?: boolean;
 		fps?: number;
+		durationSeconds?: number;
 		onStatusChange?: (status: ExportStatus) => void;
+		onProgressChange?: (progress: ExportProgress) => void;
 	},
 ): Promise<ExportResult> {
 	const {
 		filename,
 		backgroundColor,
 		constrainedFrame = false,
-		fps = 12,
+		fps = DEFAULT_GIF_EXPORT_FPS,
+		durationSeconds,
 		onStatusChange,
+		onProgressChange,
 	} = options;
 	const capabilities = detectExportCapabilities();
+	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const preparedPopup =
-		capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
+		capabilities.isMobile && mobileDelivery === "auto-download" && !capabilities.isIOS
+			? openPreparedPopupWindow()
+			: null;
 	let keepPreparedPopupOpen = false;
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
 	element.setAttribute(EXPORT_ATTRIBUTE, "true");
@@ -1048,11 +1505,20 @@ export async function exportAnimatedGif(
 		pipelineVersion: EXPORT_PIPELINE_VERSION,
 		constrainedFrame,
 		fps,
+		durationSeconds,
 		capabilities,
 		...runtimeBuildContext,
 	});
 
 	onStatusChange?.("preparing");
+	onProgressChange?.(
+		createExportProgress({
+			stage: "settling",
+			label: "Preparing animated GIF",
+			detail: "Waiting for the current UI state to settle",
+			progress: 0.03,
+		}),
+	);
 
 	const { activeElement } = document;
 	if (activeElement instanceof HTMLElement && element.contains(activeElement)) {
@@ -1068,122 +1534,304 @@ export async function exportAnimatedGif(
 	}
 
 	try {
+		onProgressChange?.(
+			createExportProgress({
+				stage: "cloning",
+				label: "Preparing animated GIF",
+				detail: "Cloning the export scene and embedding images",
+				progress: 0.12,
+			}),
+		);
 		exportNode = createDetachedExportNode(element, { constrainedFrame });
 		await preloadAndEmbedImages(exportNode);
 		await waitForMs(100);
 		await waitForNextPaint();
-
-		const targetWidth = Math.ceil(
-			exportNode.offsetWidth || exportNode.clientWidth || 1,
-		);
-		const targetHeight = Math.ceil(
-			exportNode.offsetHeight || exportNode.clientHeight || 1,
-		);
-		const detectedCycleDurationMs = applyAnimationFrameToClone(exportNode, 0);
-		const captureDurationMs = Math.max(
-			detectedCycleDurationMs,
-			GIF_DEFAULT_DURATION_MS,
-		);
-		const requestedFrameDelayMs = roundGifDelayMs(1000 / Math.max(fps, 1));
-		const uncappedFrameCount = Math.max(
-			1,
-			Math.ceil(captureDurationMs / requestedFrameDelayMs),
-		);
-		const frameCount = Math.min(uncappedFrameCount, MAX_GIF_FRAME_COUNT);
-		const frameDelayMs = roundGifDelayMs(captureDurationMs / frameCount);
+		applyAnimationFrameToClone(exportNode, 0);
 		const captureScale =
-			frameCount > 180 ? GIF_CAPTURE_SCALE_BALANCED : GIF_CAPTURE_SCALE_HIGH;
+			(durationSeconds ?? 0) > 12
+				? GIF_CAPTURE_SCALE_BALANCED
+				: GIF_CAPTURE_SCALE_HIGH;
+		const plan = buildAnimatedExportPlan(
+			exportNode.offsetWidth || exportNode.clientWidth || 1,
+			exportNode.offsetHeight || exportNode.clientHeight || 1,
+			{
+				durationSeconds,
+				fps,
+				maxFrameCount: MAX_GIF_FRAME_COUNT,
+				captureScale,
+			},
+		);
+		const frameDelayMs =
+			plan.frameCount === 1 ? 1000 : roundGifDelayMs(plan.frameDelayMs);
 
 		onStatusChange?.("encoding");
+		onProgressChange?.(
+			createExportProgress({
+				stage: "encoding",
+				label: "Starting GIF encoder",
+				detail: `${plan.frameCount} frames queued for export`,
+				progress: 0.2,
+				currentFrame: 0,
+				totalFrames: plan.frameCount,
+			}),
+		);
 
-		const encoder = GIFEncoder();
-		let palette: GifPalette | null = null;
-		let captureWidth = 0;
-		let captureHeight = 0;
-
-		for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-			const elapsedMs =
-				frameCount === 1
-					? 0
-					: Math.round(
-							(frameIndex / (frameCount - 1)) *
-								Math.max(
-									captureDurationMs -
-										frameDelayMs,
-									0,
-								),
-						);
-			applyAnimationFrameToClone(exportNode, elapsedMs);
-			await waitForNextPaint();
-
-			const canvas = await captureGifFrameCanvas(exportNode, {
-				backgroundColor,
-				pixelRatio: captureScale,
-				outputWidth: targetWidth,
-				outputHeight: targetHeight,
+		const worker = createEncoderWorkerClient();
+		try {
+			await worker.call({
+				type: "start-gif",
+				width: plan.captureWidth,
+				height: plan.captureHeight,
 			});
-			const ctx = canvas.getContext("2d");
-			if (!ctx) {
-				throw new Error("Failed to get GIF frame canvas context");
+
+			for (let frameIndex = 0; frameIndex < plan.frameCount; frameIndex += 1) {
+				const elapsedMs =
+					plan.frameCount === 1
+						? 0
+						: Math.round(
+								(frameIndex /
+									(plan.frameCount - 1)) *
+									Math.max(
+										plan.captureDurationMs -
+											frameDelayMs,
+										0,
+									),
+							);
+				applyAnimationFrameToClone(exportNode, elapsedMs);
+				flushAnimatedCloneLayout(exportNode);
+				await waitForNextPaint();
+				await waitForMs(12);
+
+				const canvas = await captureGifFrameCanvas(exportNode, {
+					backgroundColor,
+					pixelRatio: captureScale,
+					outputWidth: plan.captureWidth,
+					outputHeight: plan.captureHeight,
+				});
+				const ctx = canvas.getContext("2d");
+				if (!ctx) {
+					throw new Error("Failed to get GIF frame canvas context");
+				}
+
+				const rgba = ctx.getImageData(
+					0,
+					0,
+					plan.captureWidth,
+					plan.captureHeight,
+				).data;
+				const buffer = rgba.buffer.slice(
+					rgba.byteOffset,
+					rgba.byteOffset + rgba.byteLength,
+				);
+				onProgressChange?.(
+					createExportProgress({
+						stage: "capturing",
+						label: "Capturing GIF frames",
+						detail: `Frame ${frameIndex + 1} of ${plan.frameCount}`,
+						progress:
+							0.2 +
+							((frameIndex + 1) / plan.frameCount) * 0.58,
+						currentFrame: frameIndex + 1,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				await worker.call(
+					{
+						type: "append-gif-frame",
+						frameIndex,
+						width: plan.captureWidth,
+						height: plan.captureHeight,
+						delayMs: frameDelayMs,
+						rgba: buffer,
+					},
+					[buffer],
+				);
 			}
 
-			captureWidth = canvas.width;
-			captureHeight = canvas.height;
-			const rgba = new Uint8Array(
-				ctx.getImageData(0, 0, captureWidth, captureHeight).data,
+			onProgressChange?.(
+				createExportProgress({
+					stage: "finalizing",
+					label: "Finalizing GIF",
+					detail: "Assembling frames and writing the file",
+					progress: 0.84,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
 			);
+			const finalized = await worker.call({ type: "finalize" });
+			if (finalized.type !== "finalized" || !finalized.buffer) {
+				throw new Error("GIF encoder did not return output");
+			}
 
-			palette ??= toGifPalette(quantize(rgba, 256));
-
-			const indexed = applyPalette(rgba, palette);
-			encoder.writeFrame(indexed, captureWidth, captureHeight, {
-				palette,
-				repeat: frameIndex === 0 ? 0 : undefined,
-				delay: frameCount === 1 ? 1000 : frameDelayMs,
+			const blob = new Blob([finalized.buffer], {
+				type: finalized.mimeType ?? "image/gif",
 			});
-		}
+			if (capabilities.isMobile && mobileDelivery === "auto-share") {
+				onStatusChange?.("sharing");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "sharing",
+						label: "Opening share sheet",
+						detail: "Passing the GIF to the system share dialog",
+						progress: 0.9,
+						currentFrame: plan.frameCount,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				try {
+					const shared = await shareBlobFile(blob, filename, "image/gif");
+					if (shared) {
+						const blobSummary = await summarizeBlob(blob);
+						if (preparedPopup && !preparedPopup.closed) {
+							preparedPopup.close();
+						}
+						console.info("[gif-export:diagnostics] success", {
+							filename,
+							method: "share",
+							capturePath: "detached-html-to-image-gif",
+							frameCount: plan.frameCount,
+							frameDelayMs,
+							captureScale,
+							captureDurationMs: plan.captureDurationMs,
+							captureWidth: plan.captureWidth,
+							captureHeight: plan.captureHeight,
+							...blobSummary,
+							pipelineVersion: EXPORT_PIPELINE_VERSION,
+							...runtimeBuildContext,
+						});
+						onStatusChange?.("success");
+						onProgressChange?.(
+							createExportProgress({
+								stage: "complete",
+								label: "GIF export complete",
+								detail: filename,
+								progress: 1,
+								currentFrame: plan.frameCount,
+								totalFrames: plan.frameCount,
+							}),
+						);
+						return {
+							success: true,
+							method: "share",
+							capturePath: "detached-html-to-image-gif",
+							...blobSummary,
+						};
+					}
+				} catch (error) {
+					console.warn("GIF share failed, trying download fallback:", error);
+				}
+			}
+			if (capabilities.isMobile && mobileDelivery !== "auto-download") {
+				onStatusChange?.("sharing");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "sharing",
+						label: "Ready to save GIF",
+						detail: "Choose how to hand the file off to your device",
+						progress: 0.92,
+						currentFrame: plan.frameCount,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				const promptMethod = await presentMobileExportPrompt(blob, {
+					filename,
+					mimeType: "image/gif",
+					capabilities,
+				});
+				const blobSummary = await summarizeBlob(blob);
+				console.info("[gif-export:diagnostics] success", {
+					filename,
+					method: promptMethod,
+					capturePath: "detached-html-to-image-gif",
+					frameCount: plan.frameCount,
+					frameDelayMs,
+					captureScale,
+					captureDurationMs: plan.captureDurationMs,
+					captureWidth: plan.captureWidth,
+					captureHeight: plan.captureHeight,
+					...blobSummary,
+					pipelineVersion: EXPORT_PIPELINE_VERSION,
+					...runtimeBuildContext,
+				});
+				onStatusChange?.("success");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "complete",
+						label: "GIF export complete",
+						detail: filename,
+						progress: 1,
+						currentFrame: plan.frameCount,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				return {
+					success: true,
+					method: promptMethod,
+					capturePath: "detached-html-to-image-gif",
+					...blobSummary,
+				};
+			}
+			onProgressChange?.(
+				createExportProgress({
+					stage: "downloading",
+					label: "Downloading GIF",
+					detail: "Handing the finished file to the browser",
+					progress: 0.94,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
+			);
+			const downloadResult = downloadImageBlobWithOptions(blob, filename, {
+				allowSyntheticClick: useSyntheticDownload,
+				popupWindow: preparedPopup,
+			});
 
-		encoder.finish();
-		const blob = new Blob([encoder.bytesView()], { type: "image/gif" });
-		const downloadResult = downloadImageBlobWithOptions(blob, filename, {
-			allowSyntheticClick: useSyntheticDownload,
-			popupWindow: preparedPopup,
-		});
+			if (!downloadResult.success) {
+				onStatusChange?.("error");
+				return {
+					success: false,
+					method: "manual",
+					capturePath: "detached-html-to-image-gif",
+					error: "Browser blocked the GIF download. Try retrying on desktop Chrome.",
+				};
+			}
 
-		if (!downloadResult.success) {
-			onStatusChange?.("error");
-			return {
-				success: false,
-				method: "manual",
+			const blobSummary = await summarizeBlob(blob);
+			keepPreparedPopupOpen = downloadResult.usedPopup;
+			console.info("[gif-export:diagnostics] success", {
+				filename,
+				method: "download",
 				capturePath: "detached-html-to-image-gif",
-				error: "Browser blocked the GIF download. Try retrying on desktop Chrome.",
+				frameCount: plan.frameCount,
+				frameDelayMs,
+				captureScale,
+				captureDurationMs: plan.captureDurationMs,
+				captureWidth: plan.captureWidth,
+				captureHeight: plan.captureHeight,
+				...blobSummary,
+				pipelineVersion: EXPORT_PIPELINE_VERSION,
+				...runtimeBuildContext,
+			});
+			onStatusChange?.("success");
+			onProgressChange?.(
+				createExportProgress({
+					stage: "complete",
+					label: "GIF export complete",
+					detail: filename,
+					progress: 1,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
+			);
+			return {
+				success: true,
+				method: "download",
+				capturePath: "detached-html-to-image-gif",
+				...blobSummary,
 			};
+		} finally {
+			worker.close();
 		}
-
-		const blobSummary = await summarizeBlob(blob);
-		keepPreparedPopupOpen = downloadResult.usedPopup;
-		console.info("[gif-export:diagnostics] success", {
-			filename,
-			method: "download",
-			capturePath: "detached-html-to-image-gif",
-			frameCount,
-			frameDelayMs,
-			captureScale,
-			detectedCycleDurationMs,
-			captureDurationMs,
-			captureWidth,
-			captureHeight,
-			...blobSummary,
-			pipelineVersion: EXPORT_PIPELINE_VERSION,
-			...runtimeBuildContext,
-		});
-		onStatusChange?.("success");
-		return {
-			success: true,
-			method: "download",
-			capturePath: "detached-html-to-image-gif",
-			...blobSummary,
-		};
 	} catch (error) {
 		console.error("[gif-export:diagnostics] failure", {
 			filename,
@@ -1194,10 +1842,423 @@ export async function exportAnimatedGif(
 			error: error instanceof Error ? error.message : "Unknown error occurred",
 		});
 		onStatusChange?.("error");
+		onProgressChange?.(
+			createExportProgress({
+				stage: "error",
+				label: "GIF export failed",
+				detail:
+					error instanceof Error
+						? error.message
+						: "Unknown error occurred",
+				progress: 1,
+			}),
+		);
 		return {
 			success: false,
 			method: "manual",
 			capturePath: "detached-html-to-image-gif",
+			error: error instanceof Error ? error.message : "Unknown error occurred",
+		};
+	} finally {
+		if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
+			preparedPopup.close();
+		}
+		removeExportNode(exportNode);
+		if (existingExportAttribute === null) {
+			element.removeAttribute(EXPORT_ATTRIBUTE);
+		} else {
+			element.setAttribute(EXPORT_ATTRIBUTE, existingExportAttribute);
+		}
+	}
+}
+
+export async function exportAnimatedMp4(
+	element: HTMLElement,
+	options: {
+		filename: string;
+		backgroundColor?: string;
+		constrainedFrame?: boolean;
+		fps?: number;
+		durationSeconds?: number;
+		onStatusChange?: (status: ExportStatus) => void;
+		onProgressChange?: (progress: ExportProgress) => void;
+	},
+): Promise<ExportResult> {
+	const {
+		filename,
+		backgroundColor,
+		constrainedFrame = false,
+		fps = DEFAULT_MP4_EXPORT_FPS,
+		durationSeconds,
+		onStatusChange,
+		onProgressChange,
+	} = options;
+	const capabilities = detectExportCapabilities();
+	const mobileDelivery = resolveMobileExportDelivery(capabilities);
+	const runtimeBuildContext = resolveRuntimeBuildContext();
+	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
+	const preparedPopup =
+		capabilities.isMobile && mobileDelivery === "auto-download" && !capabilities.isIOS
+			? openPreparedPopupWindow()
+			: null;
+	let keepPreparedPopupOpen = false;
+	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
+	element.setAttribute(EXPORT_ATTRIBUTE, "true");
+	let exportNode: HTMLElement | null = null;
+
+	console.info("[mp4-export:diagnostics] start", {
+		filename,
+		pipelineVersion: EXPORT_PIPELINE_VERSION,
+		constrainedFrame,
+		fps,
+		durationSeconds,
+		capabilities,
+		...runtimeBuildContext,
+	});
+
+	if (!capabilities.canEncodeMp4) {
+		return {
+			success: false,
+			method: "manual",
+			capturePath: "detached-html-to-image-mp4",
+			error: "This browser does not support H.264 MP4 export yet.",
+		};
+	}
+
+	onStatusChange?.("preparing");
+	onProgressChange?.(
+		createExportProgress({
+			stage: "settling",
+			label: "Preparing MP4 export",
+			detail: "Waiting for the current UI state to settle",
+			progress: 0.03,
+		}),
+	);
+
+	const { activeElement } = document;
+	if (activeElement instanceof HTMLElement && element.contains(activeElement)) {
+		activeElement.blur();
+	}
+	window.getSelection?.()?.removeAllRanges();
+
+	await waitForNextPaint();
+	const settleDelayMs = getMaxVisualSettleDelayMs(element);
+	if (settleDelayMs > 0) {
+		await waitForMs(settleDelayMs + 34);
+		await waitForNextPaint();
+	}
+
+	try {
+		onProgressChange?.(
+			createExportProgress({
+				stage: "cloning",
+				label: "Preparing MP4 export",
+				detail: "Cloning the export scene and embedding images",
+				progress: 0.12,
+			}),
+		);
+		exportNode = createDetachedExportNode(element, { constrainedFrame });
+		await preloadAndEmbedImages(exportNode);
+		await waitForMs(100);
+		await waitForNextPaint();
+		applyAnimationFrameToClone(exportNode, 0);
+		const strategy = await resolveMp4ExportStrategy({
+			durationSeconds,
+			fps,
+			targetWidth: exportNode.offsetWidth || exportNode.clientWidth || 1,
+			targetHeight: exportNode.offsetHeight || exportNode.clientHeight || 1,
+		});
+		if (!strategy) {
+			throw new Error(
+				"This browser does not support H.264 MP4 export for the current capture size",
+			);
+		}
+		const { plan, captureScale, encoder } = strategy;
+		const frameDurationUs = Math.round(plan.frameDelayMs * 1000);
+
+		onStatusChange?.("encoding");
+		onProgressChange?.(
+			createExportProgress({
+				stage: "encoding",
+				label: "Starting MP4 encoder",
+				detail: `${plan.frameCount} frames queued for H.264 export`,
+				progress: 0.2,
+				currentFrame: 0,
+				totalFrames: plan.frameCount,
+			}),
+		);
+
+		const worker = createEncoderWorkerClient();
+		try {
+			await worker.call({
+				type: "start-mp4",
+				width: plan.captureWidth,
+				height: plan.captureHeight,
+				frameRate: fps,
+				bitrate: MP4_BITRATE_BITS_PER_SECOND,
+				codec: encoder.codec,
+			});
+
+			for (let frameIndex = 0; frameIndex < plan.frameCount; frameIndex += 1) {
+				const elapsedMs =
+					plan.frameCount === 1
+						? 0
+						: Math.round(
+								(frameIndex /
+									(plan.frameCount - 1)) *
+									Math.max(
+										plan.captureDurationMs -
+											plan.frameDelayMs,
+										0,
+									),
+							);
+				applyAnimationFrameToClone(exportNode, elapsedMs);
+				flushAnimatedCloneLayout(exportNode);
+				await waitForNextPaint();
+				await waitForMs(12);
+
+				const canvas = await captureGifFrameCanvas(exportNode, {
+					backgroundColor,
+					pixelRatio: captureScale,
+					outputWidth: plan.captureWidth,
+					outputHeight: plan.captureHeight,
+				});
+				const bitmap = await createImageBitmap(canvas);
+				onProgressChange?.(
+					createExportProgress({
+						stage: "capturing",
+						label: "Encoding MP4 frames",
+						detail: `Frame ${frameIndex + 1} of ${plan.frameCount}`,
+						progress:
+							0.2 +
+							((frameIndex + 1) / plan.frameCount) * 0.58,
+						currentFrame: frameIndex + 1,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				await worker.call(
+					{
+						type: "append-mp4-frame",
+						frameIndex,
+						timestampUs: frameIndex * frameDurationUs,
+						durationUs: frameDurationUs,
+						bitmap,
+					},
+					[bitmap],
+				);
+			}
+
+			onProgressChange?.(
+				createExportProgress({
+					stage: "finalizing",
+					label: "Finalizing MP4",
+					detail: "Flushing the encoder and muxing the file",
+					progress: 0.84,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
+			);
+			const finalized = await worker.call({ type: "finalize" });
+			if (finalized.type !== "finalized" || !finalized.buffer) {
+				throw new Error("MP4 encoder did not return output");
+			}
+
+			const blob = new Blob([finalized.buffer], {
+				type: finalized.mimeType ?? "video/mp4",
+			});
+			if (capabilities.isMobile && mobileDelivery === "auto-share") {
+				onStatusChange?.("sharing");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "sharing",
+						label: "Opening share sheet",
+						detail: "Passing the MP4 to the system share dialog",
+						progress: 0.9,
+						currentFrame: plan.frameCount,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				try {
+					const shared = await shareBlobFile(blob, filename, "video/mp4");
+					if (shared) {
+						const blobSummary = await summarizeBlob(blob);
+						if (preparedPopup && !preparedPopup.closed) {
+							preparedPopup.close();
+						}
+						console.info("[mp4-export:diagnostics] success", {
+							filename,
+							method: "share",
+							capturePath: "detached-html-to-image-mp4",
+							frameCount: plan.frameCount,
+							frameDurationUs,
+							codec: encoder.codec,
+							captureScale,
+							captureDurationMs: plan.captureDurationMs,
+							captureWidth: plan.captureWidth,
+							captureHeight: plan.captureHeight,
+							...blobSummary,
+							pipelineVersion: EXPORT_PIPELINE_VERSION,
+							...runtimeBuildContext,
+						});
+						onStatusChange?.("success");
+						onProgressChange?.(
+							createExportProgress({
+								stage: "complete",
+								label: "MP4 export complete",
+								detail: filename,
+								progress: 1,
+								currentFrame: plan.frameCount,
+								totalFrames: plan.frameCount,
+							}),
+						);
+						return {
+							success: true,
+							method: "share",
+							capturePath: "detached-html-to-image-mp4",
+							...blobSummary,
+						};
+					}
+				} catch (error) {
+					console.warn("MP4 share failed, trying download fallback:", error);
+				}
+			}
+			if (capabilities.isMobile && mobileDelivery !== "auto-download") {
+				onStatusChange?.("sharing");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "sharing",
+						label: "Ready to save MP4",
+						detail: "Choose how to hand the file off to your device",
+						progress: 0.92,
+						currentFrame: plan.frameCount,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				const promptMethod = await presentMobileExportPrompt(blob, {
+					filename,
+					mimeType: "video/mp4",
+					capabilities,
+				});
+				const blobSummary = await summarizeBlob(blob);
+				console.info("[mp4-export:diagnostics] success", {
+					filename,
+					method: promptMethod,
+					capturePath: "detached-html-to-image-mp4",
+					frameCount: plan.frameCount,
+					frameDurationUs,
+					codec: encoder.codec,
+					captureScale,
+					captureDurationMs: plan.captureDurationMs,
+					captureWidth: plan.captureWidth,
+					captureHeight: plan.captureHeight,
+					...blobSummary,
+					pipelineVersion: EXPORT_PIPELINE_VERSION,
+					...runtimeBuildContext,
+				});
+				onStatusChange?.("success");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "complete",
+						label: "MP4 export complete",
+						detail: filename,
+						progress: 1,
+						currentFrame: plan.frameCount,
+						totalFrames: plan.frameCount,
+					}),
+				);
+				return {
+					success: true,
+					method: promptMethod,
+					capturePath: "detached-html-to-image-mp4",
+					...blobSummary,
+				};
+			}
+			onProgressChange?.(
+				createExportProgress({
+					stage: "downloading",
+					label: "Downloading MP4",
+					detail: "Handing the finished file to the browser",
+					progress: 0.94,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
+			);
+			const downloadResult = downloadImageBlobWithOptions(blob, filename, {
+				allowSyntheticClick: useSyntheticDownload,
+				popupWindow: preparedPopup,
+			});
+			if (!downloadResult.success) {
+				onStatusChange?.("error");
+				return {
+					success: false,
+					method: "manual",
+					capturePath: "detached-html-to-image-mp4",
+					error: "Browser blocked the MP4 download. Try retrying on desktop Chrome.",
+				};
+			}
+
+			const blobSummary = await summarizeBlob(blob);
+			keepPreparedPopupOpen = downloadResult.usedPopup;
+			console.info("[mp4-export:diagnostics] success", {
+				filename,
+				method: "download",
+				capturePath: "detached-html-to-image-mp4",
+				frameCount: plan.frameCount,
+				frameDurationUs,
+				codec: encoder.codec,
+				captureScale,
+				captureDurationMs: plan.captureDurationMs,
+				captureWidth: plan.captureWidth,
+				captureHeight: plan.captureHeight,
+				...blobSummary,
+				pipelineVersion: EXPORT_PIPELINE_VERSION,
+				...runtimeBuildContext,
+			});
+			onStatusChange?.("success");
+			onProgressChange?.(
+				createExportProgress({
+					stage: "complete",
+					label: "MP4 export complete",
+					detail: filename,
+					progress: 1,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
+			);
+			return {
+				success: true,
+				method: "download",
+				capturePath: "detached-html-to-image-mp4",
+				...blobSummary,
+			};
+		} finally {
+			worker.close();
+		}
+	} catch (error) {
+		console.error("[mp4-export:diagnostics] failure", {
+			filename,
+			method: "manual",
+			capturePath: "detached-html-to-image-mp4",
+			pipelineVersion: EXPORT_PIPELINE_VERSION,
+			...runtimeBuildContext,
+			error: error instanceof Error ? error.message : "Unknown error occurred",
+		});
+		onStatusChange?.("error");
+		onProgressChange?.(
+			createExportProgress({
+				stage: "error",
+				label: "MP4 export failed",
+				detail:
+					error instanceof Error
+						? error.message
+						: "Unknown error occurred",
+				progress: 1,
+			}),
+		);
+		return {
+			success: false,
+			method: "manual",
+			capturePath: "detached-html-to-image-mp4",
 			error: error instanceof Error ? error.message : "Unknown error occurred",
 		};
 	} finally {
@@ -1230,6 +2291,7 @@ export async function exportImage(
 		pixelRatio?: number;
 		constrainedFrame?: boolean;
 		onStatusChange?: (status: ExportStatus) => void;
+		onProgressChange?: (progress: ExportProgress) => void;
 	},
 ): Promise<ExportResult> {
 	const {
@@ -1238,15 +2300,19 @@ export async function exportImage(
 		pixelRatio,
 		constrainedFrame = false,
 		onStatusChange,
+		onProgressChange,
 	} = options;
 	const capabilities = detectExportCapabilities();
+	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	// Only open a fallback popup on non-iOS mobile (e.g. Android) where synthetic
 	// clicks may be blocked. iOS uses Web Share API natively; opening a popup on
 	// iOS Safari creates a stuck about:blank tab.
 	const preparedPopup =
-		capabilities.isMobile && !capabilities.isIOS ? openPreparedPopupWindow() : null;
+		capabilities.isMobile && mobileDelivery === "auto-download" && !capabilities.isIOS
+			? openPreparedPopupWindow()
+			: null;
 	let keepPreparedPopupOpen = false;
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
 	element.setAttribute(EXPORT_ATTRIBUTE, "true");
@@ -1261,6 +2327,14 @@ export async function exportImage(
 	});
 
 	onStatusChange?.("preparing");
+	onProgressChange?.(
+		createExportProgress({
+			stage: "settling",
+			label: "Preparing image export",
+			detail: "Waiting for the current UI state to settle",
+			progress: 0.05,
+		}),
+	);
 
 	// Blur active inline editors so caret/focus artifacts don't leak into capture.
 	const { activeElement } = document;
@@ -1280,6 +2354,14 @@ export async function exportImage(
 	let exportNode: HTMLElement | null = null;
 	const ensureDetachedExportNode = async (): Promise<HTMLElement> => {
 		if (!exportNode) {
+			onProgressChange?.(
+				createExportProgress({
+					stage: "cloning",
+					label: "Preparing image export",
+					detail: "Cloning the export scene and embedding images",
+					progress: 0.18,
+				}),
+			);
 			exportNode = createDetachedExportNode(element, { constrainedFrame });
 			// Pre-load and embed all images as inline data URLs.
 			await preloadAndEmbedImages(exportNode);
@@ -1292,6 +2374,14 @@ export async function exportImage(
 	try {
 		// Prefer detached capture first for deterministic export-safe output.
 		let blob: Blob | null = null;
+		onProgressChange?.(
+			createExportProgress({
+				stage: "capturing",
+				label: "Capturing image",
+				detail: "Rendering the export frame",
+				progress: 0.44,
+			}),
+		);
 		try {
 			const detachedNode = await ensureDetachedExportNode();
 			blob = await captureToBlob(
@@ -1391,10 +2481,18 @@ export async function exportImage(
 		}
 
 		// Method 1: Web Share API (triggers native share sheet on all platforms)
-		if (blob && capabilities.canShareFiles && capabilities.isMobile) {
+		if (blob && capabilities.isMobile && mobileDelivery === "auto-share") {
 			onStatusChange?.("sharing");
+			onProgressChange?.(
+				createExportProgress({
+					stage: "sharing",
+					label: "Opening share sheet",
+					detail: "Passing the image to the system share dialog",
+					progress: 0.86,
+				}),
+			);
 			try {
-				const shared = await shareImageFile(blob, filename);
+				const shared = await shareBlobFile(blob, filename, "image/png");
 				if (shared) {
 					const blobSummary = await summarizeBlob(blob);
 					if (preparedPopup && !preparedPopup.closed) {
@@ -1409,6 +2507,14 @@ export async function exportImage(
 						...runtimeBuildContext,
 					});
 					onStatusChange?.("success");
+					onProgressChange?.(
+						createExportProgress({
+							stage: "complete",
+							label: "Image export complete",
+							detail: filename,
+							progress: 1,
+						}),
+					);
 					return {
 						success: true,
 						method: "share",
@@ -1421,8 +2527,60 @@ export async function exportImage(
 			}
 		}
 
+		if (blob && capabilities.isMobile && mobileDelivery !== "auto-download") {
+			onStatusChange?.("sharing");
+			onProgressChange?.(
+				createExportProgress({
+					stage: "sharing",
+					label: "Ready to save image",
+					detail: "Choose how to hand the file off to your device",
+					progress: 0.88,
+				}),
+			);
+			const promptMethod = await presentMobileExportPrompt(blob, {
+				filename,
+				mimeType: "image/png",
+				capabilities,
+			});
+			const blobSummary = await summarizeBlob(blob);
+			if (preparedPopup && !preparedPopup.closed) {
+				preparedPopup.close();
+			}
+			console.info("[export:diagnostics] success", {
+				filename,
+				method: promptMethod,
+				capturePath,
+				...blobSummary,
+				pipelineVersion: EXPORT_PIPELINE_VERSION,
+				...runtimeBuildContext,
+			});
+			onStatusChange?.("success");
+			onProgressChange?.(
+				createExportProgress({
+					stage: "complete",
+					label: "Image export complete",
+					detail: filename,
+					progress: 1,
+				}),
+			);
+			return {
+				success: true,
+				method: promptMethod,
+				capturePath,
+				...blobSummary,
+			};
+		}
+
 		// Method 2: Blob URL download (desktop / non-iOS mobile)
 		if (blob) {
+			onProgressChange?.(
+				createExportProgress({
+					stage: "downloading",
+					label: "Downloading image",
+					detail: "Handing the finished file to the browser",
+					progress: 0.9,
+				}),
+			);
 			const downloadResult = downloadImageBlobWithOptions(blob, filename, {
 				allowSyntheticClick: useSyntheticDownload,
 				popupWindow: preparedPopup,
@@ -1439,6 +2597,14 @@ export async function exportImage(
 					...runtimeBuildContext,
 				});
 				onStatusChange?.("success");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "complete",
+						label: "Image export complete",
+						detail: filename,
+						progress: 1,
+					}),
+				);
 				return {
 					success: true,
 					method: "download",
@@ -1451,6 +2617,14 @@ export async function exportImage(
 		// Method 3: Data URL download (legacy fallback)
 		try {
 			const dataUrlNode = exportNode ?? element;
+			onProgressChange?.(
+				createExportProgress({
+					stage: "finalizing",
+					label: "Trying compatibility fallback",
+					detail: "Switching to a data URL export path",
+					progress: 0.74,
+				}),
+			);
 			const dataUrl = await captureToDataUrl(dataUrlNode, {
 				backgroundColor,
 				pixelRatio,
@@ -1476,6 +2650,14 @@ export async function exportImage(
 					...runtimeBuildContext,
 				});
 				onStatusChange?.("success");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "complete",
+						label: "Image export complete",
+						detail: filename,
+						progress: 1,
+					}),
+				);
 				return {
 					success: true,
 					method: "dataurl",
@@ -1528,6 +2710,14 @@ export async function exportImage(
 					...runtimeBuildContext,
 				});
 				onStatusChange?.("success");
+				onProgressChange?.(
+					createExportProgress({
+						stage: "complete",
+						label: "Image export complete",
+						detail: filename,
+						progress: 1,
+					}),
+				);
 				return {
 					success: true,
 					method: "dataurl",
@@ -1544,6 +2734,14 @@ export async function exportImage(
 
 		// Method 5: Manual instructions (ultimate fallback)
 		onStatusChange?.("error");
+		onProgressChange?.(
+			createExportProgress({
+				stage: "error",
+				label: "Image export failed",
+				detail: "Export failed. Try taking a screenshot manually.",
+				progress: 1,
+			}),
+		);
 		console.error("[export:diagnostics] failure", {
 			filename,
 			method: "manual",
@@ -1569,6 +2767,17 @@ export async function exportImage(
 			error: error instanceof Error ? error.message : "Unknown error occurred",
 		});
 		onStatusChange?.("error");
+		onProgressChange?.(
+			createExportProgress({
+				stage: "error",
+				label: "Image export failed",
+				detail:
+					error instanceof Error
+						? error.message
+						: "Unknown error occurred",
+				progress: 1,
+			}),
+		);
 		return {
 			success: false,
 			method: "manual",

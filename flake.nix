@@ -34,7 +34,6 @@
             
             # Static analysis
             nodePackages.eslint
-            nodePackages.prettier
             
             # Development helpers
             jq
@@ -59,7 +58,6 @@
             echo "  npm run build    - Build for production"
             echo "  npm run test     - Run Playwright tests"
             echo "  npm run lint     - Run ESLint"
-            echo "  npm run format   - Format with Prettier"
             echo "  npm run validate - Run full validation suite"
             echo ""
             

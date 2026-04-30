@@ -1,6 +1,14 @@
 "use client";
 
-import { useReducer, useRef, useCallback, useState, useEffect, useMemo } from "react";
+import {
+	startTransition,
+	useReducer,
+	useRef,
+	useCallback,
+	useState,
+	useEffect,
+	useMemo,
+} from "react";
 import {
 	Settings,
 	Box,
@@ -12,15 +20,22 @@ import {
 	Menu,
 	Pipette,
 	Film,
+	Video,
 	Eye,
 	Terminal,
 	Play,
 	Pause,
+	Clock3,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { ExportStatus } from "@/lib/export-utils";
+import {
+	probeAnimatedMp4ExportSupport,
+	type ExportProgress,
+	type ExportStatus,
+} from "@/lib/export-utils";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
 import { IconButton } from "@/components/ui/icon-button";
+import { AnimatedExportDialog } from "@/components/ipod/export/animated-export-dialog";
 import dynamic from "next/dynamic";
 const ThreeDIpod = dynamic(
 	() => import("@/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
@@ -44,6 +59,7 @@ import {
 	BG_CUSTOM_COLORS_KEY,
 	CASE_CUSTOM_COLORS_KEY,
 	exportWorkbenchGif,
+	exportWorkbenchMp4,
 	exportWorkbenchPng,
 	loadCustomColors,
 	loadPersistedExportCounter,
@@ -78,6 +94,12 @@ import {
 	CASE_OKLCH_CONFIG,
 } from "@/lib/color-manifest";
 import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import {
+	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
+	type AnimatedExportFormat,
+	clampAnimatedExportDurationSeconds,
+} from "@/lib/export/animated-export";
+import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
 import { formatTimecode, parseTimecode } from "@/lib/time-utils";
 
 const MAX_CUSTOM_COLORS = 6;
@@ -89,7 +111,7 @@ const OKLCH_CASE_STEPS = CASE_OKLCH_CONFIG.steps;
 const OKLCH_BG_STEPS = BACKGROUND_OKLCH_CONFIG.steps;
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
-type ExportKind = "png" | "gif";
+type ExportKind = "png" | AnimatedExportFormat;
 
 function slugifyExportSegment(value: string): string {
 	return (
@@ -176,6 +198,13 @@ export default function IpodClassicWorkbench() {
 	const [isModelHydrated, setIsModelHydrated] = useState(false);
 	const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
 	const [activeExportKind, setActiveExportKind] = useState<ExportKind | null>(null);
+	const [animatedExportDialogFormat, setAnimatedExportDialogFormat] =
+		useState<AnimatedExportFormat | null>(null);
+	const [animatedExportDurationSeconds, setAnimatedExportDurationSeconds] = useState(
+		DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
+	);
+	const [canMp4Export, setCanMp4Export] = useState(false);
+	const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
 
 	// Customization State
 	const [showSettings, setShowSettings] = useState(false);
@@ -251,8 +280,32 @@ export default function IpodClassicWorkbench() {
 	}, []);
 
 	useEffect(() => {
+		let cancelled = false;
 		setHasEyeDropper("EyeDropper" in window);
-	}, []);
+		const exportTarget = exportTargetRef.current;
+		if (!exportTarget) {
+			void probeAnimatedMp4ExportSupport().then((supported) => {
+				if (!cancelled) {
+					setCanMp4Export(supported);
+				}
+			});
+		} else {
+			void resolveMp4ExportStrategy({
+				targetWidth:
+					exportTarget.offsetWidth || exportTarget.clientWidth || 1,
+				targetHeight:
+					exportTarget.offsetHeight || exportTarget.clientHeight || 1,
+			}).then((strategy) => {
+				if (!cancelled) {
+					setCanMp4Export(strategy !== null);
+				}
+			});
+		}
+
+		return () => {
+			cancelled = true;
+		};
+	}, [hardwarePreset]);
 
 	useEffect(() => {
 		setOklchReady(supportsOklch());
@@ -431,6 +484,17 @@ export default function IpodClassicWorkbench() {
 		return `${artist}-${title}`;
 	}, [state.artist, state.title]);
 
+	const currentTimeLabel = useMemo(
+		() => formatTimecode(state.currentTime),
+		[state.currentTime],
+	);
+
+	const updateExportProgress = useCallback((progress: ExportProgress) => {
+		startTransition(() => {
+			setExportProgress(progress);
+		});
+	}, []);
+
 	const formatExportId = useCallback((id: number) => {
 		return String(id).padStart(EXPORT_COUNTER_PAD, "0");
 	}, []);
@@ -439,6 +503,7 @@ export default function IpodClassicWorkbench() {
 		setIsExportCapturing(false);
 		setActiveExportKind(null);
 		setExportStatus("idle");
+		setExportProgress(null);
 	}, []);
 
 	const completeSuccessfulExport = useCallback(
@@ -448,6 +513,15 @@ export default function IpodClassicWorkbench() {
 			savePersistedExportCounter(nextCounter);
 			showSoftNotice(`${label} Exported`);
 			setExportStatus("success");
+			setExportProgress((current) =>
+				current
+					? {
+							...current,
+							stage: "complete",
+							progress: 1,
+						}
+					: null,
+			);
 			setTimeout(() => {
 				resetExportUi();
 			}, 2000);
@@ -479,6 +553,12 @@ export default function IpodClassicWorkbench() {
 
 		setActiveExportKind("png");
 		setIsExportCapturing(true);
+		updateExportProgress({
+			stage: "settling",
+			label: "Preparing image export",
+			detail: "Queueing the export pipeline",
+			progress: 0.01,
+		});
 
 		try {
 			console.info("[png-export] starting capture", { filename });
@@ -486,6 +566,7 @@ export default function IpodClassicWorkbench() {
 				filename,
 				backgroundColor: bgColor,
 				onStatusChange: setExportStatus,
+				onProgressChange: updateExportProgress,
 			});
 			console.info("[png-export] finished", result);
 
@@ -518,81 +599,186 @@ export default function IpodClassicWorkbench() {
 		resetExportUi,
 		resetInteractionChrome,
 		showSoftNotice,
+		updateExportProgress,
 	]);
 
 	useEffect(() => {
 		handlePngExportRef.current = handlePngExport;
 	}, [handlePngExport]);
 
-	const handleGifExportRef = useRef<(() => void) | null>(null);
+	const handleAnimatedExportRef = useRef<(() => void) | null>(null);
+	const lastAnimatedExportRequestRef = useRef<{
+		format: AnimatedExportFormat;
+		durationSeconds: number;
+	} | null>(null);
 
-	const handleGifExport = useCallback(async () => {
-		if (exportStatus !== "idle") return;
-		resetInteractionChrome({
-			closeSettings: true,
-			closeEditor: true,
-			closeToolbox: true,
-			clearNotice: true,
-		});
-		if (!isPreviewView && !isAsciiView) {
-			playClick();
-			showSoftNotice("Switch to Preview or ASCII for GIF");
-			return;
-		}
-		playClick();
-		if (!exportTargetRef.current) return;
+	const runAnimatedExport = useCallback(
+		async (format: AnimatedExportFormat, requestedDurationSeconds: number) => {
+			if (exportStatus !== "idle") return;
+			if (!exportTargetRef.current) return;
 
-		const exportId = exportCounter;
-		const exportTag = formatExportId(exportId);
-		const filename = `ipod-${exportTag}-${buildExportSlug()}.gif`;
+			const durationSeconds =
+				clampAnimatedExportDurationSeconds(requestedDurationSeconds);
+			const exportId = exportCounter;
+			const exportTag = formatExportId(exportId);
+			const filename = `ipod-${exportTag}-${buildExportSlug()}.${format}`;
 
-		setActiveExportKind("gif");
-		setIsExportCapturing(true);
-
-		try {
-			console.info("[gif-export] starting preview export", { filename });
-			const result = await exportWorkbenchGif(exportTargetRef.current, {
-				filename,
-				backgroundColor: bgColor,
-				onStatusChange: setExportStatus,
+			lastAnimatedExportRequestRef.current = {
+				format,
+				durationSeconds,
+			};
+			setActiveExportKind(format);
+			setIsExportCapturing(true);
+			updateExportProgress({
+				stage: "settling",
+				label:
+					format === "gif"
+						? "Preparing animated GIF"
+						: "Preparing MP4 export",
+				detail: "Queueing the export pipeline",
+				progress: 0.01,
 			});
-			console.info("[gif-export] finished", result);
 
-			if (result.success) {
-				completeSuccessfulExport(exportId, `Animated #${exportTag}`);
-			} else {
-				toast.error("GIF export failed", {
-					description: result.error,
-					action: {
-						label: "Retry",
-						onClick: () => handleGifExportRef.current?.(),
-					},
+			try {
+				console.info(`[${format}-export] starting animated export`, {
+					filename,
+					durationSeconds,
 				});
+				const result =
+					format === "gif"
+						? await exportWorkbenchGif(
+								exportTargetRef.current,
+								{
+									filename,
+									backgroundColor: bgColor,
+									durationSeconds,
+									onStatusChange:
+										setExportStatus,
+									onProgressChange:
+										updateExportProgress,
+								},
+							)
+						: await exportWorkbenchMp4(
+								exportTargetRef.current,
+								{
+									filename,
+									backgroundColor: bgColor,
+									durationSeconds,
+									onStatusChange:
+										setExportStatus,
+									onProgressChange:
+										updateExportProgress,
+								},
+							);
+				console.info(`[${format}-export] finished`, result);
+
+				if (result.success) {
+					completeSuccessfulExport(
+						exportId,
+						format === "gif"
+							? `Animated #${exportTag}`
+							: `Clip #${exportTag}`,
+					);
+					return;
+				}
+
+				toast.error(
+					format === "gif"
+						? "GIF export failed"
+						: "MP4 export failed",
+					{
+						description: result.error,
+						action: {
+							label: "Retry",
+							onClick: () =>
+								handleAnimatedExportRef.current?.(),
+						},
+					},
+				);
+				resetExportUi();
+			} catch (error) {
+				console.error(`[${format}-export] critical failure`, error);
+				toast.error(
+					format === "gif"
+						? "Critical GIF export error"
+						: "Critical MP4 export error",
+				);
 				resetExportUi();
 			}
-		} catch (error) {
-			console.error("[gif-export] critical failure", error);
-			toast.error("Critical GIF export error");
-			resetExportUi();
-		}
-	}, [
-		bgColor,
-		buildExportSlug,
-		completeSuccessfulExport,
-		exportCounter,
-		exportStatus,
-		formatExportId,
-		isPreviewView,
-		isAsciiView,
-		playClick,
-		resetExportUi,
-		resetInteractionChrome,
-		showSoftNotice,
-	]);
+		},
+		[
+			bgColor,
+			buildExportSlug,
+			completeSuccessfulExport,
+			exportCounter,
+			exportStatus,
+			formatExportId,
+			resetExportUi,
+			updateExportProgress,
+		],
+	);
 
 	useEffect(() => {
-		handleGifExportRef.current = handleGifExport;
-	}, [handleGifExport]);
+		const request = lastAnimatedExportRequestRef.current;
+		handleAnimatedExportRef.current = request
+			? () => {
+					void runAnimatedExport(
+						request.format,
+						request.durationSeconds,
+					);
+				}
+			: null;
+	}, [runAnimatedExport]);
+
+	const openAnimatedExportDialog = useCallback(
+		(format: AnimatedExportFormat) => {
+			if (exportStatus !== "idle") return;
+			resetInteractionChrome({
+				closeSettings: true,
+				closeEditor: true,
+				closeToolbox: true,
+				clearNotice: true,
+			});
+			if (!isPreviewView && !isAsciiView) {
+				playClick();
+				showSoftNotice("Switch to Preview or ASCII for Animation");
+				return;
+			}
+			if (format === "mp4" && !canMp4Export) {
+				playClick();
+				showSoftNotice("MP4 export needs a newer Chromium browser");
+				return;
+			}
+
+			playClick();
+			setAnimatedExportDialogFormat(format);
+		},
+		[
+			canMp4Export,
+			exportStatus,
+			isAsciiView,
+			isPreviewView,
+			playClick,
+			resetInteractionChrome,
+			showSoftNotice,
+		],
+	);
+
+	const handleGifExport = useCallback(() => {
+		openAnimatedExportDialog("gif");
+	}, [openAnimatedExportDialog]);
+
+	const handleMp4Export = useCallback(() => {
+		openAnimatedExportDialog("mp4");
+	}, [openAnimatedExportDialog]);
+
+	const handleAnimatedExportConfirm = useCallback(() => {
+		const format = animatedExportDialogFormat;
+		if (!format) return;
+
+		setAnimatedExportDialogFormat(null);
+		void runAnimatedExport(format, animatedExportDurationSeconds);
+	}, [animatedExportDialogFormat, animatedExportDurationSeconds, runAnimatedExport]);
 
 	const handleHardwarePresetChange = useCallback(
 		(nextPreset: IpodHardwarePresetId) => {
@@ -875,6 +1061,9 @@ export default function IpodClassicWorkbench() {
 				closeToolbox: true,
 				clearNotice: true,
 			});
+			if (nextMode === "preview") {
+				dispatch({ type: "SET_OS_SCREEN", payload: "now-playing" });
+			}
 			dispatch({ type: "SET_VIEW_MODE", payload: nextMode });
 		},
 		[resetInteractionChrome],
@@ -938,6 +1127,8 @@ export default function IpodClassicWorkbench() {
 	const scaledFrameHeight = frameHeight * previewScale;
 	const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
 	const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
+	const mp4Busy = activeExportKind === "mp4" && exportStatus !== "idle";
+	const exportProgressPercent = Math.round((exportProgress?.progress ?? 0) * 100);
 	const toolboxDockClass = isCompactToolbox
 		? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
 		: "fixed top-6 right-6";
@@ -1791,7 +1982,7 @@ export default function IpodClassicWorkbench() {
 										: ""
 							} disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
 						/>
-						{(isPreviewView || gifBusy) && (
+						{(isPreviewView || isAsciiView || gifBusy) && (
 							<IconButton
 								icon={
 									activeExportKind ===
@@ -1825,16 +2016,64 @@ export default function IpodClassicWorkbench() {
 								onClick={handleGifExport}
 								data-testid="gif-export-button"
 								contrast={true}
-								disabled={
-									!isPreviewView ||
-									exportStatus !== "idle"
-								}
+								disabled={exportStatus !== "idle"}
 								className={`transition-colors duration-300 ${
 									activeExportKind ===
 										"gif" &&
 									exportStatus === "success"
 										? "bg-green-500 hover:bg-green-600 border-none"
 										: gifBusy
+											? "bg-blue-500 hover:bg-blue-600 border-none"
+											: ""
+								} disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
+							/>
+						)}
+						{(isPreviewView || isAsciiView || mp4Busy) && (
+							<IconButton
+								icon={
+									activeExportKind ===
+										"mp4" &&
+									exportStatus ===
+										"success" ? (
+										<Check className="w-5 h-5" />
+									) : mp4Busy ? (
+										<Loader2 className="w-5 h-5 animate-spin" />
+									) : (
+										<Video className="w-5 h-5" />
+									)
+								}
+								label={
+									activeExportKind ===
+										"mp4" &&
+									exportStatus === "preparing"
+										? "Preparing..."
+										: activeExportKind ===
+													"mp4" &&
+											  exportStatus ===
+													"encoding"
+											? "Encoding MP4..."
+											: activeExportKind ===
+														"mp4" &&
+												  exportStatus ===
+														"success"
+												? "Done!"
+												: canMp4Export
+													? "Export MP4 Clip"
+													: "MP4 Not Supported"
+								}
+								onClick={handleMp4Export}
+								data-testid="mp4-export-button"
+								contrast={true}
+								disabled={
+									!canMp4Export ||
+									exportStatus !== "idle"
+								}
+								className={`transition-colors duration-300 ${
+									activeExportKind ===
+										"mp4" &&
+									exportStatus === "success"
+										? "bg-green-500 hover:bg-green-600 border-none"
+										: mp4Busy
 											? "bg-blue-500 hover:bg-blue-600 border-none"
 											: ""
 								} disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
@@ -1849,6 +2088,56 @@ export default function IpodClassicWorkbench() {
 					</div>
 				)}
 
+				{exportStatus !== "idle" && exportProgress && (
+					<div className="fixed left-1/2 top-6 z-[92] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-[24px] border border-black/10 bg-white/88 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.16)] backdrop-blur-md">
+						<div className="flex items-start justify-between gap-4">
+							<div className="min-w-0">
+								<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">
+									{activeExportKind?.toUpperCase() ??
+										"EXPORT"}{" "}
+									Progress
+								</p>
+								<p className="mt-1 text-sm font-semibold text-[#111827]">
+									{exportProgress.label}
+								</p>
+								<p className="mt-1 text-xs leading-5 text-[#4B5563]">
+									{exportProgress.detail}
+								</p>
+							</div>
+							<div className="shrink-0 text-right">
+								<div className="text-2xl font-semibold leading-none text-[#111827]">
+									{exportProgressPercent}%
+								</div>
+								<div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-medium text-black/45">
+									<Clock3 className="h-3.5 w-3.5" />
+									Live
+								</div>
+							</div>
+						</div>
+
+						<div className="mt-3 h-2 overflow-hidden rounded-full bg-black/8">
+							<div
+								className="h-full rounded-full bg-[linear-gradient(90deg,#111827,#2563EB)] transition-[width] duration-150"
+								style={{
+									width: `${exportProgressPercent}%`,
+								}}
+							/>
+						</div>
+
+						<div className="mt-3 flex items-center justify-between gap-4 text-[11px] font-medium text-black/50">
+							<span>{exportProgress.stage}</span>
+							<span>
+								{exportProgress.currentFrame &&
+								exportProgress.totalFrames
+									? `${exportProgress.currentFrame} / ${exportProgress.totalFrames} frames`
+									: activeExportKind === "png"
+										? "single-frame export"
+										: "pipeline active"}
+							</span>
+						</div>
+					</div>
+				)}
+
 				{isPreviewView && exportStatus === "idle" && (
 					<div className="mb-4 flex w-full max-w-[28rem] items-center justify-center">
 						<div className="rounded-full border border-black/10 bg-white/82 px-4 py-2 text-center opacity-0 shadow-[0_10px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm">
@@ -1857,8 +2146,8 @@ export default function IpodClassicWorkbench() {
 							</div>
 							<div className="mt-0.5 text-[12px] font-medium text-black/70">
 								{titleCanMarquee
-									? "The title is crawling. Export Animated GIF to capture it."
-									: "Title will scroll in the GIF along with progress and time."}
+									? "The title is crawling. Export GIF or MP4 to capture it."
+									: "Title will scroll in animated exports along with progress and time."}
 							</div>
 						</div>
 					</div>
@@ -1872,7 +2161,8 @@ export default function IpodClassicWorkbench() {
 							</div>
 							<div className="mt-0.5 text-[12px] font-medium text-black/70">
 								Terminal-style Now Playing. Export
-								GIF to animate the progress bar.
+								GIF or MP4 to animate the progress
+								bar.
 							</div>
 						</div>
 					</div>
@@ -1934,6 +2224,23 @@ export default function IpodClassicWorkbench() {
 						</div>
 					</div>
 				</div>
+				<AnimatedExportDialog
+					open={animatedExportDialogFormat !== null}
+					format={animatedExportDialogFormat ?? "gif"}
+					durationSeconds={animatedExportDurationSeconds}
+					currentTimeLabel={currentTimeLabel}
+					mp4Supported={canMp4Export}
+					onClose={() => setAnimatedExportDialogFormat(null)}
+					onDurationChange={(value) =>
+						setAnimatedExportDurationSeconds(
+							clampAnimatedExportDurationSeconds(value),
+						)
+					}
+					onFormatChange={(format) =>
+						setAnimatedExportDialogFormat(format)
+					}
+					onConfirm={handleAnimatedExportConfirm}
+				/>
 			</div>
 		</FixedEditorProvider>
 	);

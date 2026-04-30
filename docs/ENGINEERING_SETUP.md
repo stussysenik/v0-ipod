@@ -21,7 +21,7 @@ Comprehensive 500+ line standards document covering:
 ### 2. CI/CD Pipeline (`.github/workflows/`)
 
 #### `ci.yml` - Continuous Integration
-- **Lint & Format** - ESLint + Prettier validation
+- **Lint & Validation** - OXC + TypeScript validation
 - **Tests** - Unit tests with coverage reporting
 - **E2E Tests** - Playwright cross-browser testing
 - **Build Verification** - Production build + bundle analysis
@@ -38,7 +38,7 @@ Comprehensive 500+ line standards document covering:
 #### `pre-commit`
 - Staged file detection
 - ESLint auto-fix on staged files
-- Prettier formatting
+- OXC as the default lint toolchain
 - TypeScript type checking
 - Automatic re-staging of formatted files
 
@@ -56,15 +56,8 @@ Comprehensive 500+ line standards document covering:
 - Unicorn rules for modern JavaScript
 - Custom rules for file naming (kebab-case)
 
-#### Prettier (`.prettierrc.json`)
-- Tabs at 8 (Linux kernel style)
-- 100 character line width
-- Trailing commas
-- LF line endings
-- Overrides for YAML/JSON (spaces) and Markdown
-
 #### lint-staged (`.lintstagedrc.json`)
-- ESLint + Prettier on staged files only
+- OXC + ESLint autofix on staged TS/JS files only
 - Fast feedback loop
 
 ### 5. Code Review Infrastructure
@@ -122,7 +115,6 @@ All checks must pass before merge:
 | Gate | Tool | Threshold |
 |------|------|-----------|
 | Lint | ESLint | 0 errors |
-| Format | Prettier | 0 violations |
 | Types | TypeScript | 0 errors (strict mode) |
 | Tests | Bun/Playwright | All pass |
 | Coverage | Codecov | >80% |

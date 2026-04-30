@@ -279,9 +279,6 @@ npm run test
 # Lint
 npm run lint
 
-# Format
-npm run format
-
 # Type check
 npm run type-check
 
@@ -335,7 +332,6 @@ This project enforces strict static analysis. All code must pass:
 - Filename conventions (kebab-case)
 
 ### Formatting
-- Prettier with 90 char line width
 - EditorConfig for consistent spacing
 - LF line endings enforced
 
@@ -347,8 +343,7 @@ npm run validate
 
 This runs:
 1. ESLint with auto-fix attempts
-2. Prettier format check
-3. TypeScript compiler check
+2. TypeScript compiler check
 
 ## Nix Development Environment
 
@@ -372,7 +367,7 @@ direnv allow
 - Node.js 20 LTS
 - Bun package manager
 - TypeScript toolchain
-- ESLint + Prettier
+- OXC / Oxlint + ESLint
 - Git + build tools
 
 ### Building with Nix

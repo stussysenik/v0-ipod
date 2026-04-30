@@ -424,7 +424,6 @@ ownership:
 
 ```bash
 bun run lint
-bun run format:check
 bun run type-check
 bun run build
 ```
@@ -442,10 +441,8 @@ bun run build
 | `bun run lint` | Run OXC (`oxlint`) |
 | `bun run lint:fix` | Auto-fix OXC lint issues |
 | `bun run lint:eslint` | Run the legacy Next/ESLint ruleset |
-| `bun run format` | Format code with Prettier |
-| `bun run format:check` | Check formatting without changes |
 | `bun run type-check` | Run TypeScript type checking |
-| `bun run validate` | Run lint + format check + type check |
+| `bun run validate` | Run lint + type check |
 | `bun run storybook` | Start Storybook locally on port 6006 |
 | `bun run build-storybook` | Build the static Storybook site |
 | `bun run storybook:test` | Run Storybook-linked Vitest coverage |

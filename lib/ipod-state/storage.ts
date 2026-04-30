@@ -223,6 +223,9 @@ export function loadUiState(): Partial<IpodUiState> | null {
 		if (isSelectionKind(candidate.selectionKind))
 			safe.selectionKind = candidate.selectionKind;
 		if (isOsScreen(candidate.osScreen)) safe.osScreen = candidate.osScreen;
+		if (typeof candidate.isPlaying === "boolean") {
+			safe.isPlaying = candidate.isPlaying;
+		}
 		const rangeStartTime = getFiniteNonNegativeNumber(candidate.rangeStartTime);
 		if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
 		const rangeEndTime = getFiniteNonNegativeNumber(candidate.rangeEndTime);

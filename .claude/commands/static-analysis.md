@@ -14,9 +14,8 @@ npm run validate
 ```
 
 This runs:
-1. ESLint with TypeScript rules
-2. Prettier format check
-3. TypeScript compiler check
+1. Oxlint
+2. TypeScript compiler check
 
 ## Analysis Checks
 
@@ -59,14 +58,6 @@ This runs:
 - [ ] `react/jsx-sort-props` - Sorted props
 - [ ] `react-hooks/rules-of-hooks` - Hooks rules
 - [ ] `react-hooks/exhaustive-deps` - Dependency arrays
-
-### Formatting
-- [ ] 2 space indentation
-- [ ] Double quotes
-- [ ] Trailing commas
-- [ ] 90 character line width
-- [ ] LF line endings
-- [ ] Final newline
 
 ## Severity Levels
 
@@ -114,9 +105,6 @@ Total: 3
 ```bash
 # Fix auto-fixable issues
 npm run lint:fix
-
-# Format code
-npm run format
 
 # Check types only
 npm run type-check

@@ -1,7 +1,6 @@
 {
 	// Editor
-	"editor.formatOnSave": true,
-	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.formatOnSave": false,
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "explicit",
 		"source.organizeImports": "explicit"
@@ -31,7 +30,8 @@
 	"search.exclude": {
 		"**/.next": true,
 		"**/node_modules": true,
-		"**/bun.lock": true
+		"**/bun.lock": true,
+		"**/bun.lockb": true
 	},
 
 	// ESLint

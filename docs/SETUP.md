@@ -32,9 +32,9 @@ This document verifies the complete toolchain setup.
 - **Activation:** Say "grill me" or "activate grill mode"
 
 ### 7. Static Analysis
-- **ESLint:** Enhanced with import, unicorn plugins
+- **OXC / Oxlint:** Default lint toolchain
+- **ESLint:** Next-specific compatibility rules
 - **TypeScript:** Strict mode with all checks enabled
-- **Prettier:** 90 char width, double quotes, trailing commas
 - **EditorConfig:** Consistent spacing, LF endings
 
 ### 8. Nix Configuration
@@ -91,10 +91,9 @@ npm run validate
 |---------|-------------|
 | `npm run dev` | Start with portless (https://ipod.localhost) |
 | `npm run dev:raw` | Start without portless |
-| `npm run validate` | Run lint + format-check + type-check |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Fix ESLint issues |
-| `npm run format` | Format with Prettier |
+| `npm run validate` | Run lint + type-check |
+| `npm run lint` | Run Oxlint |
+| `npm run lint:fix` | Fix Oxlint issues |
 | `npm run type-check` | Check TypeScript |
 | `nix develop` | Enter Nix shell |
 | `nix build` | Build with Nix |

@@ -60,19 +60,11 @@ lint-fix: ## Run ESLint with auto-fix
 	@echo "$(BLUE)Running ESLint with auto-fix...$(NC)"
 	bun run lint:fix
 
-format: ## Format code with Prettier
-	@echo "$(BLUE)Formatting code...$(NC)"
-	bun run format
-
-format-check: ## Check code formatting
-	@echo "$(BLUE)Checking code formatting...$(NC)"
-	bun run format:check
-
 type-check: ## Run TypeScript type checking
 	@echo "$(BLUE)Running type check...$(NC)"
 	bun run type-check
 
-validate: ## Run all validation (lint + format + type-check)
+validate: ## Run all validation (lint + type-check)
 	@echo "$(BLUE)Running full validation...$(NC)"
 	bun run validate
 
@@ -82,7 +74,7 @@ ci: ## Run CI pipeline locally
 
 clean: ## Clean build artifacts and dependencies
 	@echo "$(YELLOW)Cleaning...$(NC)"
-	rm -rf .next node_modules bun.lock
+	rm -rf .next node_modules bun.lock bun.lockb
 	@echo "$(GREEN)Cleaned! Run 'make install' to reinstall.$(NC)"
 
 fresh: clean install ## Clean and reinstall everything

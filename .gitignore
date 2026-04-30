@@ -5,6 +5,7 @@
 
 # next.js
 /.next/
+/.next-dev/
 /out/
 
 # production
@@ -25,6 +26,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local test output
+/test-results/
+/tmp/
+screenshot1.png
+screenshot2.png
 
 # PWA generated files
 /public/sw.js

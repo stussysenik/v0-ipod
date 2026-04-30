@@ -56,9 +56,8 @@
 - [ ] Production build passes (`bun run build`)
 - [ ] Tested on mobile viewport (if UI change)
 
-### Formatting
+### Tooling
 
-- [ ] Prettier formatting applied (`bun run format`)
 - [ ] Full validation passes (`bun run validate`)
 
 ## Additional Notes

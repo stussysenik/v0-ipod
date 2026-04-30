@@ -32,7 +32,6 @@ direnv allow
 - TypeScript compiler
 - TypeScript language server
 - ESLint
-- Prettier
 
 ### Utilities
 - jq (JSON processor)
@@ -47,7 +46,6 @@ When using direnv:
 - `build` → `npm run build`
 - `test` → `npm run test`
 - `lint` → `npm run lint`
-- `format` → `npm run format`
 - `validate` → `npm run validate`
 
 ## Environment Variables

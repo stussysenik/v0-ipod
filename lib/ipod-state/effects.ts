@@ -9,7 +9,7 @@ import {
 	saveSongSnapshot,
 	saveUiState,
 } from "@/lib/ipod-state/storage";
-import type { ExportStatus } from "@/lib/export-utils";
+import type { ExportProgress, ExportStatus } from "@/lib/export-utils";
 import type { IpodWorkbenchModel, SongSnapshot } from "./model";
 import { buildPersistedUiState, buildSongSnapshot } from "./update";
 
@@ -137,6 +137,7 @@ export async function exportWorkbenchPng(
 		filename: string;
 		backgroundColor: string;
 		onStatusChange: (status: ExportStatus) => void;
+		onProgressChange?: (progress: ExportProgress) => void;
 	},
 ) {
 	await waitForFrameBoundary();
@@ -148,6 +149,7 @@ export async function exportWorkbenchPng(
 		pixelRatio: 4,
 		constrainedFrame: true,
 		onStatusChange: options.onStatusChange,
+		onProgressChange: options.onProgressChange,
 	});
 }
 
@@ -156,7 +158,9 @@ export async function exportWorkbenchGif(
 	options: {
 		filename: string;
 		backgroundColor: string;
+		durationSeconds?: number;
 		onStatusChange: (status: ExportStatus) => void;
+		onProgressChange?: (progress: ExportProgress) => void;
 	},
 ) {
 	await waitForFrameBoundary();
@@ -166,6 +170,31 @@ export async function exportWorkbenchGif(
 		filename: options.filename,
 		backgroundColor: options.backgroundColor,
 		constrainedFrame: true,
+		durationSeconds: options.durationSeconds,
 		onStatusChange: options.onStatusChange,
+		onProgressChange: options.onProgressChange,
+	});
+}
+
+export async function exportWorkbenchMp4(
+	element: HTMLElement,
+	options: {
+		filename: string;
+		backgroundColor: string;
+		durationSeconds?: number;
+		onStatusChange: (status: ExportStatus) => void;
+		onProgressChange?: (progress: ExportProgress) => void;
+	},
+) {
+	await waitForFrameBoundary();
+	const { exportAnimatedMp4 } = await import("@/lib/export-utils");
+
+	return exportAnimatedMp4(element, {
+		filename: options.filename,
+		backgroundColor: options.backgroundColor,
+		constrainedFrame: true,
+		durationSeconds: options.durationSeconds,
+		onStatusChange: options.onStatusChange,
+		onProgressChange: options.onProgressChange,
 	});
 }

@@ -2,8 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("iPod Classic 1:1 Fidelity", () => {
 	test.beforeEach(async ({ page }) => {
-		// Navigate to the app on the port we found running
-		await page.goto("http://localhost:4001");
+		await page.goto("/");
 
 		// Ensure we are in Classic mode
 		await page.click('[data-testid="theme-button"]');

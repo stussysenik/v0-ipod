@@ -590,7 +590,6 @@ Every PR must include:
 - [ ] All tests pass (`npm test`)
 - [ ] No lint errors (`npm run lint`)
 - [ ] No TypeScript errors (`npm run type-check`)
-- [ ] Code formatted (`npm run format`)
 - [ ] Self-reviewed diff
 - [ ] No `console.log` or debug code
 - [ ] Error handling in place
@@ -665,7 +664,6 @@ Link to CONTRIBUTING.md.
 ### Required VS Code Extensions
 
 - ESLint
-- Prettier
 - TypeScript Importer
 - Tailwind CSS IntelliSense
 - GitLens
@@ -675,8 +673,7 @@ Link to CONTRIBUTING.md.
 
 ```json
 {
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": false,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
@@ -705,8 +702,8 @@ Track these in CI/CD:
 
 These standards are enforced via:
 
-1. **ESLint** - Code style and best practices
-2. **Prettier** - Consistent formatting
+1. **OXC / Oxlint** - Default code quality gate
+2. **ESLint** - Next.js compatibility rules
 3. **TypeScript** - Type safety
 4. **Husky** - Pre-commit hooks
 5. **GitHub Actions** - CI/CD validation

@@ -14,6 +14,16 @@ const basePort = Number(process.env.PORT) || 4001;
 const strictPort =
 	process.env.PORT_STRICT === "1" || command === "start" || process.env.PORT != null;
 const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const shouldStartCloudflareTunnel =
+	command === "dev" && process.env.CLOUDFLARE_TUNNEL !== "0";
+const cloudflaredBin = process.env.CLOUDFLARED_BIN || "cloudflared";
+const ANSI_RESET = "\u001B[0m";
+const ANSI_BOLD = "\u001B[1m";
+const ANSI_CYAN = "\u001B[36m";
+
+if (!process.env.NEXT_DIST_DIR) {
+	process.env.NEXT_DIST_DIR = command === "dev" ? ".next-dev" : ".next";
+}
 
 function probePort(port) {
 	return new Promise((resolve) => {
@@ -96,6 +106,92 @@ async function reclaimRepoDevServer(port) {
 	}
 }
 
+function relayOutput(stream, prefix, onLine) {
+	if (!stream) {
+		return;
+	}
+
+	let buffer = "";
+	stream.setEncoding("utf8");
+	stream.on("data", (chunk) => {
+		buffer += chunk;
+		const lines = buffer.split(/\r?\n/u);
+		buffer = lines.pop() ?? "";
+		for (const line of lines) {
+			if (!line.trim()) {
+				continue;
+			}
+			console.log(`${prefix} ${line}`);
+			onLine?.(line);
+		}
+	});
+	stream.on("end", () => {
+		if (!buffer.trim()) {
+			return;
+		}
+		console.log(`${prefix} ${buffer}`);
+		onLine?.(buffer);
+	});
+}
+
+function logHighlightedCloudflareUrl(url) {
+	const line = "=".repeat(Math.max(56, url.length + 24));
+	const label = `${ANSI_BOLD}${ANSI_CYAN}Cloudflare tunnel ready${ANSI_RESET}`;
+	const highlightedUrl = `${ANSI_BOLD}${ANSI_CYAN}${url}${ANSI_RESET}`;
+
+	console.log("");
+	console.log(`[run-next] ${line}`);
+	console.log(`[run-next] ${label}`);
+	console.log(`[run-next] ${highlightedUrl}`);
+	console.log(`[run-next] ${line}`);
+	console.log("");
+}
+
+function startCloudflareTunnel(port) {
+	console.log(`[run-next] starting Cloudflare tunnel for http://localhost:${port}`);
+
+	const tunnel = spawn(
+		cloudflaredBin,
+		["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"],
+		{
+			stdio: ["ignore", "pipe", "pipe"],
+			env: process.env,
+		},
+	);
+
+	let tunnelUrlLogged = false;
+	const maybeLogTunnelUrl = (line) => {
+		if (tunnelUrlLogged) {
+			return;
+		}
+		const match = line.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/iu);
+		if (!match) {
+			return;
+		}
+		tunnelUrlLogged = true;
+		logHighlightedCloudflareUrl(match[0]);
+	};
+
+	relayOutput(tunnel.stdout, "[cloudflared]", maybeLogTunnelUrl);
+	relayOutput(tunnel.stderr, "[cloudflared]", maybeLogTunnelUrl);
+
+	tunnel.on("error", (error) => {
+		console.warn(`[run-next] failed to start Cloudflare tunnel: ${error.message}`);
+	});
+
+	tunnel.on("exit", (code, signal) => {
+		if (signal) {
+			console.log(`[run-next] Cloudflare tunnel stopped (${signal})`);
+			return;
+		}
+		if (code && code !== 0) {
+			console.warn(`[run-next] Cloudflare tunnel exited with code ${code}`);
+		}
+	});
+
+	return tunnel;
+}
+
 await reclaimRepoDevServer(basePort);
 
 const port = strictPort ? basePort : await findFreePort(basePort);
@@ -106,12 +202,44 @@ if (port !== basePort) {
 
 const nextBin = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
 
-const child = spawn(process.execPath, [nextBin, command, "-p", String(port)], {
+const nextProcess = spawn(process.execPath, [nextBin, command, "-p", String(port)], {
 	stdio: "inherit",
 	env: process.env,
 });
 
-child.on("exit", (code, signal) => {
+const tunnelProcess = shouldStartCloudflareTunnel ? startCloudflareTunnel(port) : null;
+
+let shuttingDown = false;
+
+function stopChild(child, signal = "SIGTERM") {
+	if (!child || child.killed || child.exitCode !== null || child.signalCode !== null) {
+		return;
+	}
+
+	try {
+		child.kill(signal);
+	} catch {
+		// Best effort shutdown for child processes during dev.
+	}
+}
+
+function shutdown(signal = "SIGTERM") {
+	if (shuttingDown) {
+		return;
+	}
+	shuttingDown = true;
+	stopChild(tunnelProcess, signal);
+	stopChild(nextProcess, signal);
+}
+
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+	process.on(signal, () => {
+		shutdown(signal);
+	});
+}
+
+nextProcess.on("exit", (code, signal) => {
+	shutdown(signal ?? "SIGTERM");
 	if (signal) {
 		process.kill(process.pid, signal);
 		return;
@@ -119,7 +247,8 @@ child.on("exit", (code, signal) => {
 	process.exit(code ?? 0);
 });
 
-child.on("error", (error) => {
+nextProcess.on("error", (error) => {
+	shutdown("SIGTERM");
 	console.error(error);
 	process.exit(1);
 });

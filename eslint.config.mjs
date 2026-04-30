@@ -2,7 +2,6 @@
 import storybook from "eslint-plugin-storybook";
 
 import nextConfig from "eslint-config-next";
-import prettier from "eslint-config-prettier";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import importX from "eslint-plugin-import-x";
@@ -164,6 +163,7 @@ const eslintConfig = [
 	{
 		ignores: [
 			".next/**",
+			".next-dev/**",
 			"node_modules/**",
 			"public/**",
 			"scripts/**",
@@ -171,7 +171,6 @@ const eslintConfig = [
 		],
 	},
 	...nextConfig,
-	prettier,
 	{
 		files: ["**/*.ts", "**/*.tsx"],
 		plugins: {

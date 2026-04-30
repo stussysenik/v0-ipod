@@ -36,6 +36,7 @@ function resolveDeployVersion(): string {
 }
 
 const deployVersion = resolveDeployVersion();
+const shouldRenderAnalytics = process.env.NODE_ENV === "production" && process.env.VERCEL === "1";
 
 export const viewport: Viewport = {
 	themeColor: "#000000",
@@ -100,7 +101,7 @@ export default function RootLayout({
 						},
 					}}
 				/>
-				<Analytics />
+				{shouldRenderAnalytics ? <Analytics /> : null}
 			</body>
 		</html>
 	);

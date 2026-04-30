@@ -68,7 +68,6 @@ Client-state libraries should only be introduced if multiple independently mount
 | Bun | Default install and script runner |
 | OXC / Oxlint | Default linting |
 | ESLint | Legacy Next-specific lint fallback |
-| Prettier | Code formatting |
 | PostCSS | CSS processing for Tailwind |
 | PWA (@ducanh2912/next-pwa) | Offline-capable progressive web app |
 

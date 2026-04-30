@@ -1,7 +1,8 @@
-export const MARQUEE_DELAY_MS = 2500;
-export const MARQUEE_SPEED_PX_PER_SECOND = 28;
+export const MARQUEE_SPEED_PX_PER_SECOND = 12;
 export const MARQUEE_MIN_GAP_PX = 40;
 export const MARQUEE_GAP_CHAR_WIDTH = 4.5;
+export const MARQUEE_START_DELAY_MS = 1200;
+export const MARQUEE_EDGE_PAUSE_MS = 900;
 
 export interface MarqueeMetrics {
 	containerWidth: number;
@@ -34,8 +35,7 @@ export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics): number {
 	if (scrollDistance <= 0) return 0;
 
 	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-	// Cycle: Delay(Start) -> Scroll Left -> Delay(End) -> Scroll Right
-	return 2 * MARQUEE_DELAY_MS + 2 * scrollTime;
+	return MARQUEE_START_DELAY_MS + scrollTime + MARQUEE_EDGE_PAUSE_MS + scrollTime;
 }
 
 export function getMarqueeFrame(metrics: MarqueeMetrics, elapsedMs: number): MarqueeFrame {
@@ -52,24 +52,26 @@ export function getMarqueeFrame(metrics: MarqueeMetrics, elapsedMs: number): Mar
 	}
 
 	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-	const cycleDurationMs = 2 * MARQUEE_DELAY_MS + 2 * scrollTime;
-	const timeInCycle = elapsedMs % cycleDurationMs;
+	const cycleDurationMs =
+		MARQUEE_START_DELAY_MS + scrollTime + MARQUEE_EDGE_PAUSE_MS + scrollTime;
+	const phase = ((elapsedMs % cycleDurationMs) + cycleDurationMs) % cycleDurationMs;
 
 	let translateX = 0;
 
-	if (timeInCycle <= MARQUEE_DELAY_MS) {
-		// Phase 1: Hold at start
+	if (phase <= MARQUEE_START_DELAY_MS) {
 		translateX = 0;
-	} else if (timeInCycle <= MARQUEE_DELAY_MS + scrollTime) {
-		// Phase 2: Scroll Left
-		const progress = (timeInCycle - MARQUEE_DELAY_MS) / scrollTime;
+	} else if (phase <= MARQUEE_START_DELAY_MS + scrollTime) {
+		const progress = (phase - MARQUEE_START_DELAY_MS) / scrollTime;
 		translateX = -scrollDistance * progress;
-	} else if (timeInCycle <= 2 * MARQUEE_DELAY_MS + scrollTime) {
-		// Phase 3: Hold at end
+	} else if (
+		phase <=
+		MARQUEE_START_DELAY_MS + scrollTime + MARQUEE_EDGE_PAUSE_MS
+	) {
 		translateX = -scrollDistance;
 	} else {
-		// Phase 4: Scroll Right
-		const progress = (timeInCycle - (2 * MARQUEE_DELAY_MS + scrollTime)) / scrollTime;
+		const returnElapsedMs =
+			phase - (MARQUEE_START_DELAY_MS + scrollTime + MARQUEE_EDGE_PAUSE_MS);
+		const progress = returnElapsedMs / scrollTime;
 		translateX = -scrollDistance * (1 - progress);
 	}
 
