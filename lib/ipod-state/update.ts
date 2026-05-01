@@ -1,6 +1,7 @@
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import {
+	createInitialIpodWorkbenchModel,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
 	DEFAULT_SELECTION_KIND,
 	SONG_SNAPSHOT_SCHEMA_VERSION,
@@ -51,6 +52,7 @@ export type IpodWorkbenchAction =
 	| { type: "SET_IS_PLAYING"; payload: boolean }
 	| { type: "TOGGLE_IS_PLAYING" }
 	| { type: "RESTORE_MODEL"; payload: IpodWorkbenchModel }
+	| { type: "RESET_MODEL" }
 	| { type: "APPLY_SONG_SNAPSHOT"; payload: SongSnapshot };
 
 export function clampSnapshotTime(value: number | null, duration: number): number | null {
@@ -384,6 +386,8 @@ export function ipodWorkbenchReducer(
 			});
 		case "RESTORE_MODEL":
 			return normalizeModel(action.payload);
+		case "RESET_MODEL":
+			return createInitialIpodWorkbenchModel();
 		case "APPLY_SONG_SNAPSHOT":
 			return applySongSnapshotToModel(state, action.payload);
 		default:

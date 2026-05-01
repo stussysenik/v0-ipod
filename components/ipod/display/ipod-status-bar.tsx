@@ -4,6 +4,7 @@ import { getSurfaceToken, getTextTokenCss } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import { screenChromeTokens } from "@/lib/design-system";
 import { ScreenBattery } from "@/components/ipod/display/screen-battery";
+import { useBatteryLevel } from "@/hooks/use-battery-level";
 
 interface IpodStatusBarProps {
 	screenTokens: IpodClassicPresetDefinition["screen"];
@@ -12,6 +13,7 @@ interface IpodStatusBarProps {
 
 export function IpodStatusBar({ screenTokens, showOsMenu }: IpodStatusBarProps) {
 	const statusBarTokens = screenChromeTokens.statusBar;
+	const batteryLevel = useBatteryLevel();
 
 	return (
 		<div
@@ -61,7 +63,7 @@ export function IpodStatusBar({ screenTokens, showOsMenu }: IpodStatusBarProps) 
 						</svg>
 					</div>
 				)}
-				<ScreenBattery level={1} />
+				<ScreenBattery level={batteryLevel} />
 			</div>
 		</div>
 	);

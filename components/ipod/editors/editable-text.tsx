@@ -114,16 +114,16 @@ export function EditableText({
 					? "cursor-default"
 					: "cursor-text hover:bg-black/5 hover:text-blue-900"
 			} ${className}`}
-			data-testid={animate ? undefined : dataTestId}
+			data-testid={animate || captureReady ? undefined : dataTestId}
 			onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
 			onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
 		>
-			{animate ? (
+			{animate || captureReady ? (
 				<MarqueeText
 					captureReady={captureReady}
 					className="w-full"
 					dataTestId={dataTestId}
-					preview={preview}
+					preview={preview || captureReady}
 					text={value}
 					onOverflowChange={onOverflowChange}
 				/>

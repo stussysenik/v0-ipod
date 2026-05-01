@@ -26,6 +26,7 @@ import {
 	Play,
 	Pause,
 	Clock3,
+	RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -985,7 +986,7 @@ export default function IpodClassicWorkbench() {
 			exportSafe={isExportCapturing}
 			titlePreview={isPreviewView || isPlaying}
 			animateText={isPlaying}
-			titleCaptureReady={isPreviewView || activeExportKind === "gif"}
+			titleCaptureReady={isPreviewView || activeExportKind === "gif" || activeExportKind === "mp4"}
 			onTitleOverflowChange={setTitleCanMarquee}
 		/>
 	);
@@ -1029,6 +1030,18 @@ export default function IpodClassicWorkbench() {
 		saveWorkbenchSnapshot(model);
 		showSoftNotice("Snapshot saved");
 	}, [model, playClick, showSoftNotice, resetInteractionChrome]);
+
+	const handleResetModel = useCallback(() => {
+		resetInteractionChrome({
+			closeSettings: true,
+			closeEditor: true,
+			closeToolbox: true,
+			clearNotice: true,
+		});
+		playClick();
+		dispatch({ type: "RESET_MODEL" });
+		showSoftNotice("Reset to defaults");
+	}, [dispatch, playClick, showSoftNotice, resetInteractionChrome]);
 
 	const handleLoadSnapshot = useCallback(() => {
 		resetInteractionChrome({
@@ -1934,6 +1947,13 @@ export default function IpodClassicWorkbench() {
 										: ""
 								}
 							/>
+							<IconButton
+								icon={<RotateCcw className="w-5 h-5" />}
+								label="Reset to Defaults"
+								data-testid="reset-workbench-button-top"
+								onClick={handleResetModel}
+								className="text-red-500 hover:text-red-600 border-red-100 hover:bg-red-50/50"
+							/>
 						</div>
 
 						{/* Export Action */}
@@ -2110,7 +2130,11 @@ export default function IpodClassicWorkbench() {
 								</div>
 								<div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-medium text-black/45">
 									<Clock3 className="h-3.5 w-3.5" />
-									Live
+									{exportProgress.etaSeconds !== undefined && exportProgress.etaSeconds > 0 ? (
+										<span>~{exportProgress.etaSeconds}s left</span>
+									) : (
+										"Live"
+									)}
 								</div>
 							</div>
 						</div>

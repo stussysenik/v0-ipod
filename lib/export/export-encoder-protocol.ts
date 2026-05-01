@@ -12,7 +12,7 @@ export interface AppendGifFrameMessage {
 	width: number;
 	height: number;
 	delayMs: number;
-	rgba: ArrayBuffer;
+	bitmap: ImageBitmap;
 }
 
 export interface StartMp4EncodingMessage {
@@ -71,7 +71,15 @@ export interface EncoderWorkerErrorResponse {
 	error: string;
 }
 
+export interface EncoderWorkerProgressResponse {
+	id: number;
+	type: "progress";
+	progress: number;
+	detail?: string;
+}
+
 export type EncoderWorkerResponse =
 	| EncoderWorkerOkResponse
 	| EncoderWorkerFinalizedResponse
+	| EncoderWorkerProgressResponse
 	| EncoderWorkerErrorResponse;

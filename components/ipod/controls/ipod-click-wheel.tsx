@@ -58,7 +58,7 @@ export function IpodClickWheel({
 	const wheelShadow = isWhite
 		? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
 		: exportSafe
-			? "0 0 0 1px rgba(92,96,104,0.1), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
+			? "0 0 0 1px rgba(92,96,104,0.12), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
 			: "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
 
 	const wheelBorder = derived?.border ?? getSurfaceToken("wheel.border");
@@ -86,7 +86,7 @@ export function IpodClickWheel({
 	const centerShadow = isWhite
 		? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
 		: exportSafe
-			? "0 0 0 1px rgba(92,96,104,0.05), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
+			? "0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
 			: "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
 
 	useEffect(() => {
@@ -208,7 +208,9 @@ export function IpodClickWheel({
 				<div
 					className="pointer-events-none absolute inset-[1px] rounded-full"
 					style={{
-						background: "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 70%)",
+						background: exportSafe
+							? "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%)"
+							: "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 70%)",
 					}}
 				/>
 
@@ -387,14 +389,18 @@ export function IpodClickWheel({
 				<div
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
-						background: "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0) 70%)",
+						background: exportSafe
+							? "linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%)"
+							: "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0) 70%)",
 					}}
 					aria-hidden="true"
 				/>
 				<div
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
-						background: "radial-gradient(circle at 50% 80%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 60%)",
+						background: exportSafe
+							? "linear-gradient(0deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 40%)"
+							: "radial-gradient(circle at 50% 80%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 60%)",
 					}}
 					aria-hidden="true"
 				/>

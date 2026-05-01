@@ -1,4 +1,4 @@
-import { toBlob, toPng } from "html-to-image";
+import { toBlob, toPng, toCanvas } from "html-to-image";
 
 import {
 	resolveMobileExportDelivery,
@@ -42,6 +42,7 @@ export interface ExportProgress {
 	progress: number;
 	currentFrame?: number;
 	totalFrames?: number;
+	etaSeconds?: number;
 }
 
 const EXPORT_ATTRIBUTE = "data-exporting";
@@ -50,7 +51,7 @@ const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v3";
 const GIF_DELAY_QUANTUM_MS = 10;
 const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
 const EXPORT_SHELL_CONTOUR =
-	"0 0 0 1px rgba(70,76,84,0.08), 0 18px 28px -24px rgba(0,0,0,0.32), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
+	"0 0 0 1px rgba(70,76,84,0.12), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
 
 type NextDataWindow = Window & {
 	__NEXT_DATA__?: {
@@ -290,6 +291,10 @@ function createDetachedExportNode(
     [data-export-layer="wheel-center"] {
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
     }
+    [data-marquee-container] {
+      mask-image: none !important;
+      -webkit-mask-image: none !important;
+    }
   `;
 	clone.appendChild(freezeStyle);
 
@@ -308,38 +313,28 @@ function sanitizeDetachedCloneForCapture(
 	if (shell) {
 		shell.style.borderColor = constrainedFrame
 			? EXPORT_SHELL_BORDER_COLOR
-			: "rgba(255,255,255,0.45)";
-		shell.style.boxShadow = constrainedFrame
-			? EXPORT_SHELL_CONTOUR
-			: "0 10px 16px -14px rgba(0,0,0,0.22), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.08)";
+			: "rgba(0,0,0,0.12)";
+		shell.style.boxShadow = EXPORT_SHELL_CONTOUR;
 	}
 
 	const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
 	if (screen) {
-		screen.style.boxShadow = constrainedFrame
-			? "none"
-			: "0 2px 0 rgba(0,0,0,0.82), 0 1px 2px rgba(0,0,0,0.18)";
+		screen.style.boxShadow = "inset 0 0 0 1px rgba(0,0,0,0.4), inset 0 1px 2px rgba(0,0,0,0.5)";
 	}
 
 	const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
 	if (artwork) {
-		artwork.style.boxShadow = constrainedFrame
-			? "none"
-			: "0 2px 6px -5px rgba(0,0,0,0.26)";
+		artwork.style.boxShadow = "0 1px 3px rgba(0,0,0,0.14)";
 	}
 
 	const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
 	if (wheel) {
-		wheel.style.boxShadow = constrainedFrame
-			? "inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)"
-			: "0 8px 12px -12px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05)";
+		wheel.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.05)";
 	}
 
 	const wheelCenter = clone.querySelector<HTMLElement>('[data-export-layer="wheel-center"]');
 	if (wheelCenter) {
-		wheelCenter.style.boxShadow = constrainedFrame
-			? "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)"
-			: "0 4px 8px -10px rgba(0,0,0,0.36), 0 1px 2px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.95)";
+		wheelCenter.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)";
 	}
 
 	const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
@@ -499,6 +494,7 @@ function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): numbe
 		parseNumericDataAttribute(root.dataset.exportBaseDuration) ??
 		parseNumericDataAttribute(
 			progressSection?.dataset.exportDuration ??
+				root.querySelector<HTMLElement>('[data-testid="progress-track"]')?.dataset.exportDuration ??
 				root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')
 					?.dataset.exportDuration,
 		);
@@ -574,14 +570,20 @@ async function captureGifFrameCanvas(
 		outputHeight: number;
 	},
 ): Promise<HTMLCanvasElement> {
-	const { default: html2canvas } = await import("html2canvas");
-	const sourceCanvas = await html2canvas(element, {
-		backgroundColor: options.backgroundColor ?? null,
-		scale: Math.max(options.pixelRatio ?? 1, 1),
-		useCORS: true,
-		allowTaint: true,
-		logging: false,
-		foreignObjectRendering: false,
+	const sourceCanvas = await toCanvas(element, {
+		backgroundColor: options.backgroundColor ?? undefined,
+		pixelRatio: Math.max(options.pixelRatio ?? 1, 1),
+		cacheBust: true,
+		skipFonts: false,
+		style: {
+			transform: "scale(1)",
+		},
+		filter: (node: Node) => {
+			if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
+				return false;
+			}
+			return true;
+		},
 	});
 
 	if (
@@ -982,100 +984,123 @@ async function presentMobileExportPrompt(
 		};
 
 		overlay.style.cssText =
-			"position:fixed;inset:0;z-index:99999;background:rgba(17,24,39,0.82);" +
-			"display:flex;align-items:center;justify-content:center;padding:20px";
+			"position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.4);" +
+			"backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" +
+			"display:flex;align-items:flex-end;justify-content:center;padding:0;transition:opacity 0.3s ease";
 		card.style.cssText =
-			"width:min(100%,28rem);max-height:min(100%,42rem);overflow:auto;border-radius:28px;" +
-			"background:#f7f6f1;color:#111827;padding:20px;box-shadow:0 24px 48px rgba(0,0,0,0.28)";
-		title.style.cssText = "margin:0;font:700 20px/1.2 system-ui,sans-serif";
-		detail.style.cssText = "margin:10px 0 0;font:500 14px/1.5 system-ui,sans-serif;color:#4b5563";
-		actions.style.cssText = "display:flex;flex-wrap:wrap;gap:12px;margin-top:18px";
+			"width:100%;max-width:540px;max-height:92vh;overflow:hidden;border-radius:24px 24px 0 0;" +
+			"background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(20px);" +
+			"-webkit-backdrop-filter:saturate(180%) blur(20px);" +
+			"color:#000;padding:24px 20px env(safe-area-inset-bottom, 20px);box-shadow:0 -8px 32px rgba(0,0,0,0.12);" +
+			"display:flex;flex-direction:column;gap:20px;transform:translateY(0);transition:transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
+		
+		const header = document.createElement("div");
+		header.style.cssText = "display:flex;flex-direction:column;gap:4px;text-align:center";
+		
+		title.style.cssText = "margin:0;font:600 17px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:-0.01em";
+		detail.style.cssText = "margin:0;font:400 13px/1.4 system-ui,-apple-system,sans-serif;color:#666";
 
-		title.textContent = copy.title;
-		detail.textContent = copy.detail;
+		header.append(title, detail);
+		card.appendChild(header);
 
 		if (preview instanceof HTMLImageElement) {
 			preview.src = objectUrl;
 			preview.alt = filename;
 			preview.style.cssText =
-				"display:block;width:100%;max-height:55vh;object-fit:contain;margin-top:16px;" +
-				"border-radius:18px;background:#e5e7eb";
+				"display:block;width:100%;max-height:40vh;object-fit:contain;" +
+				"border-radius:14px;background:rgba(0,0,0,0.03);box-shadow:0 4px 12px rgba(0,0,0,0.08)";
 		} else if (preview instanceof HTMLVideoElement) {
 			preview.src = objectUrl;
 			preview.controls = true;
 			preview.playsInline = true;
 			preview.style.cssText =
-				"display:block;width:100%;max-height:55vh;object-fit:contain;margin-top:16px;" +
-				"border-radius:18px;background:#111827";
+				"display:block;width:100%;max-height:40vh;object-fit:contain;" +
+				"border-radius:14px;background:#000;box-shadow:0 4px 12px rgba(0,0,0,0.15)";
+		}
+		
+		if (preview) {
+			card.appendChild(preview);
 		}
 
+		actions.style.cssText = "display:flex;flex-direction:column;gap:10px;width:100%";
+
+		const createIosButton = (label: string, primary = false) => {
+			const button = document.createElement("button");
+			button.type = "button";
+			button.textContent = label;
+			button.style.cssText = primary
+				? "border:0;border-radius:12px;padding:14px;background:#007AFF;color:#fff;" +
+				  "font:600 17px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer;width:100%"
+				: "border:0;border-radius:12px;padding:14px;background:rgba(0,0,0,0.05);color:#007AFF;" +
+				  "font:500 17px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer;width:100%";
+			return button;
+		};
+
 		if (capabilities.canShareFiles) {
-			const shareButton = createButton("Share / Save");
+			const shareButton = createIosButton("Share / Save", true);
 			shareButton.addEventListener("click", async () => {
 				try {
 					await shareNavigator.share?.({ files: [file] });
 					finish("share");
 				} catch (error) {
 					if (error instanceof Error && error.name === "AbortError") {
-						setDetail("Share was cancelled. You can try again or use another save option.");
 						return;
 					}
-					setDetail("Share failed on this browser. Try another save option below.");
+					setDetail("Share failed. Please use another option.");
 				}
 			});
 			actions.appendChild(shareButton);
 		}
 
 		if (capabilities.canSaveWithPicker) {
-			const saveButton = createButton("Save");
+			const saveButton = createIosButton("Save to Files", !capabilities.canShareFiles);
 			saveButton.addEventListener("click", async () => {
 				try {
 					await saveBlobWithPicker(blob, filename, mimeType);
 					finish("download");
 				} catch (error) {
 					if (error instanceof Error && error.name === "AbortError") {
-						setDetail("Save was cancelled. You can try again or use another option.");
 						return;
 					}
-					setDetail("Save failed on this browser. Try opening the file instead.");
+					setDetail("Save failed. Try opening the file instead.");
 				}
 			});
 			actions.appendChild(saveButton);
 		}
 
 		if (!hasExplicitSaveAction || !preview) {
-			const openButton = createButton("Open File");
+			const openButton = createIosButton("Open File", true);
 			openButton.addEventListener("click", () => {
 				const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
 				if (opened) {
 					finish("download");
 					return;
 				}
-
-				setDetail("This browser blocked the new tab. Try the other save option or retry.");
+				setDetail("Popup blocked. Please allow popups and try again.");
 			});
 			actions.appendChild(openButton);
 		}
 
-		const closeButton = createButton("Close");
-		closeButton.style.background = "#d1d5db";
-		closeButton.style.color = "#111827";
+		const closeButton = createIosButton("Cancel");
+		closeButton.style.background = "rgba(0,0,0,0.05)";
+		closeButton.style.color = "#FF3B30";
 		closeButton.addEventListener("click", () => {
 			if (settled) {
 				cleanup();
 				return;
 			}
-			fail(new Error("Save prompt closed before the export was handed off."));
+			fail(new Error("Export cancelled."));
 		});
 		actions.appendChild(closeButton);
 
-		card.append(title, detail);
-		if (preview) {
-			card.appendChild(preview);
-		}
 		card.appendChild(actions);
 		overlay.appendChild(card);
 		document.body.appendChild(overlay);
+		
+		// Animate in
+		requestAnimationFrame(() => {
+			card.style.transform = "translateY(0)";
+		});
 
 		if (!hasExplicitSaveAction && preview) {
 			settled = true;
@@ -1165,7 +1190,7 @@ function createExportProgress(progress: ExportProgress): ExportProgress {
 	};
 }
 
-function createEncoderWorkerClient() {
+function createEncoderWorkerClient(onProgress?: (progress: number, detail?: string) => void) {
 	const worker = new Worker(new URL("./export/export-encoder.worker.ts", import.meta.url), {
 		type: "module",
 	});
@@ -1187,6 +1212,12 @@ function createEncoderWorkerClient() {
 
 	worker.onmessage = (event: MessageEvent<EncoderWorkerResponse>) => {
 		const response = event.data;
+
+		if (response.type === "progress") {
+			onProgress?.(response.progress, response.detail);
+			return;
+		}
+
 		const request = pending.get(response.id);
 		if (!request) {
 			return;
@@ -1576,13 +1607,27 @@ export async function exportAnimatedGif(
 			}),
 		);
 
-		const worker = createEncoderWorkerClient();
+		const worker = createEncoderWorkerClient((workerProgress, workerDetail) => {
+			onProgressChange?.(
+				createExportProgress({
+					stage: "finalizing",
+					label: "Finalizing GIF",
+					detail: workerDetail ?? "Assembling frames and writing the file",
+					progress: 0.84 + workerProgress * 0.06,
+					currentFrame: plan.frameCount,
+					totalFrames: plan.frameCount,
+				}),
+			);
+		});
 		try {
 			await worker.call({
 				type: "start-gif",
 				width: plan.captureWidth,
 				height: plan.captureHeight,
 			});
+
+			const captureStartTime = performance.now();
+			const pendingWorkerTasks: Promise<any>[] = [];
 
 			for (let frameIndex = 0; frameIndex < plan.frameCount; frameIndex += 1) {
 				const elapsedMs =
@@ -1608,21 +1653,14 @@ export async function exportAnimatedGif(
 					outputWidth: plan.captureWidth,
 					outputHeight: plan.captureHeight,
 				});
-				const ctx = canvas.getContext("2d");
-				if (!ctx) {
-					throw new Error("Failed to get GIF frame canvas context");
-				}
+				const bitmap = await createImageBitmap(canvas);
 
-				const rgba = ctx.getImageData(
-					0,
-					0,
-					plan.captureWidth,
-					plan.captureHeight,
-				).data;
-				const buffer = rgba.buffer.slice(
-					rgba.byteOffset,
-					rgba.byteOffset + rgba.byteLength,
-				);
+				const now = performance.now();
+				const totalElapsed = now - captureStartTime;
+				const msPerFrame = totalElapsed / (frameIndex + 1);
+				const remainingFrames = plan.frameCount - (frameIndex + 1);
+				const etaSeconds = Math.round((remainingFrames * msPerFrame) / 1000);
+
 				onProgressChange?.(
 					createExportProgress({
 						stage: "capturing",
@@ -1633,31 +1671,33 @@ export async function exportAnimatedGif(
 							((frameIndex + 1) / plan.frameCount) * 0.58,
 						currentFrame: frameIndex + 1,
 						totalFrames: plan.frameCount,
+						etaSeconds,
 					}),
 				);
-				await worker.call(
+
+				// Pipeline: Don't await the worker call immediately to allow next frame capture to start
+				const workerTask = worker.call(
 					{
 						type: "append-gif-frame",
 						frameIndex,
 						width: plan.captureWidth,
 						height: plan.captureHeight,
 						delayMs: frameDelayMs,
-						rgba: buffer,
+						bitmap,
 					},
-					[buffer],
+					[bitmap],
 				);
+				pendingWorkerTasks.push(workerTask);
+
+				// Limit backpressure: don't let more than 3 frames be in flight to the worker
+				if (pendingWorkerTasks.length >= 3) {
+					await pendingWorkerTasks.shift();
+				}
 			}
 
-			onProgressChange?.(
-				createExportProgress({
-					stage: "finalizing",
-					label: "Finalizing GIF",
-					detail: "Assembling frames and writing the file",
-					progress: 0.84,
-					currentFrame: plan.frameCount,
-					totalFrames: plan.frameCount,
-				}),
-			);
+			// Ensure all frames are processed before finalizing
+			await Promise.all(pendingWorkerTasks);
+
 			const finalized = await worker.call({ type: "finalize" });
 			if (finalized.type !== "finalized" || !finalized.buffer) {
 				throw new Error("GIF encoder did not return output");
@@ -1999,6 +2039,9 @@ export async function exportAnimatedMp4(
 				codec: encoder.codec,
 			});
 
+			const captureStartTime = performance.now();
+			const pendingWorkerTasks: Promise<any>[] = [];
+
 			for (let frameIndex = 0; frameIndex < plan.frameCount; frameIndex += 1) {
 				const elapsedMs =
 					plan.frameCount === 1
@@ -2024,6 +2067,13 @@ export async function exportAnimatedMp4(
 					outputHeight: plan.captureHeight,
 				});
 				const bitmap = await createImageBitmap(canvas);
+
+				const now = performance.now();
+				const totalElapsed = now - captureStartTime;
+				const msPerFrame = totalElapsed / (frameIndex + 1);
+				const remainingFrames = plan.frameCount - (frameIndex + 1);
+				const etaSeconds = Math.round((remainingFrames * msPerFrame) / 1000);
+
 				onProgressChange?.(
 					createExportProgress({
 						stage: "capturing",
@@ -2034,9 +2084,11 @@ export async function exportAnimatedMp4(
 							((frameIndex + 1) / plan.frameCount) * 0.58,
 						currentFrame: frameIndex + 1,
 						totalFrames: plan.frameCount,
+						etaSeconds,
 					}),
 				);
-				await worker.call(
+
+				const workerTask = worker.call(
 					{
 						type: "append-mp4-frame",
 						frameIndex,
@@ -2046,7 +2098,16 @@ export async function exportAnimatedMp4(
 					},
 					[bitmap],
 				);
+				pendingWorkerTasks.push(workerTask);
+
+				// Limit backpressure: don't let more than 4 frames be in flight
+				if (pendingWorkerTasks.length >= 4) {
+					await pendingWorkerTasks.shift();
+				}
 			}
+
+			// Ensure all frames are processed before finalizing
+			await Promise.all(pendingWorkerTasks);
 
 			onProgressChange?.(
 				createExportProgress({

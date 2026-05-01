@@ -35,6 +35,7 @@
 - **Click Wheel Navigation**: Authentic iPod controls simulation
 - **Progress Seeking**: Scrub through your track with visual feedback
 - **Track Numbers**: Full album context with track X of Y
+- **Authentic Battery Logic**: Natural discharging cycle that drains slowly while the app is active
 
 ### 🕹️ **Interaction Modes**
 
@@ -71,22 +72,31 @@ graph LR
 flowchart TD
     A[Export Request] --> B{Export Type}
     B -->|PNG| C[Create Detached Clone]
-    B -->|GIF| D[Create Animation Clone]
+    B -->|GIF/MP4| D[Pipelined Capture Flow]
     C --> E[html-to-image]
     E -->|Success| F[Process Blob]
     E -->|Fail| G[html2canvas Fallback]
     G --> F
-    D --> H[Capture 12 FPS Frames]
-    H --> I[GIF Encoding]
-    I --> F
-    F --> J{Platform}
-    J -->|Mobile| K[Web Share API]
-    J -->|Desktop| L[Blob Download]
-    K -->|Fail| M[Fallback Download]
+    D --> H[Main Thread Capture]
+    H -->|ImageBitmap| I[Worker Encoding]
+    I -->|Parallel| H
+    I --> J[Finalize & Mux]
+    J --> F
+    F --> K{Platform}
+    K -->|Mobile| L[Web Share API]
+    K -->|Desktop| M[Blob Download]
+    L -->|Fail| N[Fallback Download]
 ```
 
 - **PNG Export**: 4x resolution (1200×1600px) with dual fallback strategy
 - **Animated GIF**: 12 FPS marquee animation with `gifenc` encoding
+- **MP4 Export**: H.264 video with 12Mbps bitrate for high-quality motion capture
+- **Pipelined Architecture**: Concurrent capture and encoding using Web Workers and `ImageBitmap` for zero-jank UI during export
+- **Real-time ETA**: Live estimation of remaining export time based on frame capture velocity
+- **Smart Animation Capture**: 
+  - **Marquee**: Automatically scrolls for long titles (overflow-based)
+  - **Song Progress**: Progress bar and timestamps are automatically animated to reflect the export duration
+  - **Consistency**: The export preview dialog provides a 1:1 simulation of the final rendered file
 - **Platform Detection**: Web Share API for mobile, download for desktop
 - **Automatic Fallback**: Graceful degradation if primary method fails
 

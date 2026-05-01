@@ -69,7 +69,7 @@ export function IpodScreen({
 	const shouldApplyNowPlayingLayout =
 		isStandardOsInteractionModel(interactionModel) && !showOsMenu;
 	const isInlineEditingEnabled = isEditable && !isNowPlayingLayoutMode;
-	const artworkShadow = exportSafe ? "none" : "0 1px 2px rgba(0,0,0,0.14)";
+	const artworkShadow = "0 1px 2px rgba(0,0,0,0.14)";
 	const { frameRef, renderElement } = useIpodNowPlayingLayout({
 		isLayoutMode: isNowPlayingLayoutMode,
 		shouldApplyLayout: shouldApplyNowPlayingLayout,

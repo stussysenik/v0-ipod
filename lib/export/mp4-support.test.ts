@@ -46,8 +46,8 @@ describe("resolveSupportedMp4EncoderConfig", () => {
 			config,
 			supported:
 				config.codec === "avc1.420028" &&
-				config.width === 380 &&
-				config.height === 576,
+				config.width === 670 &&
+				config.height === 1014,
 		}));
 
 		const strategy = await resolveMp4ExportStrategy({
@@ -55,9 +55,9 @@ describe("resolveSupportedMp4EncoderConfig", () => {
 			targetHeight: 676,
 		});
 
-		expect(strategy?.captureScale).toBe(0.85);
-		expect(strategy?.plan.captureWidth).toBe(380);
-		expect(strategy?.plan.captureHeight).toBe(576);
+		expect(strategy?.captureScale).toBe(1.5);
+		expect(strategy?.plan.captureWidth).toBe(670);
+		expect(strategy?.plan.captureHeight).toBe(1014);
 		expect(strategy?.encoder.codec).toBe("avc1.420028");
 	});
 });
