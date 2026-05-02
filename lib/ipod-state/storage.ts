@@ -296,6 +296,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
 			osNowPlayingLayout:
 				partialUi.osNowPlayingLayout ?? DEFAULT_OS_NOW_PLAYING_LAYOUT,
 			isPlaying: partialUi.isPlaying ?? false,
+			batteryLevel: partialUi.batteryLevel ?? 1.0,
 		};
 
 		return {
@@ -356,6 +357,7 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
 		safe.interactionModel = parsed.interactionModel;
 	if (isSelectionKind(parsed.selectionKind)) safe.selectionKind = parsed.selectionKind;
 	if (isOsScreen(parsed.osScreen)) safe.osScreen = parsed.osScreen;
+	if (typeof parsed.batteryLevel === "number") safe.batteryLevel = parsed.batteryLevel;
 
 	const rangeStartTime = getFiniteNonNegativeNumber(parsed.rangeStartTime);
 	if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;

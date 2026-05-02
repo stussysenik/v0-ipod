@@ -12,6 +12,7 @@ interface IpodDisplayProps {
 	showOsMenu: boolean;
 	frameRef: React.MutableRefObject<HTMLDivElement | null>;
 	children: React.ReactNode;
+	batteryLevel?: number;
 }
 
 export function IpodDisplay({
@@ -21,6 +22,7 @@ export function IpodDisplay({
 	showOsMenu,
 	frameRef,
 	children,
+	batteryLevel = 1.0,
 }: IpodDisplayProps) {
 	const screenTokens = preset.screen;
 	const surround = skinColor ? deriveScreenSurround(skinColor) : null;
@@ -62,6 +64,7 @@ export function IpodDisplay({
 				<IpodStatusBar
 					screenTokens={screenTokens}
 					showOsMenu={showOsMenu}
+					batteryLevel={batteryLevel}
 				/>
 				{children}
 				<IpodGlassOverlay exportSafe={exportSafe} />

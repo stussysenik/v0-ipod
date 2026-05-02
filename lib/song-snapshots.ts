@@ -34,6 +34,7 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 		osOriginalMenuSplit: DEFAULT_OS_ORIGINAL_MENU_SPLIT,
 		osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
 		isPlaying: false,
+		batteryLevel: 1.0,
 	},
 	playback: {
 		currentTime: 5,

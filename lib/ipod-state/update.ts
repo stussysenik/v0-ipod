@@ -51,6 +51,7 @@ export type IpodWorkbenchAction =
 	| { type: "TOGGLE_OS_NOW_PLAYING_EDITABLE" }
 	| { type: "SET_IS_PLAYING"; payload: boolean }
 	| { type: "TOGGLE_IS_PLAYING" }
+	| { type: "SET_BATTERY_LEVEL"; payload: number }
 	| { type: "RESTORE_MODEL"; payload: IpodWorkbenchModel }
 	| { type: "RESET_MODEL" }
 	| { type: "APPLY_SONG_SNAPSHOT"; payload: SongSnapshot };
@@ -122,6 +123,10 @@ function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 				model.interaction.osNowPlayingLayout ??
 				DEFAULT_OS_NOW_PLAYING_LAYOUT,
 			isPlaying: !!model.interaction.isPlaying,
+			batteryLevel: Math.min(
+				Math.max(model.interaction.batteryLevel ?? 1.0, 0),
+				1,
+			),
 		},
 	};
 }
@@ -141,6 +146,7 @@ export function buildPersistedUiState(model: IpodWorkbenchModel): IpodUiState {
 		osOriginalMenuSplit: model.interaction.osOriginalMenuSplit,
 		osNowPlayingLayout: model.interaction.osNowPlayingLayout,
 		isPlaying: model.interaction.isPlaying,
+		batteryLevel: model.interaction.batteryLevel,
 	};
 }
 
@@ -180,6 +186,7 @@ export function applySongSnapshotToModel(
 			osNowPlayingLayout: snapshot.ui.osNowPlayingLayout,
 			isNowPlayingEditable: false,
 			isPlaying: snapshot.ui.isPlaying ?? false,
+			batteryLevel: snapshot.ui.batteryLevel ?? 1.0,
 		},
 	});
 }
@@ -382,6 +389,14 @@ export function ipodWorkbenchReducer(
 				interaction: {
 					...state.interaction,
 					isPlaying: !state.interaction.isPlaying,
+				},
+			});
+		case "SET_BATTERY_LEVEL":
+			return normalizeModel({
+				...state,
+				interaction: {
+					...state.interaction,
+					batteryLevel: Math.min(Math.max(action.payload, 0), 1),
 				},
 			});
 		case "RESTORE_MODEL":

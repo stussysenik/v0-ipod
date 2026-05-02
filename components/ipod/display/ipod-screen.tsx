@@ -35,6 +35,7 @@ interface IpodScreenProps {
 	titlePreview?: boolean;
 	titleCaptureReady?: boolean;
 	onTitleOverflowChange?: (overflow: boolean) => void;
+	batteryLevel?: number;
 }
 
 const EMPTY_OS_MENU_ITEMS: readonly { id: string; label: string }[] = [];
@@ -57,6 +58,7 @@ export function IpodScreen({
 	titlePreview = false,
 	titleCaptureReady = false,
 	onTitleOverflowChange,
+	batteryLevel = 1.0,
 }: IpodScreenProps) {
 	const remainingAnchorRef = useRef<number | null>(null);
 	const screenTokens = preset.screen;
@@ -119,6 +121,7 @@ export function IpodScreen({
 			exportSafe={exportSafe}
 			showOsMenu={showOsMenu}
 			frameRef={frameRef}
+			batteryLevel={batteryLevel}
 		>
 			{showOsMenu ? (
 				<IpodMenuScene

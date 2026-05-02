@@ -71,6 +71,7 @@ export interface IpodInteractionState {
 	osNowPlayingLayout: IpodNowPlayingLayoutState;
 	isNowPlayingEditable: boolean;
 	isPlaying: boolean;
+	batteryLevel: number;
 }
 
 export interface IpodPlaybackSnapshot {
@@ -102,6 +103,7 @@ export interface IpodUiState {
 	osOriginalMenuSplit: number;
 	osNowPlayingLayout: IpodNowPlayingLayoutState;
 	isPlaying: boolean;
+	batteryLevel: number;
 }
 
 export interface SongSnapshot {
@@ -142,6 +144,7 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
 			isNowPlayingEditable: false,
 			isPlaying: false,
+			batteryLevel: 1.0,
 		},
 	};
 }

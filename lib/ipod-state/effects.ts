@@ -65,6 +65,7 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 				fallback.interaction.osNowPlayingLayout,
 			isNowPlayingEditable: false,
 			isPlaying: savedUi?.isPlaying ?? fallback.interaction.isPlaying,
+			batteryLevel: savedUi?.batteryLevel ?? fallback.interaction.batteryLevel,
 		},
 	};
 }

@@ -243,6 +243,7 @@ export default function IpodClassicWorkbench() {
 	const osOriginalMenuSplit = model.interaction.osOriginalMenuSplit;
 	const osNowPlayingLayout = model.interaction.osNowPlayingLayout;
 	const isOsNowPlayingEditable = model.interaction.isNowPlayingEditable;
+	const batteryLevel = model.interaction.batteryLevel;
 	const isFlatView = viewMode === "flat";
 	const isFocusView = viewMode === "focus";
 	const isPreviewView = isPreviewViewMode(viewMode);
@@ -278,6 +279,9 @@ export default function IpodClassicWorkbench() {
 	}, []);
 	const setOsOriginalMenuSplit = useCallback((nextSplit: number) => {
 		dispatch({ type: "SET_OS_ORIGINAL_MENU_SPLIT", payload: nextSplit });
+	}, []);
+	const setBatteryLevel = useCallback((nextLevel: number) => {
+		dispatch({ type: "SET_BATTERY_LEVEL", payload: nextLevel });
 	}, []);
 
 	useEffect(() => {
@@ -430,6 +434,20 @@ export default function IpodClassicWorkbench() {
 	useEffect(() => {
 		setRangeEndDraft(selectionKind === "range" ? formatTimecode(rangeEndTime) : "");
 	}, [selectionKind, rangeEndTime]);
+
+	useEffect(() => {
+		const updateIntervalMs = 10000;
+		const dischargePerUpdate = 0.001;
+
+		const interval = setInterval(() => {
+			dispatch({
+				type: "SET_BATTERY_LEVEL",
+				payload: Math.max(0.05, model.interaction.batteryLevel - dischargePerUpdate),
+			});
+		}, updateIntervalMs);
+
+		return () => clearInterval(interval);
+	}, [model.interaction.batteryLevel]);
 
 	useEffect(() => {
 		return () => {
@@ -977,6 +995,7 @@ export default function IpodClassicWorkbench() {
 			onOsOriginalMenuSplitChange={setOsOriginalMenuSplit}
 			osNowPlayingLayout={osNowPlayingLayout}
 			onOsNowPlayingLayoutChange={setOsNowPlayingLayout}
+			batteryLevel={batteryLevel}
 			isEditable={
 				!isExportCapturing &&
 				(isAuthenticInteraction
@@ -1328,6 +1347,44 @@ export default function IpodClassicWorkbench() {
 												layout.
 											</p>
 										) : null}
+									</div>
+
+									<div className="mb-4">
+										<div className="flex items-center justify-between mb-2 px-1">
+											<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em]">
+												Battery
+											</h3>
+											<span className="text-[10px] font-mono text-[#6B7280]">
+												{Math.round(
+													batteryLevel *
+														100,
+												)}
+												%
+											</span>
+										</div>
+										<div className="px-1">
+											<input
+												type="range"
+												min="0.05"
+												max="1"
+												step="0.01"
+												value={
+													batteryLevel
+												}
+												onChange={(
+													e,
+												) =>
+													setBatteryLevel(
+														parseFloat(
+															e
+																.target
+																.value,
+														),
+													)
+												}
+												className="w-full h-1.5 bg-[#D6D8DC] rounded-lg appearance-none cursor-pointer accent-[#111827]"
+											/>
+										</div>
 									</div>
 
 									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
