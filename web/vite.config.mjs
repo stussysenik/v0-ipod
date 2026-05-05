@@ -1,18 +1,18 @@
 import { defineConfig } from "vite";
-import rescript from "@jihchi/vite-plugin-rescript";
 
 export default defineConfig({
-  plugins: [rescript()],
   root: ".",
-  publicDir: "public",
+  resolve: {
+    extensions: [".mjs", ".js"],
+  },
   build: {
     outDir: "dist",
     target: "es2020",
+    rollupOptions: {
+      input: "index.html",
+    },
   },
   server: {
     port: 3000,
-  },
-  resolve: {
-    alias: {},
   },
 });
