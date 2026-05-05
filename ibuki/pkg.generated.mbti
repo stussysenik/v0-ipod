@@ -1,0 +1,42 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/ipod_moonbit/ibuki"
+
+// Values
+pub fn add_transition(Machine, (State, Event) -> (State, Array[Effect])?) -> Machine
+
+pub fn dispatch(Machine, State, Event) -> (State, Array[Effect])
+
+pub fn make_machine() -> Machine
+
+pub fn on(String, String, (State, Event) -> (State, Array[Effect])) -> (State, Event) -> (State, Array[Effect])?
+
+pub fn on_any(String, (State, Event) -> (State, Array[Effect])) -> (State, Event) -> (State, Array[Effect])?
+
+pub fn on_if(String, String, (State, Event) -> Bool, (State, Event) -> (State, Array[Effect])) -> (State, Event) -> (State, Array[Effect])?
+
+// Errors
+
+// Types and methods
+pub(all) struct Effect {
+  tag : String
+  data : String
+}
+
+pub(all) struct Event {
+  tag : String
+  data : String
+}
+
+pub struct Machine {
+  transitions : Array[(State, Event) -> (State, Array[Effect])?]
+}
+
+pub(all) struct State {
+  tag : String
+  data : String
+}
+
+// Type aliases
+
+// Traits
+

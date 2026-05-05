@@ -1,0 +1,193 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/ipod_moonbit/ipod"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn authentic_finishes() -> Array[AppleFinish]
+
+pub fn default_model() -> IpodModel
+
+pub fn derive_wheel(String) -> WheelDerivation
+
+pub fn deserialize_model(String) -> Result[IpodModel, String]
+
+pub fn get_marquee_cycle_duration_ms(Double, Double, Double) -> Double
+
+pub fn get_marquee_frame(Double, Double) -> Double
+
+pub fn get_marquee_gap_width(Double) -> Double
+
+pub fn is_dark(String) -> Bool
+
+pub fn needs_marquee(Double, Double) -> Bool
+
+pub fn normalize_model(IpodModel) -> IpodModel
+
+pub fn reduce(IpodModel, String, String) -> (IpodModel, Array[String])
+
+pub fn relative_luminance(String) -> Double
+
+pub fn serialize_model(IpodModel) -> String
+
+pub fn simulate_export_time(Double, Double) -> Double
+
+pub fn wheel_border_color(String) -> String
+
+pub fn wheel_label_color(String) -> String
+
+// Errors
+
+// Types and methods
+pub(all) struct AppleFinish {
+  label : String
+  hex : String
+}
+
+pub enum HardwarePresetId {
+  Classic2007
+  Classic2008
+  Classic2009
+  Classic2008Black
+  Classic2008Silver
+} derive(Eq, @debug.Debug)
+
+pub enum InteractionModel {
+  Direct
+  IpodOs
+  IpodOsOriginal
+} derive(Eq, @debug.Debug)
+
+pub(all) struct InteractionState {
+  interactionModel : InteractionModel
+  osScreen : OsScreen
+  menuIndex : Int
+  osOriginalMenuSplit : Double
+  isNowPlayingEditable : Bool
+  isPlaying : Bool
+  batteryLevel : Double
+}
+
+pub enum IpodEvent {
+  UpdateTitle(String)
+  UpdateArtist(String)
+  UpdateAlbum(String)
+  UpdateArtwork(String)
+  UpdateDuration(Double)
+  UpdateCurrentTime(Double)
+  UpdateRating(Int)
+  UpdateTrackNumber(Int)
+  UpdateTotalTracks(Int)
+  SetViewMode(ViewMode)
+  SetSkinColor(String)
+  SetBgColor(String)
+  SetHardwarePreset(HardwarePresetId)
+  SetInteractionModel(InteractionModel)
+  SetOsScreen(OsScreen)
+  SetOsMenuIndex(Int)
+  CycleOsMenu(Int)
+  SetOsOriginalMenuSplit(Double)
+  SetOsNowPlayingEditable(Bool)
+  ToggleOsNowPlayingEditable
+  SetIsPlaying(Bool)
+  ToggleIsPlaying
+  SetBatteryLevel(Double)
+  SetSelectionKind(SnapshotSelectionKind)
+  SetRangeStartTime(Double)
+  SetRangeEndTime(Double)
+  RestoreModel(IpodModel)
+  ResetModel
+  ApplySongSnapshot(SongSnapshot)
+}
+
+pub(all) struct IpodModel {
+  metadata : SongMetadata
+  presentation : PresentationState
+  interaction : InteractionState
+  playback : PlaybackState
+}
+
+pub enum OsScreen {
+  Menu
+  NowPlaying
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PlaybackState {
+  currentTime : Double
+  duration : Double
+  selectionKind : SnapshotSelectionKind
+  rangeStartTime : Double
+  rangeEndTime : Double
+}
+
+pub(all) struct PresentationState {
+  skinColor : String
+  bgColor : String
+  viewMode : ViewMode
+  hardwarePreset : HardwarePresetId
+}
+
+pub enum SnapshotSelectionKind {
+  Moment
+  Range
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SongMetadata {
+  title : String
+  artist : String
+  album : String
+  artwork : String
+  duration : Double
+  currentTime : Double
+  rating : Int
+  trackNumber : Int
+  totalTracks : Int
+}
+
+pub(all) struct SongSnapshot {
+  schemaVersion : Int
+  title : String
+  artist : String
+  album : String
+  artwork : String
+  duration : Double
+  currentTime : Double
+  rating : Int
+  trackNumber : Int
+  totalTracks : Int
+  skinColor : String
+  bgColor : String
+  viewMode : ViewMode
+  hardwarePreset : HardwarePresetId
+  interactionModel : InteractionModel
+  osScreen : OsScreen
+  menuIndex : Int
+  osOriginalMenuSplit : Double
+  isPlaying : Bool
+  batteryLevel : Double
+  selectionKind : SnapshotSelectionKind
+  rangeStartTime : Double
+  rangeEndTime : Double
+}
+
+pub enum ViewMode {
+  Flat
+  Focus
+  Preview
+  Ascii
+  ThreeD
+} derive(Eq, @debug.Debug)
+
+pub(all) struct WheelDerivation {
+  labelColor : String
+  borderColor : String
+  centerBorder : String
+  centerGradient : String
+}
+
+// Type aliases
+
+// Traits
+

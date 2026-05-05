@@ -1,0 +1,21 @@
+import {
+  "username/ipod_moonbit/ipod",
+}
+
+options(
+  link: {
+    "js": {
+      "exports": [
+        "default_model_json",
+        "reduce_model",
+        "get_authentic_finishes",
+        "derive_wheel_json",
+        "marquee_cycle_ms",
+        "marquee_frame",
+        "marquee_needed",
+        "color_is_dark",
+      ],
+      "format": "esm",
+    },
+  },
+)

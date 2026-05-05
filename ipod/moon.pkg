@@ -1,0 +1,7 @@
+import {
+  "username/ipod_moonbit/ibuki",
+}
+
+options(
+  link: { "js": { "format": "esm" } },
+)
