@@ -9,55 +9,24 @@ function ColorPicker(props) {
   let dispatch = props.dispatch;
   let skinColor = props.skinColor;
   let finishes = React.useMemo(() => MoonBitBindings.authenticFinishes(), []);
-  let match = React.useState(() => skinColor);
-  let setCustomHex = match[1];
-  let customHex = match[0];
-  return JsxRuntime.jsxs("div", {
-    children: [
-      JsxRuntime.jsx("div", {
-        children: Belt_Array.mapWithIndex(finishes, (i, f) => {
-          let isActive = f.hex === skinColor;
-          return JsxRuntime.jsx("div", {
-            className: "swatch" + (
-              isActive ? " swatch-active" : ""
-            ),
-            style: {
-              backgroundColor: f.hex
-            },
-            title: f.label + " " + f.hex,
-            onClick: param => dispatch({
-              TAG: "SetSkinColor",
-              _0: f.hex
-            })
-          }, i.toString());
-        }),
-        className: "swatch-grid"
-      }),
-      JsxRuntime.jsx("div", {
-        children: JsxRuntime.jsx("input", {
-          placeholder: "#000000",
-          type: "text",
-          value: customHex,
-          onKeyDown: e => {
-            if (e.key === "Enter") {
-              return dispatch({
-                TAG: "SetSkinColor",
-                _0: customHex
-              });
-            }
+  return JsxRuntime.jsx("div", {
+    children: JsxRuntime.jsx("div", {
+      children: Belt_Array.map(finishes, f => {
+        let active = f.hex === skinColor;
+        return JsxRuntime.jsx("div", {
+          className: active ? "swatch swatch-active" : "swatch",
+          style: {
+            backgroundColor: f.hex
           },
-          onBlur: param => dispatch({
+          title: f.label,
+          onClick: param => dispatch({
             TAG: "SetSkinColor",
-            _0: customHex
-          }),
-          onChange: e => {
-            let target = e.target;
-            setCustomHex(param => target.value);
-          }
-        }),
-        className: "custom-color"
-      })
-    ],
+            _0: f.hex
+          })
+        }, f.hex);
+      }),
+      className: "swatch-grid"
+    }),
     className: "color-picker"
   });
 }

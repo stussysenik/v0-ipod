@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run res:build && npm run moon:build && vite build",
-    "moon:build": "cd .. && moon build --target js --release",
+    "moon:build": "cd .. && moon build --target js --release && cp _build/js/release/build/cmd/main/main.js web/js/ipod_moonbit.js",
     "moon:watch": "cd .. && moon build --target js --watch",
     "res:build": "rescript build",
     "res:watch": "rescript watch",

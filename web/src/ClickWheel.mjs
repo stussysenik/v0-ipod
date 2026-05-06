@@ -13,6 +13,36 @@ function ClickWheel(props) {
   let accumulated = React.useRef(0.0);
   let tracking = React.useRef(false);
   let wheelColors = React.useMemo(() => MoonBitBindings.deriveWheelColors(skinColor), [skinColor]);
+  let size = "222px";
+  let centerSize = "79px";
+  let sideInset = "11%";
+  let sideIconSize = "16px";
+  let playPauseIconSize = "12px";
+  let wheelSurfaceStyle = {
+    width: size,
+    height: size,
+    backgroundImage: "linear-gradient(180deg, " + wheelColors.gradient.from + ", " + wheelColors.gradient.via + ", " + wheelColors.gradient.to + ")",
+    borderColor: wheelColors.border,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    boxShadow: "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)",
+    position: "relative",
+    borderRadius: "50%"
+  };
+  let centerStyle = {
+    width: centerSize,
+    height: centerSize,
+    backgroundImage: "linear-gradient(180deg, " + wheelColors.centerGradient.from + ", " + wheelColors.centerGradient.via + ", " + wheelColors.centerGradient.to + ")",
+    borderColor: wheelColors.centerBorder,
+    borderWidth: "1px",
+    borderStyle: "solid",
+    boxShadow: "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)",
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    borderRadius: "50%"
+  };
   let getCenter = () => {
     let el = wheelRef.current;
     if (el == null) {
@@ -72,48 +102,178 @@ function ClickWheel(props) {
   let onPointerUp = _e => {
     tracking.current = false;
   };
-  let onCenterClick = _e => dispatch({
-    TAG: "SetOsScreen",
-    _0: "NowPlaying"
-  });
-  let labelStyle = {
-    color: wheelColors.labelColor,
-    fontSize: "11px",
-    fontWeight: "600"
-  };
   return JsxRuntime.jsxs("div", {
     children: [
       JsxRuntime.jsx("div", {
-        children: "MENU",
-        className: "wheel-btn menu-btn",
-        style: labelStyle
-      }),
-      JsxRuntime.jsx("div", {
-        children: "MID.",
-        className: "wheel-btn prev-btn",
-        style: labelStyle
-      }),
-      JsxRuntime.jsx("div", {
-        children: "MID.",
-        className: "wheel-btn next-btn",
-        style: labelStyle
-      }),
-      JsxRuntime.jsx("div", {
-        children: "MID.",
-        className: "wheel-btn pp-btn",
-        style: labelStyle
-      }),
-      JsxRuntime.jsx("div", {
-        className: "wheel-center",
+        className: "pointer-events-none absolute inset-0",
         style: {
-          borderColor: wheelColors.centerBorder,
-          background: wheelColors.centerGradient
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          bottom: "0",
+          borderRadius: "50%",
+          boxShadow: "inset 0 1px 0.5px rgba(255,255,255,0.45), inset 0 -0.5px 0.5px rgba(0,0,0,0.05)"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        className: "wheel-grain"
+      }),
+      JsxRuntime.jsx("div", {
+        className: "pointer-events-none absolute",
+        style: {
+          position: "absolute",
+          top: "1px",
+          left: "1px",
+          right: "1px",
+          bottom: "1px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 70%)"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full",
+        style: {
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "calc(" + centerSize + " + 2px)",
+          height: "calc(" + centerSize + " + 2px)",
+          borderRadius: "50%",
+          background: "rgba(0,0,0,0.15)",
+          boxShadow: "inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 1px rgba(255,255,255,0.1)"
+        }
+      }),
+      JsxRuntime.jsx("button", {
+        children: "MENU",
+        className: "wheel-label",
+        style: {
+          top: "11%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: wheelColors.labelColor,
+          fontSize: "11px",
+          letterSpacing: "0.15em"
         },
-        onClick: onCenterClick
+        onClick: param => dispatch({
+          TAG: "SetOsScreen",
+          _0: "Menu"
+        })
+      }),
+      JsxRuntime.jsx("button", {
+        children: JsxRuntime.jsxs("svg", {
+          children: [
+            JsxRuntime.jsx("polygon", {
+              points: "1,1 10,8 1,15"
+            }),
+            JsxRuntime.jsx("rect", {
+              height: "14",
+              width: "3.5",
+              rx: "0.5",
+              x: "13",
+              y: "1"
+            }),
+            JsxRuntime.jsx("rect", {
+              height: "14",
+              width: "3.5",
+              rx: "0.5",
+              x: "19",
+              y: "1"
+            })
+          ],
+          style: {
+            width: "calc(" + playPauseIconSize + " * 1.5)",
+            height: playPauseIconSize
+          },
+          fill: "currentColor",
+          viewBox: "0 0 24 16"
+        }),
+        className: "wheel-label",
+        style: {
+          bottom: "12%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: wheelColors.labelColor
+        },
+        onClick: param => dispatch("ToggleIsPlaying")
+      }),
+      JsxRuntime.jsx("button", {
+        children: JsxRuntime.jsxs("svg", {
+          children: [
+            JsxRuntime.jsx("rect", {
+              height: "14",
+              width: "2.5",
+              rx: "0.5",
+              x: "1",
+              y: "1"
+            }),
+            JsxRuntime.jsx("polygon", {
+              points: "14,1 5,8 14,15"
+            }),
+            JsxRuntime.jsx("polygon", {
+              points: "23,1 14,8 23,15"
+            })
+          ],
+          style: {
+            width: "calc(" + sideIconSize + " * 1.4)",
+            height: sideIconSize
+          },
+          fill: "currentColor",
+          viewBox: "0 0 24 16"
+        }),
+        className: "wheel-label",
+        style: {
+          top: "50%",
+          left: sideInset,
+          transform: "translateY(-50%)",
+          color: wheelColors.labelColor
+        }
+      }),
+      JsxRuntime.jsx("button", {
+        children: JsxRuntime.jsxs("svg", {
+          children: [
+            JsxRuntime.jsx("polygon", {
+              points: "1,1 10,8 1,15"
+            }),
+            JsxRuntime.jsx("polygon", {
+              points: "10,1 19,8 10,15"
+            }),
+            JsxRuntime.jsx("rect", {
+              height: "14",
+              width: "2.5",
+              rx: "0.5",
+              x: "20.5",
+              y: "1"
+            })
+          ],
+          style: {
+            width: "calc(" + sideIconSize + " * 1.4)",
+            height: sideIconSize
+          },
+          fill: "currentColor",
+          viewBox: "0 0 24 16"
+        }),
+        className: "wheel-label",
+        style: {
+          top: "50%",
+          right: sideInset,
+          transform: "translateY(-50%)",
+          color: wheelColors.labelColor
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        className: "wheel-center-button",
+        style: centerStyle,
+        onClick: param => dispatch({
+          TAG: "SetOsScreen",
+          _0: "NowPlaying"
+        })
       })
     ],
     ref: Primitive_option.some(wheelRef),
     className: "click-wheel",
+    style: wheelSurfaceStyle,
     onPointerDown: onPointerDown,
     onPointerMove: onPointerMove,
     onPointerUp: onPointerUp

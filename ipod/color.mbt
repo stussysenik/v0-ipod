@@ -88,28 +88,50 @@ pub fn wheel_border_color(case_hex : String) -> String {
 }
 
 ///|
+pub(all) struct Gradient {
+  from : String
+  via : String
+  to : String
+}
+
+///|
 pub(all) struct WheelDerivation {
+  gradient : Gradient
+  border : String
   labelColor : String
-  borderColor : String
   centerBorder : String
-  centerGradient : String
+  centerGradient : Gradient
 }
 
 ///|
 pub fn derive_wheel(case_hex : String) -> WheelDerivation {
-  if is_dark(case_hex) {
+  let lum = relative_luminance(case_hex)
+  if lum < 0.18 {
+    // Dark case — authentic iPod 6G black wheel shader
     WheelDerivation::{
+      gradient: Gradient::{ from: "#1C1C1E", via: "#202022", to: "#252527" },
+      border: "#2C2C2E",
       labelColor: "#FFFFFF",
-      borderColor: "#555555",
-      centerBorder: "#444444",
-      centerGradient: "#666666",
+      centerBorder: "#3A3A3C",
+      centerGradient: Gradient::{ from: "#1C1C1E", via: "#202022", to: "#252527" },
+    }
+  } else if lum < 0.45 {
+    // Mid-dark (charcoal/gunmetal)
+    WheelDerivation::{
+      gradient: Gradient::{ from: "#4A4A4E", via: "#424246", to: "#3A3A3E" },
+      border: "#555558",
+      labelColor: "#E0E0E0",
+      centerBorder: "#505054",
+      centerGradient: Gradient::{ from: "#4E4E52", via: "#46464A", to: "#3E3E42" },
     }
   } else {
+    // Light case — iPod 6G Silver wheel colors
     WheelDerivation::{
-      labelColor: "#333333",
-      borderColor: "#999999",
-      centerBorder: "#BBBBBB",
-      centerGradient: "#CCCCCC",
+      gradient: Gradient::{ from: "#F5F5F7", via: "#E8E8EA", to: "#DCDCDC" },
+      border: "#D1D1D6",
+      labelColor: "#8E8E93",
+      centerBorder: "#D1D1D6",
+      centerGradient: Gradient::{ from: "#FFFFFF", via: "#F0F0F2", to: "#E5E5EA" },
     }
   }
 }

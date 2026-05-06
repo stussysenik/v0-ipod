@@ -4,7 +4,8 @@
 ///|
 /// Create and return the default model as JSON.
 pub fn default_model_json() -> String {
-  @ipod.serialize_model(@ipod.default_model())
+  let m = @ipod.default_model()
+  @ipod.serialize_model(m.metadata, m.presentation, m.interaction, m.playback)
 }
 
 ///|
@@ -19,7 +20,7 @@ pub fn reduce_model(
     Err(_) => @ipod.default_model()
   }
   let (next, effects) = @ipod.reduce(m, event_tag, event_data)
-  let model_json = @ipod.serialize_model(next)
+  let model_json = @ipod.serialize_model(next.metadata, next.presentation, next.interaction, next.playback)
   let effects_json = effects_to_json(effects)
   "{\"model\":" + model_json + ",\"effects\":" + effects_json + "}"
 }
@@ -56,18 +57,25 @@ fn finish_to_json(
 }
 
 ///|
+fn gradient_to_json(g : @ipod.Gradient) -> String {
+  "{\"from\":\"" + g.from + "\",\"via\":\"" + g.via + "\",\"to\":\"" + g.to + "\"}"
+}
+
+///|
 /// Derive wheel colors from case color, returned as JSON.
 pub fn derive_wheel_json(case_hex : String) -> String {
   let d = @ipod.derive_wheel(case_hex)
   "{\"labelColor\":\"" +
   d.labelColor +
-  "\",\"borderColor\":\"" +
-  d.borderColor +
+  "\",\"border\":\"" +
+  d.border +
   "\",\"centerBorder\":\"" +
   d.centerBorder +
-  "\",\"centerGradient\":\"" +
-  d.centerGradient +
-  "\"}"
+  "\",\"gradient\":" +
+  gradient_to_json(d.gradient) +
+  ",\"centerGradient\":" +
+  gradient_to_json(d.centerGradient) +
+  "}"
 }
 
 ///|

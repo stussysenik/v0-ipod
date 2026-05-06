@@ -183,19 +183,35 @@ let parseFinishes = (raw: string): array<Types.appleFinish> =>
   | _ => []
   }
 
+let parseGradient = (d: Dict.t<Js.Json.t>): Types.gradient => {
+  {
+    from: getStr(d, "from"),
+    via: getStr(d, "via"),
+    to: getStr(d, "to"),
+  }
+}
+
 let parseWheelColors = (raw: string): Types.wheelColors =>
   switch Js.Json.parseExn(raw) {
   | Object(d) => {
+      gradient: switch Dict.get(d, "gradient") {
+      | Some(Object(g)) => parseGradient(g)
+      | _ => {from: "#F5F5F7", via: "#E8E8EA", to: "#DCDCDC"}
+      },
+      border: getStr(d, "border"),
       labelColor: getStr(d, "labelColor"),
-      borderColor: getStr(d, "borderColor"),
       centerBorder: getStr(d, "centerBorder"),
-      centerGradient: getStr(d, "centerGradient"),
+      centerGradient: switch Dict.get(d, "centerGradient") {
+      | Some(Object(g)) => parseGradient(g)
+      | _ => {from: "#FFFFFF", via: "#F0F0F2", to: "#E5E5EA"}
+      },
     }
   | _ => {
-      labelColor: "#FFFFFF",
-      borderColor: "#555555",
-      centerBorder: "#444444",
-      centerGradient: "#666666",
+      gradient: {from: "#F5F5F7", via: "#E8E8EA", to: "#DCDCDC"},
+      border: "#D1D1D6",
+      labelColor: "#8E8E93",
+      centerBorder: "#D1D1D6",
+      centerGradient: {from: "#FFFFFF", via: "#F0F0F2", to: "#E5E5EA"},
     }
   }
 

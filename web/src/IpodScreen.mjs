@@ -2,6 +2,7 @@
 
 import * as Editors from "./Editors.mjs";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
+import * as MarqueeText from "./MarqueeText.mjs";
 import * as JsxRuntime from "react/jsx-runtime";
 
 function IpodScreen(props) {
@@ -18,10 +19,8 @@ function IpodScreen(props) {
   };
   let batteryPct = inter.batteryLevel * 100.0 | 0;
   let batteryBars = inter.batteryLevel * 5.0 | 0;
-  let batteryColor = batteryPct > 20 ? "#4CAF50" : "#f44336";
   let bars = Belt_Array.reduce(Belt_Array.makeBy(batteryBars, param => "|"), "", (a, b) => a + b);
   let progressPct = pb.duration > 0.0 ? pb.currentTime / pb.duration * 100.0 : 0.0;
-  let stars = Belt_Array.reduce(Belt_Array.makeBy(meta.rating, param => "*"), "", (a, b) => a + b);
   return JsxRuntime.jsxs("div", {
     children: [
       JsxRuntime.jsxs("div", {
@@ -31,9 +30,9 @@ function IpodScreen(props) {
           }),
           JsxRuntime.jsx("span", {
             children: bars + " " + batteryPct.toString() + "%",
-            className: "battery",
             style: {
-              color: batteryColor
+              color: inter.batteryLevel > 0.2 ? "#4CAF50" : "#f44336",
+              fontFamily: "monospace"
             }
           })
         ],
@@ -41,54 +40,62 @@ function IpodScreen(props) {
       }),
       JsxRuntime.jsxs("div", {
         children: [
-          meta.artwork === "" ? JsxRuntime.jsx("div", {
-              children: "🎵",
-              className: "artwork-placeholder"
-            }) : JsxRuntime.jsx("img", {
-              className: "artwork-img",
-              alt: "Album Art",
-              src: meta.artwork
-            }),
           JsxRuntime.jsx("div", {
-            children: JsxRuntime.jsx(Editors.make, {
-              field: "title",
-              value: meta.title,
-              dispatch: dispatch,
-              event: v => ({
-                TAG: "UpdateTitle",
-                _0: v
+            children: meta.artwork === "" ? JsxRuntime.jsx("div", {
+                children: "🎵",
+                className: "artwork-placeholder"
+              }) : JsxRuntime.jsx("img", {
+                className: "artwork-img",
+                alt: "Album Art",
+                src: meta.artwork
+              }),
+            className: "artwork-column"
+          }),
+          JsxRuntime.jsxs("div", {
+            children: [
+              JsxRuntime.jsx("div", {
+                children: JsxRuntime.jsx(MarqueeText.make, {
+                  text: meta.title,
+                  containerWidth: 130.0
+                }),
+                className: "song-title"
+              }),
+              JsxRuntime.jsx("div", {
+                children: JsxRuntime.jsx(Editors.make, {
+                  field: "artist",
+                  value: meta.artist,
+                  dispatch: dispatch,
+                  event: v => ({
+                    TAG: "UpdateArtist",
+                    _0: v
+                  })
+                }),
+                className: "song-artist"
+              }),
+              JsxRuntime.jsx("div", {
+                children: JsxRuntime.jsx(Editors.make, {
+                  field: "album",
+                  value: meta.album,
+                  dispatch: dispatch,
+                  event: v => ({
+                    TAG: "UpdateAlbum",
+                    _0: v
+                  })
+                }),
+                className: "song-album"
+              }),
+              JsxRuntime.jsx("div", {
+                children: "Track " + meta.trackNumber.toString() + " of " + meta.totalTracks.toString(),
+                className: "meta-row"
               })
-            }),
-            className: "song-title"
-          }),
-          JsxRuntime.jsx("div", {
-            children: JsxRuntime.jsx(Editors.make, {
-              field: "artist",
-              value: meta.artist,
-              dispatch: dispatch,
-              event: v => ({
-                TAG: "UpdateArtist",
-                _0: v
-              })
-            }),
-            className: "song-artist"
-          }),
-          JsxRuntime.jsx("div", {
-            children: JsxRuntime.jsx(Editors.make, {
-              field: "album",
-              value: meta.album,
-              dispatch: dispatch,
-              event: v => ({
-                TAG: "UpdateAlbum",
-                _0: v
-              })
-            }),
-            className: "song-album"
-          }),
-          JsxRuntime.jsx("div", {
-            children: stars + " " + meta.rating.toString() + "/5 - Track " + meta.trackNumber.toString() + " of " + meta.totalTracks.toString(),
-            className: "meta-row"
-          }),
+            ],
+            className: "track-info"
+          })
+        ],
+        className: "now-playing-content"
+      }),
+      JsxRuntime.jsxs("div", {
+        children: [
           JsxRuntime.jsx("div", {
             children: JsxRuntime.jsx("div", {
               className: "progress-fill",
@@ -110,10 +117,44 @@ function IpodScreen(props) {
             className: "time-row"
           })
         ],
-        className: "now-playing"
+        className: "progress-container"
+      }),
+      JsxRuntime.jsx("div", {
+        className: "pointer-events-none absolute",
+        style: {
+          position: "absolute",
+          inset: "0",
+          background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.05) 100%)"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        className: "pointer-events-none absolute",
+        style: {
+          position: "absolute",
+          left: "5%",
+          top: "4%",
+          height: "40%",
+          width: "50%",
+          borderRadius: "20px",
+          opacity: "0.2",
+          background: "linear-gradient(160deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0) 65%)"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        className: "pointer-events-none absolute",
+        style: {
+          position: "absolute",
+          inset: "0",
+          boxShadow: "inset 0 1px 4px rgba(0,0,0,0.15)"
+        }
       })
     ],
-    className: "screen"
+    className: "screen",
+    style: {
+      width: "296px",
+      height: "222px",
+      backgroundColor: "#fff"
+    }
   });
 }
 

@@ -9,45 +9,129 @@ function IpodDevice(props) {
   let dispatch = props.dispatch;
   let model = props.model;
   let skinColor = model.presentation.skinColor;
+  let radius = "36px";
+  let paddingX = "18px";
+  let shellSurfaceStyle = {
+    backgroundColor: skinColor,
+    backgroundImage: "linear-gradient(158deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 16%, rgba(255,255,255,0) 32%), linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.06) 100%), radial-gradient(circle at 50% 102%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 40%)",
+    width: "350px",
+    height: "580px",
+    borderRadius: radius,
+    paddingLeft: paddingX,
+    paddingRight: paddingX,
+    paddingTop: "18px",
+    paddingBottom: "28px",
+    boxShadow: "0 20px 48px -28px rgba(0,0,0,0.5), 0 42px 64px -44px rgba(0,0,0,0.38), inset 0 1.5px 0.5px rgba(255,255,255,0.45), inset 0 -1px 1px rgba(0,0,0,0.12)",
+    borderColor: "rgba(0,0,0,0.15)"
+  };
   return JsxRuntime.jsxs("div", {
     children: [
+      JsxRuntime.jsx("div", {
+        className: "pointer-events-none absolute inset-0",
+        style: {
+          borderRadius: radius,
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7), inset 1px 0 0 rgba(255,255,255,0.2), inset -1px 0 0 rgba(255,255,255,0.2)",
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          bottom: "0"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        className: "texture-grain"
+      }),
+      JsxRuntime.jsx("div", {
+        className: "pointer-events-none absolute",
+        style: {
+          inset: "2.5px",
+          borderRadius: "35px",
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 -18px 32px rgba(0,0,0,0.04)",
+          position: "absolute",
+          top: "2.5px",
+          left: "2.5px",
+          right: "2.5px",
+          bottom: "2.5px"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        style: {
+          position: "absolute",
+          left: "8%",
+          top: "2.5%",
+          height: "38%",
+          width: "84%",
+          borderRadius: "100px",
+          opacity: "0.4",
+          background: "linear-gradient(166deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 22%, rgba(255,255,255,0) 60%)"
+        }
+      }),
+      JsxRuntime.jsx("div", {
+        style: {
+          position: "absolute",
+          left: "6%",
+          right: "6%",
+          bottom: "5%",
+          height: "24%",
+          borderRadius: "80px",
+          opacity: "0.2",
+          background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0.12) 100%)"
+        }
+      }),
       JsxRuntime.jsx("div", {
         children: JsxRuntime.jsx(IpodScreen.make, {
           model: model,
           dispatch: dispatch
         }),
-        className: "screen-frame"
+        className: "screen-gasket",
+        style: {
+          marginTop: "20px"
+        }
       }),
-      JsxRuntime.jsx(ClickWheel.make, {
-        skinColor: skinColor,
-        dispatch: dispatch
+      JsxRuntime.jsx("div", {
+        children: JsxRuntime.jsx(ClickWheel.make, {
+          skinColor: skinColor,
+          dispatch: dispatch
+        }),
+        style: {
+          position: "relative",
+          zIndex: "10",
+          marginTop: "-8px",
+          flex: "1",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }
       }),
       JsxRuntime.jsxs("div", {
         children: [
-          JsxRuntime.jsx("button", {
-            children: model.interaction.isPlaying ? "Pause" : "Play",
-            onClick: param => dispatch("ToggleIsPlaying")
+          JsxRuntime.jsx(ColorPicker.make, {
+            skinColor: skinColor,
+            dispatch: dispatch
           }),
-          JsxRuntime.jsx("button", {
-            children: "Reset",
-            onClick: param => dispatch("ResetModel")
+          JsxRuntime.jsxs("div", {
+            children: [
+              JsxRuntime.jsx("button", {
+                children: model.interaction.isPlaying ? "Pause" : "Play",
+                onClick: param => dispatch("ToggleIsPlaying")
+              }),
+              JsxRuntime.jsx("button", {
+                children: "Reset",
+                onClick: param => dispatch("ResetModel")
+              })
+            ],
+            className: "controls"
           })
         ],
-        className: "controls"
-      }),
-      JsxRuntime.jsx(ColorPicker.make, {
-        skinColor: skinColor,
-        dispatch: dispatch
-      }),
-      JsxRuntime.jsx("div", {
-        children: "Powered by MoonBit",
-        className: "info-bar"
+        className: "color-picker",
+        style: {
+          position: "relative",
+          zIndex: "20"
+        }
       })
     ],
-    className: "ipod",
-    style: {
-      backgroundColor: skinColor
-    }
+    className: "ipod-shell",
+    style: shellSurfaceStyle
   });
 }
 

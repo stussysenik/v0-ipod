@@ -61,11 +61,14 @@ type ipodModel = {
 
 type appleFinish = {label: string, hex: string}
 
+type gradient = {from: string, via: string, to: string}
+
 type wheelColors = {
+  gradient: gradient,
+  border: string,
   labelColor: string,
-  borderColor: string,
   centerBorder: string,
-  centerGradient: string,
+  centerGradient: gradient,
 }
 
 type dispatchResult = {model: ipodModel, effects: array<string>}

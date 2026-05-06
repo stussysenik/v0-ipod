@@ -252,23 +252,54 @@ function parseFinishes(raw) {
   }
 }
 
+function parseGradient(d) {
+  return {
+    from: getStr(d, "from"),
+    via: getStr(d, "via"),
+    to: getStr(d, "to")
+  };
+}
+
 function parseWheelColors(raw) {
   let d = JSON.parse(raw);
-  if (typeof d === "object" && d !== null && !Array.isArray(d)) {
+  if (typeof d !== "object" || d === null || Array.isArray(d)) {
     return {
-      labelColor: getStr(d, "labelColor"),
-      borderColor: getStr(d, "borderColor"),
-      centerBorder: getStr(d, "centerBorder"),
-      centerGradient: getStr(d, "centerGradient")
-    };
-  } else {
-    return {
-      labelColor: "#FFFFFF",
-      borderColor: "#555555",
-      centerBorder: "#444444",
-      centerGradient: "#666666"
+      gradient: {
+        from: "#F5F5F7",
+        via: "#E8E8EA",
+        to: "#DCDCDC"
+      },
+      border: "#D1D1D6",
+      labelColor: "#8E8E93",
+      centerBorder: "#D1D1D6",
+      centerGradient: {
+        from: "#FFFFFF",
+        via: "#F0F0F2",
+        to: "#E5E5EA"
+      }
     };
   }
+  let match = d["gradient"];
+  let tmp;
+  tmp = typeof match === "object" && match !== null && !Array.isArray(match) ? parseGradient(match) : ({
+      from: "#F5F5F7",
+      via: "#E8E8EA",
+      to: "#DCDCDC"
+    });
+  let match$1 = d["centerGradient"];
+  let tmp$1;
+  tmp$1 = typeof match$1 === "object" && match$1 !== null && !Array.isArray(match$1) ? parseGradient(match$1) : ({
+      from: "#FFFFFF",
+      via: "#F0F0F2",
+      to: "#E5E5EA"
+    });
+  return {
+    gradient: tmp,
+    border: getStr(d, "border"),
+    labelColor: getStr(d, "labelColor"),
+    centerBorder: getStr(d, "centerBorder"),
+    centerGradient: tmp$1
+  };
 }
 
 function eventToTagData(event) {
@@ -628,6 +659,7 @@ export {
   parseIpModel,
   parseDispatchResult,
   parseFinishes,
+  parseGradient,
   parseWheelColors,
   eventToTagData,
   serializeModel,
