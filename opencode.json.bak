@@ -6,7 +6,7 @@
 			"name": "Self Hosted",
 			"options": {
 				"baseURL": "http://100.75.84.113:11435/v1",
-				"apiKeyEnv": "OPENCODE_API_KEY"
+				"apiKey": "founder-mode-unlocked"
 			},
 			"models": {
 				"model": {
