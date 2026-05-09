@@ -11,14 +11,14 @@ export function IpodGlassOverlay({ exportSafe = false }: { exportSafe?: boolean 
 		<>
 			{/* Primary surface reflection */}
 			<div
-				className="pointer-events-none absolute inset-0"
+				className="pointer-events-none absolute inset-0 z-50"
 				style={glassOverlay}
 				aria-hidden="true"
 			/>
 
 			{/* Soft top-left window reflection */}
 			<div
-				className="pointer-events-none absolute left-[5%] top-[4%] h-[40%] w-[50%] rounded-[20px] opacity-20"
+				className="pointer-events-none absolute left-[5%] top-[4%] h-[40%] w-[50%] rounded-[20px] opacity-20 z-50"
 				style={{
 					background: "linear-gradient(160deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0) 65%)",
 				}}
@@ -27,7 +27,7 @@ export function IpodGlassOverlay({ exportSafe = false }: { exportSafe?: boolean 
 
 			{/* Internal "LCD depth" vignette */}
 			<div
-				className="pointer-events-none absolute inset-0"
+				className="pointer-events-none absolute inset-0 z-50"
 				style={{
 					boxShadow: "inset 0 1px 4px rgba(0,0,0,0.15)",
 				}}

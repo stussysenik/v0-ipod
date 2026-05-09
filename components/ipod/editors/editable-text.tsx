@@ -138,7 +138,7 @@ export function EditableText({
 				<span
 					className={`block w-full ${
 						singleLine
-							? "overflow-hidden text-ellipsis whitespace-nowrap"
+							? "overflow-hidden whitespace-nowrap [text-overflow:clip] pr-1"
 							: "whitespace-normal break-words [overflow-wrap:anywhere] [hyphens:auto]"
 					}`}
 				>

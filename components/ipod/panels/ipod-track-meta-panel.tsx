@@ -100,11 +100,7 @@ export function IpodTrackMetaPanel({
 						className="max-w-full min-w-0"
 						editLabel="Edit artist"
 						dataTestId="track-artist-text"
-						animate={titlePreview || animateText}
-						preview={titlePreview || animateText}
-						captureReady={titleCaptureReady}
 						singleLine
-						staggerIndex={1}
 					/>
 				</div>,
 				{
@@ -130,11 +126,7 @@ export function IpodTrackMetaPanel({
 						className="max-w-full min-w-0"
 						editLabel="Edit album"
 						dataTestId="track-album-text"
-						animate={titlePreview || animateText}
-						preview={titlePreview || animateText}
-						captureReady={titleCaptureReady}
 						singleLine
-						staggerIndex={2}
 					/>
 				</div>,
 				{

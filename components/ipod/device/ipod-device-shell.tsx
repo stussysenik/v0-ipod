@@ -93,7 +93,7 @@ export function IPodDeviceShell({
 						className="pointer-events-none absolute inset-0"
 						style={{
 							borderRadius: preset.shell.radius,
-							boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7), inset 1px 0 0 rgba(255,255,255,0.2), inset -1px 0 0 rgba(255,255,255,0.2)",
+							boxShadow: "inset 0 1.5px 2px rgba(255,255,255,0.6), inset 0 3px 6px rgba(255,255,255,0.2), inset 0 -1.5px 2px rgba(0,0,0,0.4), inset 1.5px 0 3px rgba(255,255,255,0.25), inset -1.5px 0 3px rgba(0,0,0,0.15)",
 						}}
 						aria-hidden="true"
 					/>
@@ -146,7 +146,7 @@ export function IPodDeviceShell({
 					/>
 
 					{/* Screen Assembly with "Gasket" Gap */}
-					<div className="relative z-10 w-full rounded-[10px] bg-black/5 p-[1px] shadow-[0_0_0_0.5px_rgba(0,0,0,0.2),inset_0_1px_2px_rgba(0,0,0,0.3)]">
+					<div className="relative z-10 w-full rounded-[10px] bg-[#0A0A0A] p-[1.5px] shadow-[0_0_0_0.5px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(0,0,0,0.7),0_1px_1px_rgba(255,255,255,0.25)]">
 						{screen}
 					</div>
 

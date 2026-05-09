@@ -217,11 +217,11 @@ export function deriveWheelColors(caseHex: string): DerivedWheelColors {
 		},
 		border: "#D1D1D6",
 		labelColor: "#8E8E93",
-		centerBorder: "#D1D1D6",
+		centerBorder: "#A0A0A0",
 		centerGradient: {
-			from: "#FFFFFF",
-			via: "#F0F0F2",
-			to: "#E5E5EA",
+			from: "#DCDCDC",
+			via: "#C8C9CB",
+			to: "#B0B0B0",
 		},
 	};
 }
