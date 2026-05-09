@@ -19,6 +19,7 @@ interface EditableTextProps {
 	captureReady?: boolean;
 	onOverflowChange?: (overflow: boolean) => void;
 	singleLine?: boolean;
+	staggerIndex?: number;
 }
 
 export function EditableText({
@@ -33,6 +34,7 @@ export function EditableText({
 	captureReady = false,
 	onOverflowChange,
 	singleLine = false,
+	staggerIndex = 0,
 }: EditableTextProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [localValue, setLocalValue] = useState(value);
@@ -126,6 +128,7 @@ export function EditableText({
 					preview={preview || captureReady}
 					text={value}
 					onOverflowChange={onOverflowChange}
+					staggerIndex={staggerIndex}
 				/>
 			) : (
 				<span

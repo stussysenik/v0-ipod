@@ -14,6 +14,7 @@ interface MarqueeTextProps {
 	preview?: boolean;
 	captureReady?: boolean;
 	onOverflowChange?: (overflow: boolean) => void;
+	staggerIndex?: number;
 }
 
 interface MarqueeMeasurements {
@@ -35,6 +36,7 @@ export function MarqueeText({
 	preview = false,
 	captureReady = false,
 	onOverflowChange,
+	staggerIndex = 0,
 }: MarqueeTextProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const trackRef = useRef<HTMLDivElement>(null);
@@ -73,23 +75,16 @@ export function MarqueeText({
 
 	const overflow = measurements.contentWidth > measurements.containerWidth + 1;
 	const shouldAnimate = (preview || captureReady) && overflow;
-	const edgeFadeWidth = Math.max(
-		8,
-		Math.min(20, Math.round(measurements.containerWidth * 0.08)),
-	);
-	const edgeFadeShoulder = Math.max(6, Math.round(edgeFadeWidth * 0.68));
+	const edgeFadeWidth = 1.5;
+	const edgeFadeShoulder = 1;
 	const marqueeMask = overflow
 		? `linear-gradient(
 			to right,
 			transparent 0,
-			rgba(0, 0, 0, 0.14) ${Math.max(1, Math.round(edgeFadeWidth * 0.22))}px,
-			rgba(0, 0, 0, 0.46) ${Math.max(2, Math.round(edgeFadeWidth * 0.46))}px,
-			rgba(0, 0, 0, 0.8) ${edgeFadeShoulder}px,
+			rgba(0, 0, 0, 0.5) 0.5px,
 			black ${edgeFadeWidth}px,
 			black calc(100% - ${edgeFadeWidth}px),
-			rgba(0, 0, 0, 0.8) calc(100% - ${edgeFadeShoulder}px),
-			rgba(0, 0, 0, 0.46) calc(100% - ${Math.max(2, Math.round(edgeFadeWidth * 0.46))}px),
-			rgba(0, 0, 0, 0.14) calc(100% - ${Math.max(1, Math.round(edgeFadeWidth * 0.22))}px),
+			rgba(0, 0, 0, 0.5) calc(100% - 0.5px),
 			transparent 100%
 		)`
 		: "none";
@@ -120,7 +115,7 @@ export function MarqueeText({
 			startTime ??= timestamp;
 
 			const elapsedMs = timestamp - startTime;
-			const frame = getMarqueeFrame(measurements, elapsedMs);
+			const frame = getMarqueeFrame(measurements, elapsedMs, staggerIndex);
 			track.style.transform = `translateX(${frame.translateX}px)`;
 			container.dataset.marqueeElapsedMs = String(
 				Math.max(0, Math.round(elapsedMs)),
@@ -183,6 +178,15 @@ export function MarqueeText({
 				>
 					{text}
 				</span>
+				{overflow && (
+					<span
+						className="inline-block whitespace-nowrap"
+						aria-hidden="true"
+						style={{ paddingLeft: `${getMarqueeGapWidth(measurements.contentWidth, text.length)}px` }}
+					>
+						{text}
+					</span>
+				)}
 			</div>
 		</div>
 	);

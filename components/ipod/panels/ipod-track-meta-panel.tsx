@@ -74,6 +74,7 @@ export function IpodTrackMetaPanel({
 						captureReady={titleCaptureReady}
 						onOverflowChange={onTitleOverflowChange}
 						singleLine={!titlePreview && !animateText}
+						staggerIndex={0}
 					/>
 				</div>,
 				{
@@ -103,6 +104,7 @@ export function IpodTrackMetaPanel({
 						preview={titlePreview || animateText}
 						captureReady={titleCaptureReady}
 						singleLine
+						staggerIndex={1}
 					/>
 				</div>,
 				{
@@ -132,6 +134,7 @@ export function IpodTrackMetaPanel({
 						preview={titlePreview || animateText}
 						captureReady={titleCaptureReady}
 						singleLine
+						staggerIndex={2}
 					/>
 				</div>,
 				{
