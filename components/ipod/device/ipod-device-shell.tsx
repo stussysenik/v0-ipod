@@ -146,7 +146,12 @@ export function IPodDeviceShell({
 					/>
 
 					{/* Screen Assembly with "Gasket" Gap */}
-					<div className="relative z-10 w-full rounded-[10px] bg-[#0A0A0A] p-[1.5px] shadow-[0_0_0_0.5px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(0,0,0,0.7),0_1px_1px_rgba(255,255,255,0.25)]">
+					<div 
+						className="relative z-10 w-full bg-[#0A0A0A] shadow-[0_0_0_0.5px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(0,0,0,0.7),0_1px_1px_rgba(255,255,255,0.25)]"
+						style={{
+							borderRadius: preset.screen.outerRadius,
+						}}
+					>
 						{screen}
 					</div>
 

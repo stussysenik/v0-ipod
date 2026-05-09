@@ -214,30 +214,30 @@ export function IpodClickWheel({
 					}}
 				/>
 
-				{/* Center Button Cavity/Bezel - Extremely subtle for authentic look */}
+				{/* Center Button Cavity/Bezel - More pronounced for authentic look */}
 				<div
 					className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
 					style={{
-						width: wheelTokens.centerSize + 0.5,
-						height: wheelTokens.centerSize + 0.5,
-						background: isWhite ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.12)",
+						width: wheelTokens.centerSize + 2,
+						height: wheelTokens.centerSize + 2,
+						background: isWhite ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.3)",
 						boxShadow: isWhite 
-							? "inset 0 0.5px 1px rgba(0,0,0,0.1), 0 0.5px 0.5px rgba(255,255,255,0.5)"
-							: "inset 0 0.5px 1.5px rgba(0,0,0,0.3), 0 0.5px 0.5px rgba(255,255,255,0.08)",
+							? "inset 0 1px 1.5px rgba(0,0,0,0.12), 0 0.5px 0.5px rgba(255,255,255,0.6)"
+							: "inset 0 1px 2px rgba(0,0,0,0.5), 0 0.5px 0.5px rgba(255,255,255,0.12)",
 					}}
 				/>
 
 				{/* Button Labels */}
 				<button
 					aria-label="Menu"
-					className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent px-2 py-1 uppercase font-sans leading-none"
+					className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent px-2 py-1 uppercase font-sans leading-none transition-opacity hover:opacity-80"
 					data-testid="click-wheel-menu-button"
 					disabled={disabled}
 					style={{
 						top: wheelTokens.menuTopInset,
 						color: wheelLabelColor,
 						fontSize: wheelTokens.labelFontSize,
-						fontWeight: 600, // Slightly lighter weight for authentic look
+						fontWeight: 700, // Slightly bolder for 6th gen look
 						letterSpacing: wheelTokens.labelTracking,
 						fontFamily: WHEEL_FONT_FAMILY,
 					}}
@@ -254,7 +254,7 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-playpause-button"
-					className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center bg-transparent px-2 py-1 leading-none"
+					className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center bg-transparent px-2 py-1 leading-none transition-opacity hover:opacity-80"
 					style={{
 						bottom: wheelTokens.bottomInset,
 						color: wheelLabelColor,
@@ -296,7 +296,7 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-prev-button"
-					className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent px-1 py-2 leading-none"
+					className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent px-1 py-2 leading-none transition-opacity hover:opacity-80"
 					style={{
 						left: wheelTokens.sideInset,
 						color: wheelLabelColor,
@@ -331,7 +331,7 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-next-button"
-					className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent px-1 py-2 leading-none"
+					className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent px-1 py-2 leading-none transition-opacity hover:opacity-80"
 					style={{
 						right: wheelTokens.sideInset,
 						color: wheelLabelColor,
