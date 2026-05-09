@@ -10,6 +10,10 @@ import {
 	saveUiState,
 } from "@/lib/ipod-state/storage";
 import type { ExportProgress, ExportStatus } from "@/lib/export-utils";
+import {
+	type AnimatedExportQuality,
+	type AnimatedExportLayout,
+} from "@/lib/export/animated-export";
 import type { IpodWorkbenchModel, SongSnapshot } from "./model";
 import { buildPersistedUiState, buildSongSnapshot } from "./update";
 
@@ -160,6 +164,8 @@ export async function exportWorkbenchGif(
 		filename: string;
 		backgroundColor: string;
 		durationSeconds?: number;
+		quality?: AnimatedExportQuality;
+		layout?: AnimatedExportLayout;
 		onStatusChange: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
 	},
@@ -172,6 +178,8 @@ export async function exportWorkbenchGif(
 		backgroundColor: options.backgroundColor,
 		constrainedFrame: true,
 		durationSeconds: options.durationSeconds,
+		quality: options.quality,
+		layout: options.layout,
 		onStatusChange: options.onStatusChange,
 		onProgressChange: options.onProgressChange,
 	});
@@ -183,6 +191,8 @@ export async function exportWorkbenchMp4(
 		filename: string;
 		backgroundColor: string;
 		durationSeconds?: number;
+		quality?: AnimatedExportQuality;
+		layout?: AnimatedExportLayout;
 		onStatusChange: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
 	},
@@ -195,6 +205,8 @@ export async function exportWorkbenchMp4(
 		backgroundColor: options.backgroundColor,
 		constrainedFrame: true,
 		durationSeconds: options.durationSeconds,
+		quality: options.quality,
+		layout: options.layout,
 		onStatusChange: options.onStatusChange,
 		onProgressChange: options.onProgressChange,
 	});

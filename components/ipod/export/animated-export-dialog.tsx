@@ -1,7 +1,11 @@
 "use client";
 
-import { Film, Video, X } from "lucide-react";
-import type { AnimatedExportFormat } from "@/lib/export/animated-export";
+import { Film, Video, X, Zap, Gauge, Maximize, Square } from "lucide-react";
+import type {
+	AnimatedExportFormat,
+	AnimatedExportQuality,
+	AnimatedExportLayout,
+} from "@/lib/export/animated-export";
 import {
 	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	MAX_ANIMATED_EXPORT_DURATION_SECONDS,
@@ -13,11 +17,15 @@ interface AnimatedExportDialogProps {
 	open: boolean;
 	format: AnimatedExportFormat;
 	durationSeconds: number;
+	quality: AnimatedExportQuality;
+	layout: AnimatedExportLayout;
 	currentTimeLabel: string;
 	mp4Supported: boolean;
 	onClose: () => void;
 	onDurationChange: (value: number) => void;
 	onFormatChange: (format: AnimatedExportFormat) => void;
+	onQualityChange: (quality: AnimatedExportQuality) => void;
+	onLayoutChange: (layout: AnimatedExportLayout) => void;
 	onConfirm: () => void;
 }
 
@@ -25,11 +33,15 @@ export function AnimatedExportDialog({
 	open,
 	format,
 	durationSeconds,
+	quality,
+	layout,
 	currentTimeLabel,
 	mp4Supported,
 	onClose,
 	onDurationChange,
 	onFormatChange,
+	onQualityChange,
+	onLayoutChange,
 	onConfirm,
 }: AnimatedExportDialogProps) {
 	if (!open) {
@@ -102,6 +114,72 @@ export function AnimatedExportDialog({
 					</button>
 				</div>
 
+				<div className="mt-4 grid grid-cols-2 gap-4">
+					<div className="rounded-[24px] border border-black/10 bg-white/85 p-4">
+						<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
+							Quality
+						</p>
+						<div className="mt-3 flex flex-col gap-2">
+							<button
+								type="button"
+								onClick={() => onQualityChange("standard")}
+								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+									quality === "standard"
+										? "bg-[#111827] text-white"
+										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
+								}`}
+							>
+								<Gauge className="h-3.5 w-3.5" />
+								Standard
+							</button>
+							<button
+								type="button"
+								onClick={() => onQualityChange("pro")}
+								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+									quality === "pro"
+										? "bg-[#111827] text-white"
+										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
+								}`}
+							>
+								<Zap className="h-3.5 w-3.5" />
+								Pro (1080p)
+							</button>
+						</div>
+					</div>
+
+					<div className="rounded-[24px] border border-black/10 bg-white/85 p-4">
+						<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
+							Aspect Ratio
+						</p>
+						<div className="mt-3 flex flex-col gap-2">
+							<button
+								type="button"
+								onClick={() => onLayoutChange("original")}
+								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+									layout === "original"
+										? "bg-[#111827] text-white"
+										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
+								}`}
+							>
+								<Square className="h-3.5 w-3.5" />
+								Original
+							</button>
+							<button
+								type="button"
+								onClick={() => onLayoutChange("ig-story")}
+								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+									layout === "ig-story"
+										? "bg-[#111827] text-white"
+										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
+								}`}
+							>
+								<Maximize className="h-3.5 w-3.5" />
+								IG Story
+							</button>
+						</div>
+					</div>
+				</div>
+
 				<div className="mt-4 rounded-[24px] border border-black/10 bg-white/85 p-4">
 					<div className="flex items-end justify-between gap-4">
 						<div>
@@ -109,8 +187,7 @@ export function AnimatedExportDialog({
 								Duration
 							</p>
 							<p className="mt-1 text-sm text-[#374151]">
-								Choose roughly how long the exported
-								loop should run.
+								Up to 60 seconds of interaction.
 							</p>
 						</div>
 						<div className="text-right">
@@ -134,29 +211,6 @@ export function AnimatedExportDialog({
 						}
 						className="mt-4 w-full"
 					/>
-
-					<div className="mt-3 flex items-center justify-between gap-3">
-						<input
-							type="number"
-							min={MIN_ANIMATED_EXPORT_DURATION_SECONDS}
-							max={MAX_ANIMATED_EXPORT_DURATION_SECONDS}
-							step={1}
-							value={safeDuration}
-							onChange={(event) =>
-								onDurationChange(
-									Number(event.target.value),
-								)
-							}
-							className="w-24 rounded-xl border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-semibold text-[#111827] outline-none"
-						/>
-						<p className="text-right text-xs leading-5 text-[#6B7280]">
-							{format === "gif"
-								? "GIF keeps file size lower but uses fewer colors."
-								: mp4Supported
-									? "MP4 uses H.264 for a cleaner, more portable export."
-									: "MP4 needs a browser with WebCodecs + OffscreenCanvas support."}
-						</p>
-					</div>
 				</div>
 
 				<div className="mt-4 flex items-center justify-end gap-2">

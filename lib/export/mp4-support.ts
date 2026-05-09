@@ -1,8 +1,8 @@
 import {
 	DEFAULT_MP4_EXPORT_FPS,
-	MAX_MP4_FRAME_COUNT,
 	MP4_BITRATE_BITS_PER_SECOND,
 	MP4_CAPTURE_SCALES,
+	MAX_MP4_FRAME_COUNT,
 	buildAnimatedExportPlan,
 	type AnimatedExportPlan,
 } from "./animated-export";

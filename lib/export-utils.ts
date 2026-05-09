@@ -10,8 +10,13 @@ import {
 	GIF_CAPTURE_SCALE_BALANCED,
 	GIF_CAPTURE_SCALE_HIGH,
 	MAX_GIF_FRAME_COUNT,
+	MAX_MP4_FRAME_COUNT,
 	MP4_BITRATE_BITS_PER_SECOND,
+	GIF_QUALITY_CONFIG,
+	MP4_QUALITY_CONFIG,
 	buildAnimatedExportPlan,
+	type AnimatedExportQuality,
+	type AnimatedExportLayout,
 } from "@/lib/export/animated-export";
 import type {
 	EncoderWorkerRequestPayload,
@@ -1503,7 +1508,8 @@ export async function exportAnimatedGif(
 		filename: string;
 		backgroundColor?: string;
 		constrainedFrame?: boolean;
-		fps?: number;
+		quality?: AnimatedExportQuality;
+		layout?: AnimatedExportLayout;
 		durationSeconds?: number;
 		onStatusChange?: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
@@ -1513,11 +1519,16 @@ export async function exportAnimatedGif(
 		filename,
 		backgroundColor,
 		constrainedFrame = false,
-		fps = DEFAULT_GIF_EXPORT_FPS,
+		quality = "pro",
+		layout = "original",
 		durationSeconds,
 		onStatusChange,
 		onProgressChange,
 	} = options;
+	const config = GIF_QUALITY_CONFIG[quality];
+	const fps = config.fps;
+	const captureScale = config.scale;
+    // ... rest of implementation stays similar but uses config ...
 	const capabilities = detectExportCapabilities();
 	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
@@ -1578,10 +1589,6 @@ export async function exportAnimatedGif(
 		await waitForMs(100);
 		await waitForNextPaint();
 		applyAnimationFrameToClone(exportNode, 0);
-		const captureScale =
-			(durationSeconds ?? 0) > 12
-				? GIF_CAPTURE_SCALE_BALANCED
-				: GIF_CAPTURE_SCALE_HIGH;
 		const plan = buildAnimatedExportPlan(
 			exportNode.offsetWidth || exportNode.clientWidth || 1,
 			exportNode.offsetHeight || exportNode.clientHeight || 1,
@@ -1590,6 +1597,7 @@ export async function exportAnimatedGif(
 				fps,
 				maxFrameCount: MAX_GIF_FRAME_COUNT,
 				captureScale,
+				layout,
 			},
 		);
 		const frameDelayMs =
@@ -1918,7 +1926,8 @@ export async function exportAnimatedMp4(
 		filename: string;
 		backgroundColor?: string;
 		constrainedFrame?: boolean;
-		fps?: number;
+		quality?: AnimatedExportQuality;
+		layout?: AnimatedExportLayout;
 		durationSeconds?: number;
 		onStatusChange?: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
@@ -1928,11 +1937,17 @@ export async function exportAnimatedMp4(
 		filename,
 		backgroundColor,
 		constrainedFrame = false,
-		fps = DEFAULT_MP4_EXPORT_FPS,
+		quality = "pro",
+		layout = "original",
 		durationSeconds,
 		onStatusChange,
 		onProgressChange,
 	} = options;
+	const config = MP4_QUALITY_CONFIG[quality];
+	const fps = config.fps;
+	const captureScale = config.scale;
+	const bitrate = config.bitrate;
+
 	const capabilities = detectExportCapabilities();
 	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
@@ -1950,6 +1965,8 @@ export async function exportAnimatedMp4(
 		filename,
 		pipelineVersion: EXPORT_PIPELINE_VERSION,
 		constrainedFrame,
+		quality,
+		layout,
 		fps,
 		durationSeconds,
 		capabilities,
@@ -2002,18 +2019,31 @@ export async function exportAnimatedMp4(
 		await waitForMs(100);
 		await waitForNextPaint();
 		applyAnimationFrameToClone(exportNode, 0);
-		const strategy = await resolveMp4ExportStrategy({
-			durationSeconds,
-			fps,
-			targetWidth: exportNode.offsetWidth || exportNode.clientWidth || 1,
-			targetHeight: exportNode.offsetHeight || exportNode.clientHeight || 1,
+		
+		const plan = buildAnimatedExportPlan(
+			exportNode.offsetWidth || exportNode.clientWidth || 1,
+			exportNode.offsetHeight || exportNode.clientHeight || 1,
+			{
+				durationSeconds,
+				fps,
+				maxFrameCount: MAX_MP4_FRAME_COUNT,
+				captureScale,
+				layout,
+			},
+		);
+
+		const support = await resolveSupportedMp4EncoderConfig({
+			width: plan.captureWidth,
+			height: plan.captureHeight,
+			bitrate,
+			framerate: fps,
 		});
-		if (!strategy) {
+
+		if (!support) {
 			throw new Error(
 				"This browser does not support H.264 MP4 export for the current capture size",
 			);
 		}
-		const { plan, captureScale, encoder } = strategy;
 		const frameDurationUs = Math.round(plan.frameDelayMs * 1000);
 
 		onStatusChange?.("encoding");
@@ -2035,8 +2065,8 @@ export async function exportAnimatedMp4(
 				width: plan.captureWidth,
 				height: plan.captureHeight,
 				frameRate: fps,
-				bitrate: MP4_BITRATE_BITS_PER_SECOND,
-				codec: encoder.codec,
+				bitrate,
+				codec: support.codec,
 			});
 
 			const captureStartTime = performance.now();
@@ -2152,7 +2182,7 @@ export async function exportAnimatedMp4(
 							capturePath: "detached-html-to-image-mp4",
 							frameCount: plan.frameCount,
 							frameDurationUs,
-							codec: encoder.codec,
+							codec: support.codec,
 							captureScale,
 							captureDurationMs: plan.captureDurationMs,
 							captureWidth: plan.captureWidth,
@@ -2207,7 +2237,7 @@ export async function exportAnimatedMp4(
 					capturePath: "detached-html-to-image-mp4",
 					frameCount: plan.frameCount,
 					frameDurationUs,
-					codec: encoder.codec,
+					codec: support.codec,
 					captureScale,
 					captureDurationMs: plan.captureDurationMs,
 					captureWidth: plan.captureWidth,
@@ -2266,7 +2296,7 @@ export async function exportAnimatedMp4(
 				capturePath: "detached-html-to-image-mp4",
 				frameCount: plan.frameCount,
 				frameDurationUs,
-				codec: encoder.codec,
+				codec: support.codec,
 				captureScale,
 				captureDurationMs: plan.captureDurationMs,
 				captureWidth: plan.captureWidth,

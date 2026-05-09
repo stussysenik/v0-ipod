@@ -1,16 +1,30 @@
 export type AnimatedExportFormat = "gif" | "mp4";
+export type AnimatedExportQuality = "standard" | "pro";
+export type AnimatedExportLayout = "original" | "ig-story";
 
 export const MIN_ANIMATED_EXPORT_DURATION_SECONDS = 2;
 export const MAX_ANIMATED_EXPORT_DURATION_SECONDS = 60;
 export const DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS = 4;
-export const DEFAULT_GIF_EXPORT_FPS = 12;
-export const DEFAULT_MP4_EXPORT_FPS = 30;
+
+export const GIF_QUALITY_CONFIG = {
+	standard: { fps: 10, scale: 1.5 },
+	pro: { fps: 12, scale: 2.5 },
+} as const;
+
+export const MP4_QUALITY_CONFIG = {
+	standard: { fps: 12, bitrate: 12_000_000, scale: 2.0 },
+	pro: { fps: 30, bitrate: 24_000_000, scale: 3.375 },
+} as const;
+
+export const DEFAULT_GIF_EXPORT_FPS = GIF_QUALITY_CONFIG.standard.fps;
+export const DEFAULT_MP4_EXPORT_FPS = MP4_QUALITY_CONFIG.standard.fps;
+export const MP4_BITRATE_BITS_PER_SECOND = MP4_QUALITY_CONFIG.standard.bitrate;
+export const GIF_CAPTURE_SCALE_HIGH = GIF_QUALITY_CONFIG.pro.scale;
+export const GIF_CAPTURE_SCALE_BALANCED = GIF_QUALITY_CONFIG.standard.scale;
+export const MP4_CAPTURE_SCALES = [3.375, 2.5, 2.0, 1.5, 1.0] as const;
+
 export const MAX_GIF_FRAME_COUNT = 720;
 export const MAX_MP4_FRAME_COUNT = 1800;
-export const GIF_CAPTURE_SCALE_HIGH = 2.5;
-export const GIF_CAPTURE_SCALE_BALANCED = 1.5;
-export const MP4_CAPTURE_SCALES = [3.375, 2.5, 2.0, 1.5, 1.0] as const;
-export const MP4_BITRATE_BITS_PER_SECOND = 24_000_000;
 
 export interface AnimatedExportPlan {
 	targetWidth: number;
@@ -46,6 +60,7 @@ export function buildAnimatedExportPlan(
 		fps: number;
 		maxFrameCount: number;
 		captureScale: number;
+		layout?: AnimatedExportLayout;
 	},
 ): AnimatedExportPlan {
 	const safeTargetWidth = Math.max(1, Math.ceil(targetWidth));
@@ -63,11 +78,28 @@ export function buildAnimatedExportPlan(
 		),
 	);
 
+	let finalTargetWidth = safeTargetWidth;
+	let finalTargetHeight = safeTargetHeight;
+
+	if (options.layout === "ig-story") {
+		// Force 9:16 aspect ratio by expanding the canvas
+		const targetAspect = 9 / 16;
+		const currentAspect = safeTargetWidth / safeTargetHeight;
+
+		if (currentAspect > targetAspect) {
+			// Current is wider than 9:16, increase height
+			finalTargetHeight = safeTargetWidth / targetAspect;
+		} else {
+			// Current is taller than 9:16, increase width
+			finalTargetWidth = safeTargetHeight * targetAspect;
+		}
+	}
+
 	return {
-		targetWidth: safeTargetWidth,
-		targetHeight: safeTargetHeight,
-		captureWidth: ensureEvenDimension(safeTargetWidth * options.captureScale),
-		captureHeight: ensureEvenDimension(safeTargetHeight * options.captureScale),
+		targetWidth: Math.round(finalTargetWidth),
+		targetHeight: Math.round(finalTargetHeight),
+		captureWidth: ensureEvenDimension(finalTargetWidth * options.captureScale),
+		captureHeight: ensureEvenDimension(finalTargetHeight * options.captureScale),
 		captureDurationMs,
 		frameCount,
 		frameDelayMs: captureDurationMs / frameCount,

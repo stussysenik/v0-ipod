@@ -98,6 +98,8 @@ import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-p
 import {
 	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	type AnimatedExportFormat,
+	type AnimatedExportQuality,
+	type AnimatedExportLayout,
 	clampAnimatedExportDurationSeconds,
 } from "@/lib/export/animated-export";
 import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
@@ -204,6 +206,10 @@ export default function IpodClassicWorkbench() {
 	const [animatedExportDurationSeconds, setAnimatedExportDurationSeconds] = useState(
 		DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	);
+	const [animatedExportQuality, setAnimatedExportQuality] =
+		useState<AnimatedExportQuality>("pro");
+	const [animatedExportLayout, setAnimatedExportLayout] =
+		useState<AnimatedExportLayout>("original");
 	const [canMp4Export, setCanMp4Export] = useState(false);
 	const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
 
@@ -629,10 +635,17 @@ export default function IpodClassicWorkbench() {
 	const lastAnimatedExportRequestRef = useRef<{
 		format: AnimatedExportFormat;
 		durationSeconds: number;
+		quality: AnimatedExportQuality;
+		layout: AnimatedExportLayout;
 	} | null>(null);
 
 	const runAnimatedExport = useCallback(
-		async (format: AnimatedExportFormat, requestedDurationSeconds: number) => {
+		async (
+			format: AnimatedExportFormat,
+			requestedDurationSeconds: number,
+			quality: AnimatedExportQuality = "pro",
+			layout: AnimatedExportLayout = "original",
+		) => {
 			if (exportStatus !== "idle") return;
 			if (!exportTargetRef.current) return;
 
@@ -645,6 +658,8 @@ export default function IpodClassicWorkbench() {
 			lastAnimatedExportRequestRef.current = {
 				format,
 				durationSeconds,
+				quality,
+				layout,
 			};
 			setActiveExportKind(format);
 			setIsExportCapturing(true);
@@ -662,6 +677,8 @@ export default function IpodClassicWorkbench() {
 				console.info(`[${format}-export] starting animated export`, {
 					filename,
 					durationSeconds,
+					quality,
+					layout,
 				});
 				const result =
 					format === "gif"
@@ -671,6 +688,8 @@ export default function IpodClassicWorkbench() {
 									filename,
 									backgroundColor: bgColor,
 									durationSeconds,
+									quality,
+									layout,
 									onStatusChange:
 										setExportStatus,
 									onProgressChange:
@@ -683,6 +702,8 @@ export default function IpodClassicWorkbench() {
 									filename,
 									backgroundColor: bgColor,
 									durationSeconds,
+									quality,
+									layout,
 									onStatusChange:
 										setExportStatus,
 									onProgressChange:
@@ -744,6 +765,8 @@ export default function IpodClassicWorkbench() {
 					void runAnimatedExport(
 						request.format,
 						request.durationSeconds,
+						request.quality,
+						request.layout,
 					);
 				}
 			: null;
@@ -796,8 +819,19 @@ export default function IpodClassicWorkbench() {
 		if (!format) return;
 
 		setAnimatedExportDialogFormat(null);
-		void runAnimatedExport(format, animatedExportDurationSeconds);
-	}, [animatedExportDialogFormat, animatedExportDurationSeconds, runAnimatedExport]);
+		void runAnimatedExport(
+			format,
+			animatedExportDurationSeconds,
+			animatedExportQuality,
+			animatedExportLayout,
+		);
+	}, [
+		animatedExportDialogFormat,
+		animatedExportDurationSeconds,
+		animatedExportQuality,
+		animatedExportLayout,
+		runAnimatedExport,
+	]);
 
 	const handleHardwarePresetChange = useCallback(
 		(nextPreset: IpodHardwarePresetId) => {
@@ -2309,6 +2343,8 @@ export default function IpodClassicWorkbench() {
 					open={animatedExportDialogFormat !== null}
 					format={animatedExportDialogFormat ?? "gif"}
 					durationSeconds={animatedExportDurationSeconds}
+					quality={animatedExportQuality}
+					layout={animatedExportLayout}
 					currentTimeLabel={currentTimeLabel}
 					mp4Supported={canMp4Export}
 					onClose={() => setAnimatedExportDialogFormat(null)}
@@ -2320,6 +2356,8 @@ export default function IpodClassicWorkbench() {
 					onFormatChange={(format) =>
 						setAnimatedExportDialogFormat(format)
 					}
+					onQualityChange={setAnimatedExportQuality}
+					onLayoutChange={setAnimatedExportLayout}
 					onConfirm={handleAnimatedExportConfirm}
 				/>
 			</div>
