@@ -89,30 +89,44 @@ function floydSteinbergDither(
 			const errG = oldG - newG;
 			const errB = oldB - newB;
 
-			const spread = (dx: number, dy: number, weight: number) => {
-				const nx = x + dx;
-				const ny = y + dy;
-				if (nx >= 0 && nx < width && ny < height) {
-					const ni = (ny * width + nx) * 4;
-					data[ni] = Math.max(
-						0,
-						Math.min(255, data[ni] + errR * weight),
-					);
-					data[ni + 1] = Math.max(
-						0,
-						Math.min(255, data[ni + 1] + errG * weight),
-					);
-					data[ni + 2] = Math.max(
-						0,
-						Math.min(255, data[ni + 2] + errB * weight),
-					);
-				}
-			};
+			// Optimization: Pre-calculate weighted errors
+			const r7 = errR * (7 / 16);
+			const g7 = errG * (7 / 16);
+			const b7 = errB * (7 / 16);
+			const r3 = errR * (3 / 16);
+			const g3 = errG * (3 / 16);
+			const b3 = errB * (3 / 16);
+			const r5 = errR * (5 / 16);
+			const g5 = errG * (5 / 16);
+			const b5 = errB * (5 / 16);
+			const r1 = errR * (1 / 16);
+			const g1 = errG * (1 / 16);
+			const b1 = errB * (1 / 16);
 
-			spread(1, 0, 7 / 16);
-			spread(-1, 1, 3 / 16);
-			spread(0, 1, 5 / 16);
-			spread(1, 1, 1 / 16);
+			if (x + 1 < width) {
+				const i = idx + 4;
+				data[i] = Math.max(0, Math.min(255, data[i] + r7));
+				data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + g7));
+				data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + b7));
+			}
+			if (y + 1 < height) {
+				if (x > 0) {
+					const i = idx + (width - 1) * 4;
+					data[i] = Math.max(0, Math.min(255, data[i] + r3));
+					data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + g3));
+					data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + b3));
+				}
+				const i0 = idx + width * 4;
+				data[i0] = Math.max(0, Math.min(255, data[i0] + r5));
+				data[i0 + 1] = Math.max(0, Math.min(255, data[i0 + 1] + g5));
+				data[i0 + 2] = Math.max(0, Math.min(255, data[i0 + 2] + b5));
+				if (x + 1 < width) {
+					const i1 = idx + (width + 1) * 4;
+					data[i1] = Math.max(0, Math.min(255, data[i1] + r1));
+					data[i1 + 1] = Math.max(0, Math.min(255, data[i1 + 1] + g1));
+					data[i1 + 2] = Math.max(0, Math.min(255, data[i1 + 2] + b1));
+				}
+			}
 		}
 	}
 }
@@ -296,7 +310,7 @@ self.onmessage = async (event: MessageEvent<EncoderWorkerRequest>) => {
 					// Build global palette from sample frames
 					const samplePixels: number[] = [];
 					// Increase sample count for better color fidelity
-					const sampleCount = Math.min(frames.length, 12);
+					const sampleCount = Math.min(frames.length, 32);
 					for (let i = 0; i < sampleCount; i++) {
 						const idx = Math.floor(
 							(i / (sampleCount - 1 || 1)) *

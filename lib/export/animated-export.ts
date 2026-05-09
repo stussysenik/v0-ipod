@@ -1,16 +1,16 @@
 export type AnimatedExportFormat = "gif" | "mp4";
 
 export const MIN_ANIMATED_EXPORT_DURATION_SECONDS = 2;
-export const MAX_ANIMATED_EXPORT_DURATION_SECONDS = 20;
+export const MAX_ANIMATED_EXPORT_DURATION_SECONDS = 60;
 export const DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS = 4;
-export const DEFAULT_GIF_EXPORT_FPS = 10;
-export const DEFAULT_MP4_EXPORT_FPS = 12;
-export const MAX_GIF_FRAME_COUNT = 120;
-export const MAX_MP4_FRAME_COUNT = 96;
-export const GIF_CAPTURE_SCALE_HIGH = 2.0;
+export const DEFAULT_GIF_EXPORT_FPS = 12;
+export const DEFAULT_MP4_EXPORT_FPS = 30;
+export const MAX_GIF_FRAME_COUNT = 720;
+export const MAX_MP4_FRAME_COUNT = 1800;
+export const GIF_CAPTURE_SCALE_HIGH = 2.5;
 export const GIF_CAPTURE_SCALE_BALANCED = 1.5;
-export const MP4_CAPTURE_SCALES = [2.0, 1.5, 1.0] as const;
-export const MP4_BITRATE_BITS_PER_SECOND = 12_000_000;
+export const MP4_CAPTURE_SCALES = [3.375, 2.5, 2.0, 1.5, 1.0] as const;
+export const MP4_BITRATE_BITS_PER_SECOND = 24_000_000;
 
 export interface AnimatedExportPlan {
 	targetWidth: number;
