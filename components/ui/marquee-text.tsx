@@ -5,6 +5,7 @@ import {
 	getMarqueeCycleDurationMs,
 	getMarqueeFrame,
 	getMarqueeGapWidth,
+	type MarqueeMode,
 } from "@/lib/marquee";
 
 interface MarqueeTextProps {
@@ -15,6 +16,7 @@ interface MarqueeTextProps {
 	captureReady?: boolean;
 	onOverflowChange?: (overflow: boolean) => void;
 	staggerIndex?: number;
+	mode?: MarqueeMode;
 }
 
 interface MarqueeMeasurements {
@@ -37,6 +39,7 @@ export function MarqueeText({
 	captureReady = false,
 	onOverflowChange,
 	staggerIndex = 0,
+	mode = "reset",
 }: MarqueeTextProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const trackRef = useRef<HTMLDivElement>(null);
@@ -76,7 +79,6 @@ export function MarqueeText({
 	const overflow = measurements.contentWidth > measurements.containerWidth + 1;
 	const shouldAnimate = (preview || captureReady) && overflow;
 	const edgeFadeWidth = 1.5;
-	const edgeFadeShoulder = 1;
 	const marqueeMask = overflow
 		? `linear-gradient(
 			to right,
@@ -115,7 +117,7 @@ export function MarqueeText({
 			startTime ??= timestamp;
 
 			const elapsedMs = timestamp - startTime;
-			const frame = getMarqueeFrame(measurements, elapsedMs, staggerIndex);
+			const frame = getMarqueeFrame(measurements, elapsedMs, staggerIndex, mode);
 			track.style.transform = `translateX(${frame.translateX}px)`;
 			container.dataset.marqueeElapsedMs = String(
 				Math.max(0, Math.round(elapsedMs)),
@@ -133,7 +135,7 @@ export function MarqueeText({
 			delete container.dataset.marqueeElapsedMs;
 			track.style.transform = "translateX(0px)";
 		};
-	}, [measurements, shouldAnimate]);
+	}, [measurements, shouldAnimate, mode, staggerIndex]);
 
 	return (
 		<div
@@ -151,7 +153,7 @@ export function MarqueeText({
 			data-marquee-viewport-width={measurements.containerWidth || undefined}
 			data-marquee-content-width={measurements.contentWidth || undefined}
 			data-marquee-cycle-duration-ms={
-				shouldAnimate ? getMarqueeCycleDurationMs(measurements) : undefined
+				shouldAnimate ? getMarqueeCycleDurationMs(measurements, mode) : undefined
 			}
 		>
 			<span

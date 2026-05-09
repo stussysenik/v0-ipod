@@ -6,6 +6,7 @@ import { useFixedEditor } from "./fixed-editor";
 import { MarqueeText } from "@/components/ui/marquee-text";
 
 import type React from "react";
+import type { MarqueeMode } from "@/lib/marquee";
 
 interface EditableTextProps {
 	value: string;
@@ -20,6 +21,7 @@ interface EditableTextProps {
 	onOverflowChange?: (overflow: boolean) => void;
 	singleLine?: boolean;
 	staggerIndex?: number;
+	mode?: MarqueeMode;
 }
 
 export function EditableText({
@@ -35,6 +37,7 @@ export function EditableText({
 	onOverflowChange,
 	singleLine = false,
 	staggerIndex = 0,
+	mode,
 }: EditableTextProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [localValue, setLocalValue] = useState(value);
@@ -129,6 +132,7 @@ export function EditableText({
 					text={value}
 					onOverflowChange={onOverflowChange}
 					staggerIndex={staggerIndex}
+					mode={mode}
 				/>
 			) : (
 				<span

@@ -27,13 +27,35 @@ export function IpodArtworkPanel({
 	playClick,
 	onArtworkChange,
 }: IpodArtworkPanelProps) {
+	const artworkSrc = state.artwork || PLACEHOLDER_LOGO_SRC;
+
 	return (
 		<div className="flex h-full items-center justify-start">
 			{renderElement(
 				"artwork",
 				<div className="relative" style={{ perspective: 600 }}>
+					{/* Reflection effect */}
 					<div
-						className="relative cursor-pointer border border-[#B8B8B8] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
+						className="absolute left-0 top-full pointer-events-none -mt-[1px] opacity-[0.35]"
+						style={{
+							width: screenTokens.artworkSize,
+							height: screenTokens.artworkSize,
+							transform: "rotateY(20deg) scale(0.95) scaleY(-1)",
+							transformOrigin: "left top",
+							maskImage: "linear-gradient(to bottom, black 0%, transparent 40%)",
+							WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 40%)",
+							zIndex: 5,
+						}}
+					>
+						<img
+							src={artworkSrc}
+							alt=""
+							className="h-full w-full object-cover"
+						/>
+					</div>
+
+					<div
+						className="relative cursor-pointer border border-[#A1A1A1] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
 						style={{
 							width: screenTokens.artworkSize,
 							height: screenTokens.artworkSize,
@@ -46,14 +68,8 @@ export function IpodArtworkPanel({
 					>
 						{exportSafe ? (
 							<img
-								src={
-									state.artwork ||
-									PLACEHOLDER_LOGO_SRC
-								}
-								data-export-src={
-									state.artwork ||
-									PLACEHOLDER_LOGO_SRC
-								}
+								src={artworkSrc}
+								data-export-src={artworkSrc}
 								alt="Album artwork"
 								className="h-full w-full object-cover"
 							/>

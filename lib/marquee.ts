@@ -1,7 +1,10 @@
-export const MARQUEE_SPEED_PX_PER_SECOND = 28;
+export const MARQUEE_SPEED_PX_PER_SECOND = 35; // Authentic iPod Classic speed
 export const MARQUEE_LOOP_GAP_PX = 80;
-export const MARQUEE_START_DELAY_MS = 2200;
+export const MARQUEE_START_DELAY_MS = 2500; // 2.5s initial pause
+export const MARQUEE_END_PAUSE_MS = 1500; // 1.5s pause at the end before reset
 export const MARQUEE_STAGGER_MS = 600;
+
+export type MarqueeMode = "loop" | "reset";
 
 export interface MarqueeMetrics {
 	containerWidth: number;
@@ -16,44 +19,35 @@ export interface MarqueeFrame {
 	cycleDurationMs: number;
 }
 
-/**
- * Custom easing function that is linear in the middle but has soft entry/exit.
- * This provides an "organic" feel without making the text too fast to read.
- */
-function organicLinear(t: number): number {
-	// Simple ease-in-out quint for the first/last 15% of the movement
-	const shoulder = 0.15;
-	if (t < shoulder) {
-		return (1 / shoulder) * (t * t * (3 - 2 * (t / shoulder))) * shoulder * 0.5;
-	}
-	if (t > 1 - shoulder) {
-		const t2 = (t - (1 - shoulder)) / shoulder;
-		return (1 - shoulder) + (t2 * t2 * (3 - 2 * t2)) * shoulder;
-	}
-	// This is slightly complex, let's just use a high-quality ease-in-out-sine
-	// for simplicity and better "breathing" feel.
-	return 0.5 - Math.cos(t * Math.PI) / 2;
-}
-
 export function hasMarqueeOverflow(metrics: MarqueeMetrics): boolean {
 	return metrics.contentWidth > metrics.containerWidth + 1;
 }
 
-export function getMarqueeGapWidth(contentWidth: number, textLength: number): number {
+export function getMarqueeGapWidth(_contentWidth: number, _textLength: number): number {
 	return MARQUEE_LOOP_GAP_PX;
 }
 
-export function getMarqueeScrollDistance(metrics: MarqueeMetrics): number {
+export function getMarqueeScrollDistance(metrics: MarqueeMetrics, mode: MarqueeMode = "loop"): number {
+	if (mode === "reset") {
+		// In reset mode, we only scroll until the end of the text is visible
+		return Math.max(0, metrics.contentWidth - metrics.containerWidth);
+	}
 	// In a side-by-side loop, we scroll exactly one full "content + gap" cycle
 	return metrics.contentWidth + MARQUEE_LOOP_GAP_PX;
 }
 
-export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics): number {
-	const scrollDistance = getMarqueeScrollDistance(metrics);
+export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics, mode: MarqueeMode = "loop"): number {
+	const scrollDistance = getMarqueeScrollDistance(metrics, mode);
 	if (scrollDistance <= 0) return 0;
 
 	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-	// Loop cycle: Pause -> Organic Scroll -> (Seamless Transition)
+	
+	if (mode === "reset") {
+		// Reset cycle: Pause -> Scroll -> Pause -> Snap
+		return MARQUEE_START_DELAY_MS + scrollTime + MARQUEE_END_PAUSE_MS;
+	}
+	
+	// Loop cycle: Pause -> Scroll -> (Seamless Transition)
 	return MARQUEE_START_DELAY_MS + scrollTime;
 }
 
@@ -61,9 +55,10 @@ export function getMarqueeFrame(
 	metrics: MarqueeMetrics,
 	elapsedMs: number,
 	staggerIndex = 0,
+	mode: MarqueeMode = "loop",
 ): MarqueeFrame {
 	const overflow = hasMarqueeOverflow(metrics);
-	const scrollDistance = getMarqueeScrollDistance(metrics);
+	const scrollDistance = getMarqueeScrollDistance(metrics, mode);
 
 	if (!overflow || scrollDistance <= 0) {
 		return {
@@ -75,7 +70,7 @@ export function getMarqueeFrame(
 	}
 
 	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-	const cycleDurationMs = MARQUEE_START_DELAY_MS + scrollTime;
+	const cycleDurationMs = getMarqueeCycleDurationMs(metrics, mode);
 
 	// Apply field-level stagger
 	const adjustedElapsed = Math.max(0, elapsedMs - staggerIndex * MARQUEE_STAGGER_MS);
@@ -84,13 +79,16 @@ export function getMarqueeFrame(
 	let translateX = 0;
 
 	if (phase <= MARQUEE_START_DELAY_MS) {
-		// Registration phase: Text is anchored at the start
+		// Initial Pause
 		translateX = 0;
+	} else if (mode === "reset" && phase > MARQUEE_START_DELAY_MS + scrollTime) {
+		// Terminal Pause for reset mode
+		translateX = -scrollDistance;
 	} else {
-		// Content-first scroll phase: Seamlessly move to the next instance
+		// Scroll phase
 		const t = (phase - MARQUEE_START_DELAY_MS) / scrollTime;
-		const easedT = organicLinear(t);
-		translateX = -scrollDistance * easedT;
+		// Use linear for authentic feel
+		translateX = -scrollDistance * t;
 	}
 
 	return {
