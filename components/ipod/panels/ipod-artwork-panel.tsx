@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { ImageUpload } from "@/components/ipod/editors/image-upload";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
@@ -29,31 +30,49 @@ export function IpodArtworkPanel({
 }: IpodArtworkPanelProps) {
 	const artworkSrc = state.artwork || PLACEHOLDER_LOGO_SRC;
 
+	const reflectionHeight = useMemo(
+		() => Math.round(screenTokens.artworkSize * 0.45),
+		[screenTokens.artworkSize],
+	);
+
+	const reflectionMask = useMemo(
+		() =>
+			`linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)`,
+		[],
+	);
+
 	return (
 		<div className="flex h-full items-center justify-start">
 			{renderElement(
 				"artwork",
-				<div className="relative" style={{ perspective: 600 }}>
-					{/* Reflection effect */}
+				<div className="relative">
+					{/* Mirrored glass reflection */}
 					<div
-						className="absolute left-0 top-full pointer-events-none -mt-[1px] opacity-[0.35]"
+						className="pointer-events-none absolute left-0 top-full"
 						style={{
 							width: screenTokens.artworkSize,
-							height: screenTokens.artworkSize,
-							transform: "rotateY(20deg) scale(0.95) scaleY(-1)",
-							transformOrigin: "left top",
-							maskImage: "linear-gradient(to bottom, black 0%, transparent 40%)",
-							WebkitMaskImage: "linear-gradient(to bottom, black 0%, transparent 40%)",
-							zIndex: 5,
+							height: reflectionHeight,
+							overflow: "hidden",
+							maskImage: reflectionMask,
+							WebkitMaskImage: reflectionMask,
 						}}
+						aria-hidden="true"
 					>
 						<img
 							src={artworkSrc}
 							alt=""
-							className="h-full w-full object-cover"
+							style={{
+								position: "absolute",
+								top: 0,
+								width: "100%",
+								height: screenTokens.artworkSize,
+								transform: "scaleY(-1)",
+								transformOrigin: "center center",
+							}}
 						/>
 					</div>
 
+					{/* Primary artwork */}
 					<div
 						className="relative cursor-pointer border border-[#A1A1A1] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
 						style={{
@@ -61,8 +80,6 @@ export function IpodArtworkPanel({
 							height: screenTokens.artworkSize,
 							boxShadow: artworkShadow,
 							zIndex: 10,
-							transform: "rotateY(20deg) scale(0.95)",
-							transformOrigin: "left center",
 						}}
 						data-export-layer="artwork"
 					>
@@ -77,12 +94,7 @@ export function IpodArtworkPanel({
 							<ImageUpload
 								currentImage={state.artwork}
 								onImageChange={(artwork) => {
-									if (
-										!isInlineEditingEnabled
-									) {
-										return;
-									}
-
+									if (!isInlineEditingEnabled) return;
 									onArtworkChange(artwork);
 									playClick();
 								}}
@@ -97,3 +109,4 @@ export function IpodArtworkPanel({
 		</div>
 	);
 }
+

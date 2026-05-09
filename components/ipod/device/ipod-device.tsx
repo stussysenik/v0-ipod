@@ -18,17 +18,16 @@ export function IpodDevice({
 	wheel,
 }: IpodDeviceProps) {
 	const shellShadow = exportSafe
-		? "0 0 0 1px rgba(82,88,97,0.12), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
-		: "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.04)";
+		? "0 0 0 1px rgba(82,88,97,0.12), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.06)"
+		: "0 14px 28px -18px rgba(0,0,0,0.38), 0 0 0 1px rgba(88,94,102,0.08), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.06)";
 
 	return (
 		<div
-			className="relative flex flex-col items-center border border-white/45 transition-all duration-300"
+			className="relative flex flex-col items-center transition-all duration-300"
 			style={{
 				width: preset.shell.width,
 				height: preset.shell.height,
 				backgroundColor: skinColor,
-				borderColor: exportSafe ? "rgba(96,102,110,0.24)" : undefined,
 				boxShadow: shellShadow,
 				borderRadius: preset.shell.radius,
 				paddingLeft: preset.shell.paddingX,
@@ -38,15 +37,39 @@ export function IpodDevice({
 			}}
 			data-export-layer="shell"
 		>
+			{/* Machined chamfer — the key edge that reads as anodized aluminum */}
 			<div
-				className="pointer-events-none absolute inset-[1px]"
+				className="pointer-events-none absolute inset-0"
+				aria-hidden="true"
+				style={{
+					borderRadius: preset.shell.radius,
+					boxShadow:
+						"inset 0 0.5px 0 rgba(255,255,255,0.6), inset 0 -1px 2px rgba(0,0,0,0.12)",
+				}}
+			/>
+
+			{/* Specular sheen — single decisive hotspot, no competing gradients */}
+			<div
+				className="pointer-events-none absolute inset-[2px]"
 				aria-hidden="true"
 				style={{
 					borderRadius: preset.shell.innerRadius,
-					background: "radial-gradient(circle at 22% 10%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 18%, rgba(255,255,255,0) 42%, rgba(0,0,0,0.02) 100%)",
+					background:
+						"radial-gradient(ellipse at 24% 8%, rgba(255,255,255,0.14) 0%, transparent 50%)",
 				}}
 			/>
-			<div className="relative z-10 flex w-full justify-center">{screen}</div>
+
+			{/* Screen gasket — the dark physical gap between shell and display */}
+			<div
+				className="relative z-10 w-full bg-[#0F0F0F]"
+				style={{
+					borderRadius: preset.screen.outerRadius,
+					boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5)",
+				}}
+			>
+				{screen}
+			</div>
+
 			<div
 				className="relative z-10 flex justify-center"
 				style={{ marginTop: preset.shell.controlMarginTop }}

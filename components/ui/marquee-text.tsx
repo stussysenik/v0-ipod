@@ -78,16 +78,14 @@ export function MarqueeText({
 
 	const overflow = measurements.contentWidth > measurements.containerWidth + 1;
 	const shouldAnimate = (preview || captureReady) && overflow;
-	const edgeFadeWidth = 1.5;
+	const edgeFadeWidth = 0.5;
 	const marqueeMask = overflow
 		? `linear-gradient(
 			to right,
-			transparent 0,
-			rgba(0, 0, 0, 0.5) 0.5px,
+			rgba(0, 0, 0, 0.15) 0,
 			black ${edgeFadeWidth}px,
 			black calc(100% - ${edgeFadeWidth}px),
-			rgba(0, 0, 0, 0.5) calc(100% - 0.5px),
-			transparent 100%
+			rgba(0, 0, 0, 0.15) 100%
 		)`
 		: "none";
 

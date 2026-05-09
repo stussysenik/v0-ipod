@@ -366,7 +366,7 @@ export function IpodClickWheel({
 			</div>
 
 			<div
-				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-100 ${
+				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-100 ${
 					disabled
 						? "cursor-default"
 						: "cursor-pointer active:scale-[0.96] active:shadow-none"

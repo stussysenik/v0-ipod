@@ -39,16 +39,15 @@ export function IPodDeviceShell({
 	dataTestId,
 }: IPodDeviceShellProps) {
 	const shellShadow = exportSafe
-		? "0 8px 16px -8px rgba(0,0,0,0.4), 0 24px 48px -20px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.4)"
-		: "0 20px 48px -28px rgba(0,0,0,0.5), 0 42px 64px -44px rgba(0,0,0,0.38), inset 0 1.5px 0.5px rgba(255,255,255,0.45), inset 0 -1px 1px rgba(0,0,0,0.12)";
+		? "0 8px 20px -10px rgba(0,0,0,0.35)"
+		: "0 18px 40px -24px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
 	const shellSurfaceStyle = useMemo(
 		() => ({
 			backgroundColor: skinColor,
 			backgroundImage: [
-				"linear-gradient(158deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 16%, rgba(255,255,255,0) 32%)",
-				"linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.06) 100%)",
-				"radial-gradient(circle at 50% 102%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 40%)",
+				"linear-gradient(160deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 14%, rgba(255,255,255,0) 30%)",
+				"linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 60%, rgba(0,0,0,0.07) 100%)",
 			].join(", "),
 		}),
 		[skinColor],
@@ -63,17 +62,17 @@ export function IPodDeviceShell({
 			}}
 			data-testid={dataTestId}
 		>
-			{/* Ground contact shadows anchor the device in the preview scene. */}
+			{/* Ground contact shadow — anchors the device in scene */}
 			<div
-				className="pointer-events-none absolute left-1/2 bottom-[118px] h-[88px] w-[248px] -translate-x-1/2 rounded-full opacity-60 blur-[32px]"
+				className="pointer-events-none absolute left-1/2 bottom-[118px] h-[80px] w-[240px] -translate-x-1/2 rounded-full opacity-50 blur-[24px]"
 				style={{
-					background: "radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0) 78%)",
+					background: "radial-gradient(circle, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.14) 40%, rgba(0,0,0,0) 72%)",
 				}}
 				aria-hidden="true"
 			/>
 			<div className="relative p-12">
 				<div
-					className="relative flex flex-col items-center justify-between overflow-hidden border transition-all duration-300"
+					className="relative flex flex-col items-center justify-between overflow-hidden transition-all duration-300"
 					style={{
 						...shellSurfaceStyle,
 						width: preset.shell.width,
@@ -84,16 +83,15 @@ export function IPodDeviceShell({
 						paddingTop: preset.shell.paddingTop,
 						paddingBottom: preset.shell.paddingBottom,
 						boxShadow: shellShadow,
-						borderColor: "rgba(0,0,0,0.15)",
 					}}
 					data-export-layer="shell"
 				>
-					{/* Rim Highlight / Chamfer */}
+					{/* Machined chamfer — the decisive edge that reads as CNC aluminum */}
 					<div
 						className="pointer-events-none absolute inset-0"
 						style={{
 							borderRadius: preset.shell.radius,
-							boxShadow: "inset 0 1.5px 2px rgba(255,255,255,0.6), inset 0 3px 6px rgba(255,255,255,0.2), inset 0 -1.5px 2px rgba(0,0,0,0.4), inset 1.5px 0 3px rgba(255,255,255,0.25), inset -1.5px 0 3px rgba(0,0,0,0.15)",
+							boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.65), inset 0 -1px 2px rgba(0,0,0,0.14), inset -1px 0 2px rgba(0,0,0,0.06)",
 						}}
 						aria-hidden="true"
 					/>
@@ -119,37 +117,29 @@ export function IPodDeviceShell({
 						aria-hidden="true"
 					/>
 
+					{/* Environmental reflection — soft top-left light catch */}
 					<div
-						className="pointer-events-none absolute inset-[2.5px]"
+						className="pointer-events-none absolute left-[8%] top-[2%] h-[28%] w-[76%] rounded-[80px] opacity-22"
 						style={{
-							borderRadius: preset.shell.innerRadius,
-							boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 -18px 32px rgba(0,0,0,0.04)",
-						}}
-						aria-hidden="true"
-					/>
-
-					{/* Top-down environmental reflection */}
-					<div
-						className="pointer-events-none absolute left-[8%] top-[2.5%] h-[38%] w-[84%] rounded-[100px] opacity-40"
-						style={{
-							background: "linear-gradient(166deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 22%, rgba(255,255,255,0) 60%)",
+							background: "linear-gradient(162deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 18%, rgba(255,255,255,0) 50%)",
 						}}
 						aria-hidden="true"
 					/>
 
 					<div
-						className="pointer-events-none absolute inset-x-[6%] bottom-[5%] h-[24%] rounded-[80px] opacity-20"
+						className="pointer-events-none absolute inset-x-[6%] bottom-[5%] h-[16%] rounded-[60px] opacity-10"
 						style={{
-							background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0.12) 100%)",
+							background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.06) 70%, rgba(0,0,0,0.1) 100%)",
 						}}
 						aria-hidden="true"
 					/>
 
-					{/* Screen Assembly with "Gasket" Gap */}
+					{/* Screen gasket — the physical gap between shell and display */}
 					<div 
-						className="relative z-10 w-full bg-[#0A0A0A] shadow-[0_0_0_0.5px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(0,0,0,0.7),0_1px_1px_rgba(255,255,255,0.25)]"
+						className="relative z-10 w-full bg-[#0F0F0F]"
 						style={{
 							borderRadius: preset.screen.outerRadius,
+							boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5)",
 						}}
 					>
 						{screen}
