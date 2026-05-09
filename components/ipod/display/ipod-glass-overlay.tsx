@@ -3,8 +3,8 @@
 export function IpodGlassOverlay({ exportSafe = false }: { exportSafe?: boolean }) {
 	const glassOverlay = {
 		background: exportSafe
-			? "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.04) 100%)"
-			: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.05) 100%)",
+			? "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 45%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.06) 100%)"
+			: "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 35%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.08) 100%)",
 	};
 
 	return (
@@ -16,20 +16,33 @@ export function IpodGlassOverlay({ exportSafe = false }: { exportSafe?: boolean 
 				aria-hidden="true"
 			/>
 
-			{/* Soft top-left window reflection */}
+			{/* Iconic diagonal sharp highlight */}
 			<div
-				className="pointer-events-none absolute left-[5%] top-[4%] h-[40%] w-[50%] rounded-[20px] opacity-20 z-50"
+				className="pointer-events-none absolute inset-0 z-50 overflow-hidden"
+				aria-hidden="true"
+			>
+				<div
+					className="absolute h-[200%] w-[120%] -translate-x-[20%] -translate-y-[20%] rotate-[25deg]"
+					style={{
+						background: "linear-gradient(to right, transparent 0%, rgba(255,255,255,0.02) 48%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.02) 52%, transparent 100%)",
+					}}
+				/>
+			</div>
+
+			{/* Soft top-left window reflection - enlarged and softened */}
+			<div
+				className="pointer-events-none absolute left-[2%] top-[2%] h-[60%] w-[70%] rounded-[30px] opacity-25 z-50 blur-[1px]"
 				style={{
-					background: "linear-gradient(160deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0) 65%)",
+					background: "linear-gradient(160deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0) 70%)",
 				}}
 				aria-hidden="true"
 			/>
 
-			{/* Internal "LCD depth" vignette */}
+			{/* Internal "LCD depth" vignette - deepened for authentic 2007 feel */}
 			<div
 				className="pointer-events-none absolute inset-0 z-50"
 				style={{
-					boxShadow: "inset 0 1px 4px rgba(0,0,0,0.15)",
+					boxShadow: "inset 0 1px 6px rgba(0,0,0,0.2), inset 0 0 1px rgba(0,0,0,0.4)",
 				}}
 				aria-hidden="true"
 			/>

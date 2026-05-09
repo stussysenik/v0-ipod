@@ -84,10 +84,10 @@ export function IpodClickWheel({
 			};
 
 	const centerShadow = isWhite
-		? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
+		? "0 1px 2px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.95)"
 		: exportSafe
-			? "0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)"
-			: "0 4px 10px -12px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(92,96,104,0.04), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -1px 2px rgba(0,0,0,0.03)";
+			? "0 1px 2px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 1px rgba(0,0,0,0.05)"
+			: "0 2px 5px -1px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 2px rgba(0,0,0,0.03)";
 
 	useEffect(() => {
 		const wheel = wheelRef.current;
@@ -214,14 +214,16 @@ export function IpodClickWheel({
 					}}
 				/>
 
-				{/* Center Button Cavity/Bezel */}
+				{/* Center Button Cavity/Bezel - Extremely subtle for authentic look */}
 				<div
 					className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
 					style={{
-						width: wheelTokens.centerSize + 2,
-						height: wheelTokens.centerSize + 2,
-						background: "rgba(0,0,0,0.15)",
-						boxShadow: "inset 0 1px 2px rgba(0,0,0,0.3), 0 1px 1px rgba(255,255,255,0.1)",
+						width: wheelTokens.centerSize + 0.5,
+						height: wheelTokens.centerSize + 0.5,
+						background: isWhite ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.12)",
+						boxShadow: isWhite 
+							? "inset 0 0.5px 1px rgba(0,0,0,0.1), 0 0.5px 0.5px rgba(255,255,255,0.5)"
+							: "inset 0 0.5px 1.5px rgba(0,0,0,0.3), 0 0.5px 0.5px rgba(255,255,255,0.08)",
 					}}
 				/>
 
@@ -235,7 +237,7 @@ export function IpodClickWheel({
 						top: wheelTokens.menuTopInset,
 						color: wheelLabelColor,
 						fontSize: wheelTokens.labelFontSize,
-						fontWeight: 700,
+						fontWeight: 600, // Slightly lighter weight for authentic look
 						letterSpacing: wheelTokens.labelTracking,
 						fontFamily: WHEEL_FONT_FAMILY,
 					}}
@@ -390,8 +392,8 @@ export function IpodClickWheel({
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
 						background: exportSafe
-							? "linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 40%)"
-							: "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0) 70%)",
+							? "linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 45%)"
+							: "radial-gradient(circle at 50% 25%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 80%)",
 					}}
 					aria-hidden="true"
 				/>
@@ -399,8 +401,8 @@ export function IpodClickWheel({
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
 						background: exportSafe
-							? "linear-gradient(0deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 40%)"
-							: "radial-gradient(circle at 50% 80%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 60%)",
+							? "linear-gradient(0deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0) 45%)"
+							: "radial-gradient(circle at 50% 85%, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0) 65%)",
 					}}
 					aria-hidden="true"
 				/>

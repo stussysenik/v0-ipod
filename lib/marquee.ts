@@ -1,4 +1,4 @@
-export const MARQUEE_SPEED_PX_PER_SECOND = 35; // Authentic iPod Classic speed
+export const MARQUEE_SPEED_PX_PER_SECOND = 16; // Even slower for better readability
 export const MARQUEE_LOOP_GAP_PX = 80;
 export const MARQUEE_START_DELAY_MS = 2500; // 2.5s initial pause
 export const MARQUEE_END_PAUSE_MS = 1500; // 1.5s pause at the end before reset

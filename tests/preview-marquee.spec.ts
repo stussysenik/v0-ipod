@@ -59,7 +59,7 @@ test("preview button brings the title marquee back on the now playing screen", a
 	await page.getByTestId("preview-view-button").click();
 	const title = page.getByTestId("track-title-text");
 	await expect(title).toContainText("Sufjan Stevens");
-	await page.waitForTimeout(1200);
+	await page.waitForTimeout(3500);
 
 	const marqueeState = await title.evaluate((node) => {
 		const track = node.querySelector<HTMLElement>('[data-marquee-track="true"]');
@@ -129,7 +129,7 @@ test("preview button animates overflowing artist text too", async ({ page }) => 
 	await page.getByTestId("preview-view-button").click();
 	const artist = page.getByTestId("track-artist-text");
 	await expect(artist).toContainText("GENERATION");
-	await page.waitForTimeout(2500);
+	await page.waitForTimeout(4500);
 
 	const marqueeState = await artist.evaluate((node) => {
 		const track = node.querySelector<HTMLElement>('[data-marquee-track="true"]');

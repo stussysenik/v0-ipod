@@ -32,7 +32,7 @@ export function IpodMenuScene({
 			}}
 			data-testid="ipod-os-menu"
 		>
-			<div className="border-r border-[#AEB4BC] bg-[#FBFBF9] py-[6px]">
+			<div className="relative z-10 border-r border-[#AEB4BC] bg-[#FBFBF9] py-[6px] shadow-[1px_0_4px_rgba(0,0,0,0.12)]">
 				{osMenuItems.map((item, index) => {
 					const isActive = index === osMenuIndex;
 
