@@ -48,14 +48,14 @@ export function IpodDevice({
 				}}
 			/>
 
-			{/* Specular sheen — single decisive hotspot, no competing gradients */}
+			{/* Specular sheen — unified top-left light source */}
 			<div
 				className="pointer-events-none absolute inset-[2px]"
 				aria-hidden="true"
 				style={{
 					borderRadius: preset.shell.innerRadius,
 					background:
-						"radial-gradient(ellipse at 24% 8%, rgba(255,255,255,0.14) 0%, transparent 50%)",
+						"radial-gradient(ellipse at 24% 8%, rgba(255,255,255,0.16) 0%, transparent 55%)",
 				}}
 			/>
 

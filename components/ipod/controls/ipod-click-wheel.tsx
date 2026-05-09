@@ -52,14 +52,12 @@ export function IpodClickWheel({
 }: IpodClickWheelProps) {
 	const wheelRef = useRef<HTMLDivElement>(null);
 	const derived = skinColor ? deriveWheelColors(skinColor) : null;
-	const isWhite =
-		skinColor?.toLowerCase() === "#ffffff" || skinColor?.toLowerCase() === "#f2f2f2";
 
-	const wheelShadow = isWhite
-		? "0 2px 4px rgba(0,0,0,0.1), inset 0 1px 2px rgba(255,255,255,0.9)"
-		: exportSafe
-			? "0 0 0 1px rgba(92,96,104,0.12), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
-			: "0 14px 18px -18px rgba(0,0,0,0.24), 0 8px 14px -18px rgba(0,0,0,0.14), 0 0 0 1px rgba(92,96,104,0.08), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.05)";
+	// Unified top-left light source (~33% x, ~28% y) — all shadows and highlights
+	// share this direction so the wheel reads as a single physical object.
+	const wheelShadow = exportSafe
+		? "0 0 0 1px rgba(92,96,104,0.12), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
+		: "0 8px 18px -14px rgba(0,0,0,0.2), 0 4px 10px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(88,94,102,0.07), inset 0 1px 0 rgba(255,255,255,0.78), inset 1px 0 1px -0.5px rgba(255,255,255,0.15), inset -1px 0 1px -0.5px rgba(0,0,0,0.04), inset 0 -2px 2px -1px rgba(0,0,0,0.05)";
 
 	const wheelBorder = derived?.border ?? getSurfaceToken("wheel.border");
 	const wheelGradientFrom = derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
@@ -73,21 +71,16 @@ export function IpodClickWheel({
 	const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
 	const wheelTokens = preset.wheel;
 
-	const wheelSurfaceStyle = isWhite
-		? {
-				backgroundColor: "#e8e8e8",
-				backgroundImage:
-					"radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, transparent 60%)",
-			}
-		: {
-				backgroundImage: `linear-gradient(180deg, ${wheelGradientFrom}, ${wheelGradientVia}, ${wheelGradientTo})`,
-			};
+	// Wheel surface: same material as the case, just recessed.
+	// Gradient goes from lighter top (catching ambient light) to darker bottom (shadow).
+	const wheelSurfaceStyle = {
+		backgroundImage: `linear-gradient(175deg, ${wheelGradientFrom} 0%, ${wheelGradientVia} 55%, ${wheelGradientTo} 100%)`,
+	};
 
-	const centerShadow = isWhite
-		? "0 1px 2px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.95)"
-		: exportSafe
-			? "0 1px 2px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 1px rgba(0,0,0,0.05)"
-			: "0 2px 5px -1px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 2px rgba(0,0,0,0.03)";
+	// Directional: top-left catches light, bottom-right pools shadow
+	const centerShadow = exportSafe
+		? "0 1px 2px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1px 1px rgba(0,0,0,0.05)"
+		: "0 3px 8px -2px rgba(0,0,0,0.16), 0 1px 3px rgba(0,0,0,0.08), inset 1px 1px 1px -0.5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.07), inset 0 -1px 1px rgba(0,0,0,0.04)";
 
 	useEffect(() => {
 		const wheel = wheelRef.current;
@@ -180,51 +173,55 @@ export function IpodClickWheel({
 			<div
 				className="absolute inset-0 rounded-full border"
 				style={{
-					borderColor: isWhite ? "#d1d1d1" : wheelBorder,
+					borderColor: wheelBorder,
 					...wheelSurfaceStyle,
 					boxShadow: wheelShadow,
 				}}
 				data-export-layer="wheel"
 				data-testid="click-wheel"
 			>
-				{/* Fine Wheel Rim Highlight */}
+				{/* Directional rim light — top-left catches key light, bottom-right fades to shadow */}
 				<div
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
-						boxShadow: "inset 0 1px 0.5px rgba(255,255,255,0.45), inset 0 -0.5px 0.5px rgba(0,0,0,0.05)",
+						boxShadow:
+							"inset 0 1px 0.5px rgba(255,255,255,0.55), inset 1px 0 1px -0.5px rgba(255,255,255,0.2), inset -0.5px -0.5px 1px rgba(0,0,0,0.06)",
 					}}
 					aria-hidden="true"
 				/>
 
-				{/* Subsurface texture for material depth */}
+				{/* Subsurface micro-texture for tactile plastic feel */}
 				<div
-					className="pointer-events-none absolute inset-0 rounded-full opacity-[0.02] mix-blend-overlay"
+					className="pointer-events-none absolute inset-0 rounded-full opacity-[0.035] mix-blend-overlay"
 					style={{
-						backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+						backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
 					}}
 					aria-hidden="true"
 				/>
 
+				{/* Directional specular sheen — catches key light from top-left */}
 				<div
 					className="pointer-events-none absolute inset-[1px] rounded-full"
 					style={{
 						background: exportSafe
-							? "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%)"
-							: "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 70%)",
+							? "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 45%)"
+							: "radial-gradient(ellipse at 33% 28%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 35%, rgba(255,255,255,0) 60%, rgba(0,0,0,0.04) 85%, rgba(0,0,0,0.1) 100%)",
 					}}
+					aria-hidden="true"
 				/>
 
-				{/* Center Button Cavity/Bezel - More pronounced for authentic look */}
+				{/* Center Button Cavity — directional recess, not a black disc.
+				    Top-left catches light, bottom-right pools shadow. */}
 				<div
 					className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
 					style={{
 						width: wheelTokens.centerSize + 2,
 						height: wheelTokens.centerSize + 2,
-						background: isWhite ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.3)",
-						boxShadow: isWhite 
-							? "inset 0 1px 1.5px rgba(0,0,0,0.12), 0 0.5px 0.5px rgba(255,255,255,0.6)"
-							: "inset 0 1px 2px rgba(0,0,0,0.5), 0 0.5px 0.5px rgba(255,255,255,0.12)",
+						background: "transparent",
+						boxShadow:
+							"inset 0 1px 2px -0.5px rgba(0,0,0,0.18), inset 1px 0 1px -0.5px rgba(0,0,0,0.1), inset -0.5px -0.5px 1.5px rgba(0,0,0,0.22), 1px 1px 1px -0.5px rgba(255,255,255,0.25)",
 					}}
+					aria-hidden="true"
 				/>
 
 				{/* Button Labels */}
@@ -237,9 +234,11 @@ export function IpodClickWheel({
 						top: wheelTokens.menuTopInset,
 						color: wheelLabelColor,
 						fontSize: wheelTokens.labelFontSize,
-						fontWeight: 700, // Slightly bolder for 6th gen look
+						fontWeight: 700,
 						letterSpacing: wheelTokens.labelTracking,
 						fontFamily: WHEEL_FONT_FAMILY,
+						textShadow:
+							"0 -1px 0 rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.3)",
 					}}
 					type="button"
 					onClick={(event) => {
@@ -392,8 +391,8 @@ export function IpodClickWheel({
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
 						background: exportSafe
-							? "linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 45%)"
-							: "radial-gradient(circle at 50% 25%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 80%)",
+							? "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 45%)"
+							: "radial-gradient(ellipse at 33% 28%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0) 75%)",
 					}}
 					aria-hidden="true"
 				/>
@@ -402,7 +401,7 @@ export function IpodClickWheel({
 					style={{
 						background: exportSafe
 							? "linear-gradient(0deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0) 45%)"
-							: "radial-gradient(circle at 50% 85%, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0) 65%)",
+							: "radial-gradient(ellipse at 67% 72%, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.04) 40%, rgba(0,0,0,0) 65%)",
 					}}
 					aria-hidden="true"
 				/>
