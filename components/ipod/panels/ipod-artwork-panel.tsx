@@ -45,64 +45,77 @@ export function IpodArtworkPanel({
 		<div className="flex h-full items-center justify-start">
 			{renderElement(
 				"artwork",
-				<div className="relative">
-					{/* Authentic "Floor" Reflection - flat 2D image, perfectly aligned */}
+				<div 
+					className="relative"
+					style={{
+						perspective: "800px",
+						perspectiveOrigin: "center center",
+					}}
+				>
 					<div
-						className="pointer-events-none absolute left-0 top-full"
 						style={{
-							width: screenTokens.artworkSize,
-							height: reflectionHeight,
-							overflow: "hidden",
-							maskImage: reflectionMask,
-							WebkitMaskImage: reflectionMask,
+							transform: "rotateY(-14deg) rotateX(2deg) scale(0.92)",
+							transformStyle: "preserve-3d",
 						}}
-						aria-hidden="true"
 					>
-						<img
-							src={artworkSrc}
-							alt=""
+						{/* Authentic "Floor" Reflection - flat 2D image, perfectly aligned */}
+						<div
+							className="pointer-events-none absolute left-0 top-full"
 							style={{
-								position: "absolute",
-								top: 0,
-								width: "100%",
-								height: screenTokens.artworkSize,
-								transform: "scaleY(-1)",
-								transformOrigin: "center center",
-								objectFit: "cover",
+								width: screenTokens.artworkSize,
+								height: reflectionHeight,
+								overflow: "hidden",
+								maskImage: reflectionMask,
+								WebkitMaskImage: reflectionMask,
 							}}
-						/>
-					</div>
-
-					{/* Primary artwork */}
-					<div
-						className="relative cursor-pointer bg-[#F0F0EE] transition-transform active:scale-[0.985]"
-						style={{
-							width: screenTokens.artworkSize,
-							height: screenTokens.artworkSize,
-							boxShadow: `${artworkShadow}, 0 0 0 1px rgba(0,0,0,0.07)`,
-							zIndex: 10,
-						}}
-						data-export-layer="artwork"
-					>
-						{exportSafe ? (
+							aria-hidden="true"
+						>
 							<img
 								src={artworkSrc}
-								data-export-src={artworkSrc}
-								alt="Album artwork"
-								className="h-full w-full object-cover"
-							/>
-						) : (
-							<ImageUpload
-								currentImage={state.artwork}
-								onImageChange={(artwork) => {
-									if (!isInlineEditingEnabled) return;
-									onArtworkChange(artwork);
-									playClick();
+								alt=""
+								style={{
+									position: "absolute",
+									top: 0,
+									width: "100%",
+									height: screenTokens.artworkSize,
+									transform: "scaleY(-1)",
+									transformOrigin: "center center",
+									objectFit: "cover",
 								}}
-								disabled={!isInlineEditingEnabled}
-								className="h-full w-full object-cover"
 							/>
-						)}
+						</div>
+
+						{/* Primary artwork */}
+						<div
+							className="relative cursor-pointer bg-[#F0F0EE] transition-transform active:scale-[0.985]"
+							style={{
+								width: screenTokens.artworkSize,
+								height: screenTokens.artworkSize,
+								boxShadow: `${artworkShadow}, 0 0 0 1px rgba(0,0,0,0.08)`,
+								zIndex: 10,
+							}}
+							data-export-layer="artwork"
+						>
+							{exportSafe ? (
+								<img
+									src={artworkSrc}
+									data-export-src={artworkSrc}
+									alt="Album artwork"
+									className="h-full w-full object-cover"
+								/>
+							) : (
+								<ImageUpload
+									currentImage={state.artwork}
+									onImageChange={(artwork) => {
+										if (!isInlineEditingEnabled) return;
+										onArtworkChange(artwork);
+										playClick();
+									}}
+									disabled={!isInlineEditingEnabled}
+									className="h-full w-full object-cover"
+								/>
+							)}
+						</div>
 					</div>
 				</div>,
 				{ testId: "os-layout-artwork" },

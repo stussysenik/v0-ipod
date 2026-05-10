@@ -169,11 +169,12 @@ export function IpodTrackMetaPanel({
 			{renderElement(
 				"track-info",
 				<div
-					className="font-normal leading-none tracking-[0.01em] mt-auto mb-1"
+					className="font-normal leading-none tracking-[0.01em] mt-auto mb-[-24px]"
 					style={{
 						color: trackInfoColor,
 						fontSize: screenTokens.metaFontSize,
 						fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+						opacity: 0.9,
 					}}
 				>
 					<EditableTrackNumber

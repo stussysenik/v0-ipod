@@ -12,20 +12,33 @@ export function ScreenBattery({
 	level = screenChromeTokens.statusBar.battery.fillWidthRatio,
 }: ScreenBatteryProps) {
 	const batteryId = useId().replace(/:/g, "");
+	const tokens = screenChromeTokens.statusBar.battery;
 	const safeLevel = Math.min(Math.max(level, 0), 1);
 
-	const svgWidth = 23;
-	const svgHeight = 11;
-	const shellWidth = 20;
-	const shellHeight = 10;
-	const terminalWidth = 2;
-	const terminalHeight = 4;
+	// Dimensions from tokens
+	const shellWidth = tokens.width;
+	const shellHeight = tokens.height;
+	const terminalWidth = tokens.capWidth;
+	const terminalHeight = tokens.capHeight;
+	const fillInset = tokens.fillInset;
 
-	// The fill should be inside the shell's 1px border
-	const fillX = 1.5;
-	const fillY = 1.5;
-	const fillWidth = Math.max(0, (shellWidth - 2) * safeLevel);
-	const fillHeight = shellHeight - 2;
+	// Total SVG size needs to accommodate the terminal nub and stroke
+	const svgWidth = shellWidth + terminalWidth + 1; 
+	const svgHeight = shellHeight + 2; // Extra px for stroke safety
+
+	// Integer boundaries for crisp 1:1 rendering
+	const innerLeft = 1;
+	const innerTop = 1;
+	const innerWidth = shellWidth - 1; 
+	const innerHeight = shellHeight - 1; 
+
+	// The fill sits inside the inner bounding box, offset by fillInset
+	const fillX = innerLeft + fillInset; 
+	const fillY = innerTop + fillInset; 
+	const maxFillWidth = innerWidth - fillInset * 2; 
+	const fillHeight = innerHeight - fillInset * 2; 
+
+	const fillWidth = Math.max(0, maxFillWidth * safeLevel);
 
 	return (
 		<svg
@@ -46,25 +59,13 @@ export function ScreenBattery({
 					y2={fillY + fillHeight}
 					gradientUnits="userSpaceOnUse"
 				>
-					{/* Authentic 4-stop 3D Volumetric Apple Glass Green */}
-					<stop offset="0%" stopColor="#A2E94A" />
-					<stop offset="48%" stopColor="#71C31B" />
-					<stop offset="50%" stopColor="#449704" />
-					<stop offset="100%" stopColor="#5EBB0C" />
+					{/* Reference shows a very vibrant, slightly volumetric green */}
+					<stop offset="0%" stopColor="#A6E63A" />
+					<stop offset="100%" stopColor="#69C00D" />
 				</linearGradient>
 			</defs>
 
-			{/* Inner background (empty space) */}
-			<rect
-				x={0.5}
-				y={0.5}
-				width={shellWidth}
-				height={shellHeight}
-				rx={1}
-				fill="#FFFFFF"
-			/>
-
-			{/* The Fill - vibrant citrus green with sharp Apple-style gloss */}
+			{/* The Fill - vibrant citrus green "brick" */}
 			{fillWidth > 0 && (
 				<rect
 					x={fillX}
@@ -72,25 +73,30 @@ export function ScreenBattery({
 					width={fillWidth}
 					height={fillHeight}
 					fill={`url(#${batteryId}-fill)`}
+					rx={0.5}
 				/>
 			)}
 
-			{/* Battery Shell (1px crisp border) */}
+			{/* Battery Shell (prominent 1px border) */}
 			<rect
 				x={0.5}
-				y={0.5}
+				y={1.5}
 				width={shellWidth}
 				height={shellHeight}
-				rx={1}
-				stroke="#444444"
+				rx={1.5}
+				stroke="#666666"
 				strokeWidth={1}
 				fill="none"
 			/>
 
 			{/* Terminal (the nub) */}
-			<path
-				d={`M ${shellWidth + 0.5} ${(svgHeight - terminalHeight) / 2} h ${terminalWidth} v ${terminalHeight} h -${terminalWidth} Z`}
-				fill="#444444"
+			<rect
+				x={shellWidth + 0.5}
+				y={(shellHeight - terminalHeight) / 2 + 1.5}
+				width={terminalWidth}
+				height={terminalHeight}
+				fill="#666666"
+				rx={0.5}
 			/>
 		</svg>
 	);
