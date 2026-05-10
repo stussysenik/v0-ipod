@@ -152,6 +152,37 @@ sequenceDiagram
 - **[pnpm](https://pnpm.io)** 10+
 - **Git** for cloning the repository
 
+### Shell Productivity Tools
+
+This project ships with shell helpers for faster git workflows:
+
+| Tool | What It Does |
+|------|-------------|
+| **[forgit](https://github.com/wfxr/forgit)** | Interactive git (add, log, diff, checkout…) via fzf |
+| **[gh-repo-fzf](https://github.com/kavinvalli/gh-repo-fzf)** | Fuzzy-find and clone GitHub repos |
+
+**To enable forgit aliases (`ga`, `glo`, `gcb`, `gd`…) in this directory:**
+
+#### Option A: direnv (recommended, auto-activates on `cd`)
+```bash
+brew install direnv          # one-time
+echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+direnv allow                 # inside this project
+```
+
+#### Option B: Manual
+```bash
+source /opt/homebrew/opt/forgit/share/forgit/forgit.plugin.zsh
+```
+
+**To use gh-repo-fzf:**
+```bash
+gh repo-fzf    # fuzzy-find repos from your GitHub
+```
+
+> Both for `forgit` aliases and `gh repo-fzf` require `fzf` and `gh` to be installed:
+> `brew install fzf gh forgit && gh extension install kavinvalli/gh-repo-fzf`
+
 ### Installation
 
 ```bash

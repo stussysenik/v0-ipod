@@ -29,19 +29,20 @@
             gnumake
             
             # Code quality
-            nodePackages.typescript
-            nodePackages.typescript-language-server
+            typescript
+            typescript-language-server
             
             # Static analysis
-            nodePackages.eslint
+            eslint
             
             # Development helpers
             jq
             curl
             wget
             
-            # Portless for clean URLs
-            # (installed via npm globally or npx)
+            # Shell productivity
+            fzf
+            gh
           ];
 
           shellHook = ''
@@ -59,7 +60,16 @@
             echo "  npm run test     - Run Playwright tests"
             echo "  npm run lint     - Run ESLint"
             echo "  npm run validate - Run full validation suite"
+            echo "  ga              - git add (fzf picker)"
+            echo "  glo             - git log (fzf)"
+            echo "  gcb             - git checkout branch (fzf)"
+            echo "  gh repo-fzf     - fuzzy-find GitHub repos"
             echo ""
+
+            # Source forgit zsh plugin if available (homebrew)
+            if [ -f /opt/homebrew/opt/forgit/share/forgit/forgit.plugin.zsh ]; then
+              source /opt/homebrew/opt/forgit/share/forgit/forgit.plugin.zsh 2>/dev/null || true
+            fi
             
             # Install portless if not available
             if ! command -v portless &> /dev/null; then

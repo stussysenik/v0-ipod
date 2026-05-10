@@ -9,17 +9,24 @@ pkgs.mkShell {
     bun
     git
     gnumake
-    nodePackages.typescript
-    nodePackages.typescript-language-server
-    nodePackages.eslint
+    typescript
+    typescript-language-server
+    eslint
     jq
     curl
+    fzf
+    gh
   ];
 
   shellHook = ''
     echo "iPod Snapshot development shell"
     echo "Node: $(node --version)"
     echo "Bun: $(bun --version)"
+
+    # Source forgit zsh plugin if available (homebrew)
+    if [ -f /opt/homebrew/opt/forgit/share/forgit/forgit.plugin.zsh ]; then
+      source /opt/homebrew/opt/forgit/share/forgit/forgit.plugin.zsh 2>/dev/null || true
+    fi
   '';
 
   NODE_ENV = "development";
