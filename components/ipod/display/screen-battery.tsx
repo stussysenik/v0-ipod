@@ -26,17 +26,18 @@ export function ScreenBattery({
 	const svgWidth = shellWidth + terminalWidth + 1; 
 	const svgHeight = shellHeight + 2; // Extra px for stroke safety
 
-	// Integer boundaries for crisp 1:1 rendering
+	// Integer boundaries — align fill precisely inside the 1px stroke shell.
+	// Shell rect is at x=0.5 y=1.5; stroke inward offset is 0.5px on each side.
 	const innerLeft = 1;
-	const innerTop = 1;
-	const innerWidth = shellWidth - 1; 
+	const innerTop = 2;
+	const innerWidth = shellWidth - 1;
 	const innerHeight = shellHeight - 1; 
 
-	// The fill sits inside the inner bounding box, offset by fillInset
-	const fillX = innerLeft + fillInset; 
-	const fillY = innerTop + fillInset; 
-	const maxFillWidth = innerWidth - fillInset * 2; 
-	const fillHeight = innerHeight - fillInset * 2; 
+	// The fill occupies the entire shell interior with no inset gaps
+	const fillX = innerLeft; 
+	const fillY = innerTop; 
+	const maxFillWidth = innerWidth; 
+	const fillHeight = innerHeight; 
 
 	const fillWidth = Math.max(0, maxFillWidth * safeLevel);
 

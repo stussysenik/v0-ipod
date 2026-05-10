@@ -43,28 +43,20 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 					<div className="relative flex items-center justify-center">
 						<svg
 							aria-hidden="true"
-							className="shrink-0 drop-shadow-[0_1px_0_rgba(255,255,255,0.7)]"
-							viewBox="0 0 10 10"
-							style={{ width: 11, height: 11 }}
+							className="shrink-0 drop-shadow-[0_0.5px_0.5px_rgba(0,0,0,0.12)]"
+							viewBox="0 0 10 9"
+							style={{ width: 16, height: 14 }}
 						>
-							<defs>
-								<linearGradient id="play-grad" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="0%" stopColor="#6DB1E0" />
-									<stop offset="50%" stopColor="#3786BB" />
-									<stop offset="100%" stopColor="#2A6A95" />
-								</linearGradient>
-							</defs>
 							<path
-								d="M2.5 1.5L9.5 5.5L2.5 9.5Z"
-								fill="url(#play-grad)"
-								stroke="rgba(0,0,0,0.15)"
-								strokeWidth="0.5"
+								d="M1 0.5L9 4.5L1 8.5V0.5Z"
+								fill={statusBarTokens.playIndicator}
+								stroke="rgba(255,255,255,0.75)"
+								strokeWidth="0.75"
 								strokeLinejoin="round"
 							/>
-							{/* Soft top highlight */}
 							<path
-								d="M3.2 2.8L7.8 5.5L3.2 8.2V2.8Z"
-								fill="rgba(255,255,255,0.25)"
+								d="M2 1.8L7.5 4.5L2 7.2V1.8Z"
+								fill="rgba(255,255,255,0.35)"
 							/>
 						</svg>
 					</div>
