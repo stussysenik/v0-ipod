@@ -58,7 +58,7 @@ export function IpodPlaybackFooter({
 					},
 				)}
 			</div>
-			<div className="min-w-0 flex-1 px-[6px]">
+			<div className="min-w-0 flex-1 px-[4px]">
 				<IpodProgressBar
 					currentTime={state.currentTime}
 					duration={state.duration}
@@ -106,11 +106,11 @@ export function IpodPlaybackFooter({
 			</div>
 		</div>,
 		{
-			className: "absolute left-0 right-0",
+			className: "absolute 				left-0 right-0",
 			style: {
 				bottom: screenTokens.progressBottom,
 				height: screenTokens.progressHeight,
-				paddingInline: screenTokens.statusBarPaddingX + 2,
+				paddingInline: screenTokens.statusBarPaddingX,
 				paddingTop: screenTokens.progressPaddingTop,
 				background: screenChromeTokens.progress.footerBackground,
 				display: "flex",

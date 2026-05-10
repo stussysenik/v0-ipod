@@ -20,7 +20,6 @@ export function ScreenBattery({
 	const shellHeight = tokens.height;
 	const terminalWidth = tokens.capWidth;
 	const terminalHeight = tokens.capHeight;
-	const fillInset = tokens.fillInset;
 
 	// Total SVG size needs to accommodate the terminal nub and stroke
 	const svgWidth = shellWidth + terminalWidth + 1; 

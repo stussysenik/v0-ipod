@@ -92,6 +92,7 @@ export function IpodProgressBar({
 					background: "linear-gradient(to bottom, #fdfdfd, #f1f1f1 40%, #e5e5e5)",
 					boxShadow: "inset 0 1px 1px rgba(0,0,0,.15)",
 					touchAction: "none",
+					padding: "0 1px",
 				}}
 			>
 				<div
