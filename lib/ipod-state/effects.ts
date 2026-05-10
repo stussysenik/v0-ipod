@@ -1,10 +1,12 @@
 import type { MutableRefObject } from "react";
 import {
 	loadExportCounter,
+	loadLastExportedBatteryLevel,
 	loadMetadata,
 	loadSongSnapshot,
 	loadUiState,
 	saveExportCounter,
+	saveLastExportedBatteryLevel,
 	saveMetadata,
 	saveSongSnapshot,
 	saveUiState,
@@ -70,6 +72,7 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 			isNowPlayingEditable: false,
 			isPlaying: savedUi?.isPlaying ?? fallback.interaction.isPlaying,
 			batteryLevel: savedUi?.batteryLevel ?? fallback.interaction.batteryLevel,
+			batteryMode: savedUi?.batteryMode ?? fallback.interaction.batteryMode,
 		},
 	};
 }
@@ -95,9 +98,14 @@ export function savePersistedSongSnapshot(snapshot: SongSnapshot): void {
 	saveSongSnapshot(snapshot);
 }
 
+export function loadPersistedLastBattery(): number {
+	return loadLastExportedBatteryLevel();
+}
+
 export function saveWorkbenchSnapshot(model: IpodWorkbenchModel): SongSnapshot {
 	const snapshot = buildSongSnapshot(model);
 	savePersistedSongSnapshot(snapshot);
+	saveLastExportedBatteryLevel(model.interaction.batteryLevel);
 	return snapshot;
 }
 

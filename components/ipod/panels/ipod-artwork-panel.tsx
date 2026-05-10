@@ -31,22 +31,22 @@ export function IpodArtworkPanel({
 	const artworkSrc = state.artwork || PLACEHOLDER_LOGO_SRC;
 
 	const reflectionHeight = useMemo(
-		() => Math.round(screenTokens.artworkSize * 0.45),
+		() => Math.round(screenTokens.artworkSize * 0.30),
 		[screenTokens.artworkSize],
 	);
 
 	const reflectionMask = useMemo(
 		() =>
-			`linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)`,
+			`linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)`,
 		[],
 	);
 
 	return (
-		<div className="flex h-full items-center justify-start">
+		<div className="flex h-full items-start justify-start pt-1">
 			{renderElement(
 				"artwork",
 				<div className="relative">
-					{/* Mirrored glass reflection */}
+					{/* Authentic "Floor" Reflection - flat 2D image, perfectly aligned */}
 					<div
 						className="pointer-events-none absolute left-0 top-full"
 						style={{
@@ -68,17 +68,18 @@ export function IpodArtworkPanel({
 								height: screenTokens.artworkSize,
 								transform: "scaleY(-1)",
 								transformOrigin: "center center",
+								objectFit: "cover",
 							}}
 						/>
 					</div>
 
 					{/* Primary artwork */}
 					<div
-						className="relative cursor-pointer border border-[#A1A1A1] bg-[#F0F0EE] transition-transform active:scale-[0.985]"
+						className="relative cursor-pointer bg-[#F0F0EE] transition-transform active:scale-[0.985]"
 						style={{
 							width: screenTokens.artworkSize,
 							height: screenTokens.artworkSize,
-							boxShadow: artworkShadow,
+							boxShadow: `${artworkShadow}, 0 0 0 1px rgba(0,0,0,0.07)`,
 							zIndex: 10,
 						}}
 						data-export-layer="artwork"

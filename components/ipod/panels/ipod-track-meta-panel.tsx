@@ -87,7 +87,7 @@ export function IpodTrackMetaPanel({
 			{renderElement(
 				"artist",
 				<div
-					className="min-w-0 font-medium leading-[1.25] tracking-[-0.01em]"
+					className="min-w-0 font-normal leading-[1.25] tracking-[-0.01em]"
 					style={{
 						color: artistColor,
 						fontSize: screenTokens.artistFontSize,
@@ -117,7 +117,7 @@ export function IpodTrackMetaPanel({
 			{renderElement(
 				"album",
 				<div
-					className="min-w-0 font-medium leading-[1.25] tracking-[-0.01em]"
+					className="min-w-0 font-normal leading-[1.25] tracking-[-0.01em]"
 					style={{
 						color: albumColor,
 						fontSize: screenTokens.albumFontSize,
@@ -169,10 +169,11 @@ export function IpodTrackMetaPanel({
 			{renderElement(
 				"track-info",
 				<div
-					className="font-medium leading-none tracking-[0.01em]"
+					className="font-normal leading-none tracking-[0.01em]"
 					style={{
 						color: trackInfoColor,
 						fontSize: screenTokens.metaFontSize,
+						fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
 					}}
 				>
 					<EditableTrackNumber

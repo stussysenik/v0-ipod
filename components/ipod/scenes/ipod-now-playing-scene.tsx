@@ -45,7 +45,7 @@ export function IpodNowPlayingScene({
 	return (
 		<>
 			<div
-				className="grid animate-in slide-in-from-right-2 duration-200"
+				className="relative z-10 grid animate-in slide-in-from-right-2 duration-200"
 				style={{
 					height: `calc(100% - ${screenTokens.statusBarHeight + screenTokens.progressHeight + screenTokens.progressBottom + 2}px)`,
 					gridTemplateColumns: `${screenTokens.artworkColumnWidth}px minmax(0, 1fr)`,

@@ -38,11 +38,19 @@ export function IpodGlassOverlay({ exportSafe = false }: { exportSafe?: boolean 
 				aria-hidden="true"
 			/>
 
-			{/* Internal "LCD depth" vignette - deepened for authentic 2007 feel */}
+			{/* Environmental bottom-screen dual glare (simulating physical light sources reflecting on convex lens) */}
+			{!exportSafe && (
+				<div className="pointer-events-none absolute bottom-[10%] left-[8%] z-50 flex gap-4 opacity-40 blur-[2px]" aria-hidden="true">
+					<div className="h-6 w-12 rounded-[100%] bg-white/20" />
+					<div className="h-6 w-12 rounded-[100%] bg-white/20" />
+				</div>
+			)}
+
+			{/* Internal "LCD depth" vignette - deepened for authentic 2007 feel, especially top shadow for physical recess */}
 			<div
 				className="pointer-events-none absolute inset-0 z-50"
 				style={{
-					boxShadow: "inset 0 1px 6px rgba(0,0,0,0.2), inset 0 0 1px rgba(0,0,0,0.4)",
+					boxShadow: "inset 0 3px 8px -2px rgba(0,0,0,0.4), inset 0 0 2px rgba(0,0,0,0.5)",
 				}}
 				aria-hidden="true"
 			/>

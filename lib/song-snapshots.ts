@@ -35,6 +35,7 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 		osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
 		isPlaying: false,
 		batteryLevel: 1.0,
+		batteryMode: "manual",
 	},
 	playback: {
 		currentTime: 5,

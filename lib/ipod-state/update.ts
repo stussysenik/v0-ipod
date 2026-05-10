@@ -5,6 +5,7 @@ import {
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
 	DEFAULT_SELECTION_KIND,
 	SONG_SNAPSHOT_SCHEMA_VERSION,
+	type BatteryMode,
 	type IpodNowPlayingLayoutState,
 	type IpodWorkbenchModel,
 	type IpodUiState,
@@ -52,6 +53,7 @@ export type IpodWorkbenchAction =
 	| { type: "SET_IS_PLAYING"; payload: boolean }
 	| { type: "TOGGLE_IS_PLAYING" }
 	| { type: "SET_BATTERY_LEVEL"; payload: number }
+	| { type: "SET_BATTERY_MODE"; payload: BatteryMode }
 	| { type: "RESTORE_MODEL"; payload: IpodWorkbenchModel }
 	| { type: "RESET_MODEL" }
 	| { type: "APPLY_SONG_SNAPSHOT"; payload: SongSnapshot };
@@ -147,6 +149,7 @@ export function buildPersistedUiState(model: IpodWorkbenchModel): IpodUiState {
 		osNowPlayingLayout: model.interaction.osNowPlayingLayout,
 		isPlaying: model.interaction.isPlaying,
 		batteryLevel: model.interaction.batteryLevel,
+		batteryMode: model.interaction.batteryMode,
 	};
 }
 
@@ -187,6 +190,7 @@ export function applySongSnapshotToModel(
 			isNowPlayingEditable: false,
 			isPlaying: snapshot.ui.isPlaying ?? false,
 			batteryLevel: snapshot.ui.batteryLevel ?? 1.0,
+			batteryMode: snapshot.ui.batteryMode ?? "manual",
 		},
 	});
 }
@@ -397,6 +401,14 @@ export function ipodWorkbenchReducer(
 				interaction: {
 					...state.interaction,
 					batteryLevel: Math.min(Math.max(action.payload, 0), 1),
+				},
+			});
+		case "SET_BATTERY_MODE":
+			return normalizeModel({
+				...state,
+				interaction: {
+					...state.interaction,
+					batteryMode: action.payload,
 				},
 			});
 		case "RESTORE_MODEL":

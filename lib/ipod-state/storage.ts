@@ -1,4 +1,5 @@
 import type { SongMetadata } from "@/types/ipod";
+import type { BatteryMode } from "@/lib/ipod-state/model";
 import {
 	DEFAULT_INTERACTION_MODEL,
 	DEFAULT_MENU_INDEX,
@@ -25,6 +26,7 @@ const METADATA_STORAGE_KEY = "ipodSnapshotMetadata";
 const UI_STORAGE_KEY = "ipodSnapshotUiState";
 const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
 const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
+const LAST_EXPORTED_BATTERY_KEY = "ipodSnapshotLastBattery";
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 export function loadMetadata(): Partial<SongMetadata> | null {
@@ -71,6 +73,10 @@ function isSelectionKind(value: unknown): value is SnapshotSelectionKind {
 
 function isOsScreen(value: unknown): value is IpodOsScreen {
 	return value === "menu" || value === "now-playing";
+}
+
+function isBatteryMode(value: unknown): value is BatteryMode {
+	return value === "manual" || value === "solar";
 }
 
 export function isHexColor(value: unknown): value is string {
@@ -241,6 +247,8 @@ export function loadUiState(): Partial<IpodUiState> | null {
 			safe.osOriginalMenuSplit = osOriginalMenuSplit;
 		}
 		safe.osNowPlayingLayout = getNowPlayingLayout(candidate.osNowPlayingLayout);
+		if (isBatteryMode(candidate.batteryMode))
+			safe.batteryMode = candidate.batteryMode;
 		return safe;
 	} catch {
 		return null;
@@ -297,6 +305,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
 				partialUi.osNowPlayingLayout ?? DEFAULT_OS_NOW_PLAYING_LAYOUT,
 			isPlaying: partialUi.isPlaying ?? false,
 			batteryLevel: partialUi.batteryLevel ?? 1.0,
+			batteryMode: partialUi.batteryMode ?? "manual",
 		};
 
 		return {
@@ -358,6 +367,7 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
 	if (isSelectionKind(parsed.selectionKind)) safe.selectionKind = parsed.selectionKind;
 	if (isOsScreen(parsed.osScreen)) safe.osScreen = parsed.osScreen;
 	if (typeof parsed.batteryLevel === "number") safe.batteryLevel = parsed.batteryLevel;
+	if (isBatteryMode(parsed.batteryMode)) safe.batteryMode = parsed.batteryMode;
 
 	const rangeStartTime = getFiniteNonNegativeNumber(parsed.rangeStartTime);
 	if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
@@ -393,6 +403,33 @@ export function saveExportCounter(nextCounter: number): void {
 	try {
 		const safe = Math.max(0, Math.floor(nextCounter));
 		localStorage.setItem(EXPORT_COUNTER_STORAGE_KEY, String(safe));
+	} catch {
+		// Ignore quota errors
+	}
+}
+
+export function loadLastExportedBatteryLevel(): number {
+	try {
+		const raw = localStorage.getItem(LAST_EXPORTED_BATTERY_KEY);
+		if (!raw) {
+			const snapshot = loadSongSnapshot();
+			return snapshot?.ui.batteryLevel ?? 1.0;
+		}
+		const parsed = parseFloat(raw);
+		if (!Number.isFinite(parsed)) {
+			const snapshot = loadSongSnapshot();
+			return snapshot?.ui.batteryLevel ?? 1.0;
+		}
+		return Math.min(Math.max(parsed, 0.08), 1.0);
+	} catch {
+		return 1.0;
+	}
+}
+
+export function saveLastExportedBatteryLevel(level: number): void {
+	try {
+		const clamped = Math.min(Math.max(level, 0.08), 1.0);
+		localStorage.setItem(LAST_EXPORTED_BATTERY_KEY, String(clamped));
 	} catch {
 		// Ignore quota errors
 	}

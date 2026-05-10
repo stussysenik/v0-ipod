@@ -12,6 +12,7 @@ export type IpodHardwarePresetId =
 	| "classic-2008-silver";
 export type SnapshotSelectionKind = "moment" | "range";
 export type IpodOsScreen = "menu" | "now-playing";
+export type BatteryMode = "manual" | "solar";
 
 export const NOW_PLAYING_LAYOUT_ELEMENT_IDS = [
 	"artwork",
@@ -72,6 +73,7 @@ export interface IpodInteractionState {
 	isNowPlayingEditable: boolean;
 	isPlaying: boolean;
 	batteryLevel: number;
+	batteryMode: BatteryMode;
 }
 
 export interface IpodPlaybackSnapshot {
@@ -104,6 +106,7 @@ export interface IpodUiState {
 	osNowPlayingLayout: IpodNowPlayingLayoutState;
 	isPlaying: boolean;
 	batteryLevel: number;
+	batteryMode: BatteryMode;
 }
 
 export interface SongSnapshot {
@@ -145,6 +148,7 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			isNowPlayingEditable: false,
 			isPlaying: false,
 			batteryLevel: 1.0,
+			batteryMode: "manual",
 		},
 	};
 }

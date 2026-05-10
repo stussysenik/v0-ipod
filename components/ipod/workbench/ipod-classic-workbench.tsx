@@ -65,6 +65,7 @@ import {
 	loadCustomColors,
 	loadPersistedExportCounter,
 	loadPersistedSongSnapshot,
+	loadPersistedLastBattery,
 	loadPersistedWorkbenchModel,
 	persistCustomColors,
 	persistWorkbenchModel,
@@ -75,6 +76,7 @@ import {
 } from "@/lib/ipod-state/effects";
 import {
 	createInitialIpodWorkbenchModel,
+	type BatteryMode,
 	type IpodInteractionModel,
 	type IpodHardwarePresetId,
 	type IpodNowPlayingLayoutState,
@@ -250,6 +252,7 @@ export default function IpodClassicWorkbench() {
 	const osNowPlayingLayout = model.interaction.osNowPlayingLayout;
 	const isOsNowPlayingEditable = model.interaction.isNowPlayingEditable;
 	const batteryLevel = model.interaction.batteryLevel;
+	const batteryMode = model.interaction.batteryMode;
 	const isFlatView = viewMode === "flat";
 	const isFocusView = viewMode === "focus";
 	const isPreviewView = isPreviewViewMode(viewMode);
@@ -288,6 +291,9 @@ export default function IpodClassicWorkbench() {
 	}, []);
 	const setBatteryLevel = useCallback((nextLevel: number) => {
 		dispatch({ type: "SET_BATTERY_LEVEL", payload: nextLevel });
+	}, []);
+	const setBatteryMode = useCallback((nextMode: BatteryMode) => {
+		dispatch({ type: "SET_BATTERY_MODE", payload: nextMode });
 	}, []);
 
 	useEffect(() => {
@@ -441,19 +447,35 @@ export default function IpodClassicWorkbench() {
 		setRangeEndDraft(selectionKind === "range" ? formatTimecode(rangeEndTime) : "");
 	}, [selectionKind, rangeEndTime]);
 
+	const lastExportedBatteryRef = useRef(loadPersistedLastBattery());
+
 	useEffect(() => {
-		const updateIntervalMs = 10000;
-		const dischargePerUpdate = 0.001;
+		if (batteryMode !== "manual") return;
+		dispatch({ type: "SET_BATTERY_LEVEL", payload: lastExportedBatteryRef.current });
+	}, [batteryMode]);
 
+	useEffect(() => {
+		if (batteryMode !== "manual") return;
+		const DRAIN_PER_TICK = (1.0 - 0.08) / 6480;
 		const interval = setInterval(() => {
-			dispatch({
-				type: "SET_BATTERY_LEVEL",
-				payload: Math.max(0.05, model.interaction.batteryLevel - dischargePerUpdate),
-			});
-		}, updateIntervalMs);
-
+			const next = Math.max(0.08, batteryLevel - DRAIN_PER_TICK);
+			dispatch({ type: "SET_BATTERY_LEVEL", payload: next });
+		}, 10000);
 		return () => clearInterval(interval);
-	}, [model.interaction.batteryLevel]);
+	}, [batteryMode, batteryLevel]);
+
+	useEffect(() => {
+		if (batteryMode !== "solar") return;
+		const startLevel = lastExportedBatteryRef.current;
+		const interval = setInterval(() => {
+			const dur = model.metadata.duration;
+			if (dur <= 0) return;
+			const progress = Math.min(model.metadata.currentTime / dur, 1.0);
+			const level = startLevel - (startLevel - 0.08) * progress;
+			dispatch({ type: "SET_BATTERY_LEVEL", payload: Math.max(level, 0.08) });
+		}, 10000);
+		return () => clearInterval(interval);
+	}, [batteryMode, model.metadata.currentTime, model.metadata.duration]);
 
 	useEffect(() => {
 		return () => {
@@ -1081,6 +1103,7 @@ export default function IpodClassicWorkbench() {
 		});
 		playClick();
 		saveWorkbenchSnapshot(model);
+		lastExportedBatteryRef.current = model.interaction.batteryLevel;
 		showSoftNotice("Snapshot saved");
 	}, [model, playClick, showSoftNotice, resetInteractionChrome]);
 
@@ -1108,6 +1131,7 @@ export default function IpodClassicWorkbench() {
 		if (persisted) {
 			dispatch({ type: "APPLY_SONG_SNAPSHOT", payload: persisted });
 			savePersistedSongSnapshot(persisted);
+			lastExportedBatteryRef.current = persisted.ui.batteryLevel;
 			setShowSettings(false);
 			showSoftNotice("Snapshot loaded");
 			return;
@@ -1115,6 +1139,7 @@ export default function IpodClassicWorkbench() {
 
 		dispatch({ type: "APPLY_SONG_SNAPSHOT", payload: TEST_SONG_SNAPSHOT });
 		savePersistedSongSnapshot(TEST_SONG_SNAPSHOT);
+		lastExportedBatteryRef.current = TEST_SONG_SNAPSHOT.ui.batteryLevel;
 		setShowSettings(false);
 		showSoftNotice("Loaded sample snapshot");
 	}, [dispatch, playClick, showSoftNotice, resetInteractionChrome]);
@@ -1418,6 +1443,28 @@ export default function IpodClassicWorkbench() {
 												}
 												className="w-full h-1.5 bg-[#D6D8DC] rounded-lg appearance-none cursor-pointer accent-[#111827]"
 											/>
+										</div>
+										<div className="grid grid-cols-2 gap-1.5 mt-2 px-1">
+											{(
+												[
+													["manual", "Manual", "18h real-life drain"],
+													["solar", "Solar", "Depletes over one song"],
+												] as const
+											).map(([mode, label, hint]) => (
+												<button
+													key={mode}
+													type="button"
+													onClick={() => setBatteryMode(mode)}
+													title={hint}
+													className={`rounded-lg border px-1.5 py-1 text-[10px] font-semibold leading-tight transition-colors ${
+														batteryMode === mode
+															? "border-[#111827] bg-white/90 text-[#111827]"
+															: "border-[#BEC3CA] bg-white/65 text-[#6B7280] hover:bg-white/80"
+													}`}
+												>
+													{label}
+												</button>
+											))}
 										</div>
 									</div>
 
