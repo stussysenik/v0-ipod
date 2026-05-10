@@ -52,29 +52,42 @@ export function ScreenBattery({
 		>
 			<defs>
 				<linearGradient
-					id={`${batteryId}-fill`}
+					id={`${batteryId}-body`}
 					x1="0"
 					y1={fillY}
 					x2="0"
 					y2={fillY + fillHeight}
 					gradientUnits="userSpaceOnUse"
 				>
-					{/* Reference shows a very vibrant, slightly volumetric green */}
-					<stop offset="0%" stopColor="#A6E63A" />
-					<stop offset="100%" stopColor="#69C00D" />
+					<stop offset="0%" stopColor="#55C068" />
+					<stop offset="35%" stopColor="#41A457" />
+					<stop offset="100%" stopColor="#368E49" />
 				</linearGradient>
 			</defs>
 
-			{/* The Fill - vibrant citrus green "brick" */}
+			{/* The Fill — 3D volumetric green body */}
 			{fillWidth > 0 && (
-				<rect
-					x={fillX}
-					y={fillY}
-					width={fillWidth}
-					height={fillHeight}
-					fill={`url(#${batteryId}-fill)`}
-					rx={0.5}
-				/>
+				<>
+					<rect
+						x={fillX}
+						y={fillY}
+						width={fillWidth}
+						height={fillHeight}
+						fill={`url(#${batteryId}-body)`}
+						rx={0.5}
+					/>
+					{/* Top highlight for 3D bevel / liquid volume */}
+					{fillWidth >= 2 && (
+						<rect
+							x={fillX + 0.5}
+							y={fillY + 0.5}
+							width={fillWidth - 1}
+							height={Math.max(1, Math.ceil(fillHeight * 0.35))}
+							fill="rgba(255,255,255,0.22)"
+							rx={0.5}
+						/>
+					)}
+				</>
 			)}
 
 			{/* Battery Shell (prominent 1px border) */}

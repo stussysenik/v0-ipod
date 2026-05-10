@@ -31,6 +31,10 @@ export function IpodPlaybackFooter({
 	const timeFontSize = Math.max(9, screenTokens.metaFontSize + 1);
 	const timeWidth = Math.max(28, Math.round(timeFontSize * 3.2));
 
+	const batteryTokens = screenChromeTokens.statusBar.battery;
+	const batterySvgWidth = batteryTokens.width + batteryTokens.capWidth + 1;
+	const batteryHalfWidth = Math.ceil(batterySvgWidth / 2);
+
 	return renderElement(
 		"progress",
 		<div
@@ -42,7 +46,7 @@ export function IpodPlaybackFooter({
 				letterSpacing: "-0.01em",
 			}}
 		>
-			<div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
+			<div style={{ flexShrink: 0, width: timeWidth, textAlign: "left", paddingLeft: 2 }}>
 				{renderElement(
 					"elapsed-time",
 					<EditableTime
@@ -82,7 +86,7 @@ export function IpodPlaybackFooter({
 					)}
 				/>
 			</div>
-			<div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
+			<div style={{ flexShrink: 0, width: timeWidth, textAlign: "right", marginRight: batteryHalfWidth }}>
 				{renderElement(
 					"remaining-time",
 					<div className="flex items-center justify-end text-black">

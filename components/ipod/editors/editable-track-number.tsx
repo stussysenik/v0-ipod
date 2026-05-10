@@ -149,7 +149,7 @@ export function EditableTrackNumber({
 				/>
 			) : (
 				<span
-					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
+					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 -mx-0.5 transition-colors`}
 					data-testid="track-number-value"
 					onClick={
 						isTouchEditingPreferred
@@ -186,7 +186,7 @@ export function EditableTrackNumber({
 				/>
 			) : (
 				<span
-					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 transition-colors`}
+					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 -mx-0.5 transition-colors`}
 					data-testid="total-tracks-value"
 					onClick={
 						isTouchEditingPreferred

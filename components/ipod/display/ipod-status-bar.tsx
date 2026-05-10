@@ -38,24 +38,24 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 			>
 				<span>{showOsMenu ? "RE:MIX" : "Now Playing"}</span>
 			</div>
-			<div className="flex items-center gap-[6px]">
+			<div className="flex items-center gap-[5px]">
 				{!showOsMenu && (
-					<div className="relative flex items-center justify-center">
+					<div className="relative flex items-center justify-center" style={{ width: 14, height: 14 }}>
 						<svg
 							aria-hidden="true"
 							className="shrink-0 drop-shadow-[0_0.5px_0.5px_rgba(0,0,0,0.12)]"
-							viewBox="0 0 10 9"
-							style={{ width: 16, height: 14 }}
+							viewBox="0 0 8 7"
+							style={{ width: 14, height: 12 }}
 						>
 							<path
-								d="M1 0.5L9 4.5L1 8.5V0.5Z"
+								d="M1.5 0.5L6.5 3.5L1.5 6.5V0.5Z"
 								fill={statusBarTokens.playIndicator}
 								stroke="rgba(255,255,255,0.75)"
 								strokeWidth="0.75"
 								strokeLinejoin="round"
 							/>
 							<path
-								d="M2 1.8L7.5 4.5L2 7.2V1.8Z"
+								d="M2.5 1.5L5.5 3.5L2.5 5.5V1.5Z"
 								fill="rgba(255,255,255,0.35)"
 							/>
 						</svg>
