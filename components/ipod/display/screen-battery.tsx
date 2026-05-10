@@ -14,19 +14,17 @@ export function ScreenBattery({
 	const batteryId = useId().replace(/:/g, "");
 	const safeLevel = Math.min(Math.max(level, 0), 1);
 
-	// High-fidelity dimensions to match the reference image exactly
-	// Reference shows a clean outline with the fill sitting perfectly inside the strokes
-	const svgWidth = 18.5; // Width including the terminal
-	const svgHeight = 8;
-	const shellWidth = 16.5;
-	const shellHeight = 8;
-	const terminalWidth = 1.5;
-	const terminalHeight = 3.5;
+	const svgWidth = 23;
+	const svgHeight = 11;
+	const shellWidth = 20;
+	const shellHeight = 10;
+	const terminalWidth = 2;
+	const terminalHeight = 4;
 
 	// The fill should be inside the shell's 1px border
-	const fillX = 1;
-	const fillY = 1;
-	const fillWidth = (shellWidth - 2) * safeLevel;
+	const fillX = 1.5;
+	const fillY = 1.5;
+	const fillWidth = Math.max(0, (shellWidth - 2) * safeLevel);
 	const fillHeight = shellHeight - 2;
 
 	return (
@@ -43,72 +41,57 @@ export function ScreenBattery({
 				<linearGradient
 					id={`${batteryId}-fill`}
 					x1="0"
-					y1="1"
+					y1={fillY}
 					x2="0"
-					y2="7"
+					y2={fillY + fillHeight}
 					gradientUnits="userSpaceOnUse"
 				>
-					{/* Authentic 3D Volumetric Apple 'Battery Green' */}
-					<stop offset="0" stopColor="#E2F5B6" />
-					<stop offset="0.1" stopColor="#81D72B" />
-					<stop offset="0.5" stopColor="#4BB30B" />
-					<stop offset="0.55" stopColor="#6AC914" />
-					<stop offset="1" stopColor="#9DE43E" />
+					{/* Authentic 4-stop 3D Volumetric Apple Glass Green */}
+					<stop offset="0%" stopColor="#A2E94A" />
+					<stop offset="48%" stopColor="#71C31B" />
+					<stop offset="50%" stopColor="#449704" />
+					<stop offset="100%" stopColor="#5EBB0C" />
 				</linearGradient>
 			</defs>
 
-			{/* Battery Shell and Terminal as a single dark path */}
-			<path
-				d={`
-          M 1 0 
-          H ${shellWidth - 1} 
-          Q ${shellWidth} 0, ${shellWidth} 1 
-          V ${(svgHeight - terminalHeight) / 2} 
-          H ${shellWidth + terminalWidth - 0.5} 
-          Q ${shellWidth + terminalWidth} ${(svgHeight - terminalHeight) / 2}, ${shellWidth + terminalWidth} ${(svgHeight - terminalHeight) / 2 + 0.5} 
-          V ${(svgHeight + terminalHeight) / 2 - 0.5} 
-          Q ${shellWidth + terminalWidth} ${(svgHeight + terminalHeight) / 2}, ${shellWidth + terminalWidth - 0.5} ${(svgHeight + terminalHeight) / 2} 
-          H ${shellWidth} 
-          V ${shellHeight - 1} 
-          Q ${shellWidth} ${shellHeight}, ${shellWidth - 1} ${shellHeight} 
-          H 1 
-          Q 0 ${shellHeight}, 0 ${shellHeight - 1} 
-          V 1 
-          Q 0 0, 1 0 
-          Z
-        `}
-				fill="#555555"
-			/>
-
 			{/* Inner background (empty space) */}
 			<rect
-				x={fillX}
-				y={fillY}
-				width={shellWidth - 2}
-				height={fillHeight}
+				x={0.5}
+				y={0.5}
+				width={shellWidth}
+				height={shellHeight}
+				rx={1}
 				fill="#FFFFFF"
 			/>
 
 			{/* The Fill - vibrant citrus green with sharp Apple-style gloss */}
 			{fillWidth > 0 && (
-				<>
-					<rect
-						x={fillX}
-						y={fillY}
-						width={fillWidth}
-						height={fillHeight}
-						fill={`url(#${batteryId}-fill)`}
-					/>
-					{/* Horizontal highlight for 'glassy' depth - sharp Apple-style gloss */}
-					<rect
-						x={fillX}
-						y={fillY}
-						width={fillWidth}
-						height={fillHeight / 2}
-						fill="rgba(255,255,255,0.42)"
-					/>
-				</>
+				<rect
+					x={fillX}
+					y={fillY}
+					width={fillWidth}
+					height={fillHeight}
+					fill={`url(#${batteryId}-fill)`}
+				/>
 			)}
+
+			{/* Battery Shell (1px crisp border) */}
+			<rect
+				x={0.5}
+				y={0.5}
+				width={shellWidth}
+				height={shellHeight}
+				rx={1}
+				stroke="#444444"
+				strokeWidth={1}
+				fill="none"
+			/>
+
+			{/* Terminal (the nub) */}
+			<path
+				d={`M ${shellWidth + 0.5} ${(svgHeight - terminalHeight) / 2} h ${terminalWidth} v ${terminalHeight} h -${terminalWidth} Z`}
+				fill="#444444"
+			/>
 		</svg>
 	);
 }
