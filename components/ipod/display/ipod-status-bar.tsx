@@ -45,7 +45,7 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 							aria-hidden="true"
 							className="shrink-0 drop-shadow-[0_0.5px_0.5px_rgba(0,0,0,0.12)]"
 							viewBox="0 0 10 9"
-							style={{ width: 12, height: 11 }}
+							style={{ width: 14, height: 13 }}
 						>
 							<path
 								d="M1 0.5L9 4.5L1 8.5V0.5Z"

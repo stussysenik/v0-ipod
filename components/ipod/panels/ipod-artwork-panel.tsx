@@ -42,7 +42,7 @@ export function IpodArtworkPanel({
 	);
 
 	return (
-		<div className="flex h-full items-start justify-start pt-1">
+		<div className="flex h-full items-center justify-start">
 			{renderElement(
 				"artwork",
 				<div className="relative">

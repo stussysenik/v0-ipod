@@ -48,11 +48,12 @@ export function ScreenBattery({
 					y2="7"
 					gradientUnits="userSpaceOnUse"
 				>
-					{/* Authentic Apple 'Battery Green' - vibrant citrus green with sharp transition */}
-					<stop offset="0" stopColor="#96E14B" />
-					<stop offset="0.45" stopColor="#7CD92F" />
-					<stop offset="0.5" stopColor="#5BB81A" />
-					<stop offset="1" stopColor="#45A00D" />
+					{/* Authentic 3D Volumetric Apple 'Battery Green' */}
+					<stop offset="0" stopColor="#E2F5B6" />
+					<stop offset="0.1" stopColor="#81D72B" />
+					<stop offset="0.5" stopColor="#4BB30B" />
+					<stop offset="0.55" stopColor="#6AC914" />
+					<stop offset="1" stopColor="#9DE43E" />
 				</linearGradient>
 			</defs>
 

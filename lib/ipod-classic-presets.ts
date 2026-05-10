@@ -94,8 +94,8 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		screen: {
 			frameWidth: 320,
 			frameHeight: 240,
-			outerRadius: 8,
-			innerRadius: 6,
+			outerRadius: 6,
+			innerRadius: 5,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -150,8 +150,8 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		screen: {
 			frameWidth: 308, // More balanced width
 			frameHeight: 231,
-			outerRadius: 8,
-			innerRadius: 6,
+			outerRadius: 6,
+			innerRadius: 5,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -206,8 +206,8 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		screen: {
 			frameWidth: 308,
 			frameHeight: 231,
-			outerRadius: 8,
-			innerRadius: 6,
+			outerRadius: 6,
+			innerRadius: 5,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -262,8 +262,8 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		screen: {
 			frameWidth: 308,
 			frameHeight: 231,
-			outerRadius: 8,
-			innerRadius: 6,
+			outerRadius: 6,
+			innerRadius: 5,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -318,8 +318,8 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		screen: {
 			frameWidth: 320,
 			frameHeight: 240,
-			outerRadius: 8,
-			innerRadius: 6,
+			outerRadius: 6,
+			innerRadius: 5,
 			statusBarHeight: 17,
 			statusBarPaddingX: 8,
 			contentHeight: 134,
