@@ -2,7 +2,7 @@
 
 ## 1. Wire the canonical Figma file
 - [ ] 1.1 Update `figma.config.json` fileKey from `PLACEHOLDER_FILE_KEY` to `UEUmBeQrbJd5gjbUennIg3`.
-- [ ] 1.2 Verify `bun run figma:check-token` reaches the live file.
+- [ ] 1.2 Verify `pnpm figma:check-token` reaches the live file.
 - [ ] 1.3 Add a pre-merge test that fails if `figma.config.json` contains `PLACEHOLDER_FILE_KEY`.
 
 ## 2. Figma foundations bootstrap
@@ -17,7 +17,7 @@
 - [ ] 2.9 Provision `Motion` and `Material` collections as stubs (filled in C4).
 - [ ] 2.10 Write `design-tokens/figma-id-map.json` — stable token-path → Figma Variable ID manifest.
 - [ ] 2.11 Add a "Bootstrap file" button to the plugin UI that calls the same underlying library as the CLI.
-- [ ] 2.12 Re-run test: running `bun run figma:bootstrap` twice on the same file produces zero new nodes.
+- [ ] 2.12 Re-run test: running `pnpm figma:bootstrap` twice on the same file produces zero new nodes.
 
 ## 3. DTCG token pipeline
 - [ ] 3.1 Write `scripts/tokens-extract.ts` — Figma Variables → `design-tokens/tokens.json` (DTCG format).
@@ -64,26 +64,26 @@
 - [ ] 7.6 Ship a placeholder SVG reference photo until `[STICKY:reference-photos]` is resolved.
 
 ## 8. Environment portability gate
-- [ ] 8.1 Write `scripts/setup.ts` — idempotent one-shot setup covering `bun install`, `.env.local` bootstrap, `figma.config.json` validation, `figma:check-token`, `tokens:extract`, `tokens:build`, `figma/plugin` build, `storybook:build`.
+- [ ] 8.1 Write `scripts/setup.ts` — idempotent one-shot setup covering `pnpm install`, `.env.local` bootstrap, `figma.config.json` validation, `figma:check-token`, `tokens:extract`, `tokens:build`, `figma/plugin` build, `storybook:build`.
 - [ ] 8.2 Print a green checkmark summary on success; each failure prints a one-line remedy pointing at the runbook.
 - [ ] 8.3 Add `package.json` script: `setup`.
-- [ ] 8.4 Add a CI job in `.github/workflows/figma-bridge.yml` that runs `bun run setup` on a throwaway container.
+- [ ] 8.4 Add a CI job in `.github/workflows/figma-bridge.yml` that runs `pnpm setup` on a throwaway container.
 - [ ] 8.5 Fail the CI job if any step of `setup` exits non-zero.
-- [ ] 8.6 Document the workflow in `ENGINEERING_SETUP.md` and `README.md` ("Getting started → run `bun run setup`").
+- [ ] 8.6 Document the workflow in `ENGINEERING_SETUP.md` and `README.md` ("Getting started → run `pnpm setup`").
 
 ## 9. Documentation
 - [ ] 9.1 Insert "Phase 0 — Foundations bootstrap (C1)" above the existing Phase 1 in `docs/figma/runbook.md`.
 - [ ] 9.2 Replace `docs/figma/file-manifest.md` with the page skeleton from the design spec §6.1.
 - [ ] 9.3 Write `docs/figma/provenance.md` — model, CLI commands, rules.
 - [ ] 9.4 Write `docs/figma/dimensional-fidelity.md` — schema, mm-to-px derivation, frozen-by-default rule.
-- [ ] 9.5 Update `ENGINEERING_SETUP.md` to describe the `bun run setup` flow.
+- [ ] 9.5 Update `ENGINEERING_SETUP.md` to describe the `pnpm setup` flow.
 
 ## 10. Validation and handoff
-- [ ] 10.1 `bun run setup` on a clean checkout completes with a green checkmark and no manual intervention other than `FIGMA_TOKEN`.
-- [ ] 10.2 `bun run figma:bootstrap` against the live file creates the full page skeleton and populates seed content.
-- [ ] 10.3 `bun run tokens:extract && bun run tokens:build` produces `globals.css` + `tailwind.config.ts` that render the app visually identical to the current state.
-- [ ] 10.4 `bun run provenance:show color.surface.raised` returns a non-empty history.
-- [ ] 10.5 `bun run design:back-to-figma click-wheel` creates a hold and opens the frame.
+- [ ] 10.1 `pnpm setup` on a clean checkout completes with a green checkmark and no manual intervention other than `FIGMA_TOKEN`.
+- [ ] 10.2 `pnpm figma:bootstrap` against the live file creates the full page skeleton and populates seed content.
+- [ ] 10.3 `pnpm tokens:extract && pnpm tokens:build` produces `globals.css` + `tailwind.config.ts` that render the app visually identical to the current state.
+- [ ] 10.4 `pnpm provenance:show color.surface.raised` returns a non-empty history.
+- [ ] 10.5 `pnpm design:back-to-figma click-wheel` creates a hold and opens the frame.
 - [ ] 10.6 Every Hardware Storybook story wraps in the physical-reference decorator and the ruler reads `<mm> (<px>)`.
 - [ ] 10.7 CI portability job passes on a throwaway container.
 - [ ] 10.8 Round-trip determinism test passes: `extract → sync → extract` yields zero delta.

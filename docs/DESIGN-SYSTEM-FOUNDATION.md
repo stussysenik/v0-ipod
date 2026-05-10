@@ -116,10 +116,10 @@ Product showcase artifacts for later Storybook lanes:
 
 ## Storybook Validation
 
-- Run `bun run storybook` for local primitive and showcase iteration.
-- Run `bun run build-storybook` to verify the static docs build.
-- Run `bun run storybook:test` for Storybook/Vitest coverage.
-- Run `bun run storybook:validate` before landing Storybook-specific changes when you need the full verification pass.
+- Run `pnpm storybook` for local primitive and showcase iteration.
+- Run `pnpm build-storybook` to verify the static docs build.
+- Run `pnpm storybook:test` for Storybook/Vitest coverage.
+- Run `pnpm storybook:validate` before landing Storybook-specific changes when you need the full verification pass.
 
 ## Ready-To-Unblock Outcome
 

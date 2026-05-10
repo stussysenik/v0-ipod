@@ -24,7 +24,7 @@
 - [x] 5.3 Update `TECHSTACK.md`, `docs/IPOD-ASSEMBLY.md`, and related docs to reflect the final supporting taxonomy.
 
 ## 6. Validation
-- [x] 6.1 Run `bun run type-check`.
-- [x] 6.2 Run `bun run build`.
+- [x] 6.1 Run `pnpm type-check`.
+- [x] 6.2 Run `pnpm build`.
 - [ ] 6.3 Run the relevant Playwright suites for interactions, export, and mobile behavior.
 - [x] 6.4 Run `openspec validate refactor-ipod-supporting-component-taxonomy --strict --no-interactive`.

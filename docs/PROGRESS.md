@@ -33,7 +33,7 @@ This pass added the OKLCH grey palette picker, ASCII mode, animated GIF export, 
 
 Current baseline:
 - The committed Playwright suite has been removed to reset test ownership.
-- Use `bun run lint`, `bun run type-check`, and `bun run build` as the active automated checks.
+- Use `pnpm lint`, `pnpm type-check`, and `pnpm build` as the active automated checks.
 
 Manual (Chrome DevTools):
 - All view modes render correctly (2D, 3D, Preview, ASCII, Focus)

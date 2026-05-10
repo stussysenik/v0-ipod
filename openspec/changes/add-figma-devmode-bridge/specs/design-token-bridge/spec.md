@@ -20,7 +20,7 @@
 A `scripts/extract-tokens.ts` script SHALL read `tailwind.config.ts` and `app/globals.css` and emit `design-tokens/tokens.json` in the W3C Design Token Community Group format. The script SHALL support the token categories color, spacing, radius, fontSize, fontFamily, fontWeight, lineHeight, letterSpacing, shadow, duration, easing, and z-index at minimum.
 
 #### Scenario: A Clean Extract Produces Valid DTCG
-- **GIVEN** the developer runs `bun run tokens:extract`
+- **GIVEN** the developer runs `pnpm tokens:extract`
 - **WHEN** the script completes successfully
 - **THEN** `design-tokens/tokens.json` SHALL exist and parse as JSON
 - **AND** the JSON SHALL conform to the DTCG format including `$type` and `$value` keys for every token
@@ -28,7 +28,7 @@ A `scripts/extract-tokens.ts` script SHALL read `tailwind.config.ts` and `app/gl
 
 #### Scenario: An Invalid Token In Source Fails The Extract
 - **GIVEN** `tailwind.config.ts` defines a color token with an invalid value such as `"not-a-color"`
-- **WHEN** the developer runs `bun run tokens:extract`
+- **WHEN** the developer runs `pnpm tokens:extract`
 - **THEN** the script SHALL exit with a non-zero status code
 - **AND** the error message SHALL name the offending token and the file it came from
 

@@ -148,7 +148,7 @@ Following Addy's performance principles:
 ## Running the App
 
 ```bash
-bun run dev
+pnpm dev
 ```
 
 The app now features:

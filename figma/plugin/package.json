@@ -4,8 +4,8 @@
 	"private": true,
 	"description": "Custom Figma plugin for the iPod Dev Mode Bridge",
 	"scripts": {
-		"build": "bun run build.mjs",
-		"watch": "bun run build.mjs --watch"
+		"build": "node build.mjs",
+		"watch": "node build.mjs --watch"
 	},
 	"devDependencies": {
 		"@figma/plugin-typings": "^1.100.0",

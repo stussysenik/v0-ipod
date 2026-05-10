@@ -7,7 +7,7 @@ props snippet sourced from the working tree rather than hand-authored hints.
 ## Workflow
 
 1. Component added under `components/` → a `.figma.tsx` file here is also
-   added. The scaffolder (`bun run scaffold:component <name>`) stamps out
+   added. The scaffolder (`pnpm scaffold:component <name>`) stamps out
    both in one shot. The CI parity check
    (`scripts/check-code-connect-parity.ts`) fails if they drift.
 2. Publish mappings to the canonical file:

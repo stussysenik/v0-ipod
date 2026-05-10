@@ -130,10 +130,10 @@ All checks must pass before merge:
 # 1. Clone and install
 git clone <repo>
 cd v0-ipod
-bun install
+pnpm install
 
 # 2. Setup git hooks
-bun run prepare
+pnpm prepare
 
 # 3. Verify setup
 make validate
@@ -269,7 +269,7 @@ The project uses Figma as a live, vector-first dev mode. See
    blocks commits that contain it.
 4. Confirm the token works:
    ```bash
-   bun run figma:check-token
+   pnpm figma:check-token
    ```
 5. If a token is ever leaked, revoke it in Figma settings **before** doing
    anything else, then rotate via step 1.
@@ -279,7 +279,7 @@ The project uses Figma as a live, vector-first dev mode. See
 Never hand-create a component in a way that bypasses the Figma bridge. Use:
 
 ```bash
-bun run scaffold:component <name>
+pnpm scaffold:component <name>
 ```
 
 This stamps out the component file, a matching story with `parameters.compat`,
@@ -290,13 +290,13 @@ CI parity checks will fail if any of these four pieces go missing.
 
 | Script                       | Phase | Purpose                                             |
 | ---------------------------- | ----- | --------------------------------------------------- |
-| `bun run storybook`          | 1     | Local Storybook dev server                          |
-| `bun run storybook:build`    | 1     | Static build consumed by Story.to.Design            |
-| `bun run figma:push`         | 1     | One-shot push of all stories into the canonical file|
-| `bun run tokens:extract`     | 1     | Extract tokens into `design-tokens/tokens.json`     |
-| `bun run tokens:sync`        | 1     | Sync the DTCG JSON into Figma Variables             |
-| `bun run figma:dev`          | 2     | Live HMR loop (requires `FIGMA_HMR=1`)              |
-| `bun run figma:check-token`  | 1     | Smoke-test the `FIGMA_TOKEN` scopes                 |
+| `pnpm storybook`          | 1     | Local Storybook dev server                          |
+| `pnpm storybook:build`    | 1     | Static build consumed by Story.to.Design            |
+| `pnpm figma:push`         | 1     | One-shot push of all stories into the canonical file|
+| `pnpm tokens:extract`     | 1     | Extract tokens into `design-tokens/tokens.json`     |
+| `pnpm tokens:sync`        | 1     | Sync the DTCG JSON into Figma Variables             |
+| `pnpm figma:dev`          | 2     | Live HMR loop (requires `FIGMA_HMR=1`)              |
+| `pnpm figma:check-token`  | 1     | Smoke-test the `FIGMA_TOKEN` scopes                 |
 
 ## 📚 Reference Documents
 

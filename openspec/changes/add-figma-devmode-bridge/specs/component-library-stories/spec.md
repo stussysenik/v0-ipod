@@ -4,15 +4,15 @@
 The project SHALL use Storybook 8 with the Next.js framework as the canonical surface for authoring and reviewing 2D component variants. Storybook SHALL share the Tailwind configuration, `app/globals.css`, and the theme provider with the Next.js app so that a story renders pixel-for-pixel identical to the same component in the running application, modulo satori limitations that are declared per story.
 
 #### Scenario: Running Storybook Locally
-- **GIVEN** a developer has cloned the repository and installed dependencies with `bun install`
-- **WHEN** they run `bun run storybook`
+- **GIVEN** a developer has cloned the repository and installed dependencies with `pnpm install`
+- **WHEN** they run `pnpm storybook`
 - **THEN** Storybook SHALL start on a local port
 - **AND** the preview frame SHALL load Tailwind styles and the theme provider
 - **AND** the first-party iPod components SHALL render with the same appearance as they do in the Next.js app
 
 #### Scenario: Producing A Static Build For Tooling
 - **GIVEN** the Storybook configuration is committed and all in-scope stories exist
-- **WHEN** a developer runs `bun run storybook:build`
+- **WHEN** a developer runs `pnpm storybook:build`
 - **THEN** the build SHALL exit with a zero status code
 - **AND** a `storybook-static/` directory SHALL exist at the repo root containing the static site
 - **AND** the artifact SHALL be consumable by downstream tools such as Story.to.Design
@@ -22,7 +22,7 @@ The library SHALL contain at least one `Default` story plus named variant storie
 
 #### Scenario: Authoring A Story For A New Component
 - **GIVEN** a developer adds a new component under `components/ipod/`
-- **WHEN** they run `bun run scaffold:component <name>`
+- **WHEN** they run `pnpm scaffold:component <name>`
 - **THEN** a `stories/<name>.stories.tsx` file SHALL be generated containing at least a `Default` story
 - **AND** the CI check for story coverage SHALL pass
 
@@ -91,6 +91,6 @@ The existing `validate` script SHALL be extended to include `storybook:build`, s
 
 #### Scenario: A Broken Story Fails Validation
 - **GIVEN** a developer introduces a story that throws on render
-- **WHEN** they run `bun run validate`
+- **WHEN** they run `pnpm validate`
 - **THEN** the command SHALL exit with a non-zero status code
 - **AND** the failure output SHALL name the broken story file

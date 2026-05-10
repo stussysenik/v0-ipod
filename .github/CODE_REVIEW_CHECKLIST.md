@@ -10,9 +10,9 @@ Use this checklist for every pull request. All items must be verified before mer
 
 Before requesting review, confirm:
 
-- [ ] `bun run validate` passes locally
-- [ ] `bun run test` passes
-- [ ] `bun run build` succeeds without warnings
+- [ ] `pnpm validate` passes locally
+- [ ] `pnpm test` passes
+- [ ] `pnpm build` succeeds without warnings
 - [ ] No `console.log` or debug code left in
 - [ ] Self-reviewed the diff ("Would I understand this in 6 months?")
 - [ ] Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
@@ -161,11 +161,11 @@ Once all items are checked:
 
 | Command | Purpose |
 |---------|---------|
-| `bun run validate` | Lint + Format + Type-check |
-| `bun run test` | Run all tests |
-| `bun run test:coverage` | Run tests with coverage |
-| `bun run build` | Production build |
-| `bun run ci` | Full CI simulation |
+| `pnpm validate` | Lint + Format + Type-check |
+| `pnpm test` | Run all tests |
+| `pnpm test:coverage` | Run tests with coverage |
+| `pnpm build` | Production build |
+| `pnpm ci` | Full CI simulation |
 
 **Reference Docs:**
 - [STANDARDS.md](../STANDARDS.md) - Engineering standards

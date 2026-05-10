@@ -78,17 +78,17 @@ Every in-scope component SHALL have a corresponding `.figma.tsx` file under `fig
 - **THEN** CI SHALL fail with a message naming the component and the expected Code Connect path
 
 ### Requirement: Single-Command Figma Push Workflow
-The project SHALL provide a `bun run figma:push` script that runs the full phase-1 push against the canonical file. The script SHALL read its authentication from a user-scoped `FIGMA_TOKEN` environment variable and SHALL refuse to run if the variable is unset.
+The project SHALL provide a `pnpm figma:push` script that runs the full phase-1 push against the canonical file. The script SHALL read its authentication from a user-scoped `FIGMA_TOKEN` environment variable and SHALL refuse to run if the variable is unset.
 
 #### Scenario: Running The Push With Authentication
 - **GIVEN** a developer has exported a valid `FIGMA_TOKEN`
-- **WHEN** they run `bun run figma:push`
+- **WHEN** they run `pnpm figma:push`
 - **THEN** the script SHALL execute the full Storybook build and push workflow
 - **AND** it SHALL print a summary of pushed, updated, and skipped stories
 
 #### Scenario: Running The Push Without Authentication
 - **GIVEN** `FIGMA_TOKEN` is unset in the environment
-- **WHEN** a developer runs `bun run figma:push`
+- **WHEN** a developer runs `pnpm figma:push`
 - **THEN** the script SHALL exit immediately with a non-zero status code
 - **AND** the error message SHALL direct the developer to the token setup instructions in `ENGINEERING_SETUP.md`
 

@@ -13,7 +13,7 @@
 
 **Spec:** `openspec/changes/update-ipod-theme-black-white-toggle/`
 
-**Verification strategy:** This is a UI-only change. There are no unit tests for these components, so verification is done via (1) TypeScript + ESLint (`bun run lint`, `bun run typecheck`), (2) OpenSpec validation, (3) manual browser smoke-test against both themes through the dev server on every substantive task. The plan calls out the exact viewport checks.
+**Verification strategy:** This is a UI-only change. There are no unit tests for these components, so verification is done via (1) TypeScript + ESLint (`pnpm lint`, `pnpm typecheck`), (2) OpenSpec validation, (3) manual browser smoke-test against both themes through the dev server on every substantive task. The plan calls out the exact viewport checks.
 
 ---
 
@@ -55,7 +55,7 @@ Expected: `Change 'update-ipod-theme-black-white-toggle' is valid`.
 
 Run:
 ```bash
-bun run dev
+pnpm dev
 ```
 
 Run in background so you can visually verify after each task. Expected: Next.js boots on `http://localhost:3000`.
@@ -228,7 +228,7 @@ Expected: `hooks/use-ipod-theme.tsx` exists, old `.ts` is gone.
 
 Run:
 ```bash
-bun run typecheck
+pnpm typecheck
 ```
 
 Expected: Pass with zero errors. If any consumer still references `"silver"` as a theme value, fix those references to `"white"` now before moving on. Likely touch points: none at runtime, but grep to be safe:
@@ -288,7 +288,7 @@ Replace with:
 
 Run:
 ```bash
-bun run typecheck
+pnpm typecheck
 ```
 
 Expected: Pass.
@@ -432,8 +432,8 @@ Only delete imports with zero remaining references.
 
 Run:
 ```bash
-bun run typecheck
-bun run lint
+pnpm typecheck
+pnpm lint
 ```
 
 Expected: Pass. Fix any `'X' is declared but never read` by deleting the offending import.
@@ -487,7 +487,7 @@ Delete it entirely. Leave the `isPreviewView` notice above it alone.
 
 Run:
 ```bash
-bun run typecheck
+pnpm typecheck
 ```
 
 Expected: Pass. If `isAsciiView` becomes unused, remove its declaration at the top of the component too.
@@ -686,8 +686,8 @@ Concretely: locate the `return (` at roughly line ~1190 and wrap its single top-
 
 Run:
 ```bash
-bun run typecheck
-bun run lint
+pnpm typecheck
+pnpm lint
 ```
 
 Expected: Pass.
@@ -739,8 +739,8 @@ Expected: `Change 'update-ipod-theme-black-white-toggle' is valid`.
 
 Run:
 ```bash
-bun run typecheck
-bun run lint
+pnpm typecheck
+pnpm lint
 ```
 
 Expected: Both pass.

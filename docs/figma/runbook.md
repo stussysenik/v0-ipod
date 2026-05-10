@@ -9,7 +9,7 @@ success criterion fails, stop and file a bug rather than working around it.
 
 ## Pre-flight
 
-1. `bun install`
+1. `pnpm install`
 2. `cp .env.example .env.local` and fill in `FIGMA_TOKEN` per
    `ENGINEERING_SETUP.md`.
 3. Confirm the canonical Figma file exists and its key matches
@@ -22,18 +22,18 @@ success criterion fails, stop and file a bug rather than working around it.
 ### 1.1 Storybook comes up
 
 ```bash
-bun run storybook
+pnpm storybook
 ```
 
 - **Success:** Storybook loads on http://localhost:6006, the sidebar lists all
   in-scope components, and the Controls + Design + A11y panels are present.
-- **Failure:** Re-run `bun install`. If the failure persists, check
+- **Failure:** Re-run `pnpm install`. If the failure persists, check
   `.storybook/main.ts` against `tooling-costs.md` for version drift.
 
 ### 1.2 Static build succeeds
 
 ```bash
-bun run storybook:build
+pnpm storybook:build
 ```
 
 - **Success:** `storybook-static/` exists and contains `index.html`.
@@ -52,7 +52,7 @@ Only run on a brand-new canonical file.
 ### 1.4 First push
 
 ```bash
-bun run figma:push
+pnpm figma:push
 ```
 
 - **Success:** Every `satori` and `raster` story appears as a frame on the
@@ -66,7 +66,7 @@ bun run figma:push
 After a successful push, run:
 
 ```bash
-bun run figma:record-frames
+pnpm figma:record-frames
 ```
 
 - **Success:** `docs/figma/frame-manifest.json` is updated with one entry per
@@ -77,7 +77,7 @@ bun run figma:record-frames
 ### 1.6 Backfill design URLs on stories
 
 ```bash
-bun run figma:backfill-design-links
+pnpm figma:backfill-design-links
 ```
 
 Populates `parameters.design` on every story from the frame manifest. The
@@ -86,8 +86,8 @@ Storybook Design panel now shows the real frame.
 ### 1.7 Token extract + sync
 
 ```bash
-bun run tokens:extract
-bun run tokens:sync
+pnpm tokens:extract
+pnpm tokens:sync
 ```
 
 - **Success:** `design-tokens/tokens.json` exists and is DTCG-valid;
@@ -104,7 +104,7 @@ bunx figma connect publish
 
 - **Success:** Dev Mode shows the source path for every in-scope component.
 - **Failure:** Parity check will name missing `.figma.tsx` files. Add them via
-  the scaffolder: `bun run scaffold:component <name>`.
+  the scaffolder: `pnpm scaffold:component <name>`.
 
 ## Phase 2 — Live HMR
 
@@ -120,7 +120,7 @@ server refuses to start.
 ### 2.2 Custom plugin build
 
 ```bash
-cd figma/plugin && bun run build
+cd figma/plugin && pnpm build
 ```
 
 - **Success:** `figma/plugin/dist/code.js` and `figma/plugin/dist/ui.js` exist.
@@ -136,7 +136,7 @@ cd figma/plugin && bun run build
 ### 2.4 Dev server
 
 ```bash
-bun run figma:dev
+pnpm figma:dev
 ```
 
 - **Success:** Next.js dev, the HMR WebSocket server, the chokidar watcher,
@@ -179,7 +179,7 @@ In the canonical file, open the `Semantic` variable collection and edit
 - Phase 3 can be disabled by dropping `FIGMA_HMR=1`. Phase 2 keeps working.
 - Phase 2 can be disabled by refusing to import the plugin. Phase 1 keeps
   working.
-- Phase 1 can be disabled by removing `bun run figma:push` from CI. The app is
+- Phase 1 can be disabled by removing `pnpm figma:push` from CI. The app is
   unaffected.
 
 ## Known Sharp Edges
@@ -192,7 +192,7 @@ In the canonical file, open the `Semantic` variable collection and edit
 - Dragging a Variable slider in Figma produces at most one `token-changed`
   write per 500ms. Rapid-fire edits are intentionally debounced.
 - Tokens renamed in code mark the old Figma Variable `⚠ deprecated`. Actual
-  deletion requires `bun run tokens:sync -- --delete-orphans` with explicit
+  deletion requires `pnpm tokens:sync -- --delete-orphans` with explicit
   confirmation.
 
 ## Changelog

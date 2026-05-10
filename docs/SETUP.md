@@ -156,7 +156,7 @@ ls -la .claude/skills/
 
 ### ESLint plugins missing
 ```bash
-bun install
+pnpm install
 ```
 
 ## Next Steps

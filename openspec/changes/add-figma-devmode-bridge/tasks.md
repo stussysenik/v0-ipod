@@ -6,11 +6,11 @@
 - [x] 1.5 Document the `FIGMA_TOKEN` secret workflow in `ENGINEERING_SETUP.md`, including how to create a scoped token and how the pre-commit guard detects leaks.
 
 ## 2. Storybook Bootstrap
-- [x] 2.1 Install Storybook 8 with the Next.js framework using `bun x storybook@latest init` and commit the generated `.storybook/` directory.
+- [x] 2.1 Install Storybook 8 with the Next.js framework using `pnpm dlx storybook@latest init` and commit the generated `.storybook/` directory.
 - [x] 2.2 Port Tailwind config and `app/globals.css` into `.storybook/preview.tsx` so stories render with production styles.
 - [x] 2.3 Mock `next/image`, `next/font`, and `next/navigation` in `.storybook/preview.tsx` so components that depend on Next.js runtime APIs render cleanly.
 - [x] 2.4 Install and register `@storybook/addon-essentials`, `@storybook/addon-a11y`, `@storybook/addon-interactions`, `@storybook/addon-themes`, `storybook-dark-mode`, and `@storybook/addon-designs`.
-- [x] 2.5 Wire `bun run storybook` and `bun run storybook:build` scripts, include the build step in the existing `validate` chain.
+- [x] 2.5 Wire `pnpm storybook` and `pnpm storybook:build` scripts, include the build step in the existing `validate` chain.
 - [x] 2.6 Add the `Not In Scope` Storybook docs page listing every excluded component and the reason for exclusion.
 
 ## 3. Story Coverage
@@ -25,10 +25,10 @@
 - [ ] 4.1 Create the canonical Figma file with the page layout defined in the `figma-design-bridge` spec and record the file key in `docs/figma/file-manifest.md`. _(operator step — see runbook §1.3)_
 - [ ] 4.2 Install Story.to.Design in the canonical Figma file and connect it to the local `storybook-static/` build. _(operator step — see runbook §1.3)_
 - [ ] 4.3 Run the first full push; resolve satori-incompatible stories using the `raster` or `exclude` path; record decisions in the component audit. _(operator step — see runbook §1.4)_
-- [ ] 4.4 Record the resulting Figma node IDs for every pushed frame in `docs/figma/frame-manifest.json`. _(automated by `bun run figma:record-frames` after §1.4)_
-- [ ] 4.5 Backfill `parameters.design` URLs on every story using the frame manifest so the Storybook Design panel shows the real frames. _(automated by `bun run figma:backfill-design-links` after §1.4)_
+- [ ] 4.4 Record the resulting Figma node IDs for every pushed frame in `docs/figma/frame-manifest.json`. _(automated by `pnpm figma:record-frames` after §1.4)_
+- [ ] 4.5 Backfill `parameters.design` URLs on every story using the frame manifest so the Storybook Design panel shows the real frames. _(automated by `pnpm figma:backfill-design-links` after §1.4)_
 - [x] 4.6 Document the Phase 1 push runbook in `docs/figma/runbook.md` with screenshots of the expected file structure. _(text runbook committed; screenshots added by operator at first bootstrap)_
-- [x] 4.7 Wire a `bun run figma:push` script that runs `storybook:build` and the Story.to.Design push in one command; fail fast when `FIGMA_TOKEN` is unset.
+- [x] 4.7 Wire a `pnpm figma:push` script that runs `storybook:build` and the Story.to.Design push in one command; fail fast when `FIGMA_TOKEN` is unset.
 
 ## 5. Design Token Bridge
 - [x] 5.1 Inventory every design token currently living in `tailwind.config.ts` and `app/globals.css` and classify into `Primitives`, `Semantic`, and `Component` collections.
@@ -48,7 +48,7 @@
 - [x] 6.4 Add a CI parity check that fails when an in-scope component has no matching `.figma.tsx` file.
 
 ## 7. Component Scaffolder CLI
-- [x] 7.1 Write `bun run scaffold:component <name>` that creates the component file, a matching story file, a `.figma.tsx` mapping, and a token audit entry in a single command.
+- [x] 7.1 Write `pnpm scaffold:component <name>` that creates the component file, a matching story file, a `.figma.tsx` mapping, and a token audit entry in a single command.
 - [x] 7.2 Add the CLI to `ENGINEERING_SETUP.md` as the supported entry point for new component authoring.
 - [x] 7.3 Verify the CLI output passes all the existing CI parity checks out of the box.
 
@@ -60,7 +60,7 @@
 - [x] 8.5 Implement the plugin UI: connect/disconnect control, bound page indicator, recent updates list, error console, and manual rebind action.
 - [x] 8.6 Implement the plugin code path: WebSocket client, `story-updated` → `figma.createNodeFromSvg()` on the frame identified by plugin data, preserving frame position, constraints, and auto-layout.
 - [x] 8.7 Implement the plugin snapshot stack and the `Undo Restore` button per the spec.
-- [x] 8.8 Wire `bun run figma:dev` as a single entry point that boots Next.js dev, the HMR server, the watchers, and the token sync watcher with coloured logging.
+- [x] 8.8 Wire `pnpm figma:dev` as a single entry point that boots Next.js dev, the HMR server, the watchers, and the token sync watcher with coloured logging.
 - [x] 8.9 Gate Phase 2 behind a `FIGMA_HMR=1` env flag so engineers can opt in individually.
 
 ## 9. Phase 3 Token Round-Trip
@@ -74,7 +74,7 @@
 
 ## 10. Validation
 - [x] 10.1 Add Playwright regression coverage that every in-scope story renders in the running app without errors.
-- [ ] 10.2 Resolve every critical `@storybook/addon-a11y` violation on in-scope stories. _(operator step — runs after `bun install` + `bun run storybook`)_
+- [ ] 10.2 Resolve every critical `@storybook/addon-a11y` violation on in-scope stories. _(operator step — runs after `pnpm install` + `pnpm storybook`)_
 - [ ] 10.3 Run the manual round-trip check: a code token change propagates into Figma within one second; a Figma Variable edit propagates into the working tree within one second. _(operator step — see runbook §2.6 and §3.1)_
 - [x] 10.4 Add CI steps that run `storybook:build`, `tokens:extract`, the token freshness check, the Code Connect parity check, and the story coverage check.
 - [x] 10.5 Run `openspec validate add-figma-devmode-bridge --strict --no-interactive` and fix any validation errors before proposal review.

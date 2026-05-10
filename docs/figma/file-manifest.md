@@ -48,11 +48,11 @@ order:
 
 If the canonical file is ever deleted, corrupted, or loses variable state:
 
-1. Stop all connected plugins (`bun run figma:dev` instances) to prevent
+1. Stop all connected plugins (`pnpm figma:dev` instances) to prevent
    competing writes.
 2. Create a new empty file with the page layout above.
-3. Run `bun run figma:push` to re-bootstrap vector frames from `storybook-static/`.
-4. Run `bun run tokens:sync` to re-import Variables from
+3. Run `pnpm figma:push` to re-bootstrap vector frames from `storybook-static/`.
+4. Run `pnpm tokens:sync` to re-import Variables from
    `design-tokens/tokens.json`.
 5. Update this manifest with the new file key and URL and commit.
 6. Re-publish Code Connect (`bunx figma connect publish`).

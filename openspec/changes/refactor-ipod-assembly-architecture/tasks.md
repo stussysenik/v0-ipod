@@ -19,6 +19,6 @@
 - [x] 4.3 Keep file import and click-audio behaviors isolated from display and panel rendering.
 
 ## 5. Validation
-- [ ] 5.1 Preserve existing behavior with `bun run type-check` and the relevant Playwright suites.
+- [ ] 5.1 Preserve existing behavior with `pnpm type-check` and the relevant Playwright suites.
 - [ ] 5.2 Validate that the refactor does not introduce regressions in export, mobile editing, or authentic iPod interaction flow.
 - [x] 5.3 Run `openspec validate refactor-ipod-assembly-architecture --strict --no-interactive`.

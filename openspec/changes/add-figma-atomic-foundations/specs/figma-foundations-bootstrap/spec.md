@@ -6,7 +6,7 @@ The project SHALL reference the canonical Figma file at fileKey `UEUmBeQrbJd5gjb
 
 #### Scenario: A clean checkout reaches the live file
 
-- **WHEN** a contributor clones the repo, runs `bun install`, sets `FIGMA_TOKEN`, and runs `bun run figma:check-token`
+- **WHEN** a contributor clones the repo, runs `pnpm install`, sets `FIGMA_TOKEN`, and runs `pnpm figma:check-token`
 - **THEN** the command SHALL succeed and print the canonical file name
 
 #### Scenario: Placeholder fileKey fails fast
@@ -20,12 +20,12 @@ The project SHALL provide `scripts/figma-bootstrap.ts` that creates the full pag
 
 #### Scenario: First run populates the file
 
-- **WHEN** a maintainer runs `bun run figma:bootstrap` against an empty canonical file
+- **WHEN** a maintainer runs `pnpm figma:bootstrap` against an empty canonical file
 - **THEN** the script SHALL create every page listed in the design spec §6.1 with its two-digit prefix, populate `00 Cover`, `01 Changelog`, and `02 How to Use` with seed content, and create the `Primitives`, `Semantic`, and `Component` Variable collections
 
 #### Scenario: Re-run is a no-op
 
-- **WHEN** a maintainer runs `bun run figma:bootstrap` a second time against the same file
+- **WHEN** a maintainer runs `pnpm figma:bootstrap` a second time against the same file
 - **THEN** the script SHALL detect existing pages and collections via their stable `plugin-data` keys, skip creation, and exit with a summary showing zero changes
 
 ### Requirement: Three-tier Variable architecture
@@ -66,5 +66,5 @@ The bootstrap script SHALL persist a mapping from stable token paths to Figma Va
 
 #### Scenario: Bootstrap reads the ID map before creating
 
-- **WHEN** `bun run figma:bootstrap` runs against a file where `design-tokens/figma-id-map.json` already contains an entry for `color.primitive.blue.500`
+- **WHEN** `pnpm figma:bootstrap` runs against a file where `design-tokens/figma-id-map.json` already contains an entry for `color.primitive.blue.500`
 - **THEN** the script SHALL reuse the recorded Variable ID and update the existing Variable's value rather than creating a new one

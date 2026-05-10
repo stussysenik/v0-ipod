@@ -58,8 +58,8 @@ In addition to the canonical atomic hierarchy (Primitives → Atoms → Molecule
 Unresolved `[STICKY:...]` markers (canonical measurements, reference photos, maintainer handles) emit warnings in the build, surface in the Storybook toolbar, and render as `NaN` in dependent stories — but do not fail CI.
 *Rationale:* The environment must ship before the reference measurements are finalized, otherwise the user is blocked on fieldwork (calipers on a real iPod) before they can use the tooling that measures. C2 may promote specific stickies to blocking once the environment is proven.
 
-**Decision 6: `bun run setup` is the portability gate.**
-One command covers `bun install → .env.local scaffolding → figma.config.json validation → token verification → tokens:extract → tokens:build → plugin build → storybook:build`. CI runs it on a throwaway container every PR.
+**Decision 6: `pnpm setup` is the portability gate.**
+One command covers `pnpm install → .env.local scaffolding → figma.config.json validation → token verification → tokens:extract → tokens:build → plugin build → storybook:build`. CI runs it on a throwaway container every PR.
 *Alternatives considered:* A `setup.sh` shell script was rejected because it would duplicate Bun's existing orchestration and add a second language.
 
 **Decision 7: Idempotent bootstrap script, not manual file setup.**
@@ -79,17 +79,17 @@ The reference photo overlay and draggable ruler live as a Storybook decorator (`
 | DTCG round-trip introduces gratuitous reorderings | Spurious git diffs | Deterministic key ordering in the writer; round-trip test in CI verifies zero-delta on a no-op cycle |
 | `NaN` in Storybook for unresolved stickies breaks visual tests | Flaky CI | Storybook build succeeds; only affected stories render `NaN`. Visual-diff CI skips hardware stories until stickies resolved |
 | Figma Variable ID instability across runs | Broken bindings | Bootstrap script writes a `design-tokens/figma-id-map.json` manifest that maps stable token paths to Figma Variable IDs; subsequent runs read this before creating |
-| Portability gate passes locally but fails in CI | Broken PRs | The CI job uses the same `bun run setup` script on a clean container — no fork between local and CI |
+| Portability gate passes locally but fails in CI | Broken PRs | The CI job uses the same `pnpm setup` script on a clean container — no fork between local and CI |
 | Designer edits a Variable outside the plugin (direct Figma UI) | Provenance missed | Plugin polls for Variable changes on a 2s interval and stamps provenance retroactively with `source: "ui-write"` |
 | Drawing-board hold never gets cleared | Component stuck out of drift lint forever | Hold expires after 14 days with a nag in the plugin UI |
 
 ## Migration Plan
 
 **Forward migration**
-1. Apply this change. Run `bun run setup` — verifies the environment.
-2. Run `bun run figma:bootstrap` against the canonical file. Creates page skeleton and Variable collections.
-3. Run `bun run tokens:extract` — pulls Variables into `design-tokens/tokens.json`.
-4. Run `bun run tokens:build` — emits `app/globals.css` custom properties and `tailwind.config.ts` extension.
+1. Apply this change. Run `pnpm setup` — verifies the environment.
+2. Run `pnpm figma:bootstrap` against the canonical file. Creates page skeleton and Variable collections.
+3. Run `pnpm tokens:extract` — pulls Variables into `design-tokens/tokens.json`.
+4. Run `pnpm tokens:build` — emits `app/globals.css` custom properties and `tailwind.config.ts` extension.
 5. Verify Storybook renders identically to the current state (visual regression gate).
 6. Resolve `[STICKY:...]` measurements post-merge as they become available.
 

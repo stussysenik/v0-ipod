@@ -59,5 +59,5 @@ Status updates map to toolbar action states (`preparing`, `sharing`, `success`, 
 ## Validation Baseline
 
 This repository currently ships without a committed automated test suite.
-Use `bun run lint`, `bun run type-check`, `bun run build`, and focused manual
+Use `pnpm lint`, `pnpm type-check`, `pnpm build`, and focused manual
 verification while you rebuild test ownership.

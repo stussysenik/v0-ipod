@@ -149,7 +149,7 @@ sequenceDiagram
 
 ### Prerequisites
 
-- **[Bun](https://bun.sh)** 1.1+
+- **[pnpm](https://pnpm.io)** 10+
 - **Git** for cloning the repository
 
 ### Installation
@@ -160,10 +160,10 @@ git clone https://github.com/stussysenik/v0-ipod.git
 cd v0-ipod
 
 # Install dependencies
-bun install
+pnpm install
 
 # Start development server
-bun run dev
+pnpm dev
 ```
 
 The app will be available at **`http://localhost:4001`**
@@ -178,7 +178,7 @@ This repo also includes a small local Cursor SDK harness based on the official
 echo 'CURSOR_API_KEY="crsr_..."' >> .env.local
 
 # ask Cursor to inspect this workspace
-bun run cursor:harness -- "Summarize the export pipeline in this repo"
+pnpm cursor:harness -- "Summarize the export pipeline in this repo"
 ```
 
 Optional flags:
@@ -189,15 +189,15 @@ Optional flags:
 
 > **💡 Tip**: Override the port if needed:
 > ```bash
-> PORT=4010 bun run dev
-> PORT=4010 bun run start
+> PORT=4010 pnpm dev
+> PORT=4010 pnpm start
 > ```
 
 ### Build for Production
 
 ```bash
-bun run build
-bun run start
+pnpm build
+pnpm start
 ```
 
 ---
@@ -236,27 +236,27 @@ one assembly, or one source-of-truth surface at a time.
 
 ```bash
 # Run Storybook locally for day-to-day work
-bun run storybook
+pnpm storybook
 
 # Build the static Storybook site
-bun run build-storybook
+pnpm build-storybook
 
 # Run Storybook-linked tests
-bun run storybook:test
+pnpm storybook:test
 
 # Run build + Storybook tests together
-bun run storybook:validate
+pnpm storybook:validate
 ```
 
 How to use them:
 
-- Use `bun run storybook` while actively designing or refactoring.
-- Use `bun run build-storybook` to make sure the Storybook site compiles cleanly.
-- Use `bun run storybook:test` to verify story interactions and test coverage.
-- Use `bun run storybook:validate` before landing larger Storybook-related changes.
+- Use `pnpm storybook` while actively designing or refactoring.
+- Use `pnpm build-storybook` to make sure the Storybook site compiles cleanly.
+- Use `pnpm storybook:test` to verify story interactions and test coverage.
+- Use `pnpm storybook:validate` before landing larger Storybook-related changes.
 
-`bun run build-storybook` is **not** the main daily command. It is the static
-verification/build command. The main interactive command is `bun run storybook`.
+`pnpm build-storybook` is **not** the main daily command. It is the static
+verification/build command. The main interactive command is `pnpm storybook`.
 
 ### Source Of Truth Map
 
@@ -284,7 +284,7 @@ If you want to change a shared primitive:
 2. Open `tokens/shared-ui/Manifest` in Storybook.
 3. Open the affected `components/ui/*` story, for example `components/ui/IconButton`.
 4. Adjust the component only if the token change is not enough.
-5. Run `bun run build-storybook` when the change is ready to verify.
+5. Run `pnpm build-storybook` when the change is ready to verify.
 
 If you want to change the physical iPod finish, screen chrome, or wheel:
 
@@ -485,9 +485,9 @@ Use the existing quality gates plus focused manual checks while rebuilding test
 ownership:
 
 ```bash
-bun run lint
-bun run type-check
-bun run build
+pnpm lint
+pnpm type-check
+pnpm build
 ```
 
 ---
@@ -496,19 +496,19 @@ bun run build
 
 | Script | Description |
 |--------|-------------|
-| `bun run dev` | Start development server on port 4001 |
-| `bun run build` | Build production bundle |
-| `bun run start` | Start production server |
-| `bun run clean:next` | Remove `.next` if a stale local build causes runtime issues |
-| `bun run lint` | Run OXC (`oxlint`) |
-| `bun run lint:fix` | Auto-fix OXC lint issues |
-| `bun run lint:eslint` | Run the legacy Next/ESLint ruleset |
-| `bun run type-check` | Run TypeScript type checking |
-| `bun run validate` | Run lint + type check |
-| `bun run storybook` | Start Storybook locally on port 6006 |
-| `bun run build-storybook` | Build the static Storybook site |
-| `bun run storybook:test` | Run Storybook-linked Vitest coverage |
-| `bun run storybook:validate` | Run Storybook build + Storybook tests |
+| `pnpm dev` | Start development server on port 4001 |
+| `pnpm build` | Build production bundle |
+| `pnpm start` | Start production server |
+| `pnpm clean:next` | Remove `.next` if a stale local build causes runtime issues |
+| `pnpm lint` | Run OXC (`oxlint`) |
+| `pnpm lint:fix` | Auto-fix OXC lint issues |
+| `pnpm lint:eslint` | Run the legacy Next/ESLint ruleset |
+| `pnpm type-check` | Run TypeScript type checking |
+| `pnpm validate` | Run lint + type check |
+| `pnpm storybook` | Start Storybook locally on port 6006 |
+| `pnpm build-storybook` | Build the static Storybook site |
+| `pnpm storybook:test` | Run Storybook-linked Vitest coverage |
+| `pnpm storybook:validate` | Run Storybook build + Storybook tests |
 
 ---
 
@@ -549,7 +549,7 @@ We welcome contributions! Please follow these steps:
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feat/your-feature`
 3. **Make your changes** using [semantic commits](./docs/CONTRIBUTING.md#semantic-commits)
-4. **Run validation**: `bun run validate`
+4. **Run validation**: `pnpm validate`
 5. **Push and create a PR**
 
 See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines including:
@@ -564,10 +564,10 @@ See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines including:
 
 ### Port Already in Use
 
-If `bun run dev` fails because port 4001 is occupied:
+If `pnpm dev` fails because port 4001 is occupied:
 
 ```bash
-PORT=4010 bun run dev
+PORT=4010 pnpm dev
 ```
 
 ### Export Not Working on Mobile

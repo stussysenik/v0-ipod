@@ -32,9 +32,9 @@
 ## Checklist
 
 ### Pre-Review (Author)
-- [ ] `bun run validate` passes locally
-- [ ] `bun run test` passes
-- [ ] `bun run build` succeeds
+- [ ] `pnpm validate` passes locally
+- [ ] `pnpm test` passes
+- [ ] `pnpm build` succeeds
 - [ ] No `console.log` or debug code
 - [ ] Commit messages follow Conventional Commits
 
@@ -51,14 +51,14 @@
 
 ### Validation
 
-- [ ] Linter passes (`bun run lint`)
-- [ ] TypeScript type checking passes (`bun run type-check`)
-- [ ] Production build passes (`bun run build`)
+- [ ] Linter passes (`pnpm lint`)
+- [ ] TypeScript type checking passes (`pnpm type-check`)
+- [ ] Production build passes (`pnpm build`)
 - [ ] Tested on mobile viewport (if UI change)
 
 ### Tooling
 
-- [ ] Full validation passes (`bun run validate`)
+- [ ] Full validation passes (`pnpm validate`)
 
 ## Additional Notes
 

@@ -4,7 +4,7 @@
 The project SHALL run a local WebSocket server at `ws://localhost:7733/figma-hmr` started by `scripts/figma-hmr-server.ts`. The server SHALL accept at most one Figma plugin connection at a time and SHALL log connection state, render events, and errors with color-coded output.
 
 #### Scenario: Starting The HMR Server
-- **GIVEN** a developer runs `bun run figma:dev`
+- **GIVEN** a developer runs `pnpm figma:dev`
 - **WHEN** the script initializes
 - **THEN** the HMR server SHALL bind to port 7733
 - **AND** the server SHALL print the endpoint URL and a waiting message to the console
@@ -119,16 +119,16 @@ If the WebSocket connection drops, the plugin SHALL show a disconnected indicato
 - **AND** the server SHALL surface the error in both its own console and the plugin UI
 
 ### Requirement: Single-Command Dev Entry Point
-The project SHALL provide a `bun run figma:dev` script that starts the Next.js dev server, the HMR WebSocket server, the chokidar watcher, and the token sync watcher in a single process with coloured log output that distinguishes story, token, and error events.
+The project SHALL provide a `pnpm figma:dev` script that starts the Next.js dev server, the HMR WebSocket server, the chokidar watcher, and the token sync watcher in a single process with coloured log output that distinguishes story, token, and error events.
 
 #### Scenario: Running The Dev Entry Point
-- **GIVEN** a developer runs `bun run figma:dev`
+- **GIVEN** a developer runs `pnpm figma:dev`
 - **WHEN** the script starts up
 - **THEN** Next.js dev, the HMR server, and the file watchers SHALL all be running under one process
 - **AND** the console output SHALL clearly label `[next]`, `[hmr]`, and `[tokens]` messages
 
 #### Scenario: Shutting Down Cleanly
-- **GIVEN** `bun run figma:dev` is running
+- **GIVEN** `pnpm figma:dev` is running
 - **WHEN** the developer sends a SIGINT
 - **THEN** the HMR WebSocket server, file watchers, and Next.js dev server SHALL all shut down within two seconds
 - **AND** no orphan child process SHALL remain

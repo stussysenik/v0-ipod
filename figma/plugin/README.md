@@ -8,9 +8,9 @@ operator workflow.
 
 ```bash
 cd figma/plugin
-bun install
-bun run build      # one-shot
-bun run watch      # incremental
+pnpm install
+pnpm build      # one-shot
+pnpm watch      # incremental
 ```
 
 The build emits `dist/code.js`, `dist/ui.js`, and copies `src/ui.html` into

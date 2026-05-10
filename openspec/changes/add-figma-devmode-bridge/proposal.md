@@ -15,7 +15,7 @@ The change also gives the project its first real component library surface (Stor
 - Build the phase-2 HMR bridge: a local WebSocket server, a chokidar file watcher, a satori JSX-to-SVG renderer, and a custom Figma plugin we own. On save, the bridge re-renders the affected stories and updates only the interior of the bound Figma frame, preserving parent layout, position, constraints, and auto-layout settings.
 - Build the phase-3 token round-trip: Figma Variable edits in the `Primitives` and `Semantic` collections are captured by the plugin and written back into `app/globals.css` or `tailwind.config.ts` with a `[figma-hmr]` blame marker, debounced so a slider drag produces at most one commit-ready change per 500ms.
 - Document the sharp edges explicitly: the `@react-three/fiber` 3D view, advanced CSS filters, and animations are out of scope for the vector pipeline and will not appear in the Figma file. Designers get a "Not in Figma" callout on the file cover so this boundary is never implicit.
-- Add a component scaffolder CLI (`bun run scaffold:component`) that stamps out component + story + Code Connect binding + token audit entry in a single command so the maintenance tax stays bounded as the library grows.
+- Add a component scaffolder CLI (`pnpm scaffold:component`) that stamps out component + story + Code Connect binding + token audit entry in a single command so the maintenance tax stays bounded as the library grows.
 
 ## Impact
 - Affected specs: `component-library-stories`, `figma-design-bridge`, `design-token-bridge`, `figma-hmr-loop`

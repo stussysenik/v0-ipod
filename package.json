@@ -2,7 +2,7 @@
 	"name": "ipod-snapshot",
 	"version": "0.1.0",
 	"private": true,
-	"packageManager": "bun@1.1.32",
+	"packageManager": "pnpm@10.28.0",
 	"scripts": {
 		"dev": "node scripts/run-next.mjs dev",
 		"dev:raw": "CLOUDFLARE_TUNNEL=0 node scripts/run-next.mjs dev",
@@ -14,17 +14,17 @@
 		"lint:eslint": "eslint . --ext .ts,.tsx",
 		"lint:eslint:fix": "eslint . --ext .ts,.tsx --fix",
 		"type-check": "node scripts/type-check.mjs",
-		"validate": "bun run lint && bun run type-check",
+		"validate": "pnpm lint && pnpm type-check",
 		"clean:next": "rm -rf .next .next-dev",
 		"storybook": "storybook dev -p 6006",
-		"test": "npm run test:unit && npm run test:e2e",
+		"test": "pnpm test:unit && pnpm test:e2e",
 		"test:e2e": "playwright test",
 		"test:exports": "playwright test tests/export-downloads.spec.ts",
-		"test:exports:prod": "bun run build && PLAYWRIGHT_USE_PROD_SERVER=1 playwright test tests/export-downloads.spec.ts",
+		"test:exports:prod": "pnpm build && PLAYWRIGHT_USE_PROD_SERVER=1 playwright test tests/export-downloads.spec.ts",
 		"test:unit": "vitest run --project unit",
 		"build-storybook": "storybook build",
 		"storybook:test": "vitest run --project storybook",
-		"storybook:validate": "bun run build-storybook && bun run storybook:test",
+		"storybook:validate": "pnpm build-storybook && pnpm storybook:test",
 		"prepare": "husky"
 	},
 	"dependencies": {
@@ -91,6 +91,9 @@
 		"three": "^0.182.0",
 		"vaul": "^1.1.2",
 		"zod": "3.25.76"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": ["esbuild", "sharp"]
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.1.2",

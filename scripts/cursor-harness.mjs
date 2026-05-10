@@ -176,8 +176,8 @@ function printHelp() {
 	process.stdout.write(`Cursor harness for this repo
 
 Usage:
-  bun run cursor:harness -- "Summarize this project"
-  echo "Find the export flow" | bun run cursor:harness
+  pnpm cursor:harness -- "Summarize this project"
+  echo "Find the export flow" | pnpm cursor:harness
 
 Options:
   -C, --cwd <path>     Workspace to run against. Defaults to the repo root.

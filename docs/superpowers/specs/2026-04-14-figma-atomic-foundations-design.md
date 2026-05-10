@@ -19,7 +19,7 @@ This spec covers the **foundations layer** of the design-engineering environment
 - The runbook's Phase 1 push relies on Satori + Story.to.Design, which produces rasterized frames. The user has explicitly rejected images as the primary artifact.
 - There is no provenance system. A designer cannot answer "who changed `stroke/hairline` from 1 to 1.5 three weeks ago?" without archaeology.
 - Real-world physical dimensions are not tokenized. The iPod body's 103.5mm height is a magic number scattered across components instead of a single Variable.
-- A new contributor cannot `git clone && bun install && bun run setup` into a working environment. The environment is not portable.
+- A new contributor cannot `git clone && pnpm install && pnpm setup` into a working environment. The environment is not portable.
 - The four personas (senior product designer, interaction designer, industrial/brand designer, design engineer) cannot work on their aspect in parallel without collision because tokens are not organized by aspect.
 
 C1 resolves all six gaps in one coherent change.
@@ -30,12 +30,12 @@ C1 resolves all six gaps in one coherent change.
 2. **Full page skeleton created.** All pages from section 4.5 of the research doc exist in the canonical file, with two-digit prefixes and separator pages.
 3. **Three-tier Variable architecture populated.** Primitives, Semantic (with light/dark modes), and Component collections exist with seed values. Semantic bindings correctly reference Primitives.
 4. **Dimensional Fidelity aspect lives.** `device/classic-5g/*` Variables exist for every dimension listed in the sticky notes (even if values are filled in after C1 merges — provisioned but not final).
-5. **DTCG export pipeline works.** `bun run tokens:extract` reads Figma Variables and writes DTCG JSON. `bun run tokens:sync` reads DTCG JSON and writes Figma Variables. Round-trip is deterministic (no gratuitous reorderings).
-6. **Style Dictionary build works.** `bun run tokens:build` reads DTCG and emits `tailwind.config.ts` extension + `app/globals.css` custom properties.
+5. **DTCG export pipeline works.** `pnpm tokens:extract` reads Figma Variables and writes DTCG JSON. `pnpm tokens:sync` reads DTCG JSON and writes Figma Variables. Round-trip is deterministic (no gratuitous reorderings).
+6. **Style Dictionary build works.** `pnpm tokens:build` reads DTCG and emits `tailwind.config.ts` extension + `app/globals.css` custom properties.
 7. **Provenance sidecar is live.** Every Variable write from any direction stamps `design-tokens/.provenance.json` with `{ layer, author, timestamp, figmaNodeId, commitSha }`. A CLI reads it and answers "who set this when."
-8. **Drawing-board escape hatch CLI exists.** `bun run design:back-to-figma <component>` marks a component as "in redesign," opens the Figma frame in the browser, suspends drift lint for that component until check-in.
+8. **Drawing-board escape hatch CLI exists.** `pnpm design:back-to-figma <component>` marks a component as "in redesign," opens the Figma frame in the browser, suspends drift lint for that component until check-in.
 9. **Physical reference pane MVP.** A Storybook decorator pins a placeholder reference image behind Hardware stories, with a draggable ruler that reads mm/px values from `device/scale/px-per-mm`.
-10. **`bun run setup` is a portability gate.** On a clean checkout, `git clone && bun install && bun run setup` takes a new contributor from zero to working. CI runs this on a throwaway container every PR.
+10. **`pnpm setup` is a portability gate.** On a clean checkout, `git clone && pnpm install && pnpm setup` takes a new contributor from zero to working. CI runs this on a throwaway container every PR.
 
 ## 4. Non-goals (deferred to C2–C5)
 
@@ -185,7 +185,7 @@ Sidecar file: `design-tokens/.provenance.json`.
 }
 ```
 
-Every token write appends or updates the relevant entry. A CLI command `bun run provenance show <token-path>` prints the history.
+Every token write appends or updates the relevant entry. A CLI command `pnpm provenance show <token-path>` prints the history.
 
 **Rules:**
 - Provenance is **append-only** in practice — the CLI updates `timestamp`, `commitSha`, `source`, and `note` but preserves the full history in a `.provenance-history.jsonl` log for durable audit.
@@ -241,14 +241,14 @@ Sticky-noted values are safe to leave unresolved until the user fills them in �
 
 ### 6.6 Drawing-board escape hatch
 
-CLI command: `bun run design:back-to-figma <component-name>`
+CLI command: `pnpm design:back-to-figma <component-name>`
 
 Behavior:
 1. Validate that the component exists in `components/ipod/` or `components/ui/`.
 2. Look up the Figma node id for the corresponding component from `figma/code-connect/*.figma.tsx` and `docs/figma/frame-manifest.json`.
 3. Write an entry to `.design-holds.json`: `{ componentName, figmaNodeId, openedAt, reason }`.
 4. Open the Figma frame URL in the default browser.
-5. Print a receipt: `✓ <component> is now in drawing-board mode. Drift lint will skip this component until you check it back in with 'bun run design:back-to-figma <component> --done'.`
+5. Print a receipt: `✓ <component> is now in drawing-board mode. Drift lint will skip this component until you check it back in with 'pnpm design:back-to-figma <component> --done'.`
 
 The `--done` flag clears the hold, validates that provenance has been updated for whichever tokens changed, and re-enables drift lint for that component.
 
@@ -266,19 +266,19 @@ Behavior (MVP):
 
 C1 MVP renders a placeholder SVG reference until `[STICKY:reference-photos]` is filled in. Stories under `stories/hardware/*` wrap in the decorator; everything else opts out.
 
-### 6.8 `bun run setup` — portability gate
+### 6.8 `pnpm setup` — portability gate
 
 Script: `scripts/setup.ts`.
 
 Steps, each idempotent:
-1. `bun install` (no-op if already installed).
+1. `pnpm install` (no-op if already installed).
 2. Verify `.env.local` exists; copy from `.env.example` if not and prompt for `FIGMA_TOKEN`.
 3. Verify `figma.config.json` has a real fileKey (not `PLACEHOLDER_FILE_KEY`). If placeholder, fail with a clear message pointing at the README.
-4. `bun run figma:check-token` — verifies the token reaches the live file.
-5. `bun run tokens:extract` — pulls current Variables into `design-tokens/tokens.json`.
-6. `bun run tokens:build` — emits CSS vars and Tailwind extension.
-7. `cd figma/plugin && bun run build` — compiles the custom plugin (scaffolded in devmode-bridge, extended here).
-8. `bun run storybook:build` — smoke-test the preview.
+4. `pnpm figma:check-token` — verifies the token reaches the live file.
+5. `pnpm tokens:extract` — pulls current Variables into `design-tokens/tokens.json`.
+6. `pnpm tokens:build` — emits CSS vars and Tailwind extension.
+7. `cd figma/plugin && pnpm build` — compiles the custom plugin (scaffolded in devmode-bridge, extended here).
+8. `pnpm storybook:build` — smoke-test the preview.
 9. Print a green checkmark summary.
 
 Any failure prints a one-line remedy pointing at the runbook. The script is what CI runs on every PR in a throwaway container.
@@ -324,7 +324,7 @@ Executed via the custom plugin + MCP `use_figma` Plugin API writes. One scripted
 - [ ] `stories/hardware/*.stories.tsx` — wrap Hardware stories in the decorator.
 - [ ] `figma/plugin/` — extend the existing scaffold with provenance stamping on every write.
 - [ ] `package.json` scripts — `setup`, `tokens:extract`, `tokens:sync`, `tokens:build`, `provenance:show`, `design:back-to-figma`, `figma:bootstrap`.
-- [ ] `README.md` — "Getting started" section that tells new contributors to run `bun run setup`.
+- [ ] `README.md` — "Getting started" section that tells new contributors to run `pnpm setup`.
 
 ### 7.3 Documentation changes
 
@@ -336,7 +336,7 @@ Executed via the custom plugin + MCP `use_figma` Plugin API writes. One scripted
 
 ### 7.4 CI changes
 
-- [ ] `.github/workflows/figma-bridge.yml` — add a job that runs `bun run setup` on a throwaway container and fails if it does not produce a working environment end-to-end.
+- [ ] `.github/workflows/figma-bridge.yml` — add a job that runs `pnpm setup` on a throwaway container and fails if it does not produce a working environment end-to-end.
 - [ ] Token freshness check — verify that `design-tokens/tokens.json` matches the output of `tokens:extract` (no drift).
 - [ ] Provenance integrity check — verify every entry in `design-tokens/tokens.json` has a matching provenance entry.
 - [ ] Storybook build check — runs on every PR.
@@ -380,14 +380,14 @@ See §6.5. Committed to `design-tokens/.schema/device-reference.schema.json` and
 
 | Command | Purpose |
 |---|---|
-| `bun run setup` | Portability gate — zero to working |
-| `bun run figma:bootstrap` | Idempotent Figma file structure creator |
-| `bun run tokens:extract` | Figma Variables → DTCG |
-| `bun run tokens:sync` | DTCG → Figma Variables |
-| `bun run tokens:build` | DTCG → Tailwind + CSS vars |
-| `bun run provenance:show <token-path>` | History for a token |
-| `bun run design:back-to-figma <component>` | Enter drawing-board mode |
-| `bun run design:back-to-figma <component> --done` | Exit drawing-board mode |
+| `pnpm setup` | Portability gate — zero to working |
+| `pnpm figma:bootstrap` | Idempotent Figma file structure creator |
+| `pnpm tokens:extract` | Figma Variables → DTCG |
+| `pnpm tokens:sync` | DTCG → Figma Variables |
+| `pnpm tokens:build` | DTCG → Tailwind + CSS vars |
+| `pnpm provenance:show <token-path>` | History for a token |
+| `pnpm design:back-to-figma <component>` | Enter drawing-board mode |
+| `pnpm design:back-to-figma <component> --done` | Exit drawing-board mode |
 
 ### 9.2 Plugin UI (extends existing scaffold)
 
@@ -398,11 +398,11 @@ See §6.5. Committed to `design-tokens/.schema/device-reference.schema.json` and
 
 ## 10. Success criteria
 
-1. `bun run setup` on a clean checkout brings a new machine from zero to a working environment with no manual intervention other than filling in `FIGMA_TOKEN`.
-2. `bun run figma:bootstrap` on the live file creates all pages from §6.1 and populates the Cover, Changelog, How to Use, Foundations, and Primitives content.
-3. `bun run tokens:extract && bun run tokens:build` produces a `tailwind.config.ts` extension and `app/globals.css` block that, when imported, renders the app visually identical to the current state (no regression).
-4. `bun run provenance:show color.surface.raised` returns a non-empty history.
-5. `bun run design:back-to-figma click-wheel` creates a hold entry and opens the Figma frame in the browser.
+1. `pnpm setup` on a clean checkout brings a new machine from zero to a working environment with no manual intervention other than filling in `FIGMA_TOKEN`.
+2. `pnpm figma:bootstrap` on the live file creates all pages from §6.1 and populates the Cover, Changelog, How to Use, Foundations, and Primitives content.
+3. `pnpm tokens:extract && pnpm tokens:build` produces a `tailwind.config.ts` extension and `app/globals.css` block that, when imported, renders the app visually identical to the current state (no regression).
+4. `pnpm provenance:show color.surface.raised` returns a non-empty history.
+5. `pnpm design:back-to-figma click-wheel` creates a hold entry and opens the Figma frame in the browser.
 6. Every Hardware Storybook story wraps in the physical-reference decorator and the ruler reads `<mm> (<px>)` at the cursor (with placeholder values until sticky notes are resolved).
 7. CI's portability job passes on a throwaway container.
 8. Existing Storybook stories still render identically (no regression from the tokens build).

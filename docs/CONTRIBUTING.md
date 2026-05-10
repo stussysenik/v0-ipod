@@ -74,7 +74,7 @@ git clone <repo-url>
 cd ipod-snapshot
 
 # Install dependencies
-bun install
+pnpm install
 
 # Wrong scope format
 feat(Export Utils): add webp
@@ -126,7 +126,7 @@ git checkout -b docs/architecture-diagrams
 ### 3. Install Dependencies
 
 ```bash
-bun install
+pnpm install
 ```
 
 ### 4. Make Changes
@@ -139,14 +139,14 @@ bun install
 
 ```bash
 # Run all validation checks
-bun run validate
+pnpm validate
 
 # Or run individually:
-bun run lint           # Check OXC lint errors
-bun run lint:fix       # Auto-fix OXC lint errors
-bun run lint:eslint    # Run the legacy Next/ESLint ruleset
-bun run type-check     # TypeScript type checking
-bun run build          # Verify the production build
+pnpm lint           # Check OXC lint errors
+pnpm lint:fix       # Auto-fix OXC lint errors
+pnpm lint:eslint    # Run the legacy Next/ESLint ruleset
+pnpm type-check     # TypeScript type checking
+pnpm build          # Verify the production build
 ```
 
 ### Making Changes
@@ -317,9 +317,9 @@ Until a new harness is introduced, validate changes with the existing quality
 gates and focused manual checks:
 
 ```bash
-bun run lint
-bun run type-check
-bun run build
+pnpm lint
+pnpm type-check
+pnpm build
 ```
 
 For UI-heavy changes, verify the affected flows manually in desktop and mobile
@@ -346,9 +346,9 @@ flowchart LR
 Before submitting a PR, ensure:
 
 - [ ] **Semantic commits**: All commits follow conventional format
-- [ ] **Linting**: `bun run lint` has no errors
-- [ ] **Type checking**: `bun run type-check` succeeds
-- [ ] **Production build**: `bun run build` succeeds
+- [ ] **Linting**: `pnpm lint` has no errors
+- [ ] **Type checking**: `pnpm type-check` succeeds
+- [ ] **Production build**: `pnpm build` succeeds
 - [ ] **Documentation**: Updated relevant docs (README, ARCHITECTURE, etc.)
 - [ ] **Mobile tested**: Verified on mobile viewport (if UI change)
 - [ ] **No breaking changes**: Or clearly marked with `!` and `BREAKING CHANGE:`

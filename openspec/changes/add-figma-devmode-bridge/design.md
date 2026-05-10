@@ -163,7 +163,7 @@ The contract is that the bridge never leaves a frame in a half-updated state and
 
 - **Three.js components invisible in Figma.** The 3D iPod view is visually important in the app but fundamentally absent from Figma. Mitigation: an explicit "Not in Figma" callout on the Figma file cover and a Storybook docs page listing out-of-scope components. Designers know from day one what the bridge does not do.
 
-- **Maintenance tax per new component.** Each new component now owes a story, a satori compatibility audit, a `.figma.tsx` mapping, and a token coverage check. Mitigation: `bun run scaffold:component` stamps out all four in one command, and CI enforces the invariants so missing pieces fail the build rather than rot silently.
+- **Maintenance tax per new component.** Each new component now owes a story, a satori compatibility audit, a `.figma.tsx` mapping, and a token coverage check. Mitigation: `pnpm scaffold:component` stamps out all four in one command, and CI enforces the invariants so missing pieces fail the build rather than rot silently.
 
 ## Migration Plan
 This change is additive — none of the existing iPod components change shape. Migration is about introducing new artifacts and processes rather than rewriting existing ones.
@@ -183,7 +183,7 @@ This change is additive — none of the existing iPod components change shape. M
 4. Phase 1 off-the-shelf push via Story.to.Design, with stable node ID recording.
 5. Design token extract, W3C DTCG JSON, Figma Variable sync with multi-mode support.
 6. Code Connect mapping wiring and CI parity check.
-7. Phase 2 HMR server, satori renderer, chokidar watcher, custom Figma plugin, single-command `bun run figma:dev` entry point.
+7. Phase 2 HMR server, satori renderer, chokidar watcher, custom Figma plugin, single-command `pnpm figma:dev` entry point.
 8. Phase 3 token round-trip with debouncing and blame markers.
 9. Component scaffolder CLI, validation pass, openspec strict validation, documentation runbook.
 
