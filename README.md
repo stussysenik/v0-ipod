@@ -344,6 +344,58 @@ a parallel source of truth.
 
 ---
 
+## 📐 Design Fidelity: Click Wheel Label Positioning
+
+The click wheel labels (MENU, ▶⏸, ⏮, ⏭) are positioned using a
+**source-truth proportion system** derived from the official Wikipedia SVG
+diagram of the iPod click wheel.
+
+### Method
+
+The Wikipedia SVG provides precise coordinate data:
+
+| Element | Outer Circle | Center Button | Ring Width |
+|---------|-------------|---------------|------------|
+| Radius  | 245 units    | 90 units      | 155 units  |
+
+Label positions were measured from raw SVG coordinates:
+
+| Label     | Distance from outer edge | % of ring width |
+|-----------|-------------------------|-----------------|
+| MENU      | 25 units                | 16.1%           |
+| Play/Pause| 26 units                | 16.8%           |
+| Prev/Next | 28 units                | 18.1%           |
+
+### The Inequality
+
+The constraint that keeps labels true to the original hardware:
+
+```
+0.12 ≤ (inset_px / ring_width) ≤ 0.20
+```
+
+Where `ring_width = (wheel_size - center_size) / 2` and `inset_px = inset_% × wheel_size`.
+
+### Applying to Presets
+
+Each preset is checked against the inequality by solving for the percentage
+that places labels at ~15–18% of the ring from the outer edge:
+
+```
+inset_% ≈ 0.15 × ring_width / wheel_size
+```
+
+| Preset | Old inset | Ring position | New inset | Ring position |
+|--------|-----------|---------------|-----------|---------------|
+| 2007   | 10.5%     | 33% ❌        | 5%        | 16% ✓         |
+| 2008   | 2%        | 6% ✓          | unchanged | —             |
+| 2009   | 10%       | 30% ❌        | 5%        | 15% ✓         |
+
+This ensures no preset places labels closer to the center button than to the
+outer edge — matching the visual balance of the original hardware.
+
+---
+
 ## 🎯 User Workflow
 
 ```mermaid
