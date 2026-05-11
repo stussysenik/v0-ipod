@@ -62,7 +62,7 @@ export function IpodPlaybackFooter({
 					},
 				)}
 			</div>
-			<div className="min-w-0 flex-1 px-[3px]">
+			<div className="min-w-0 flex-1 pl-[7px] pr-[3px]">
 				<IpodProgressBar
 					currentTime={state.currentTime}
 					duration={state.duration}
