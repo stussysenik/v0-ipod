@@ -18,4 +18,6 @@ export const FEATURE_FLAGS = {
 	SHOW_FOCUS_VIEW_MODE: false,
 	/** "ASCII Mode" view mode button */
 	SHOW_ASCII_VIEW_MODE: false,
+	/** Materiality VFX — directional specular sheen, noise texture, rim light, cavity groove, and concave center button shading */
+	ENABLE_MATERIALITY: true, 
 } as const;

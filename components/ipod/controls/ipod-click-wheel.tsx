@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 // No lucide imports — all wheel icons are hand-crafted SVGs matching real iPod hardware
 import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
@@ -159,6 +160,54 @@ export function IpodClickWheel({
 				data-export-layer="wheel"
 				data-testid="click-wheel"
 			>
+				{FEATURE_FLAGS.ENABLE_MATERIALITY && (
+					<>
+						{/* VFX 1: Directional rim light — top-left catches key light, bottom-right fades to shadow */}
+						<div
+							className="pointer-events-none absolute inset-0 rounded-full"
+							style={{
+								boxShadow:
+									"inset 0 1px 0.5px rgba(255,255,255,0.55), inset 1px 0 1px -0.5px rgba(255,255,255,0.2), inset -0.5px -0.5px 1px rgba(0,0,0,0.06)",
+							}}
+							aria-hidden="true"
+						/>
+
+						{/* VFX 2: Subsurface micro-texture for tactile plastic feel */}
+						<div
+							className="pointer-events-none absolute inset-0 rounded-full opacity-[0.035] mix-blend-overlay"
+							style={{
+								backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+							}}
+							aria-hidden="true"
+						/>
+
+						{/* VFX 3: Directional specular sheen — catches key light from top-left */}
+						<div
+							className="pointer-events-none absolute inset-[1px] rounded-full"
+							style={{
+								background: exportSafe
+									? "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 45%)"
+									: "radial-gradient(ellipse at 33% 28%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 35%, rgba(255,255,255,0) 60%, rgba(0,0,0,0.04) 85%, rgba(0,0,0,0.1) 100%)",
+							}}
+							aria-hidden="true"
+						/>
+
+						{/* VFX 4: Center Button Cavity — directional recess, not a black disc.
+						    Top-left catches light, bottom-right pools shadow. */}
+						<div
+							className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+							style={{
+								width: wheelTokens.centerSize + 2,
+								height: wheelTokens.centerSize + 2,
+								background: "transparent",
+								boxShadow:
+									"inset 0 1px 2px -0.5px rgba(0,0,0,0.18), inset 1px 0 1px -0.5px rgba(0,0,0,0.1), inset -0.5px -0.5px 1.5px rgba(0,0,0,0.22), 1px 1px 1px -0.5px rgba(255,255,255,0.25)",
+							}}
+							aria-hidden="true"
+						/>
+					</>
+				)}
+
 				{/* Button Labels */}
 				<button
 					aria-label="Menu"
@@ -173,8 +222,9 @@ export function IpodClickWheel({
 						letterSpacing: wheelTokens.labelTracking,
 						fontFamily: WHEEL_FONT_FAMILY,
 						opacity: 0.6,
-						textShadow:
-							"0 1px 1px rgba(255,255,255,0.4), 0 -0.5px 1px rgba(0,0,0,0.35)",
+						textShadow: FEATURE_FLAGS.ENABLE_MATERIALITY
+							? "0 -1px 0 rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.3)"
+							: "0 1px 1px rgba(255,255,255,0.4), 0 -0.5px 1px rgba(0,0,0,0.35)",
 					}}
 					type="button"
 					onClick={(event) => {
@@ -310,15 +360,26 @@ export function IpodClickWheel({
 				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-100 ${
 					disabled
 						? "cursor-default"
-						: "cursor-pointer active:scale-[0.96]"
+						: `cursor-pointer active:scale-[0.96]${FEATURE_FLAGS.ENABLE_MATERIALITY ? " active:shadow-none" : ""}`
 				}`}
 				style={{
 					width: wheelTokens.centerSize,
 					height: wheelTokens.centerSize,
-					background: "#ffffff",
-					border: "none",
-					outline: "none",
-					boxShadow: `inset 0 0 ${(wheelTokens.centerSize * 0.022).toFixed(1)}px rgba(0, 0, 0, 0.12), inset 0 0 ${(wheelTokens.centerSize * 0.065).toFixed(1)}px rgba(0, 0, 0, 0.07)`,
+					...(FEATURE_FLAGS.ENABLE_MATERIALITY
+						? {
+								background:
+									"radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F5F5F7 50%, #E8E8EB 100%)",
+								border: "none",
+								outline: "none",
+								boxShadow:
+									"inset 0 8px 12px -4px rgba(0,0,0,0.18), inset 0 2px 3px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.9), 0 1px 2px rgba(255,255,255,0.7), 0 0 0 0.5px rgba(0,0,0,0.06)",
+							}
+						: {
+								background: "#ffffff",
+								border: "none",
+								outline: "none",
+								boxShadow: `inset 0 0 ${(wheelTokens.centerSize * 0.022).toFixed(1)}px rgba(0, 0, 0, 0.12), inset 0 0 ${(wheelTokens.centerSize * 0.065).toFixed(1)}px rgba(0, 0, 0, 0.07)`,
+							}),
 				}}
 				data-export-layer="wheel-center"
 				data-testid="click-wheel-center"
