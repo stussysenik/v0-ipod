@@ -26,12 +26,36 @@ export function ScreenBattery({
 
 	const fX = 1;
 	const fY = 2;
-	const fW = bodyW - 1;
 	const fH = bodyH - 1;
-	const cW = Math.max(0, fW * safe);
+	// At 100% (safe >= 1), we want to fill the body completely and seamlessly
+	const cW = safe >= 1 ? bodyW : Math.max(0, (bodyW - 1) * safe);
 
+	const bodyRight = bodyW + 0.5;
+	const bodyBottom = bodyH + 1.5;
 	const termX = bodyW + 0.5;
 	const termY = (bodyH - capH) / 2 + 1.5;
+	const termRight = termX + capW;
+	const termBottom = termY + capH;
+
+	// Unified shell path: one continuous outline — no inner wall between body and terminal
+	const shellD = [
+		`M ${0.5 + rx} 1.5`,
+		`L ${bodyRight - rx} 1.5`,
+		`Q ${bodyRight} 1.5 ${bodyRight} ${1.5 + rx}`,
+		`L ${bodyRight} ${termY}`,
+		`L ${termRight - rx} ${termY}`,
+		`Q ${termRight} ${termY} ${termRight} ${termY + rx}`,
+		`L ${termRight} ${termBottom - rx}`,
+		`Q ${termRight} ${termBottom} ${termRight - rx} ${termBottom}`,
+		`L ${bodyRight} ${termBottom}`,
+		`L ${bodyRight} ${bodyBottom - rx}`,
+		`Q ${bodyRight} ${bodyBottom} ${bodyRight - rx} ${bodyBottom}`,
+		`L ${0.5 + rx} ${bodyBottom}`,
+		`Q 0.5 ${bodyBottom} 0.5 ${bodyBottom - rx}`,
+		`L 0.5 ${1.5 + rx}`,
+		`Q 0.5 1.5 ${0.5 + rx} 1.5`,
+		"Z",
+	].join(" ");
 
 	return (
 		<svg
@@ -56,20 +80,12 @@ export function ScreenBattery({
 					<stop offset="45%" stopColor="#41A457" />
 					<stop offset="100%" stopColor={t.fillTo} />
 				</linearGradient>
-				<linearGradient
-					id={`${id}-term`}
-					x1="0"
-					y1={termY}
-					x2="0"
-					y2={termY + capH}
-					gradientUnits="userSpaceOnUse"
-				>
-					<stop offset="0%" stopColor="#8E8E8E" />
-					<stop offset="100%" stopColor={t.border} />
-				</linearGradient>
 			</defs>
 
-			{/* Charge fill */}
+			{/* Unified shell: one continuous outline, no inner wall between body and terminal */}
+			<path d={shellD} fill={t.background} stroke={t.border} strokeWidth={1} />
+
+			{/* Charge fill: body interior */}
 			{cW > 0 && (
 				<>
 					<rect
@@ -93,37 +109,28 @@ export function ScreenBattery({
 				</>
 			)}
 
-			{/* Body shell */}
-			<rect
-				x={0.5}
-				y={1.5}
-				width={bodyW}
-				height={bodyH}
-				rx={rx}
-				stroke={t.border}
-				strokeWidth={1}
-				fill="none"
-			/>
+			{/* Terminal nub fills green at 100% — the total area includes the nub */}
+			{safe >= 1 && (
+				<>
+					<rect
+						x={termX - 0.5}
+						y={termY + 0.5}
+						width={capW + 0.5}
+						height={capH - 1}
+						fill={`url(#${id}-fill)`}
+						rx={0.5}
+					/>
+					<rect
+						x={termX}
+						y={termY + 0.5}
+						width={capW - 1}
+						height={Math.max(1, Math.ceil(capH * 0.35))}
+						fill={t.highlight}
+						rx={0.5}
+					/>
+				</>
+			)}
 
-			{/* Bottom contact terminal */}
-			<rect
-				x={bodyW * 0.3 + 0.5}
-				y={bodyH + 1.5}
-				width={bodyW * 0.4}
-				height={1.5}
-				rx={0.75}
-				fill={t.border}
-			/>
-
-			{/* Top terminal nub */}
-			<rect
-				x={termX}
-				y={termY}
-				width={capW}
-				height={capH}
-				rx={0.75}
-				fill={`url(#${id}-term)`}
-			/>
 		</svg>
 	);
 }
