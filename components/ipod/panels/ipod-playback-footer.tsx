@@ -114,7 +114,7 @@ export function IpodPlaybackFooter({
 			style: {
 				bottom: screenTokens.progressBottom,
 				height: screenTokens.progressHeight,
-				paddingLeft: screenTokens.statusBarPaddingX + 4,
+				paddingLeft: screenTokens.statusBarPaddingX,
 				paddingRight: screenTokens.statusBarPaddingX,
 				paddingTop: screenTokens.progressPaddingTop,
 				background: screenChromeTokens.progress.footerBackground,
