@@ -212,18 +212,19 @@ export function IpodClickWheel({
 				{/* Button Labels */}
 				<button
 					aria-label="Menu"
-					className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent px-2 py-1 uppercase font-sans leading-none transition-opacity"
-					data-testid="click-wheel-menu-button"
-					disabled={disabled}
-					style={{
-						top: wheelTokens.menuTopInset,
-						color: wheelLabelColor,
-						fontSize: wheelTokens.labelFontSize,
-						fontWeight: 700,
-						letterSpacing: wheelTokens.labelTracking,
-						fontFamily: WHEEL_FONT_FAMILY,
-						opacity: 0.6,
-						textShadow: FEATURE_FLAGS.ENABLE_MATERIALITY
+			className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent uppercase font-sans leading-none transition-opacity"
+			data-testid="click-wheel-menu-button"
+			disabled={disabled}
+			style={{
+				top: wheelTokens.menuTopInset,
+				color: wheelLabelColor,
+				fontSize: wheelTokens.labelFontSize,
+				fontWeight: 700,
+				letterSpacing: wheelTokens.labelTracking,
+				fontFamily: WHEEL_FONT_FAMILY,
+				opacity: 0.6,
+				padding: "0.7rem 1rem 0.5rem 1rem",
+				textShadow: FEATURE_FLAGS.ENABLE_MATERIALITY
 							? "0 -1px 0 rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.3)"
 							: "0 1px 1px rgba(255,255,255,0.4), 0 -0.5px 1px rgba(0,0,0,0.35)",
 					}}
@@ -240,12 +241,13 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-playpause-button"
-					className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center bg-transparent px-2 py-1 leading-none transition-opacity"
-					style={{
-						bottom: wheelTokens.bottomInset,
-						color: wheelLabelColor,
-						opacity: 0.55,
-					}}
+				className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center bg-transparent leading-none transition-opacity"
+				style={{
+					bottom: wheelTokens.bottomInset,
+					color: wheelLabelColor,
+					opacity: 0.55,
+					padding: "0.7rem 1rem 0.5rem 1rem",
+				}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {
 						event.stopPropagation();
@@ -284,12 +286,13 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-prev-button"
-					className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent px-1 py-2 leading-none transition-opacity"
-					style={{
-						left: wheelTokens.sideInset,
-						color: wheelLabelColor,
-						opacity: 0.55,
-					}}
+			className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent leading-none transition-opacity"
+			style={{
+				left: wheelTokens.sideInset,
+				color: wheelLabelColor,
+				opacity: 0.55,
+				padding: "0.7rem 1rem 0.5rem 1rem",
+			}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {
 						event.stopPropagation();
@@ -321,12 +324,13 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-next-button"
-					className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent px-1 py-2 leading-none transition-opacity"
-					style={{
-						right: wheelTokens.sideInset,
-						color: wheelLabelColor,
-						opacity: 0.55,
-					}}
+			className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent leading-none transition-opacity"
+			style={{
+				right: wheelTokens.sideInset,
+				color: wheelLabelColor,
+				opacity: 0.55,
+				padding: "0.7rem 1rem 0.5rem 1rem",
+			}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {
 						event.stopPropagation();
