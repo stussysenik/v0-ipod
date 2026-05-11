@@ -118,6 +118,34 @@ export function playClickAudio(audioRef: MutableRefObject<HTMLAudioElement | nul
 	audioRef.current.play().catch(() => {});
 }
 
+export function playMechanicalClick(): void {
+	try {
+		const ctx = new AudioContext();
+		const now = ctx.currentTime;
+		const sampleRate = ctx.sampleRate;
+		const duration = 0.025;
+		const length = Math.floor(sampleRate * duration);
+		const buffer = ctx.createBuffer(1, length, sampleRate);
+		const data = buffer.getChannelData(0);
+		for (let i = 0; i < length; i++) {
+			data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (length * 0.12));
+		}
+		const noise = ctx.createBufferSource();
+		noise.buffer = buffer;
+		const filter = ctx.createBiquadFilter();
+		filter.type = "highpass";
+		filter.frequency.setValueAtTime(2400, now);
+		const gain = ctx.createGain();
+		gain.gain.setValueAtTime(0.18, now);
+		gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+		noise.connect(filter);
+		filter.connect(gain);
+		gain.connect(ctx.destination);
+		noise.start(now);
+		noise.stop(now + duration);
+	} catch { /* suppress autoplay-policy errors */ }
+}
+
 export function loadCustomColors(storageKey: string): string[] {
 	try {
 		const raw = localStorage.getItem(storageKey);

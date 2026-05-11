@@ -169,7 +169,7 @@ export function IpodTrackMetaPanel({
 			{renderElement(
 				"track-info",
 				<div
-					className="mt-auto font-normal leading-tight tracking-[0.01em] pb-0 -mt-[22px]"
+					className="mt-[6.5px] font-normal leading-tight tracking-[0.01em] pb-0"
 					style={{
 						color: trackInfoColor,
 						fontSize: screenTokens.metaFontSize,

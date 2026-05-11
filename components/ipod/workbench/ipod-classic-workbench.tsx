@@ -1086,11 +1086,9 @@ export default function IpodClassicWorkbench() {
 			playClick={playClick}
 			onSeek={handleWheelSeek}
 			onCenterClick={
-				isAuthenticInteraction
-					? osScreen === "menu"
-						? handleOsMenuSelect
-						: handleNowPlayingCenterClick
-					: undefined
+				isAuthenticInteraction && osScreen === "menu"
+					? handleOsMenuSelect
+					: handlePlayPauseButtonPress
 			}
 			onMenuPress={handleMenuButtonPress}
 			onPreviousPress={handlePreviousButtonPress}

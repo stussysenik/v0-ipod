@@ -19,5 +19,7 @@ export const FEATURE_FLAGS = {
 	/** "ASCII Mode" view mode button */
 	SHOW_ASCII_VIEW_MODE: false,
 	/** Materiality VFX — directional specular sheen, noise texture, rim light, cavity groove, and concave center button shading */
-	ENABLE_MATERIALITY: true, 
+	ENABLE_MATERIALITY: true,
+	/** Mechanical center button — deeper press animation with spring-back, enhanced shadow recess, and a distinct physical click sound via Web Audio API */
+	ENABLE_MECHANICAL_CENTER_CLICK: true,
 } as const;

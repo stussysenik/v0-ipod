@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 // No lucide imports — all wheel icons are hand-crafted SVGs matching real iPod hardware
 import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
+import { playMechanicalClick } from "@/lib/ipod-state/effects";
 
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
@@ -357,10 +358,16 @@ export function IpodClickWheel({
 			</div>
 
 			<div
-				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-100 ${
+				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+					FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK
+						? "transition-[transform,box-shadow] duration-[80ms] ease-out"
+						: "transition-all duration-100"
+				} ${
 					disabled
 						? "cursor-default"
-						: `cursor-pointer active:scale-[0.96]${FEATURE_FLAGS.ENABLE_MATERIALITY ? " active:shadow-none" : ""}`
+						: FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK
+							? "cursor-pointer active:scale-[0.91]"
+							: `cursor-pointer active:scale-[0.96]${FEATURE_FLAGS.ENABLE_MATERIALITY ? " active:shadow-none" : ""}`
 				}`}
 				style={{
 					width: wheelTokens.centerSize,
@@ -385,9 +392,17 @@ export function IpodClickWheel({
 				data-testid="click-wheel-center"
 				role="button"
 				tabIndex={disabled ? -1 : 0}
-				onPointerDown={(e) => e.stopPropagation()}
+				onPointerDown={(e) => {
+					e.stopPropagation();
+					if (FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK && !disabled) {
+						playMechanicalClick();
+						playClick();
+						onCenterClick?.();
+					}
+				}}
 				onClick={(e) => {
 					e.stopPropagation();
+					if (FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK) return;
 					handleControlPress(onCenterClick);
 				}}
 			/>

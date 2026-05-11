@@ -132,7 +132,7 @@ export function EditableTrackNumber({
 
 	return (
 		<div
-			className={`flex items-center gap-1 mt-[29px] ${className}`}
+			className={`flex items-center gap-1 ${className}`}
 			data-testid="track-number-container"
 		>
 			{isEditingTrack ? (
