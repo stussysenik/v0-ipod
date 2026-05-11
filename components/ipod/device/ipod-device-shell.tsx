@@ -40,7 +40,7 @@ export function IPodDeviceShell({
 }: IPodDeviceShellProps) {
 	const shellShadow = exportSafe
 		? "0 8px 20px -10px rgba(0,0,0,0.35)"
-		: "0 18px 40px -24px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
+		: "0 18px 40px -24px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
 	const shellSurfaceStyle = useMemo(
 		() => ({
@@ -91,7 +91,7 @@ export function IPodDeviceShell({
 						className="pointer-events-none absolute inset-0"
 						style={{
 							borderRadius: preset.shell.radius,
-							boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.65), inset 0 -1px 2px rgba(0,0,0,0.14), inset -1px 0 2px rgba(0,0,0,0.06)",
+							boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.5), inset 0 -1px 2px rgba(0,0,0,0.08)",
 						}}
 						aria-hidden="true"
 					/>

@@ -20,8 +20,9 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 			style={{
 				height: screenTokens.statusBarHeight,
 				paddingInline: screenTokens.statusBarPaddingX,
-				backgroundImage: `linear-gradient(180deg, ${getSurfaceToken("screen.statusbar.bg.from")} 0%, ${getSurfaceToken("screen.statusbar.bg.to")} 100%)`,
-				borderColor: "rgba(0,0,0,0.08)",
+				backgroundImage: "none",
+				backgroundColor: "#f9fafb",
+				borderColor: "#e5e7eb",
 			}}
 		>
 			<div

@@ -27,14 +27,14 @@ export function IpodDisplay({
 	const screenTokens = preset.screen;
 	return (
 		<div
-			className="relative z-10 mx-auto shrink-0 p-[1px]"
+			className="relative z-10 mx-auto shrink-0 p-0"
 			style={{
 				width: screenTokens.frameWidth,
 				height: screenTokens.frameHeight,
-				background: "linear-gradient(180deg, #e5e5e7 0%, #8e8e93 100%)",
+				background: "transparent",
 				borderRadius: screenTokens.outerRadius,
-				boxShadow:
-					"0 0 0 0.5px rgba(0,0,0,0.06), 0 8px 24px -8px rgba(0,0,0,0.15)",
+				boxShadow: "none",
+				outline: "none",
 			}}
 			data-export-layer="screen"
 			data-testid="ipod-screen"
@@ -46,6 +46,10 @@ export function IpodDisplay({
 					backgroundColor: getSurfaceToken("screen.content.bg"),
 					borderRadius: screenTokens.innerRadius,
 					fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+					boxShadow:
+						"inset 0 0 0 0.5px rgba(255,255,255,0.7)",
+					outline: "none",
+					border: "1px solid #e5e7eb",
 				}}
 			>
 				<IpodStatusBar
