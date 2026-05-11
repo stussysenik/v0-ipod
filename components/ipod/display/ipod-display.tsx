@@ -56,7 +56,7 @@ export function IpodDisplay({
 				className="relative h-full w-full overflow-hidden border"
 				style={{
 					backgroundColor: getSurfaceToken("screen.content.bg"),
-					borderColor: "rgba(0,0,0,0.6)",
+					borderColor: "rgba(0,0,0,0.10)",
 					borderRadius: screenTokens.innerRadius,
 					fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
 				}}

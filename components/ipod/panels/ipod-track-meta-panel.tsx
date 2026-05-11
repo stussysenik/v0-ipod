@@ -50,13 +50,13 @@ export function IpodTrackMetaPanel({
 
 	return (
 		<div
-			className="z-20 flex h-full w-full min-w-0 flex-col justify-center pr-[2px] text-left"
+			className="z-20 flex h-full w-full min-w-0 flex-col justify-start pt-[44px] pr-[2px] text-left"
 			data-testid="track-meta"
 		>
 			{renderElement(
 				"title",
 				<div
-					className="min-w-0 font-bold leading-[1.05] tracking-[-0.02em]"
+					className="min-w-0 font-bold leading-[1.05] tracking-[-0.03em]"
 					style={{
 						color: titleColor,
 						fontSize: screenTokens.titleFontSize,
@@ -169,7 +169,7 @@ export function IpodTrackMetaPanel({
 			{renderElement(
 				"track-info",
 				<div
-					className="mt-auto font-normal leading-tight tracking-[0.01em] pb-[10px]"
+					className="mt-auto font-normal leading-tight tracking-[0.01em] pb-0 -mt-[22px]"
 					style={{
 						color: trackInfoColor,
 						fontSize: screenTokens.metaFontSize,

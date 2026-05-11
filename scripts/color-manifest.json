@@ -297,17 +297,17 @@
 		},
 
 		"screen.surround.top": {
-			"hex": "#0D0D0D",
+			"hex": "#5A5A5D",
 			"role": "screen-surround",
 			"family": "neutral"
 		},
 		"screen.surround.mid": {
-			"hex": "#181818",
+			"hex": "#6A6A6E",
 			"role": "screen-surround",
 			"family": "neutral"
 		},
 		"screen.surround.bottom": {
-			"hex": "#060606",
+			"hex": "#505054",
 			"role": "screen-surround",
 			"family": "neutral"
 		},

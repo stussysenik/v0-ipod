@@ -7,6 +7,7 @@ import {
 	Html,
 	Lightformer,
 	MeshTransmissionMaterial,
+	OrbitControls,
 	PerspectiveCamera,
 	RoundedBox,
 } from "@react-three/drei";
@@ -18,6 +19,7 @@ import React, {
 	useImperativeHandle,
 	useMemo,
 	useRef,
+	useState,
 } from "react";
 import * as THREE from "three";
 
@@ -25,12 +27,13 @@ import { deriveWheelColors } from "@/lib/color-manifest";
 
 import { PostProcessing } from "./post-processing";
 
-// Export handle for capturing high-res renders
+// ─── Types ───────────────────────────────────────────────────────────────────────
+
 export interface ThreeDIpodHandle {
 	captureHighRes: (width?: number, height?: number) => Promise<Blob | null>;
 }
 
-interface ThreeDIpodProps {
+export interface ThreeDIpodProps {
 	screen: React.ReactNode;
 	wheel: React.ReactNode;
 	skinColor: string;
@@ -41,317 +44,426 @@ interface IpodModelProps extends Omit<ThreeDIpodProps, "onReady"> {
 	onRegisterReset?: (fn: () => void) => void;
 }
 
-function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps) {
-	const meshRef = useRef<THREE.Group>(null);
-	const screenGroupRef = useRef<THREE.Group>(null);
+// ─── Dimensions (scaled to real iPod Classic proportions) ─────────────────────────
+
+const DIMS = {
+	width: 3.75,
+	height: 6.25,
+	depth: 0.38,
+	radius: 0.34,
+	screenW: 3.15,
+	screenH: 2.38,
+	wheelOuterR: 1.18,
+	wheelInnerR: 0.72,
+	centerR: 0.69,
+} as const;
+
+const Z = {
+	backFace: 0,
+	frontFace: DIMS.depth / 2 + 0.012,
+	screenBezel: DIMS.depth / 2 + 0.015,
+	screenGlass: DIMS.depth / 2 + 0.044,
+	wheelRecess: DIMS.depth / 2 - 0.008,
+	wheelSurface: DIMS.depth / 2 + 0.002,
+	wheelCenter: DIMS.depth / 2 + 0.006,
+	wheelHtml: DIMS.depth / 2 + 0.012,
+	screenHtml: DIMS.depth / 2 + 0.022,
+} as const;
+
+// ─── Procedural Brushed Metal Texture ─────────────────────────────────────────────
+
+function createBrushedMetalTexture(): THREE.CanvasTexture {
+	const size = 1024;
+	const canvas = document.createElement("canvas");
+	canvas.width = size;
+	canvas.height = size;
+	const ctx = canvas.getContext("2d")!;
+
+	ctx.fillStyle = "#484848";
+	ctx.fillRect(0, 0, size, size);
+
+	// Directional brushed lines
+	for (let i = 0; i < 600; i++) {
+		const y = Math.random() * size;
+		const alpha = 0.04 + Math.random() * 0.12;
+		ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+		ctx.lineWidth = 0.3 + Math.random() * 1.2;
+		ctx.beginPath();
+		ctx.moveTo(0, y);
+		ctx.lineTo(size, y + (Math.random() - 0.5) * 30);
+		ctx.stroke();
+	}
+
+	// Micro-scratches
+	for (let i = 0; i < 300; i++) {
+		const x = Math.random() * size;
+		const y = Math.random() * size;
+		ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.04})`;
+		ctx.fillRect(x, y, 0.5 + Math.random() * 1.5, 12 + Math.random() * 40);
+	}
+
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.wrapS = THREE.RepeatWrapping;
+	texture.wrapT = THREE.RepeatWrapping;
+	texture.repeat.set(1.5, 1.5);
+	texture.colorSpace = THREE.SRGBColorSpace;
+	return texture;
+}
+
+// ─── LCD Screen Shader ───────────────────────────────────────────────────────────
+
+function useLcdShader() {
+	return useMemo(() => {
+		return new THREE.ShaderMaterial({
+			uniforms: {
+				time: { value: 0 },
+				color: { value: new THREE.Color("#c8d4c0") },
+				brightness: { value: 0.78 },
+			},
+			vertexShader: /* glsl */ `
+				varying vec2 vUv;
+				void main() {
+					vUv = uv;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+				}`,
+			fragmentShader: /* glsl */ `
+				uniform float time;
+				uniform vec3 color;
+				uniform float brightness;
+				varying vec2 vUv;
+				void main() {
+					vec2 center = vUv - 0.5;
+					float dist = length(center) / 0.7;
+					float vignette = 1.0 - smoothstep(0.35, 0.82, dist) * 0.65;
+					float scanline = sin(vUv.y * 320.0 + time * 2.0) * 0.015 + 0.985;
+					vec3 lit = color * vignette * scanline * brightness;
+					gl_FragColor = vec4(lit, 1.0);
+				}`,
+			transparent: false,
+		});
+	}, []);
+}
+
+// ─── Physical Details ────────────────────────────────────────────────────────────
+
+function PhysicalDetails({ caseColor }: { caseColor: string }) {
+	const metalDark = new THREE.Color(caseColor).multiplyScalar(0.55);
+
+	const switchGeo = useMemo(() => {
+		const shape = new THREE.Shape();
+		const w = 0.32, h = 0.13, r = 0.03;
+		shape.moveTo(-w / 2 + r, -h / 2);
+		shape.lineTo(w / 2 - r, -h / 2);
+		shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+		shape.lineTo(w / 2, h / 2 - r);
+		shape.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+		shape.lineTo(-w / 2 + r, h / 2);
+		shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+		shape.lineTo(-w / 2, -h / 2 + r);
+		shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+		return new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 2 });
+	}, []);
+
+	return (
+		<group>
+			{/* Hold Switch */}
+			<group position={[-0.85, DIMS.height / 2 - 0.35, DIMS.depth / 2 + 0.08]}>
+				<mesh geometry={switchGeo}>
+					<meshStandardMaterial color={metalDark} metalness={0.7} roughness={0.35} />
+				</mesh>
+				<mesh position={[0.08, 0, 0.024]}>
+					<boxGeometry args={[0.1, 0.05, 0.015]} />
+					<meshStandardMaterial color="#333" metalness={0.8} roughness={0.3} />
+				</mesh>
+			</group>
+
+			{/* Headphone Jack */}
+			<group position={[0.85, DIMS.height / 2 - 0.35, 0]}>
+				<mesh rotation={[0, Math.PI / 2, 0]}>
+					<torusGeometry args={[0.055, 0.015, 16, 32]} />
+					<meshStandardMaterial color="#222" metalness={0.85} roughness={0.25} />
+				</mesh>
+			</group>
+
+			{/* 30-pin Dock Connector */}
+			<group position={[0, -DIMS.height / 2 + 0.28, 0]}>
+				<mesh rotation={[-Math.PI / 2, 0, 0]}>
+					<boxGeometry args={[0.65, 0.08, 0.012]} />
+					<meshStandardMaterial color="#1a1a1a" metalness={0.7} roughness={0.3} />
+				</mesh>
+				{Array.from({ length: 15 }).map((_, i) => (
+					<mesh
+						key={i}
+						position={[-0.28 + i * 0.04, 0, 0.01]}
+						rotation={[-Math.PI / 2, 0, 0]}
+					>
+						<boxGeometry args={[0.016, 0.04, 0.004]} />
+						<meshStandardMaterial color="#d4a84b" metalness={0.95} roughness={0.15} />
+					</mesh>
+				))}
+			</group>
+		</group>
+	);
+}
+
+// ─── Screen Bezel Geometry ───────────────────────────────────────────────────────
+
+function ScreenBezel() {
+	const bezelGeo = useMemo(() => {
+		const w = DIMS.screenW + 0.14;
+		const h = DIMS.screenH + 0.14;
+		const r = 0.03;
+		const shape = new THREE.Shape();
+		shape.moveTo(-w / 2 + r, -h / 2);
+		shape.lineTo(w / 2 - r, -h / 2);
+		shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+		shape.lineTo(w / 2, h / 2 - r);
+		shape.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+		shape.lineTo(-w / 2 + r, h / 2);
+		shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+		shape.lineTo(-w / 2, -h / 2 + r);
+		shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+		return new THREE.ExtrudeGeometry(shape, { depth: 0.015, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2 });
+	}, []);
+
+	return (
+		<group position={[0, 1.25, Z.screenBezel]}>
+			<mesh geometry={bezelGeo}>
+				<meshStandardMaterial color="#0d0d0d" metalness={0.1} roughness={0.55} />
+			</mesh>
+
+			{/* Inner shadow ring */}
+			<mesh position={[0, 0, 0.008]}>
+				<ringGeometry args={[DIMS.screenW / 2 - 0.03, DIMS.screenW / 2 + 0.03, 64]} />
+				<meshStandardMaterial
+					color="#000"
+					roughness={0.9}
+					side={THREE.DoubleSide}
+					transparent
+					opacity={0.6}
+				/>
+			</mesh>
+		</group>
+	);
+}
+
+// ─── Click Wheel 3D Assembly ─────────────────────────────────────────────────────
+
+function ClickWheel3D({ skinColor, wheelHtml }: { skinColor: string; wheelHtml: React.ReactNode }) {
 	const wheelColors = useMemo(() => deriveWheelColors(skinColor), [skinColor]);
 
-	// Register reset function for export capture
+	return (
+		<group position={[0, -1.5, 0]}>
+			{/* Wheel cavity — the recessed depression */}
+			<mesh position={[0, 0, Z.wheelRecess]}>
+				<ringGeometry args={[DIMS.wheelInnerR - 0.04, DIMS.wheelOuterR + 0.04, 80]} />
+				<meshStandardMaterial
+					color={new THREE.Color(skinColor).multiplyScalar(0.82)}
+					metalness={0.15}
+					roughness={0.45}
+				/>
+			</mesh>
+
+			{/* Wheel ring — polycarbonate touch surface */}
+			<mesh position={[0, 0, Z.wheelSurface]}>
+				<ringGeometry args={[DIMS.wheelInnerR, DIMS.wheelOuterR, 80]} />
+				<meshPhysicalMaterial
+					clearcoat={0.85}
+					clearcoatRoughness={0.08}
+					color={wheelColors.gradient.via}
+					envMapIntensity={0.9}
+					metalness={0.0}
+					roughness={0.16}
+					sheen={0.28}
+					sheenColor={wheelColors.gradient.from}
+					sheenRoughness={0.38}
+				/>
+			</mesh>
+
+			{/* Center button cavity */}
+			<mesh position={[0, 0, Z.wheelRecess + 0.001]}>
+				<ringGeometry args={[DIMS.centerR - 0.02, DIMS.centerR + 0.05, 60]} />
+				<meshStandardMaterial
+					color={new THREE.Color(skinColor).multiplyScalar(0.7)}
+					metalness={0.1}
+					roughness={0.5}
+				/>
+			</mesh>
+
+			{/* Center button */}
+			<mesh position={[0, 0, Z.wheelCenter]}>
+				<circleGeometry args={[DIMS.centerR, 60]} />
+				<meshPhysicalMaterial
+					clearcoat={0.4}
+					color={wheelColors.centerGradient.via}
+					envMapIntensity={1.1}
+					metalness={0.55}
+					roughness={0.22}
+				/>
+			</mesh>
+
+			{/* Interactive HTML overlay for wheel controls */}
+			<Html
+				transform
+				className="select-none pointer-events-none"
+				occlude={false}
+				position={[0, 0, Z.wheelHtml]}
+				scale={0.01}
+				style={{
+					width: "280px",
+					height: "280px",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+				}}
+				zIndexRange={[100, 0]}
+			>
+				<div style={{ pointerEvents: "auto", transform: "scale(0.86)", transformOrigin: "center center" }}>
+					{wheelHtml}
+				</div>
+			</Html>
+		</group>
+	);
+}
+
+// ─── Ipod Model ──────────────────────────────────────────────────────────────────
+
+function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps) {
+	const groupRef = useRef<THREE.Group>(null);
+	const lcdMaterial = useLcdShader();
+	const brushedTexture = useMemo(() => createBrushedMetalTexture(), []);
+
 	useEffect(() => {
 		if (onRegisterReset) {
 			onRegisterReset(() => {
-				if (meshRef.current) {
-					meshRef.current.rotation.set(0, 0, 0);
-				}
+				if (groupRef.current) groupRef.current.rotation.set(0, 0, 0);
 			});
 		}
 	}, [onRegisterReset]);
 
 	useFrame((state) => {
-		if (!meshRef.current) return;
-
-		// Keep product mostly front-facing, with subtle interactive tilt
-		const { x, y } = state.mouse;
-		meshRef.current.rotation.x = THREE.MathUtils.lerp(
-			meshRef.current.rotation.x,
-			y * 0.16,
-			0.06,
-		);
-		meshRef.current.rotation.y = THREE.MathUtils.lerp(
-			meshRef.current.rotation.y,
-			x * 0.18,
-			0.06,
-		);
-
-		// Subtle floating animation for screen glow
-		if (screenGroupRef.current) {
-			const time = state.clock.elapsedTime;
-			screenGroupRef.current.children.forEach((child) => {
-				if (
-					child instanceof THREE.Mesh &&
-					child.material instanceof THREE.MeshPhysicalMaterial
-				) {
-					// Subtle pulsing backlight effect
-					const baseIntensity = 0.3;
-					const pulse = Math.sin(time * 0.5) * 0.1;
-					child.material.emissiveIntensity = baseIntensity + pulse;
-				}
-			});
-		}
-	});
-
-	// Dimensions
-	const args = {
-		width: 3.75,
-		height: 6.25,
-		depth: 0.35,
-		radius: 0.36,
-	};
-
-	// Z-Stacking Layers (Calculated from center 0)
-	const z = {
-		back: 0,
-		frontFaceCenter: 0.175 + 0.015, // Starts at 0.175, Thickness 0.03
-		screenBezel: 0.175 + 0.03 + 0.001, // Just on top of front face
-		screenHtml: 0.175 + 0.03 + 0.005, // Slightly above bezel
-		screenGlass: 0.175 + 0.03 + 0.02, // Floating slightly above to contain volume
-		wheelBase: 0.175 + 0.03 + 0.002,
-		wheelHtml: 0.175 + 0.03 + 0.006,
-	};
-
-	// Procedural scratch texture for brushed steel back (per PDF spec)
-	const scratchTexture = useMemo(() => {
-		const canvas = document.createElement("canvas");
-		canvas.width = 1024;
-		canvas.height = 1024;
-		const ctx = canvas.getContext("2d")!;
-
-		// Base roughness (0.02 min per PDF)
-		ctx.fillStyle = "#404040";
-		ctx.fillRect(0, 0, 1024, 1024);
-
-		// Add random scratches for realistic imperfections
-		ctx.strokeStyle = "#606060";
-		ctx.lineWidth = 0.5;
-		for (let i = 0; i < 200; i++) {
-			ctx.beginPath();
-			ctx.moveTo(Math.random() * 1024, Math.random() * 1024);
-			ctx.lineTo(Math.random() * 1024, Math.random() * 1024);
-			ctx.stroke();
-		}
-
-		// Add brushed metal directional lines
-		ctx.strokeStyle = "#505050";
-		ctx.lineWidth = 0.3;
-		for (let i = 0; i < 300; i++) {
-			const y = Math.random() * 1024;
-			ctx.beginPath();
-			ctx.moveTo(0, y);
-			ctx.lineTo(1024, y + (Math.random() - 0.5) * 20);
-			ctx.stroke();
-		}
-
-		const texture = new THREE.CanvasTexture(canvas);
-		texture.wrapS = THREE.RepeatWrapping;
-		texture.wrapT = THREE.RepeatWrapping;
-		texture.repeat.set(2, 2);
-		return texture;
-	}, []);
-
-	// LCD Screen backlight glow shader
-	const lcdShaderMaterial = useMemo(() => {
-		return new THREE.ShaderMaterial({
-			uniforms: {
-				time: { value: 0 },
-				color: { value: new THREE.Color(0xc7d0c0) },
-			},
-			vertexShader: `
-                                varying vec2 vUv;
-                                void main() {
-                                        vUv = uv;
-                                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                                }
-                        `,
-			fragmentShader: `
-                                uniform float time;
-                                uniform vec3 color;
-                                varying vec2 vUv;
-
-                                void main() {
-                                        // Subtle vignette effect
-                                        vec2 center = vUv - 0.5;
-                                        float dist = length(center);
-                                        float vignette = 1.0 - smoothstep(0.3, 0.7, dist);
-
-                                        // Subtle scanline effect
-                                        float scanline = sin(vUv.y * 100.0 + time) * 0.02 + 0.98;
-
-                                        // LCD backlight glow
-                                        vec3 finalColor = color * vignette * scanline;
-                                        gl_FragColor = vec4(finalColor, 1.0);
-                                }
-                        `,
-			transparent: false,
-		});
-	}, []);
-
-	useFrame((state) => {
-		lcdShaderMaterial.uniforms.time.value = state.clock.elapsedTime;
+		lcdMaterial.uniforms.time.value = state.clock.elapsedTime;
 	});
 
 	return (
-		<group ref={meshRef}>
+		<group ref={groupRef}>
 			<Float
-				floatIntensity={0.12}
-				floatingRange={[-0.03, 0.03]}
-				rotationIntensity={0.05}
-				speed={1.4}
+				floatIntensity={0.1}
+				floatingRange={[-0.025, 0.025]}
+				rotationIntensity={0.04}
+				speed={1.6}
 			>
 				<group>
-					{/* 1. BACK CASE (Brushed Steel with Scratch Imperfections - per PDF Section 3) */}
+					{/* ── BACK CASE (Brushed Stainless Steel) ── */}
 					<RoundedBox
-						args={[args.width, args.height, args.depth]}
-						radius={args.radius}
-						smoothness={10}
+						args={[DIMS.width, DIMS.height, DIMS.depth]}
+						radius={DIMS.radius}
+						smoothness={12}
 					>
 						<meshPhysicalMaterial
-							anisotropy={0.7}
+							anisotropy={0.85}
 							anisotropyRotation={Math.PI / 2}
-							clearcoat={0.2}
-							clearcoatRoughness={0.12}
-							color="#e8e8e8"
-							envMapIntensity={1.55}
+							clearcoat={0.15}
+							clearcoatRoughness={0.1}
+							color="#dcdcdc"
+							envMapIntensity={1.65}
 							metalness={1.0}
 							reflectivity={0.95}
-							roughness={0.22}
-							roughnessMap={scratchTexture}
+							roughness={0.18}
+							roughnessMap={brushedTexture}
 						/>
 					</RoundedBox>
 
-					{/* 2. FRONT FACE (Polycarbonate with SSS Effect - per PDF Section 3) */}
-					<group position={[0, 0, z.frontFaceCenter]}>
+					{/* ── FRONT FACE (Polycarbonate) ── */}
+					<group position={[0, 0, Z.frontFace]}>
 						<RoundedBox
-							args={[args.width, args.height, 0.03]}
-							radius={args.radius}
-							smoothness={10}
+							args={[DIMS.width, DIMS.height, 0.025]}
+							radius={DIMS.radius}
+							smoothness={12}
 						>
 							<meshPhysicalMaterial
-								clearcoat={0.9}
-								clearcoatRoughness={0.09}
+								clearcoat={0.92}
+								clearcoatRoughness={0.07}
 								color={skinColor}
-								envMapIntensity={0.85}
+								envMapIntensity={0.88}
 								metalness={0.0}
-								roughness={0.25}
-								sheen={0.16}
-								sheenColor={new THREE.Color(
-									skinColor,
-								).multiplyScalar(1.06)}
-								sheenRoughness={0.58}
-								thickness={0.18}
-								transmission={0.03}
+								roughness={0.22}
+								sheen={0.18}
+								sheenColor={new THREE.Color(skinColor).multiplyScalar(1.08)}
+								sheenRoughness={0.55}
+								thickness={0.22}
+								transmission={0.04}
 							/>
 						</RoundedBox>
 					</group>
 
-					{/* 3. SCREEN ASSEMBLY */}
-					<group ref={screenGroupRef} position={[0, 1.25, 0]}>
-						{/* 3a. Screen Bezel with LCD Shader Background */}
-						<mesh position={[0, 0, z.screenBezel]}>
-							<planeGeometry args={[3.25, 2.45]} />
-							<primitive
-								attach="material"
-								object={lcdShaderMaterial}
-							/>
-						</mesh>
+					{/* ── SCREEN BEZEL ── */}
+					<ScreenBezel />
 
-						{/* 3b. LCD Content - The actual interface */}
-						<Html
-							transform
-							className="select-none pointer-events-none"
-							occlude={false}
-							position={[0, 0, z.screenHtml]}
-							scale={0.01}
-							style={{
-								width: "322px",
-								height: "240px",
-							}}
-							zIndexRange={[100, 0]}
-						>
+					{/* ── LCD BACKLIGHT ── */}
+					<mesh position={[0, 1.25, Z.screenBezel + 0.008]}>
+						<planeGeometry args={[DIMS.screenW, DIMS.screenH]} />
+						<primitive attach="material" object={lcdMaterial} />
+					</mesh>
+
+					{/* ── SCREEN HTML OVERLAY ── */}
+					<Html
+						transform
+						className="select-none pointer-events-none"
+						occlude={false}
+						position={[0, 1.25, Z.screenHtml]}
+						scale={0.01}
+						style={{
+							width: "320px",
+							height: "242px",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+						zIndexRange={[100, 0]}
+					>
+						<div style={{ transform: "scale(0.975)", transformOrigin: "center center" }}>
 							{screen}
-						</Html>
+						</div>
+					</Html>
 
-						{/* 3c. Screen glass tuned for subtle realism and minimal artifacts */}
-						<group position={[0, 0, z.screenGlass]}>
-							<RoundedBox
-								args={[3.25, 2.45, 0.02]}
-								radius={0.05}
-								smoothness={4}
-							>
-								<MeshTransmissionMaterial
-									anisotropicBlur={0.01}
-									chromaticAberration={0.0015}
-									color="#ffffff"
-									distortion={0.008}
-									ior={1.49}
-									roughness={0.02}
-									temporalDistortion={0}
-									thickness={0.025}
-									transmission={0.97}
-								/>
-							</RoundedBox>
-						</group>
-					</group>
-
-					{/* 4. CLICK WHEEL ASSEMBLY */}
-					<group position={[0, -1.5, 0]}>
-						{/* Wheel Ring (Polycarbonate Touch Surface) — color derived from case */}
-						<mesh position={[0, 0, z.wheelBase]}>
-							<ringGeometry args={[0.75, 1.2, 64]} />
-							<meshPhysicalMaterial
-								clearcoat={0.8}
-								clearcoatRoughness={0.1}
-								color={wheelColors.gradient.via}
-								envMapIntensity={0.85}
-								metalness={0.0}
-								roughness={0.18}
-								sheen={0.24}
-								sheenColor={
-									wheelColors.gradient.from
-								}
-								sheenRoughness={0.42}
-							/>
-						</mesh>
-
-						{/* Center Button — color derived from case */}
-						<mesh position={[0, 0, z.wheelBase + 0.001]}>
-							<circleGeometry args={[0.73, 50]} />
-							<meshPhysicalMaterial
-								clearcoat={0.35}
-								color={
-									wheelColors.centerGradient
-										.via
-								}
-								envMapIntensity={1.05}
-								metalness={0.55}
-								roughness={0.24}
-							/>
-						</mesh>
-
-						{/* Wheel Interface */}
-						<Html
-							transform
-							className="select-none"
-							occlude={false}
-							position={[0, 0, z.wheelHtml]}
-							scale={0.01}
-							style={{
-								width: "240px",
-								height: "240px",
-							}}
-							zIndexRange={[100, 0]}
+					{/* ── SCREEN GLASS ── */}
+					<group position={[0, 1.25, Z.screenGlass]}>
+						<RoundedBox
+							args={[DIMS.screenW, DIMS.screenH, 0.018]}
+							radius={0.045}
+							smoothness={6}
 						>
-							<div style={{ pointerEvents: "auto" }}>
-								{wheel}
-							</div>
-						</Html>
+							<MeshTransmissionMaterial
+								anisotropicBlur={0.01}
+								backside
+								backsideThickness={0.025}
+								chromaticAberration={0.001}
+								color="#ffffff"
+								distortion={0.006}
+								ior={1.49}
+								iridescence={0}
+								roughness={0.015}
+								temporalDistortion={0}
+								thickness={0.04}
+								transmission={0.97}
+							/>
+						</RoundedBox>
 					</group>
+
+					{/* ── CLICK WHEEL ── */}
+					<ClickWheel3D skinColor={skinColor} wheelHtml={wheel} />
+
+					{/* ── PHYSICAL DETAILS ── */}
+					<PhysicalDetails caseColor={skinColor} />
 				</group>
 			</Float>
 		</group>
 	);
 }
 
-// Scene capture component for high-res exports
+// ─── Scene Capture ───────────────────────────────────────────────────────────────
+
 function SceneCapture({
 	onCapture,
 	onReady,
@@ -364,20 +476,12 @@ function SceneCapture({
 	const { gl, scene, camera } = useThree();
 
 	useEffect(() => {
-		const captureHighRes = async (
-			width = 4096,
-			height = 4096,
-		): Promise<Blob | null> => {
-			// Store original size
+		const captureHighRes = async (width = 4096, height = 4096): Promise<Blob | null> => {
 			const originalSize = new THREE.Vector2();
 			gl.getSize(originalSize);
 
-			// Reset model rotation to front-facing before capture
-			if (modelResetRef?.current) {
-				modelResetRef.current();
-			}
+			if (modelResetRef?.current) modelResetRef.current();
 
-			// Create high-resolution render target with MSAA
 			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
 				samples: 4,
 				type: THREE.UnsignedByteType,
@@ -387,65 +491,36 @@ function SceneCapture({
 			});
 
 			try {
-				// Render to the high-res target
 				gl.setRenderTarget(renderTarget);
 				gl.render(scene, camera);
 
-				// Read pixels from the render target
 				const buffer = new Uint8Array(width * height * 4);
-				gl.readRenderTargetPixels(
-					renderTarget,
-					0,
-					0,
-					width,
-					height,
-					buffer,
-				);
-
-				// Restore original render target
+				gl.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
 				gl.setRenderTarget(null);
 
-				// Convert to PNG blob via canvas
 				const canvas = document.createElement("canvas");
 				canvas.width = width;
 				canvas.height = height;
 				const ctx = canvas.getContext("2d");
-
-				if (!ctx) {
-					throw new Error("Failed to get canvas 2D context");
-				}
+				if (!ctx) throw new Error("Failed to get canvas 2D context");
 
 				const imageData = ctx.createImageData(width, height);
-
-				// Flip Y axis (WebGL renders upside down)
 				for (let y = 0; y < height; y++) {
 					for (let x = 0; x < width; x++) {
-						const srcIndex = ((height - y - 1) * width + x) * 4;
-						const dstIndex = (y * width + x) * 4;
-						imageData.data[dstIndex] = buffer[srcIndex];
-						imageData.data[dstIndex + 1] = buffer[srcIndex + 1];
-						imageData.data[dstIndex + 2] = buffer[srcIndex + 2];
-						imageData.data[dstIndex + 3] = buffer[srcIndex + 3];
+						const srcIdx = ((height - y - 1) * width + x) * 4;
+						const dstIdx = (y * width + x) * 4;
+						imageData.data[dstIdx] = buffer[srcIdx]!;
+						imageData.data[dstIdx + 1] = buffer[srcIdx + 1]!;
+						imageData.data[dstIdx + 2] = buffer[srcIdx + 2]!;
+						imageData.data[dstIdx + 3] = buffer[srcIdx + 3]!;
 					}
 				}
-
 				ctx.putImageData(imageData, 0, 0);
 
-				// Convert to blob with timeout
 				return new Promise((resolve, reject) => {
-					const timeoutId = setTimeout(() => {
-						reject(
-							new Error(
-								"Canvas toBlob timed out after 10 seconds",
-							),
-						);
-					}, 10000);
-
+					const timeoutId = setTimeout(() => reject(new Error("Canvas toBlob timed out")), 10000);
 					canvas.toBlob(
-						(blob) => {
-							clearTimeout(timeoutId);
-							resolve(blob);
-						},
+						(blob) => { clearTimeout(timeoutId); resolve(blob); },
 						"image/png",
 						1.0,
 					);
@@ -456,165 +531,204 @@ function SceneCapture({
 		};
 
 		onCapture(captureHighRes);
-		// Signal that the scene is ready for capture
 		onReady?.();
 	}, [gl, scene, camera, onCapture, onReady, modelResetRef]);
 
 	return null;
 }
 
-export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, ref) => {
-	const { onReady, ...modelProps } = props;
-	const captureRef = useRef<((w?: number, h?: number) => Promise<Blob | null>) | null>(null);
-	const modelResetRef = useRef<(() => void) | null>(null);
+// ─── Turntable Toggle Button ─────────────────────────────────────────────────────
 
-	useImperativeHandle(ref, () => ({
-		captureHighRes: async (width?: number, height?: number) => {
-			if (captureRef.current) {
-				return captureRef.current(width, height);
-			}
-			return null;
-		},
-	}));
-
-	const handleCapture = useCallback(
-		(fn: (w?: number, h?: number) => Promise<Blob | null>) => {
-			captureRef.current = fn;
-		},
-		[],
-	);
-
-	const handleRegisterReset = useCallback((fn: () => void) => {
-		modelResetRef.current = fn;
-	}, []);
-
+function TurntableToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
 	return (
-		<div className="w-full h-full min-h-screen absolute inset-0">
-			<Canvas
-				shadows
-				dpr={[1, 2]}
-				gl={{
-					antialias: true,
-					toneMapping: THREE.ACESFilmicToneMapping,
-					toneMappingExposure: 1.0,
-					preserveDrawingBuffer: true, // Required for capture
-				}}
-			>
-				<PerspectiveCamera makeDefault fov={30} position={[0, 0, 11]} />
-
-				{/* Ambient base light */}
-				<ambientLight color="#eef1f5" intensity={0.3} />
-
-				{/* Key Light - 800 lumens equivalent per PDF Table 4 */}
-				<spotLight
-					castShadow
-					angle={0.3}
-					color="#FFF5E0"
-					intensity={560}
-					penumbra={1}
-					position={[8, 12, 10]}
-					shadow-bias={-0.0001}
-					shadow-mapSize={[2048, 2048]}
-				/>
-
-				{/* Fill Light - Softer from left */}
-				<spotLight
-					angle={0.5}
-					color="#e0f0ff"
-					intensity={150}
-					penumbra={1}
-					position={[-10, 5, 8]}
-				/>
-
-				{/* Rim Light - 1200 lumens per PDF Table 4 */}
-				<spotLight
-					angle={0.6}
-					color="#E0F0FF"
-					intensity={430}
-					penumbra={1}
-					position={[0, 2, -8]}
-				/>
-
-				{/* Kicker light for edge highlights per PDF */}
-				<rectAreaLight
-					color="#FFE0C0"
-					height={10}
-					intensity={180}
-					position={[5, 0, 0]}
-					width={2}
-				/>
-
-				{/* Subtle area light for screen illumination */}
-				<rectAreaLight
-					color="#c7d0c0"
-					height={3}
-					intensity={2.8}
-					position={[0, 1, 6]}
-					width={4}
-				/>
-
-				{/* HDRI Environment with Lightformers for studio look per PDF Section 4.3 */}
-				<Environment
-					background={false}
-					blur={0.5}
-					environmentIntensity={0.72}
-					preset="studio"
+		<Html fullscreen style={{ pointerEvents: "none" }}>
+			<div className="absolute bottom-6 left-1/2 -translate-x-1/2" style={{ pointerEvents: "auto" }}>
+				<button
+					type="button"
+					onClick={onToggle}
+					className={`rounded-full border px-4 py-2 text-xs font-semibold backdrop-blur-md transition-all ${
+						active
+							? "border-white/30 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+							: "border-white/15 bg-black/30 text-white/60 hover:text-white/90 hover:bg-black/40"
+					}`}
 				>
-					{/* Top strip light for zebra effect on metal */}
-					<Lightformer
-						color="white"
-						intensity={1.2}
-						position={[0, 10, 0]}
-						scale={[20, 0.5, 1]}
-					/>
-					{/* Side softboxes */}
-					<Lightformer
-						color="white"
-						intensity={0.9}
-						position={[5, 5, -5]}
-						scale={[10, 3, 1]}
-					/>
-					<Lightformer
-						color="#e0f0ff"
-						intensity={0.7}
-						position={[-5, 3, -5]}
-						scale={[10, 3, 1]}
-					/>
-					{/* Bottom fill for subtle reflection */}
-					<Lightformer
-						color="#f0f0f0"
-						intensity={0.3}
-						position={[0, -5, 0]}
-						scale={[15, 2, 1]}
-					/>
-				</Environment>
-
-				<IpodModel {...modelProps} onRegisterReset={handleRegisterReset} />
-
-				{/* Enhanced contact shadows */}
-				<ContactShadows
-					blur={1.65}
-					color="#000000"
-					far={10}
-					opacity={0.42}
-					position={[0, -3.5, 0]}
-					resolution={2048}
-					scale={20}
-				/>
-
-				{/* Post-processing effects per PDF Section 4.4 */}
-				<PostProcessing />
-
-				{/* Scene capture for high-res exports */}
-				<SceneCapture
-					modelResetRef={modelResetRef}
-					onCapture={handleCapture}
-					onReady={onReady}
-				/>
-			</Canvas>
-		</div>
+					{active ? "⟳ Turntable On" : "↻ Turntable Off"}
+				</button>
+			</div>
+		</Html>
 	);
-});
+}
 
-// Display name for debugging
+// ─── Main Export ─────────────────────────────────────────────────────────────────
+
+export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
+	(props, ref) => {
+		const { onReady, ...modelProps } = props;
+		const captureRef = useRef<((w?: number, h?: number) => Promise<Blob | null>) | null>(null);
+		const modelResetRef = useRef<(() => void) | null>(null);
+		const [turntable, setTurntable] = useState(false);
+
+		useImperativeHandle(ref, () => ({
+			captureHighRes: async (width?: number, height?: number) => {
+				if (captureRef.current) return captureRef.current(width, height);
+				return null;
+			},
+		}));
+
+		const handleCapture = useCallback(
+			(fn: (w?: number, h?: number) => Promise<Blob | null>) => { captureRef.current = fn; },
+			[],
+		);
+
+		const handleRegisterReset = useCallback(
+			(fn: () => void) => { modelResetRef.current = fn; },
+			[],
+		);
+
+		return (
+			<div className="w-full h-full min-h-screen absolute inset-0 bg-black">
+				<Canvas
+					shadows
+					dpr={[1, 2]}
+					gl={{
+						antialias: true,
+						toneMapping: THREE.ACESFilmicToneMapping,
+						toneMappingExposure: 1.05,
+						preserveDrawingBuffer: true,
+						outputColorSpace: THREE.SRGBColorSpace,
+					}}
+				>
+					<PerspectiveCamera makeDefault fov={32} position={[0, 0.2, 10.5]} />
+
+					<OrbitControls
+						autoRotate={turntable}
+						autoRotateSpeed={0.25}
+						enableDamping
+						dampingFactor={0.08}
+						enablePan={false}
+						enableZoom
+						maxDistance={18}
+						maxPolarAngle={Math.PI}
+						minDistance={4}
+						minPolarAngle={0}
+						target={[0, 0.2, 0]}
+					/>
+
+					{/* Ambient */}
+					<ambientLight color="#eef1f5" intensity={0.28} />
+
+					{/* Key Light — warm, from top-right */}
+					<spotLight
+						castShadow
+						angle={0.32}
+						color="#FFF5E0"
+						intensity={520}
+						penumbra={0.9}
+						position={[9, 13, 11]}
+						shadow-bias={-0.0001}
+						shadow-mapSize={[2048, 2048]}
+					/>
+
+					{/* Fill Light — cool, from left */}
+					<spotLight
+						angle={0.55}
+						color="#d8e8ff"
+						intensity={140}
+						penumbra={0.9}
+						position={[-11, 5, 9]}
+					/>
+
+					{/* Rim Light — separates from background */}
+					<spotLight
+						angle={0.65}
+						color="#D8E8FF"
+						intensity={400}
+						penumbra={0.9}
+						position={[0, 1.5, -9]}
+					/>
+
+					{/* Edge Kicker — right side metallic sheen */}
+					<rectAreaLight
+						color="#FFE0C0"
+						height={10}
+						intensity={160}
+						position={[5.5, 0, 0.5]}
+						width={1.5}
+					/>
+
+					{/* Screen illumination — subtle LCD glow */}
+					<rectAreaLight
+						color="#c8d8c0"
+						height={3}
+						intensity={2.4}
+						position={[0, 1.2, 6]}
+						width={4}
+					/>
+
+					{/* HDRI Studio Environment */}
+					<Environment
+						background={false}
+						blur={0.4}
+						environmentIntensity={0.68}
+						preset="studio"
+					>
+						<Lightformer
+							color="white"
+							intensity={1.3}
+							position={[0, 9, 0]}
+							scale={[18, 0.4, 1]}
+						/>
+						<Lightformer
+							color="white"
+							intensity={0.95}
+							position={[6, 5, -5]}
+							scale={[9, 3, 1]}
+						/>
+						<Lightformer
+							color="#d8e8ff"
+							intensity={0.75}
+							position={[-5, 3, -5]}
+							scale={[9, 3, 1]}
+						/>
+						<Lightformer
+							color="#f0f0f0"
+							intensity={0.35}
+							position={[0, -5, 0]}
+							scale={[14, 1.5, 1]}
+						/>
+					</Environment>
+
+				<IpodModel
+					{...modelProps}
+					onRegisterReset={handleRegisterReset}
+				/>
+
+					<ContactShadows
+						blur={1.5}
+						color="#000000"
+						far={9}
+						opacity={0.4}
+						position={[0, -3.5, 0]}
+						resolution={2048}
+						scale={22}
+					/>
+
+					<PostProcessing />
+
+					<TurntableToggle
+						active={turntable}
+						onToggle={() => setTurntable((v) => !v)}
+					/>
+
+					<SceneCapture
+						modelResetRef={modelResetRef}
+						onCapture={handleCapture}
+						onReady={onReady}
+					/>
+				</Canvas>
+			</div>
+		);
+	},
+);
+
 ThreeDIpod.displayName = "ThreeDIpod";

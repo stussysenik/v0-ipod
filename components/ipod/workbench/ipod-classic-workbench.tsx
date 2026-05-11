@@ -1184,10 +1184,18 @@ export default function IpodClassicWorkbench() {
 			return 1;
 		}
 
-		const horizontalReserve = viewportSize.width >= 768 ? 112 : 24;
-		const verticalReserve = isCompactToolbox ? 128 : 32;
-		const availableWidth = Math.max(viewportSize.width - horizontalReserve, 260);
-		const availableHeight = Math.max(viewportSize.height - verticalReserve, 320);
+		// Reserve space for toolbox and safe areas
+		const isSmall = viewportSize.width < 640;
+		const isMedium = viewportSize.width < 1024;
+		const horizontalReserve = isSmall ? 20 : isMedium ? 72 : 112;
+		const verticalReserve = isSmall
+			? (isCompactToolbox ? 100 : 64)
+			: isCompactToolbox
+				? 120
+				: 40;
+
+		const availableWidth = Math.max(viewportSize.width - horizontalReserve, 240);
+		const availableHeight = Math.max(viewportSize.height - verticalReserve, 280);
 		const fitScale = Math.min(
 			availableWidth / frameWidth,
 			availableHeight / frameHeight,
@@ -1214,8 +1222,8 @@ export default function IpodClassicWorkbench() {
 		frameHeight,
 	]);
 
-	const scaledFrameWidth = frameWidth * previewScale;
-	const scaledFrameHeight = frameHeight * previewScale;
+	const scaledFrameWidth = Math.round(frameWidth * previewScale);
+	const scaledFrameHeight = Math.round(frameHeight * previewScale);
 	const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
 	const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
 	const mp4Busy = activeExportKind === "mp4" && exportStatus !== "idle";
@@ -2341,48 +2349,53 @@ export default function IpodClassicWorkbench() {
 
 				{/* 2D / EXPORT MODE */}
 				<div
-					className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
+					className={`relative flex items-center justify-center transition-all duration-700 ${
+						viewMode !== "3d"
+							? "opacity-100"
+							: "opacity-0 pointer-events-none absolute"
+					}`}
+					style={{
+						width: `${scaledFrameWidth}px`,
+						height: `${scaledFrameHeight}px`,
+						maxWidth: "calc(100vw - 2rem)",
+						maxHeight: "calc(100dvh - 6rem)",
+					}}
 				>
 					<div
-						className="relative"
+						className="origin-top-left"
 						style={{
-							width: `${scaledFrameWidth}px`,
-							height: `${scaledFrameHeight}px`,
+							width: `${frameWidth}px`,
+							height: `${frameHeight}px`,
+							transform: `scale(${previewScale})`,
+							transformOrigin: "center center",
+							marginLeft: `-${Math.round(frameWidth * (1 - previewScale) / 2)}px`,
+							marginTop: `-${Math.round(frameHeight * (1 - previewScale) / 2)}px`,
 						}}
 					>
 						<div
-							className="origin-top-left"
+							ref={exportTargetRef}
+							data-export-shell={
+								isExportCapturing
+									? "true"
+									: "false"
+							}
+							className="p-8 sm:p-10 md:p-12"
 							style={{
-								width: `${frameWidth}px`,
-								height: `${frameHeight}px`,
-								transform: `scale(${previewScale})`,
+								backgroundColor:
+									isExportCapturing
+										? bgColor
+										: "transparent",
 							}}
 						>
-							<div
-								ref={exportTargetRef}
-								data-export-shell={
+							<IpodDevice
+								preset={activePreset}
+								skinColor={skinColor}
+								exportSafe={
 									isExportCapturing
-										? "true"
-										: "false"
 								}
-								className="p-12"
-								style={{
-									backgroundColor:
-										isExportCapturing
-											? bgColor
-											: "transparent",
-								}}
-							>
-								<IpodDevice
-									preset={activePreset}
-									skinColor={skinColor}
-									exportSafe={
-										isExportCapturing
-									}
-									screen={screenComponent}
-									wheel={wheelComponent}
-								/>
-							</div>
+								screen={screenComponent}
+								wheel={wheelComponent}
+							/>
 						</div>
 					</div>
 				</div>

@@ -28,7 +28,7 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 			<div className="absolute top-0 left-0 right-0 h-[0.5px] bg-white/40" />
 
 			<div
-				className="flex items-center gap-[4px] font-bold leading-none tracking-[-0.015em]"
+				className="flex items-center gap-[4px] font-bold leading-none tracking-[-0.03em]"
 				style={{
 					color: getTextTokenCss("screen.statusbar.text"),
 					fontSize: Math.max(9, screenTokens.statusBarHeight - 7),

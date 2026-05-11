@@ -63,11 +63,6 @@ export function IpodClickWheel({
 	const wheelGradientFrom = derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
 	const wheelGradientVia = derived?.gradient.via ?? getSurfaceToken("wheel.gradient.via");
 	const wheelGradientTo = derived?.gradient.to ?? getSurfaceToken("wheel.gradient.to");
-	const wheelCenterBorder = derived?.centerBorder ?? getSurfaceToken("wheel.center.border");
-	const wheelCenterFrom =
-		derived?.centerGradient.from ?? getSurfaceToken("wheel.center.from");
-	const wheelCenterVia = derived?.centerGradient.via ?? getSurfaceToken("wheel.center.via");
-	const wheelCenterTo = derived?.centerGradient.to ?? getSurfaceToken("wheel.center.to");
 	const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
 	const wheelTokens = preset.wheel;
 
@@ -77,10 +72,10 @@ export function IpodClickWheel({
 		backgroundImage: `linear-gradient(175deg, ${wheelGradientFrom} 0%, ${wheelGradientVia} 55%, ${wheelGradientTo} 100%)`,
 	};
 
-	// Directional: top-left catches light, bottom-right pools shadow
+	// Concave center: uniform depression, white surface — shadow at rim, light pools at center
 	const centerShadow = exportSafe
-		? "0 1px 2px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1px 1px rgba(0,0,0,0.05)"
-		: "0 3px 8px -2px rgba(0,0,0,0.16), 0 1px 3px rgba(0,0,0,0.08), inset 1px 1px 1px -0.5px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.07), inset 0 -1px 1px rgba(0,0,0,0.04)";
+		? "inset 0 1px 3px rgba(0,0,0,0.08)"
+		: "inset 0 1px 4px rgba(0,0,0,0.10), inset 0 -0.5px 1px rgba(255,255,255,0.6)";
 
 	useEffect(() => {
 		const wheel = wheelRef.current;
@@ -365,7 +360,7 @@ export function IpodClickWheel({
 			</div>
 
 			<div
-				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-100 ${
+				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-100 ${
 					disabled
 						? "cursor-default"
 						: "cursor-pointer active:scale-[0.96] active:shadow-none"
@@ -373,8 +368,9 @@ export function IpodClickWheel({
 				style={{
 					width: wheelTokens.centerSize,
 					height: wheelTokens.centerSize,
-					borderColor: wheelCenterBorder,
-					backgroundImage: `linear-gradient(180deg, ${wheelCenterFrom}, ${wheelCenterVia}, ${wheelCenterTo})`,
+					borderColor: "#D4D4D8",
+					backgroundImage:
+						"radial-gradient(circle at 50% 50%, #FAFAFA 40%, #EAEAEC 100%)",
 					boxShadow: centerShadow,
 				}}
 				data-export-layer="wheel-center"
@@ -391,8 +387,8 @@ export function IpodClickWheel({
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
 						background: exportSafe
-							? "linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 45%)"
-							: "radial-gradient(ellipse at 33% 28%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0) 75%)",
+							? "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.35) 30%, rgba(255,255,255,0) 70%)"
+							: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.5) 25%, rgba(255,255,255,0) 65%)",
 					}}
 					aria-hidden="true"
 				/>
@@ -400,8 +396,8 @@ export function IpodClickWheel({
 					className="pointer-events-none absolute inset-0 rounded-full"
 					style={{
 						background: exportSafe
-							? "linear-gradient(0deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0) 45%)"
-							: "radial-gradient(ellipse at 67% 72%, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.04) 40%, rgba(0,0,0,0) 65%)",
+							? "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.06) 100%)"
+							: "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.09) 100%)",
 					}}
 					aria-hidden="true"
 				/>

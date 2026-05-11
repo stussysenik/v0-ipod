@@ -29,7 +29,7 @@ export function IpodPlaybackFooter({
 	playClick,
 }: IpodPlaybackFooterProps) {
 	const timeFontSize = Math.max(9, screenTokens.metaFontSize + 1);
-	const timeWidth = Math.max(28, Math.round(timeFontSize * 3.2));
+	const timeWidth = Math.max(28, Math.round(timeFontSize * 1.8));
 
 	const batteryTokens = screenChromeTokens.statusBar.battery;
 	const batterySvgWidth = batteryTokens.width + batteryTokens.capWidth + 1;
@@ -62,7 +62,7 @@ export function IpodPlaybackFooter({
 					},
 				)}
 			</div>
-			<div className="min-w-0 flex-1 px-[4px]">
+			<div className="min-w-0 flex-1 px-[3px]">
 				<IpodProgressBar
 					currentTime={state.currentTime}
 					duration={state.duration}
@@ -114,7 +114,8 @@ export function IpodPlaybackFooter({
 			style: {
 				bottom: screenTokens.progressBottom,
 				height: screenTokens.progressHeight,
-				paddingInline: screenTokens.statusBarPaddingX,
+				paddingLeft: screenTokens.statusBarPaddingX + 4,
+				paddingRight: screenTokens.statusBarPaddingX,
 				paddingTop: screenTokens.progressPaddingTop,
 				background: screenChromeTokens.progress.footerBackground,
 				display: "flex",

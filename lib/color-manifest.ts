@@ -306,10 +306,10 @@ export function deriveScreenSurround(caseHex: string): {
 		};
 	}
 
-	// Dark case — slightly lighter surround so it doesn't merge with case
+	// Dark case — lighter surround matching progress bar visual weight
 	return {
-		top: "#1A1A1C",
-		mid: "#222224",
-		bottom: "#121214",
+		top: "#5A5A5D",
+		mid: "#6A6A6E",
+		bottom: "#505054",
 	};
 }
