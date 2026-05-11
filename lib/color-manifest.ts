@@ -101,12 +101,12 @@ export const DEFAULT_SHELL_COLOR = "#F2F2F2"; // White iPod case — 1st gen lig
 export const DEFAULT_BACKDROP_COLOR = "#FFFFFF"; // Stage background
 
 // Authentic iPod 6G colors
-export const IPOD_6G_BLACK = "#1A1A1A"; // Black case
+export const IPOD_6G_BLACK = "#1b1818"; // Black case — warm undertone
 export const IPOD_6G_SILVER = "#C8C9CB"; // Silver case
 export const IPOD_6G_BACKGROUND = "#FFFFFF"; // White background
 
 // Click wheel colors
-export const WHEEL_DARK_SURFACE = "#1C1C1E"; // Black iPod wheel
+export const WHEEL_DARK_SURFACE = "#1c1a1b"; // Black iPod wheel — warm
 export const WHEEL_DARK_LABEL = "#FFFFFF"; // Black iPod labels
 export const WHEEL_LIGHT_SURFACE = "#F5F5F7"; // Silver iPod wheel
 export const WHEEL_LIGHT_LABEL = "#8E8E93"; // Silver iPod labels

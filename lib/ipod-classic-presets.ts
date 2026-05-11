@@ -191,7 +191,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		shortLabel: "2008 Black",
 		yearLabel: "2008",
 		notes: "Black version of the 120GB revision.",
-		defaultShellColor: "#1A1A1A",
+		defaultShellColor: "#1b1818",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
 		shell: {
 			width: 350,

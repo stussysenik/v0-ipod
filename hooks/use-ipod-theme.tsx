@@ -8,7 +8,7 @@ import type { IpodHardwarePresetId } from "@/types/ipod-state";
 // Based on reference: ipod-6th-classic-gen.png
 export const IPOD_6G_COLORS = {
 	case: {
-		black: "#1A1A1A",
+		black: "#1b1818",
 		white: "#F5F5F7",
 	},
 	background: {
@@ -17,11 +17,11 @@ export const IPOD_6G_COLORS = {
 	},
 	wheel: {
 		dark: {
-			surface: "#1C1C1E",
-			border: "#2C2C2E",
+			surface: "#1c1a1b",
+			border: "#2c2a2b",
 			label: "#FFFFFF",
-			center: "#2C2C2E",
-			centerBorder: "#3A3A3C",
+			center: "#2c2a2b",
+			centerBorder: "#3a3838",
 		},
 		light: {
 			surface: "#F5F5F7",

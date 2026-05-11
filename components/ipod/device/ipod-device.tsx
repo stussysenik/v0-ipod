@@ -61,7 +61,7 @@ export function IpodDevice({
 
 			{/* Screen gasket — the dark physical gap between shell and display */}
 			<div
-				className="relative z-10 w-full bg-[#0F0F0F]"
+				className="relative z-10 w-full bg-[#110f0f]"
 				style={{
 					borderRadius: preset.screen.outerRadius,
 					boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5)",

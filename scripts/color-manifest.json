@@ -24,7 +24,7 @@
 		},
 		{
 			"label": "Black (5th Gen)",
-			"hex": "#1A1A1A",
+			"hex": "#1b1818",
 			"family": "black",
 			"generation": "5"
 		},
@@ -36,7 +36,7 @@
 		},
 		{
 			"label": "Black (Classic 6th)",
-			"hex": "#1C1C1E",
+			"hex": "#1c1a1b",
 			"family": "black",
 			"generation": "6"
 		},
@@ -99,7 +99,7 @@
 			"label": "Black",
 			"generation": "5th Gen (Video)",
 			"year": 2005,
-			"hex": "#1A1A1A",
+			"hex": "#1b1818",
 			"wheelVariant": "dark",
 			"notes": "First black iPod, anodized aluminum back"
 		},
@@ -117,7 +117,7 @@
 			"label": "Black",
 			"generation": "Classic 6th Gen",
 			"year": 2007,
-			"hex": "#1C1C1E",
+			"hex": "#1c1a1b",
 			"wheelVariant": "dark",
 			"notes": "Deep black anodized aluminum, 160GB"
 		},
@@ -161,7 +161,7 @@
 
 	"surfaceTokens": {
 		"shell.default": {
-			"hex": "#1A1A1A",
+			"hex": "#1b1818",
 			"role": "shell",
 			"family": "black",
 			"note": "iPod 6G Black case"
@@ -180,7 +180,7 @@
 		},
 
 		"wheel.dark.surface": {
-			"hex": "#1C1C1E",
+			"hex": "#1c1a1b",
 			"role": "wheel",
 			"family": "black",
 			"note": "Dark wheel surface - iPod 6G Black"
@@ -248,7 +248,7 @@
 			"note": "Default wheel border (legacy)"
 		},
 		"wheel.gradient.from": {
-			"hex": "#1C1C1E",
+			"hex": "#1c1a1b",
 			"role": "wheel",
 			"family": "black",
 			"note": "Default wheel gradient from (legacy)"
