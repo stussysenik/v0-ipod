@@ -53,29 +53,13 @@ export function IpodClickWheel({
 	const wheelRef = useRef<HTMLDivElement>(null);
 	const derived = skinColor ? deriveWheelColors(skinColor) : null;
 
-	// Unified top-left light source (~33% x, ~28% y) — all shadows and highlights
-	// share this direction so the wheel reads as a single physical object.
-	const wheelShadow = exportSafe
-		? "0 0 0 1px rgba(92,96,104,0.12), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -1px 0 rgba(0,0,0,0.05)"
-		: "0 8px 18px -14px rgba(0,0,0,0.2), 0 4px 10px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(88,94,102,0.07), inset 0 1px 0 rgba(255,255,255,0.78), inset 1px 0 1px -0.5px rgba(255,255,255,0.15), inset -1px 0 1px -0.5px rgba(0,0,0,0.04), inset 0 -2px 2px -1px rgba(0,0,0,0.05)";
-
-	const wheelBorder = derived?.border ?? getSurfaceToken("wheel.border");
-	const wheelGradientFrom = derived?.gradient.from ?? getSurfaceToken("wheel.gradient.from");
-	const wheelGradientVia = derived?.gradient.via ?? getSurfaceToken("wheel.gradient.via");
-	const wheelGradientTo = derived?.gradient.to ?? getSurfaceToken("wheel.gradient.to");
 	const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
 	const wheelTokens = preset.wheel;
 
-	// Wheel surface: same material as the case, just recessed.
-	// Gradient goes from lighter top (catching ambient light) to darker bottom (shadow).
+	// Wheel surface: clean flat gray — the recessed tone
 	const wheelSurfaceStyle = {
-		backgroundImage: `linear-gradient(175deg, ${wheelGradientFrom} 0%, ${wheelGradientVia} 55%, ${wheelGradientTo} 100%)`,
+		background: "#CACACC",
 	};
-
-	// Concave center: uniform depression, white surface — shadow at rim, light pools at center
-	const centerShadow = exportSafe
-		? "inset 0 1px 3px rgba(0,0,0,0.08)"
-		: "inset 0 1px 4px rgba(0,0,0,0.10), inset 0 -0.5px 1px rgba(255,255,255,0.6)";
 
 	useEffect(() => {
 		const wheel = wheelRef.current;
@@ -166,11 +150,11 @@ export function IpodClickWheel({
 		>
 			{/* Wheel surface, labels, and center button form one hardware subassembly. */}
 			<div
-				className="absolute inset-0 rounded-full border"
+				className="absolute inset-0 rounded-full"
 				style={{
-					borderColor: wheelBorder,
 					...wheelSurfaceStyle,
-					boxShadow: wheelShadow,
+					boxShadow:
+						"inset 0 1px 3px rgba(0,0,0,0.12)",
 				}}
 				data-export-layer="wheel"
 				data-testid="click-wheel"
@@ -360,7 +344,7 @@ export function IpodClickWheel({
 			</div>
 
 			<div
-				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-100 ${
+				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-100 ${
 					disabled
 						? "cursor-default"
 						: "cursor-pointer active:scale-[0.96] active:shadow-none"
@@ -368,10 +352,10 @@ export function IpodClickWheel({
 				style={{
 					width: wheelTokens.centerSize,
 					height: wheelTokens.centerSize,
-					borderColor: "#D4D4D8",
-					backgroundImage:
-						"radial-gradient(circle at 50% 50%, #FAFAFA 40%, #EAEAEC 100%)",
-					boxShadow: centerShadow,
+					background:
+						"radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F5F5F7 50%, #E8E8EB 100%)",
+					boxShadow:
+						"inset 0 8px 12px -4px rgba(0,0,0,0.18), inset 0 2px 3px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.9), 0 1px 2px rgba(255,255,255,0.7), 0 0 0 0.5px rgba(0,0,0,0.06)",
 				}}
 				data-export-layer="wheel-center"
 				data-testid="click-wheel-center"
@@ -382,26 +366,7 @@ export function IpodClickWheel({
 					e.stopPropagation();
 					handleControlPress(onCenterClick);
 				}}
-			>
-				<div
-					className="pointer-events-none absolute inset-0 rounded-full"
-					style={{
-						background: exportSafe
-							? "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.35) 30%, rgba(255,255,255,0) 70%)"
-							: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.5) 25%, rgba(255,255,255,0) 65%)",
-					}}
-					aria-hidden="true"
-				/>
-				<div
-					className="pointer-events-none absolute inset-0 rounded-full"
-					style={{
-						background: exportSafe
-							? "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.06) 100%)"
-							: "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.09) 100%)",
-					}}
-					aria-hidden="true"
-				/>
-			</div>
+			/>
 		</div>
 	);
 }

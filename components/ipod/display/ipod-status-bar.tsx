@@ -21,12 +21,9 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 				height: screenTokens.statusBarHeight,
 				paddingInline: screenTokens.statusBarPaddingX,
 				backgroundImage: `linear-gradient(180deg, ${getSurfaceToken("screen.statusbar.bg.from")} 0%, ${getSurfaceToken("screen.statusbar.bg.to")} 100%)`,
-				borderColor: screenChromeTokens.statusBar.divider,
+				borderColor: "rgba(0,0,0,0.08)",
 			}}
 		>
-			{/* Top highlight for metallic feel */}
-			<div className="absolute top-0 left-0 right-0 h-[0.5px] bg-white/40" />
-
 			<div
 				className="flex items-center gap-[4px] font-bold leading-none tracking-[-0.03em]"
 				style={{

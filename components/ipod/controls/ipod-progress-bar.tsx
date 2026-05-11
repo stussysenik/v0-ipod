@@ -87,10 +87,8 @@ export function IpodProgressBar({
 				style={{
 					height: visualTrackHeight,
 					borderRadius: 2,
-					borderColor: "#b8b8b8",
-					borderTopColor: "#9e9e9e",
-					background: "linear-gradient(to bottom, #fdfdfd, #f1f1f1 40%, #e5e5e5)",
-					boxShadow: "inset 0 1px 1px rgba(0,0,0,.15)",
+					borderColor: "rgba(0,0,0,0.1)",
+					background: "#f1f1f1",
 					touchAction: "none",
 					padding: "0 1px",
 				}}
@@ -101,17 +99,8 @@ export function IpodProgressBar({
 					style={{
 						width: `${visibleProgress}%`,
 						background: "linear-gradient(to bottom, #72B9F4 0%, #3D9CF4 48%, #1680E0 52%, #4C9EEB 100%)",
-						boxShadow: "inset 0 1px 0 rgba(255,255,255,0.45)",
 						maxWidth: "100%",
 						borderRadius: "1px 0 0 1px",
-					}}
-				/>
-				<div
-					className="pointer-events-none absolute inset-x-0 top-0 h-[5px]"
-					style={{
-						background: "linear-gradient(to bottom, rgba(255,255,255,0.75), rgba(255,255,255,0.15))",
-						borderRadius: "1px 1px 0 0",
-						mixBlendMode: "screen",
 					}}
 				/>
 			</div>
