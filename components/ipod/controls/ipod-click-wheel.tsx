@@ -309,8 +309,7 @@ export function IpodClickWheel({
 					background: "#ffffff",
 					border: "none",
 					outline: "none",
-					boxShadow:
-						"inset 0 0 2px rgba(0, 0, 0, 0.12), inset 0 0 6px rgba(0, 0, 0, 0.07)",
+					boxShadow: `inset 0 0 ${(wheelTokens.centerSize * 0.022).toFixed(1)}px rgba(0, 0, 0, 0.12), inset 0 0 ${(wheelTokens.centerSize * 0.065).toFixed(1)}px rgba(0, 0, 0, 0.07)`,
 				}}
 				data-export-layer="wheel-center"
 				data-testid="click-wheel-center"
