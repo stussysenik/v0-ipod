@@ -1,6 +1,6 @@
 "use client";
 
-import { getSurfaceToken, getTextTokenCss } from "@/lib/color-manifest";
+import { getTextTokenCss } from "@/lib/color-manifest";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import { screenChromeTokens } from "@/lib/design-system";
 import { ScreenBattery } from "@/components/ipod/display/screen-battery";
