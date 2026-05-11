@@ -97,6 +97,7 @@ import {
 	CASE_OKLCH_CONFIG,
 } from "@/lib/color-manifest";
 import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import {
 	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	type AnimatedExportFormat,
@@ -376,6 +377,22 @@ export default function IpodClassicWorkbench() {
 		setIsModelHydrated(true);
 	}, []);
 
+	// Correct viewMode if the current mode is gated by a feature flag
+	useEffect(() => {
+		if (!isModelHydrated) return;
+		const gatedModes: Array<{ mode: IpodViewMode; flag: boolean }> = [
+			{ mode: "3d", flag: FEATURE_FLAGS.SHOW_3D_VIEW_MODE },
+			{ mode: "focus", flag: FEATURE_FLAGS.SHOW_FOCUS_VIEW_MODE },
+			{ mode: "ascii", flag: FEATURE_FLAGS.SHOW_ASCII_VIEW_MODE },
+		];
+		const activeGated = gatedModes.find(
+			(g) => g.mode === model.presentation.viewMode && !g.flag,
+		);
+		if (activeGated) {
+			dispatch({ type: "SET_VIEW_MODE", payload: "preview" });
+		}
+	}, [isModelHydrated, model.presentation.viewMode]);
+
 	useEffect(() => {
 		setExportCounter(loadPersistedExportCounter());
 	}, []);
@@ -454,15 +471,7 @@ export default function IpodClassicWorkbench() {
 		dispatch({ type: "SET_BATTERY_LEVEL", payload: lastExportedBatteryRef.current });
 	}, [batteryMode]);
 
-	useEffect(() => {
-		if (batteryMode !== "manual") return;
-		const DRAIN_PER_TICK = (1.0 - 0.08) / 6480;
-		const interval = setInterval(() => {
-			const next = Math.max(0.08, batteryLevel - DRAIN_PER_TICK);
-			dispatch({ type: "SET_BATTERY_LEVEL", payload: next });
-		}, 10000);
-		return () => clearInterval(interval);
-	}, [batteryMode, batteryLevel]);
+	// Note: Manual mode no longer drains automatically to ensure it "stays full" and is deterministic.
 
 	useEffect(() => {
 		if (batteryMode !== "solar") return;
@@ -470,8 +479,10 @@ export default function IpodClassicWorkbench() {
 		const interval = setInterval(() => {
 			const dur = model.metadata.duration;
 			if (dur <= 0) return;
+			// Simulated "solar" drain is now much slower: e.g. 5% per full song duration
 			const progress = Math.min(model.metadata.currentTime / dur, 1.0);
-			const level = startLevel - (startLevel - 0.08) * progress;
+			const SENSITIVITY = 0.05; // Only drain 5% per song in solar mode
+			const level = startLevel - (startLevel - 0.08) * progress * SENSITIVITY;
 			dispatch({ type: "SET_BATTERY_LEVEL", payload: Math.max(level, 0.08) });
 		}, 10000);
 		return () => clearInterval(interval);
@@ -1293,7 +1304,12 @@ export default function IpodClassicWorkbench() {
 											Attempt
 										</h3>
 										<div className="grid grid-cols-1 gap-2">
-											{IPOD_CLASSIC_PRESETS.map(
+											{IPOD_CLASSIC_PRESETS.filter(
+												(p) =>
+													FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS ||
+													p.id ===
+														"classic-2008-black",
+											).map(
 												(
 													presetOption,
 												) => (
@@ -1380,31 +1396,34 @@ export default function IpodClassicWorkbench() {
 												iPod
 												OS
 											</button>
-											<button
-												type="button"
-												data-testid="interaction-mode-ipod-os-original-button"
-												aria-pressed={
-													interactionModel ===
-													"ipod-os-original"
-												}
-												onClick={() =>
-													handleInteractionModelChange(
-														"ipod-os-original",
-													)
-												}
-												className={getLockedInteractionModeButtonClass(
-													interactionModel ===
-														"ipod-os-original",
-													"col-span-2",
-												)}
-											>
-												iPod
-												OS
-												Original
-											</button>
+											{FEATURE_FLAGS.SHOW_IPOD_OS_ORIGINAL && (
+												<button
+													type="button"
+													data-testid="interaction-mode-ipod-os-original-button"
+													aria-pressed={
+														interactionModel ===
+														"ipod-os-original"
+													}
+													onClick={() =>
+														handleInteractionModelChange(
+															"ipod-os-original",
+														)
+													}
+													className={getLockedInteractionModeButtonClass(
+														interactionModel ===
+															"ipod-os-original",
+														"col-span-2",
+													)}
+												>
+													iPod
+													OS
+													Original
+												</button>
+											)}
 										</div>
-										{interactionModel ===
-										"ipod-os-original" ? (
+										{FEATURE_FLAGS.SHOW_IPOD_OS_ORIGINAL &&
+										interactionModel ===
+											"ipod-os-original" ? (
 											<p className="mt-2 px-1 text-[10px] leading-[1.35] text-[#6B7280]">
 												Mirrors
 												the
@@ -1541,6 +1560,7 @@ export default function IpodClassicWorkbench() {
 										}
 									/>
 									{oklchReady &&
+										FEATURE_FLAGS.SHOW_OKLCH_SPECTRUM &&
 										oklchCasePalette.length >
 											0 && (
 											<div className="mb-4">
@@ -1703,6 +1723,7 @@ export default function IpodClassicWorkbench() {
 										}
 									/>
 									{oklchReady &&
+										FEATURE_FLAGS.SHOW_OKLCH_AMBIENT &&
 										oklchBgPalette.length >
 											0 && (
 											<div className="mb-3">
@@ -2034,43 +2055,49 @@ export default function IpodClassicWorkbench() {
 									)
 								}
 							/>
-							<IconButton
-								icon={<Box className="w-5 h-5" />}
-								label="3D Experience"
-								badge="WIP"
-								data-testid="three-d-view-button"
-								isActive={viewMode === "3d"}
-								onClick={() =>
-									handleViewModeChange("3d")
-								}
-							/>
-							<IconButton
-								icon={
-									<Monitor className="w-5 h-5" />
-								}
-								label="Focus Mode"
-								data-testid="focus-view-button"
-								isActive={viewMode === "focus"}
-								onClick={() =>
-									handleViewModeChange(
-										"focus",
-									)
-								}
-							/>
-							<IconButton
-								icon={
-									<Terminal className="w-5 h-5" />
-								}
-								label="ASCII Mode"
-								badge="WIP"
-								data-testid="ascii-view-button"
-								isActive={viewMode === "ascii"}
-								onClick={() =>
-									handleViewModeChange(
-										"ascii",
-									)
-								}
-							/>
+							{FEATURE_FLAGS.SHOW_3D_VIEW_MODE && (
+								<IconButton
+									icon={<Box className="w-5 h-5" />}
+									label="3D Experience"
+									badge="WIP"
+									data-testid="three-d-view-button"
+									isActive={viewMode === "3d"}
+									onClick={() =>
+										handleViewModeChange("3d")
+									}
+								/>
+							)}
+							{FEATURE_FLAGS.SHOW_FOCUS_VIEW_MODE && (
+								<IconButton
+									icon={
+										<Monitor className="w-5 h-5" />
+									}
+									label="Focus Mode"
+									data-testid="focus-view-button"
+									isActive={viewMode === "focus"}
+									onClick={() =>
+										handleViewModeChange(
+											"focus",
+										)
+									}
+								/>
+							)}
+							{FEATURE_FLAGS.SHOW_ASCII_VIEW_MODE && (
+								<IconButton
+									icon={
+										<Terminal className="w-5 h-5" />
+									}
+									label="ASCII Mode"
+									badge="WIP"
+									data-testid="ascii-view-button"
+									isActive={viewMode === "ascii"}
+									onClick={() =>
+										handleViewModeChange(
+											"ascii",
+										)
+									}
+								/>
+							)}
 							<IconButton
 								icon={
 									isPlaying ? (
