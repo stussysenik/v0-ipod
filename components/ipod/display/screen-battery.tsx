@@ -27,8 +27,10 @@ export function ScreenBattery({
 	const fX = 1;
 	const fY = 2;
 	const fH = bodyH - 1;
-	// At 100% (safe >= 1), we want to fill the body completely and seamlessly
-	const cW = safe >= 1 ? bodyW : Math.max(0, (bodyW - 1) * safe);
+	// Use a small epsilon for "full" state to ensure visual determinism at 100%
+	const isFull = safe >= 0.98;
+	// At threshold, we fill the body completely to connect seamlessly with the terminal
+	const cW = isFull ? bodyW : Math.max(0, (bodyW - 1) * safe);
 
 	const bodyRight = bodyW + 0.5;
 	const bodyBottom = bodyH + 1.5;
@@ -37,7 +39,6 @@ export function ScreenBattery({
 	const termRight = termX + capW;
 	const termBottom = termY + capH;
 
-	// Unified shell path: one continuous outline — no inner wall between body and terminal
 	const shellD = [
 		`M ${0.5 + rx} 1.5`,
 		`L ${bodyRight - rx} 1.5`,
@@ -82,8 +83,8 @@ export function ScreenBattery({
 				</linearGradient>
 			</defs>
 
-			{/* Unified shell: one continuous outline, no inner wall between body and terminal */}
-			<path d={shellD} fill={t.background} stroke={t.border} strokeWidth={1} />
+			{/* Background Fill Layer */}
+			<path d={shellD} fill={t.background} />
 
 			{/* Charge fill: body interior */}
 			{cW > 0 && (
@@ -109,8 +110,8 @@ export function ScreenBattery({
 				</>
 			)}
 
-			{/* Terminal nub fills green at 100% — the total area includes the nub */}
-			{safe >= 1 && (
+			{/* Terminal nub fills green at 100% (deterministic threshold) */}
+			{isFull && (
 				<>
 					<rect
 						x={termX - 0.5}
@@ -131,6 +132,8 @@ export function ScreenBattery({
 				</>
 			)}
 
+			{/* Stroke Layer: Top-most to ensure "pixel detail" consistency of the outline */}
+			<path d={shellD} stroke={t.border} strokeWidth={1} pointerEvents="none" />
 		</svg>
 	);
 }
