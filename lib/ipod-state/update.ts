@@ -26,6 +26,8 @@ export type IpodWorkbenchAction =
 	| { type: "SET_VIEW_MODE"; payload: IpodWorkbenchModel["presentation"]["viewMode"] }
 	| { type: "SET_SKIN_COLOR"; payload: string }
 	| { type: "SET_BG_COLOR"; payload: string }
+	| { type: "SET_RING_COLOR"; payload: string }
+	| { type: "SET_CENTER_COLOR"; payload: string }
 	| {
 			type: "SET_HARDWARE_PRESET";
 			payload: IpodWorkbenchModel["presentation"]["hardwarePreset"];
@@ -137,6 +139,8 @@ export function buildPersistedUiState(model: IpodWorkbenchModel): IpodUiState {
 	return {
 		skinColor: model.presentation.skinColor,
 		bgColor: model.presentation.bgColor,
+		ringColor: model.presentation.ringColor,
+		centerColor: model.presentation.centerColor,
 		viewMode: model.presentation.viewMode,
 		hardwarePreset: model.presentation.hardwarePreset,
 		interactionModel: model.interaction.interactionModel,
@@ -178,6 +182,8 @@ export function applySongSnapshotToModel(
 		presentation: {
 			skinColor: snapshot.ui.skinColor,
 			bgColor: snapshot.ui.bgColor,
+			ringColor: snapshot.ui.ringColor ?? "",
+			centerColor: snapshot.ui.centerColor ?? "",
 			viewMode: snapshot.ui.viewMode,
 			hardwarePreset: snapshot.ui.hardwarePreset,
 		},
@@ -262,6 +268,16 @@ export function ipodWorkbenchReducer(
 				...state,
 				presentation: { ...state.presentation, bgColor: action.payload },
 			});
+		case "SET_RING_COLOR":
+			return normalizeModel({
+				...state,
+				presentation: { ...state.presentation, ringColor: action.payload },
+			});
+		case "SET_CENTER_COLOR":
+			return normalizeModel({
+				...state,
+				presentation: { ...state.presentation, centerColor: action.payload },
+			});
 		case "SET_HARDWARE_PRESET": {
 			const preset = getIpodClassicPreset(action.payload);
 
@@ -272,6 +288,8 @@ export function ipodWorkbenchReducer(
 					hardwarePreset: action.payload,
 					skinColor: preset.defaultShellColor,
 					bgColor: preset.defaultBackdropColor,
+					ringColor: "",
+					centerColor: "",
 				},
 			});
 		}

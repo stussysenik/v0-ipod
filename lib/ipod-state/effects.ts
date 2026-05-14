@@ -21,6 +21,8 @@ import { buildPersistedUiState, buildSongSnapshot } from "./update";
 
 export const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
 export const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
+export const RING_CUSTOM_COLORS_KEY = "ipodSnapshotRingCustomColors";
+export const CENTER_CUSTOM_COLORS_KEY = "ipodSnapshotCenterCustomColors";
 
 function waitForFrameBoundary(): Promise<void> {
 	return new Promise((resolve) =>
@@ -54,6 +56,8 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 		presentation: {
 			skinColor: savedUi?.skinColor ?? fallback.presentation.skinColor,
 			bgColor: savedUi?.bgColor ?? fallback.presentation.bgColor,
+			ringColor: savedUi?.ringColor ?? fallback.presentation.ringColor,
+			centerColor: savedUi?.centerColor ?? fallback.presentation.centerColor,
 			viewMode: savedUi?.viewMode ?? fallback.presentation.viewMode,
 			hardwarePreset:
 				savedUi?.hardwarePreset ?? fallback.presentation.hardwarePreset,

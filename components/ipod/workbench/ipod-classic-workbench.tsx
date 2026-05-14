@@ -54,11 +54,13 @@ import { IpodScreen } from "../display/ipod-screen";
 import { IpodAsciiScene } from "../scenes/ipod-ascii-scene";
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodDevice } from "../device/ipod-device";
-import { GreyPalettePicker } from "../editors/grey-palette-picker";
 import { HexColorInput } from "../editors/hex-color-input";
+import { IPOD_6G_COLORS } from "@/hooks/use-ipod-theme";
 import {
 	BG_CUSTOM_COLORS_KEY,
 	CASE_CUSTOM_COLORS_KEY,
+	RING_CUSTOM_COLORS_KEY,
+	CENTER_CUSTOM_COLORS_KEY,
 	exportWorkbenchGif,
 	exportWorkbenchMp4,
 	exportWorkbenchPng,
@@ -82,7 +84,6 @@ import {
 	type IpodNowPlayingLayoutState,
 	type IpodOsScreen,
 	type IpodViewMode,
-	type SnapshotSelectionKind,
 } from "@/lib/ipod-state/model";
 import {
 	isAsciiViewMode,
@@ -91,11 +92,6 @@ import {
 	isPreviewViewMode,
 } from "@/lib/ipod-state/selectors";
 import { clampSnapshotTime, ipodWorkbenchReducer } from "@/lib/ipod-state/update";
-import {
-	AUTHENTIC_CASE_COLORS,
-	BACKGROUND_OKLCH_CONFIG,
-	CASE_OKLCH_CONFIG,
-} from "@/lib/color-manifest";
 import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import {
@@ -106,15 +102,9 @@ import {
 	clampAnimatedExportDurationSeconds,
 } from "@/lib/export/animated-export";
 import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
-import { formatTimecode, parseTimecode } from "@/lib/time-utils";
+import { formatTimecode } from "@/lib/time-utils";
 
 const MAX_CUSTOM_COLORS = 6;
-const OKLCH_CASE_L = CASE_OKLCH_CONFIG.lightness;
-const OKLCH_CASE_C = CASE_OKLCH_CONFIG.chroma;
-const OKLCH_BG_L = BACKGROUND_OKLCH_CONFIG.lightness;
-const OKLCH_BG_C = BACKGROUND_OKLCH_CONFIG.chroma;
-const OKLCH_CASE_STEPS = CASE_OKLCH_CONFIG.steps;
-const OKLCH_BG_STEPS = BACKGROUND_OKLCH_CONFIG.steps;
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | AnimatedExportFormat;
@@ -156,38 +146,6 @@ function getLockedInteractionModeButtonClass(isActive: boolean, extraClassName?:
 		.join(" ");
 }
 
-const supportsOklch = () =>
-	typeof CSS !== "undefined" &&
-	typeof CSS.supports === "function" &&
-	CSS.supports("color", "oklch(0.7 0.1 20)");
-
-const oklchToHex = (lightness: number, chroma: number, hue: number) => {
-	if (typeof document === "undefined") return null;
-	const swatch = document.createElement("div");
-	swatch.style.color = `oklch(${lightness} ${chroma} ${hue})`;
-	swatch.style.display = "none";
-	document.body.appendChild(swatch);
-	const computed = getComputedStyle(swatch).color;
-	document.body.removeChild(swatch);
-	const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-	if (!match) return null;
-	const [r, g, b] = match.slice(1, 4).map((value) => Number(value));
-	if ([r, g, b].some((value) => Number.isNaN(value))) return null;
-	return `#${[r, g, b]
-		.map((value) => value.toString(16).padStart(2, "0"))
-		.join("")}`.toUpperCase();
-};
-
-const buildOklchPalette = (steps: number, lightness: number, chroma: number, offset = 0) =>
-	Array.from({ length: steps }, (_, index) => {
-		const hue = Math.round(((index / steps) * 360 + offset) % 360);
-		return {
-			label: `OKLCH ${hue}°`,
-			value: `oklch(${lightness} ${chroma} ${hue})`,
-			hue,
-		};
-	});
-
 /**
  * Top-level authoring workbench for the iPod experience.
  *
@@ -220,6 +178,8 @@ export default function IpodClassicWorkbench() {
 	const [showSettings, setShowSettings] = useState(false);
 	const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
 	const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
+	const [savedRingColors, setSavedRingColors] = useState<string[]>([]);
+	const [savedCenterColors, setSavedCenterColors] = useState<string[]>([]);
 	const [isExportCapturing, setIsExportCapturing] = useState(false);
 	const [titleCanMarquee, setTitleCanMarquee] = useState(false);
 	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -228,15 +188,6 @@ export default function IpodClassicWorkbench() {
 	const [exportCounter, setExportCounter] = useState(0);
 	const [isToolboxOpen, setIsToolboxOpen] = useState(true);
 	const [hasEyeDropper, setHasEyeDropper] = useState(false);
-	const [oklchReady, setOklchReady] = useState(false);
-	const [oklchCasePalette, setOklchCasePalette] = useState<
-		{ label: string; value: string; hue: number }[]
-	>([]);
-	const [oklchBgPalette, setOklchBgPalette] = useState<
-		{ label: string; value: string; hue: number }[]
-	>([]);
-	const [rangeStartDraft, setRangeStartDraft] = useState("");
-	const [rangeEndDraft, setRangeEndDraft] = useState("");
 	const state = model.metadata;
 	const selectionKind = model.playback.selectionKind;
 	const rangeStartTime = model.playback.rangeStartTime;
@@ -245,6 +196,8 @@ export default function IpodClassicWorkbench() {
 	const hardwarePreset = model.presentation.hardwarePreset;
 	const skinColor = model.presentation.skinColor;
 	const bgColor = model.presentation.bgColor;
+	const ringColor = model.presentation.ringColor;
+	const centerColor = model.presentation.centerColor;
 	const interactionModel = model.interaction.interactionModel;
 	const isPlaying = model.interaction.isPlaying;
 	const osScreen = model.interaction.osScreen;
@@ -274,6 +227,12 @@ export default function IpodClassicWorkbench() {
 	}, []);
 	const setBgColor = useCallback((nextColor: string) => {
 		dispatch({ type: "SET_BG_COLOR", payload: nextColor });
+	}, []);
+	const setRingColor = useCallback((nextColor: string) => {
+		dispatch({ type: "SET_RING_COLOR", payload: nextColor });
+	}, []);
+	const setCenterColor = useCallback((nextColor: string) => {
+		dispatch({ type: "SET_CENTER_COLOR", payload: nextColor });
 	}, []);
 	const setRangeStartTime = useCallback((nextValue: number | null) => {
 		dispatch({ type: "SET_RANGE_START_TIME", payload: nextValue });
@@ -326,29 +285,28 @@ export default function IpodClassicWorkbench() {
 	}, [hardwarePreset]);
 
 	useEffect(() => {
-		setOklchReady(supportsOklch());
-	}, []);
-
-	useEffect(() => {
-		if (!oklchReady) return;
-		setOklchCasePalette(
-			buildOklchPalette(OKLCH_CASE_STEPS, OKLCH_CASE_L, OKLCH_CASE_C),
-		);
-		setOklchBgPalette(buildOklchPalette(OKLCH_BG_STEPS, OKLCH_BG_L, OKLCH_BG_C, 180));
-	}, [oklchReady]);
-
-	useEffect(() => {
 		setSavedCaseColors(loadCustomColors(CASE_CUSTOM_COLORS_KEY));
 		setSavedBgColors(loadCustomColors(BG_CUSTOM_COLORS_KEY));
+		setSavedRingColors(loadCustomColors(RING_CUSTOM_COLORS_KEY));
+		setSavedCenterColors(loadCustomColors(CENTER_CUSTOM_COLORS_KEY));
 	}, []);
 
-	const saveCustomColor = useCallback((target: "case" | "bg", hex: string) => {
-		const key = target === "case" ? CASE_CUSTOM_COLORS_KEY : BG_CUSTOM_COLORS_KEY;
+	const saveCustomColor = useCallback((target: "case" | "bg" | "ring" | "center", hex: string) => {
+		const key =
+			target === "case"
+				? CASE_CUSTOM_COLORS_KEY
+				: target === "bg"
+					? BG_CUSTOM_COLORS_KEY
+					: target === "ring"
+						? RING_CUSTOM_COLORS_KEY
+						: CENTER_CUSTOM_COLORS_KEY;
 		const current = loadCustomColors(key);
 		const next = [hex, ...current.filter((c) => c !== hex)].slice(0, MAX_CUSTOM_COLORS);
 		persistCustomColors(key, next);
 		if (target === "case") setSavedCaseColors(next);
-		else setSavedBgColors(next);
+		else if (target === "bg") setSavedBgColors(next);
+		else if (target === "ring") setSavedRingColors(next);
+		else setSavedCenterColors(next);
 	}, []);
 
 	useEffect(() => {
@@ -455,14 +413,6 @@ export default function IpodClassicWorkbench() {
 		setRangeStartTime,
 		setRangeEndTime,
 	]);
-
-	useEffect(() => {
-		setRangeStartDraft(selectionKind === "range" ? formatTimecode(rangeStartTime) : "");
-	}, [selectionKind, rangeStartTime]);
-
-	useEffect(() => {
-		setRangeEndDraft(selectionKind === "range" ? formatTimecode(rangeEndTime) : "");
-	}, [selectionKind, rangeEndTime]);
 
 	const lastExportedBatteryRef = useRef(loadPersistedLastBattery());
 
@@ -892,26 +842,6 @@ export default function IpodClassicWorkbench() {
 		[resetInteractionChrome],
 	);
 
-	const handleSelectionKindChange = useCallback((nextKind: SnapshotSelectionKind) => {
-		dispatch({ type: "SET_SELECTION_KIND", payload: nextKind });
-	}, []);
-
-	const commitRangeInput = useCallback(
-		(target: "start" | "end", raw: string) => {
-			const seconds = parseTimecode(raw);
-			if (seconds === null) {
-				if (target === "start")
-					setRangeStartDraft(formatTimecode(rangeStartTime));
-				else setRangeEndDraft(formatTimecode(rangeEndTime));
-				return;
-			}
-
-			if (target === "start") setRangeStartTime(seconds);
-			else setRangeEndTime(seconds);
-		},
-		[rangeStartTime, rangeEndTime, setRangeStartTime, setRangeEndTime],
-	);
-
 	const cycleOsMenu = useCallback(
 		(direction: number) => {
 			dispatch({
@@ -964,7 +894,7 @@ export default function IpodClassicWorkbench() {
 	);
 
 	const openEyeDropper = useCallback(
-		async (target: "case" | "bg") => {
+		async (target: "case" | "bg" | "ring" | "center") => {
 			if (!hasEyeDropper) return;
 			try {
 				// @ts-expect-error - EyeDropper is a new experimental API
@@ -972,13 +902,15 @@ export default function IpodClassicWorkbench() {
 				const result = await eyeDropper.open();
 				const hex = result.sRGBHex.toUpperCase();
 				if (target === "case") setSkinColor(hex);
-				else setBgColor(hex);
+				else if (target === "bg") setBgColor(hex);
+				else if (target === "ring") setRingColor(hex);
+				else setCenterColor(hex);
 				saveCustomColor(target, hex);
 			} catch (e) {
 				console.warn("EyeDropper failed or cancelled", e);
 			}
 		},
-		[hasEyeDropper, saveCustomColor, setBgColor, setSkinColor],
+		[hasEyeDropper, saveCustomColor, setBgColor, setSkinColor, setRingColor, setCenterColor],
 	);
 
 	const handleOsMenuSelect = useCallback(() => {
@@ -1083,6 +1015,8 @@ export default function IpodClassicWorkbench() {
 		<IpodClickWheel
 			preset={activePreset}
 			skinColor={skinColor}
+			ringColor={ringColor || undefined}
+			centerColor={centerColor || undefined}
 			playClick={playClick}
 			onSeek={handleWheelSeek}
 			onCenterClick={
@@ -1496,118 +1430,48 @@ export default function IpodClassicWorkbench() {
 									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
 										Case Color
 									</h3>
-									<div className="mb-4">
-										<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-											Authentic
-											Apple
-											Releases
-										</h4>
-										<div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
-											{AUTHENTIC_CASE_COLORS.map(
-												(
-													c,
-												) => (
-													<button
-														key={
-															c.value
-														}
-														onClick={() =>
-															setSkinColor(
-																c.value,
-															)
-														}
-														title={
-															c.label
-														}
-														className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
-															skinColor ===
-															c.value
-																? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-																: "border-[#B5BBC3]"
-														}`}
-														style={{
-															backgroundColor:
-																c.value,
-														}}
-													/>
-												),
-											)}
-										</div>
+									<div className="mb-3 grid grid-cols-2 gap-2">
+										<button
+											type="button"
+											onClick={() => {
+												setSkinColor(IPOD_6G_COLORS.case.black);
+												setRingColor(IPOD_6G_COLORS.wheel.dark.surface);
+												setCenterColor(IPOD_6G_COLORS.wheel.dark.center);
+												setBgColor(IPOD_6G_COLORS.background.white);
+											}}
+											className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-2 ${
+												skinColor === IPOD_6G_COLORS.case.black
+													? "border-[#111827] bg-white/90 text-[#111827]"
+													: "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
+											}`}
+										>
+											<span
+												className="w-4 h-4 rounded-full border border-[#B5BBC3] shrink-0"
+												style={{ backgroundColor: IPOD_6G_COLORS.case.black }}
+											/>
+											Black
+										</button>
+										<button
+											type="button"
+											onClick={() => {
+												setSkinColor(IPOD_6G_COLORS.case.white);
+												setRingColor(IPOD_6G_COLORS.wheel.light.surface);
+												setCenterColor(IPOD_6G_COLORS.wheel.light.center);
+												setBgColor(IPOD_6G_COLORS.background.white);
+											}}
+											className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-2 ${
+												skinColor === IPOD_6G_COLORS.case.white
+													? "border-[#111827] bg-white/90 text-[#111827]"
+													: "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
+											}`}
+										>
+											<span
+												className="w-4 h-4 rounded-full border border-[#B5BBC3] shrink-0"
+												style={{ backgroundColor: IPOD_6G_COLORS.case.white }}
+											/>
+											White
+										</button>
 									</div>
-									<GreyPalettePicker
-										target="case"
-										currentColor={
-											skinColor
-										}
-										onColorSelect={
-											setSkinColor
-										}
-										onColorCommit={(
-											hex,
-										) =>
-											saveCustomColor(
-												"case",
-												hex,
-											)
-										}
-										oklchToHex={
-											oklchToHex
-										}
-										oklchReady={
-											oklchReady
-										}
-									/>
-									{oklchReady &&
-										FEATURE_FLAGS.SHOW_OKLCH_SPECTRUM &&
-										oklchCasePalette.length >
-											0 && (
-											<div className="mb-4">
-												<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-													OKLCH
-													Spectrum
-												</h4>
-												<div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
-													{oklchCasePalette.map(
-														(
-															swatch,
-														) => (
-															<button
-																key={
-																	swatch.hue
-																}
-																onClick={() => {
-																	const hex =
-																		oklchToHex(
-																			OKLCH_CASE_L,
-																			OKLCH_CASE_C,
-																			swatch.hue,
-																		);
-																	if (
-																		!hex
-																	)
-																		return;
-																	setSkinColor(
-																		hex,
-																	);
-																	saveCustomColor(
-																		"case",
-																		hex,
-																	);
-																}}
-																title={
-																	swatch.label
-																}
-																className="w-8 h-8 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
-																style={{
-																	backgroundColor:
-																		swatch.value,
-																}}
-															/>
-														),
-													)}
-												</div>
-											</div>
-										)}
 									{savedCaseColors.length >
 										0 && (
 										<div className="mb-4">
@@ -1646,21 +1510,13 @@ export default function IpodClassicWorkbench() {
 											</div>
 										</div>
 									)}
-
-									{!oklchReady && (
-										<p className="mb-4 px-1 text-[10px] text-[#6B7280]">
-											OKLCH
-											palettes
-											need a
-											modern
-											browser. Use
-											the custom
-											picker for
-											full
-											compatibility.
-										</p>
-									)}
-									<div className="flex items-end gap-1 mb-4">
+									<div
+										className="flex items-end gap-1 mb-4 cursor-text"
+										onClick={(e) => {
+											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
+											input?.focus();
+										}}
+									>
 										<HexColorInput
 											value={
 												skinColor
@@ -1695,82 +1551,112 @@ export default function IpodClassicWorkbench() {
 									</div>
 
 									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+										Outer Ring Color
+									</h3>
+									{savedRingColors.length > 0 && (
+										<div className="mb-3">
+											<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+												Recent
+											</h4>
+											<div className="flex flex-wrap gap-2">
+												{savedRingColors.map((color) => (
+													<button
+														key={color}
+														onClick={() => setRingColor(color)}
+														title={`Custom ${color}`}
+														className={`w-7 h-7 rounded-full border ${
+															ringColor === color
+																? "border-[#111827] ring-2 ring-[#CDD1D6]"
+																: "border-[#B5BBC3]"
+														}`}
+														style={{ backgroundColor: color }}
+													/>
+												))}
+											</div>
+										</div>
+									)}
+									<div
+										className="flex items-end gap-1 cursor-text"
+										onClick={(e) => {
+											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
+											input?.focus();
+										}}
+									>
+										<HexColorInput
+											value={ringColor}
+											onChange={(color) => {
+												setRingColor(color);
+												saveCustomColor("ring", color);
+											}}
+										/>
+										{hasEyeDropper && (
+											<button
+												type="button"
+												onClick={() => openEyeDropper("ring")}
+												className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+												title="Pick color from screen"
+												aria-label="Pick outer ring color from screen"
+											>
+												<Pipette className="w-3.5 h-3.5" />
+											</button>
+										)}
+									</div>
+
+									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+										Inner Ring Color
+									</h3>
+									{savedCenterColors.length > 0 && (
+										<div className="mb-3">
+											<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+												Recent
+											</h4>
+											<div className="flex flex-wrap gap-2">
+												{savedCenterColors.map((color) => (
+													<button
+														key={color}
+														onClick={() => setCenterColor(color)}
+														title={`Custom ${color}`}
+														className={`w-7 h-7 rounded-full border ${
+															centerColor === color
+																? "border-[#111827] ring-2 ring-[#CDD1D6]"
+																: "border-[#B5BBC3]"
+														}`}
+														style={{ backgroundColor: color }}
+													/>
+												))}
+											</div>
+										</div>
+									)}
+									<div
+										className="flex items-end gap-1 cursor-text"
+										onClick={(e) => {
+											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
+											input?.focus();
+										}}
+									>
+										<HexColorInput
+											value={centerColor}
+											onChange={(color) => {
+												setCenterColor(color);
+												saveCustomColor("center", color);
+											}}
+										/>
+										{hasEyeDropper && (
+											<button
+												type="button"
+												onClick={() => openEyeDropper("center")}
+												className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+												title="Pick color from screen"
+												aria-label="Pick inner ring color from screen"
+											>
+												<Pipette className="w-3.5 h-3.5" />
+											</button>
+										)}
+									</div>
+
+									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
 										Background
 									</h3>
-									<GreyPalettePicker
-										target="bg"
-										currentColor={
-											bgColor
-										}
-										onColorSelect={
-											setBgColor
-										}
-										onColorCommit={(
-											hex,
-										) =>
-											saveCustomColor(
-												"bg",
-												hex,
-											)
-										}
-										oklchToHex={
-											oklchToHex
-										}
-										oklchReady={
-											oklchReady
-										}
-									/>
-									{oklchReady &&
-										FEATURE_FLAGS.SHOW_OKLCH_AMBIENT &&
-										oklchBgPalette.length >
-											0 && (
-											<div className="mb-3">
-												<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-													OKLCH
-													Ambient
-												</h4>
-												<div className="grid grid-cols-7 sm:grid-cols-9 gap-2">
-													{oklchBgPalette.map(
-														(
-															swatch,
-														) => (
-															<button
-																key={
-																	swatch.hue
-																}
-																onClick={() => {
-																	const hex =
-																		oklchToHex(
-																			OKLCH_BG_L,
-																			OKLCH_BG_C,
-																			swatch.hue,
-																		);
-																	if (
-																		!hex
-																	)
-																		return;
-																	setBgColor(
-																		hex,
-																	);
-																	saveCustomColor(
-																		"bg",
-																		hex,
-																	);
-																}}
-																title={
-																	swatch.label
-																}
-																className="w-6 h-6 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
-																style={{
-																	backgroundColor:
-																		swatch.value,
-																}}
-															/>
-														),
-													)}
-												</div>
-											</div>
-										)}
 									{savedBgColors.length >
 										0 && (
 										<div className="mt-3">
@@ -1809,7 +1695,13 @@ export default function IpodClassicWorkbench() {
 											</div>
 										</div>
 									)}
-									<div className="flex items-end gap-1">
+									<div
+										className="flex items-end gap-1 cursor-text"
+										onClick={(e) => {
+											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
+											input?.focus();
+										}}
+									>
 										<HexColorInput
 											value={
 												bgColor
@@ -1844,162 +1736,6 @@ export default function IpodClassicWorkbench() {
 									</div>
 
 									<div className="mt-4 pt-3 border-t border-[#D5D7DA]">
-										<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-											Snapshot
-										</h4>
-										<div className="mb-3 grid grid-cols-2 gap-2">
-											<button
-												type="button"
-												data-testid="snapshot-selection-moment-button"
-												aria-pressed={
-													selectionKind ===
-													"moment"
-												}
-												onClick={() =>
-													handleSelectionKindChange(
-														"moment",
-													)
-												}
-												className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-													selectionKind ===
-													"moment"
-														? "border-[#111827] bg-white/90 text-[#111827]"
-														: "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
-												}`}
-											>
-												Exact
-												Moment
-											</button>
-											<button
-												type="button"
-												data-testid="snapshot-selection-range-button"
-												aria-pressed={
-													selectionKind ===
-													"range"
-												}
-												onClick={() =>
-													handleSelectionKindChange(
-														"range",
-													)
-												}
-												className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-													selectionKind ===
-													"range"
-														? "border-[#111827] bg-white/90 text-[#111827]"
-														: "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
-												}`}
-											>
-												Range
-											</button>
-										</div>
-
-										{selectionKind ===
-											"range" && (
-											<div className="mb-3 grid grid-cols-2 gap-2">
-												<label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
-													Start
-													<input
-														type="text"
-														inputMode="numeric"
-														data-testid="snapshot-range-start-input"
-														value={
-															rangeStartDraft
-														}
-														onChange={(
-															event,
-														) =>
-															setRangeStartDraft(
-																event
-																	.target
-																	.value,
-															)
-														}
-														onBlur={() =>
-															commitRangeInput(
-																"start",
-																rangeStartDraft,
-															)
-														}
-														onKeyDown={(
-															event,
-														) => {
-															if (
-																event.key ===
-																"Enter"
-															) {
-																commitRangeInput(
-																	"start",
-																	rangeStartDraft,
-																);
-															}
-														}}
-														className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
-													/>
-												</label>
-												<label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
-													End
-													<input
-														type="text"
-														inputMode="numeric"
-														data-testid="snapshot-range-end-input"
-														value={
-															rangeEndDraft
-														}
-														onChange={(
-															event,
-														) =>
-															setRangeEndDraft(
-																event
-																	.target
-																	.value,
-															)
-														}
-														onBlur={() =>
-															commitRangeInput(
-																"end",
-																rangeEndDraft,
-															)
-														}
-														onKeyDown={(
-															event,
-														) => {
-															if (
-																event.key ===
-																"Enter"
-															) {
-																commitRangeInput(
-																	"end",
-																	rangeEndDraft,
-																);
-															}
-														}}
-														className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
-													/>
-												</label>
-											</div>
-										)}
-
-										<div className="mb-3 rounded-lg border border-[#D5D7DA] bg-white/60 px-3 py-2 text-[10px] text-[#4F555D]">
-											<div className="font-semibold text-[#111827]">
-												{
-													activePreset.label
-												}{" "}
-												·{" "}
-												{interactionModel ===
-												"direct"
-													? "Direct Edit"
-													: interactionModel ===
-														  "ipod-os-original"
-														? "iPod OS Original"
-														: "iPod OS"}
-											</div>
-											<div className="mt-0.5">
-												{selectionKind ===
-												"range"
-													? `Range ${formatTimecode(rangeStartTime)} to ${formatTimecode(rangeEndTime)}`
-													: `Moment ${formatTimecode(state.currentTime)}`}
-											</div>
-										</div>
 										<div className="grid grid-cols-2 gap-2">
 											<button
 												type="button"
@@ -2367,6 +2103,8 @@ export default function IpodClassicWorkbench() {
 				{viewMode === "3d" && (
 					<ThreeDIpod
 						skinColor={skinColor}
+						ringColor={ringColor || undefined}
+						centerColor={centerColor || undefined}
 						screen={screenComponent}
 						wheel={wheelComponent}
 					/>

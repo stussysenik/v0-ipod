@@ -37,6 +37,8 @@ export interface ThreeDIpodProps {
 	screen: React.ReactNode;
 	wheel: React.ReactNode;
 	skinColor: string;
+	ringColor?: string;
+	centerColor?: string;
 	onReady?: () => void;
 }
 
@@ -249,8 +251,11 @@ function ScreenBezel() {
 
 // ─── Click Wheel 3D Assembly ─────────────────────────────────────────────────────
 
-function ClickWheel3D({ skinColor, wheelHtml }: { skinColor: string; wheelHtml: React.ReactNode }) {
-	const wheelColors = useMemo(() => deriveWheelColors(skinColor), [skinColor]);
+function ClickWheel3D({ skinColor, ringColor, centerColor, wheelHtml }: { skinColor: string; ringColor?: string; centerColor?: string; wheelHtml: React.ReactNode }) {
+	const wheelColors = useMemo(
+		() => deriveWheelColors(ringColor || skinColor),
+		[skinColor, ringColor],
+	);
 
 	return (
 		<group position={[0, -1.5, 0]}>
@@ -295,7 +300,7 @@ function ClickWheel3D({ skinColor, wheelHtml }: { skinColor: string; wheelHtml: 
 				<circleGeometry args={[DIMS.centerR, 60]} />
 				<meshPhysicalMaterial
 					clearcoat={0.4}
-					color={wheelColors.centerGradient.via}
+					color={centerColor || wheelColors.centerGradient.via}
 					envMapIntensity={1.1}
 					metalness={0.55}
 					roughness={0.22}
@@ -328,7 +333,7 @@ function ClickWheel3D({ skinColor, wheelHtml }: { skinColor: string; wheelHtml: 
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps) {
+function IpodModel({ screen, wheel, skinColor, ringColor, centerColor, onRegisterReset }: IpodModelProps) {
 	const groupRef = useRef<THREE.Group>(null);
 	const lcdMaterial = useLcdShader();
 	const brushedTexture = useMemo(() => createBrushedMetalTexture(), []);
@@ -452,7 +457,7 @@ function IpodModel({ screen, wheel, skinColor, onRegisterReset }: IpodModelProps
 					</group>
 
 					{/* ── CLICK WHEEL ── */}
-					<ClickWheel3D skinColor={skinColor} wheelHtml={wheel} />
+					<ClickWheel3D skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} wheelHtml={wheel} />
 
 					{/* ── PHYSICAL DETAILS ── */}
 					<PhysicalDetails caseColor={skinColor} />

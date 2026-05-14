@@ -60,6 +60,8 @@ export const INITIAL_SONG_METADATA: SongMetadata = {
 export interface IpodPresentationState {
 	skinColor: string;
 	bgColor: string;
+	ringColor: string;
+	centerColor: string;
 	viewMode: IpodViewMode;
 	hardwarePreset: IpodHardwarePresetId;
 }
@@ -94,6 +96,8 @@ export interface IpodWorkbenchModel {
 export interface IpodUiState {
 	skinColor: string;
 	bgColor: string;
+	ringColor: string;
+	centerColor: string;
 	viewMode: IpodViewMode;
 	hardwarePreset: IpodHardwarePresetId;
 	interactionModel: IpodInteractionModel;
@@ -136,6 +140,8 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 		presentation: {
 			skinColor: defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR,
 			bgColor: defaultPreset.defaultBackdropColor ?? DEFAULT_BACKDROP_COLOR,
+			ringColor: "#1c1a1b",
+			centerColor: "#2c2a2b",
 			viewMode: "flat",
 			hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
 		},

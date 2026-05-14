@@ -220,6 +220,8 @@ export function loadUiState(): Partial<IpodUiState> | null {
 		const safe: Partial<IpodUiState> = {};
 		if (isHexColor(candidate.skinColor)) safe.skinColor = candidate.skinColor;
 		if (isHexColor(candidate.bgColor)) safe.bgColor = candidate.bgColor;
+		if (isHexColor(candidate.ringColor)) safe.ringColor = candidate.ringColor;
+		if (isHexColor(candidate.centerColor)) safe.centerColor = candidate.centerColor;
 		if (isViewMode(candidate.viewMode)) safe.viewMode = candidate.viewMode;
 		if (isHardwarePreset(candidate.hardwarePreset))
 			safe.hardwarePreset = candidate.hardwarePreset;
@@ -291,6 +293,8 @@ export function loadSongSnapshot(): SongSnapshot | null {
 		const ui: IpodUiState = {
 			skinColor: partialUi.skinColor,
 			bgColor: partialUi.bgColor,
+			ringColor: partialUi.ringColor ?? "",
+			centerColor: partialUi.centerColor ?? "",
 			viewMode: partialUi.viewMode,
 			hardwarePreset: partialUi.hardwarePreset ?? DEFAULT_HARDWARE_PRESET_ID,
 			interactionModel: partialUi.interactionModel ?? DEFAULT_INTERACTION_MODEL,
@@ -360,6 +364,8 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
 	const safe: Partial<IpodUiState> = {};
 	if (isHexColor(parsed.skinColor)) safe.skinColor = parsed.skinColor;
 	if (isHexColor(parsed.bgColor)) safe.bgColor = parsed.bgColor;
+	if (isHexColor(parsed.ringColor)) safe.ringColor = parsed.ringColor;
+	if (isHexColor(parsed.centerColor)) safe.centerColor = parsed.centerColor;
 	if (isViewMode(parsed.viewMode)) safe.viewMode = parsed.viewMode;
 	if (isHardwarePreset(parsed.hardwarePreset)) safe.hardwarePreset = parsed.hardwarePreset;
 	if (isInteractionModel(parsed.interactionModel))

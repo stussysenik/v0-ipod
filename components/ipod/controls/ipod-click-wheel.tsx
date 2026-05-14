@@ -21,6 +21,8 @@ const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 interface IpodClickWheelProps {
 	preset: IpodClassicPresetDefinition;
 	skinColor?: string;
+	ringColor?: string;
+	centerColor?: string;
 	playClick: () => void;
 	onSeek: (direction: number) => void;
 	onCenterClick?: () => void;
@@ -40,6 +42,8 @@ interface IpodClickWheelProps {
 export function IpodClickWheel({
 	preset,
 	skinColor,
+	ringColor,
+	centerColor,
 	playClick,
 	onSeek,
 	onCenterClick,
@@ -55,12 +59,17 @@ export function IpodClickWheel({
 	const wheelRef = useRef<HTMLDivElement>(null);
 	const derived = skinColor ? deriveWheelColors(skinColor) : null;
 
-	const wheelLabelColor = derived?.labelColor ?? getSurfaceToken("wheel.label");
+	const effectiveRingColor = ringColor || derived?.gradient?.via || "#CACACC";
+	const effectiveLabelColor = ringColor
+		? deriveWheelColors(ringColor).labelColor
+		: (derived?.labelColor ?? getSurfaceToken("wheel.label"));
+
+	const wheelLabelColor = effectiveLabelColor;
 	const wheelTokens = preset.wheel;
 
-	// Wheel surface: clean flat gray — the recessed tone
+	// Wheel surface: the ring color
 	const wheelSurfaceStyle = {
-		background: "#CACACC",
+		background: effectiveRingColor,
 	};
 
 	useEffect(() => {
@@ -246,7 +255,7 @@ export function IpodClickWheel({
 					bottom: wheelTokens.bottomInset,
 					color: wheelLabelColor,
 					opacity: 0.55,
-					padding: "0.7rem 1rem 0.5rem 1rem",
+padding: "0.7rem 1rem 1rem",
 				}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {
@@ -378,15 +387,16 @@ export function IpodClickWheel({
 					height: wheelTokens.centerSize,
 					...(FEATURE_FLAGS.ENABLE_MATERIALITY
 						? {
-								background:
-									"radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F5F5F7 50%, #E8E8EB 100%)",
+								background: centerColor
+									? centerColor
+									: "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F5F5F7 50%, #E8E8EB 100%)",
 								border: "none",
 								outline: "none",
 								boxShadow:
 									"inset 0 8px 12px -4px rgba(0,0,0,0.18), inset 0 2px 3px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.9), 0 1px 2px rgba(255,255,255,0.7), 0 0 0 0.5px rgba(0,0,0,0.06)",
 							}
 						: {
-								background: "#ffffff",
+								background: centerColor || "#ffffff",
 								border: "none",
 								outline: "none",
 								boxShadow: `inset 0 0 ${(wheelTokens.centerSize * 0.022).toFixed(1)}px rgba(0, 0, 0, 0.12), inset 0 0 ${(wheelTokens.centerSize * 0.065).toFixed(1)}px rgba(0, 0, 0, 0.07)`,

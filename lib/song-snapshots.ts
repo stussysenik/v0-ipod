@@ -23,6 +23,8 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 	ui: {
 		skinColor: "#FBFBF8",
 		bgColor: "#F4F4EF",
+		ringColor: "",
+		centerColor: "",
 		viewMode: "flat",
 		hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
 		interactionModel: "direct",
