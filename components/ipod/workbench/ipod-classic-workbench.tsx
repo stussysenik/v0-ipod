@@ -1,5 +1,7 @@
 "use client";
 
+import { KumaSettingsPanel } from "./kuma-settings-panel";
+
 import {
 	startTransition,
 	useReducer,
@@ -10,7 +12,6 @@ import {
 	useMemo,
 } from "react";
 import {
-	Settings,
 	Box,
 	Share,
 	Monitor,
@@ -18,7 +19,6 @@ import {
 	Check,
 	Loader2,
 	Menu,
-	Pipette,
 	Film,
 	Video,
 	Eye,
@@ -54,8 +54,6 @@ import { IpodScreen } from "../display/ipod-screen";
 import { IpodAsciiScene } from "../scenes/ipod-ascii-scene";
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodDevice } from "../device/ipod-device";
-import { HexColorInput } from "../editors/hex-color-input";
-import { IPOD_6G_COLORS } from "@/hooks/use-ipod-theme";
 import {
 	BG_CUSTOM_COLORS_KEY,
 	CASE_CUSTOM_COLORS_KEY,
@@ -92,7 +90,7 @@ import {
 	isPreviewViewMode,
 } from "@/lib/ipod-state/selectors";
 import { clampSnapshotTime, ipodWorkbenchReducer } from "@/lib/ipod-state/update";
-import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import {
 	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
@@ -130,21 +128,6 @@ const CLASSIC_OS_MENU_ITEMS = [
 	{ id: "now-playing", label: "Now Playing" },
 	{ id: "about", label: "About" },
 ] as const;
-const LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS =
-	"rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors border-[#111827] bg-white/90 text-[#111827]";
-const LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS =
-	"rounded-xl border px-3 py-2 text-[11px] font-semibold transition-colors border-[#C8CDD3] bg-white/65 text-[#6B7280] hover:bg-white/80";
-
-function getLockedInteractionModeButtonClass(isActive: boolean, extraClassName?: string): string {
-	return [
-		extraClassName,
-		isActive
-			? LOCKED_INTERACTION_MODE_BUTTON_ACTIVE_CLASS
-			: LOCKED_INTERACTION_MODE_BUTTON_INACTIVE_CLASS,
-	]
-		.filter(Boolean)
-		.join(" ");
-}
 
 /**
  * Top-level authoring workbench for the iPod experience.
@@ -187,7 +170,6 @@ export default function IpodClassicWorkbench() {
 	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [exportCounter, setExportCounter] = useState(0);
 	const [isToolboxOpen, setIsToolboxOpen] = useState(true);
-	const [hasEyeDropper, setHasEyeDropper] = useState(false);
 	const state = model.metadata;
 	const selectionKind = model.playback.selectionKind;
 	const rangeStartTime = model.playback.rangeStartTime;
@@ -258,7 +240,6 @@ export default function IpodClassicWorkbench() {
 
 	useEffect(() => {
 		let cancelled = false;
-		setHasEyeDropper("EyeDropper" in window);
 		const exportTarget = exportTargetRef.current;
 		if (!exportTarget) {
 			void probeAnimatedMp4ExportSupport().then((supported) => {
@@ -893,26 +874,6 @@ export default function IpodClassicWorkbench() {
 		[state.currentTime, state.duration, playClick],
 	);
 
-	const openEyeDropper = useCallback(
-		async (target: "case" | "bg" | "ring" | "center") => {
-			if (!hasEyeDropper) return;
-			try {
-				// @ts-expect-error - EyeDropper is a new experimental API
-				const eyeDropper = new window.EyeDropper();
-				const result = await eyeDropper.open();
-				const hex = result.sRGBHex.toUpperCase();
-				if (target === "case") setSkinColor(hex);
-				else if (target === "bg") setBgColor(hex);
-				else if (target === "ring") setRingColor(hex);
-				else setCenterColor(hex);
-				saveCustomColor(target, hex);
-			} catch (e) {
-				console.warn("EyeDropper failed or cancelled", e);
-			}
-		},
-		[hasEyeDropper, saveCustomColor, setBgColor, setSkinColor, setRingColor, setCenterColor],
-	);
-
 	const handleOsMenuSelect = useCallback(() => {
 		const activeItem = CLASSIC_OS_MENU_ITEMS[osMenuIndex];
 		if (!activeItem) return;
@@ -1127,15 +1088,11 @@ export default function IpodClassicWorkbench() {
 			return 1;
 		}
 
-		// Reserve space for toolbox and safe areas
+		// Reserve space for container padding and toolbox
 		const isSmall = viewportSize.width < 640;
 		const isMedium = viewportSize.width < 1024;
-		const horizontalReserve = isSmall ? 20 : isMedium ? 72 : 112;
-		const verticalReserve = isSmall
-			? (isCompactToolbox ? 100 : 64)
-			: isCompactToolbox
-				? 120
-				: 40;
+		const horizontalReserve = isSmall ? 24 : isMedium ? 56 : 80;
+		const verticalReserve = isCompactToolbox ? 144 : 48;
 
 		const availableWidth = Math.max(viewportSize.width - horizontalReserve, 240);
 		const availableHeight = Math.max(viewportSize.height - verticalReserve, 280);
@@ -1182,7 +1139,7 @@ export default function IpodClassicWorkbench() {
 		<FixedEditorProvider resetKey={editorResetKey}>
 			<div
 				ref={containerRef}
-				className="min-h-[100dvh] w-full flex flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-4 pb-24 transition-colors duration-500 sm:justify-center sm:p-6"
+				className="relative h-full w-full flex flex-col items-center justify-center overflow-hidden transition-colors duration-500 p-2 sm:p-4"
 				style={{ backgroundColor: bgColor }}
 			>
 				{/* Floating Tools UI */}
@@ -1209,561 +1166,34 @@ export default function IpodClassicWorkbench() {
 						data-testid="toolbox-panel"
 						className={toolboxPanelClass}
 					>
-						{/* Settings / Theme */}
-						<div className="relative group">
-							<IconButton
-								icon={
-									<Settings className="w-5 h-5" />
-								}
-								label="Theme"
-								data-testid="theme-button"
-								onClick={handleToggleSettings}
-								isActive={showSettings}
-							/>
-
-							{showSettings && (
-								<div
-									data-testid="theme-panel"
-									className={`z-20 overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in ${
-										isCompactToolbox
-											? "slide-in-from-bottom-2 fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] max-h-[min(52dvh,24rem)] rounded-2xl"
-											: "slide-in-from-right-2 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)]"
-									}`}
-								>
-									<div className="mb-4">
-										<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
-											Revision
-											Attempt
-										</h3>
-										<div className="grid grid-cols-1 gap-2">
-											{IPOD_CLASSIC_PRESETS.filter(
-												(p) =>
-													FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS ||
-													p.id ===
-														"classic-2008-black",
-											).map(
-												(
-													presetOption,
-												) => (
-													<button
-														key={
-															presetOption.id
-														}
-														type="button"
-														data-testid={`hardware-preset-${presetOption.id}-button`}
-														aria-pressed={
-															hardwarePreset ===
-															presetOption.id
-														}
-														onClick={() =>
-															handleHardwarePresetChange(
-																presetOption.id,
-															)
-														}
-														className={`rounded-xl border px-3 py-2 text-left transition-colors ${
-															hardwarePreset ===
-															presetOption.id
-																? "border-[#111827] bg-white/90 shadow-[inset_0_0_0_1px_rgba(17,24,39,0.08)]"
-																: "border-[#C8CDD3] bg-white/65 hover:bg-white/80"
-														}`}
-													>
-														<div className="text-[11px] font-semibold text-[#111827]">
-															{
-																presetOption.label
-															}
-														</div>
-														<div className="mt-0.5 text-[10px] text-[#6B7280]">
-															{
-																presetOption.notes
-															}
-														</div>
-													</button>
-												),
-											)}
-										</div>
-									</div>
-
-									<div className="mb-4">
-										<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
-											Interaction
-										</h3>
-										<div className="grid grid-cols-2 gap-2">
-											<button
-												type="button"
-												data-testid="interaction-mode-direct-button"
-												aria-pressed={
-													interactionModel ===
-													"direct"
-												}
-												onClick={() =>
-													handleInteractionModelChange(
-														"direct",
-													)
-												}
-												className={getLockedInteractionModeButtonClass(
-													interactionModel ===
-														"direct",
-												)}
-											>
-												Direct
-												Edit
-											</button>
-											<button
-												type="button"
-												data-testid="interaction-mode-ipod-os-button"
-												aria-pressed={
-													interactionModel ===
-													"ipod-os"
-												}
-												onClick={() =>
-													handleInteractionModelChange(
-														"ipod-os",
-													)
-												}
-												className={getLockedInteractionModeButtonClass(
-													interactionModel ===
-														"ipod-os",
-												)}
-											>
-												iPod
-												OS
-											</button>
-											{FEATURE_FLAGS.SHOW_IPOD_OS_ORIGINAL && (
-												<button
-													type="button"
-													data-testid="interaction-mode-ipod-os-original-button"
-													aria-pressed={
-														interactionModel ===
-														"ipod-os-original"
-													}
-													onClick={() =>
-														handleInteractionModelChange(
-															"ipod-os-original",
-														)
-													}
-													className={getLockedInteractionModeButtonClass(
-														interactionModel ===
-															"ipod-os-original",
-														"col-span-2",
-													)}
-												>
-													iPod
-													OS
-													Original
-												</button>
-											)}
-										</div>
-										{FEATURE_FLAGS.SHOW_IPOD_OS_ORIGINAL &&
-										interactionModel ===
-											"ipod-os-original" ? (
-											<p className="mt-2 px-1 text-[10px] leading-[1.35] text-[#6B7280]">
-												Mirrors
-												the
-												standard
-												iPod
-												OS
-												layout.
-											</p>
-										) : null}
-									</div>
-
-									<div className="mb-4">
-										<div className="flex items-center justify-between mb-2 px-1">
-											<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em]">
-												Battery
-											</h3>
-											<span className="text-[10px] font-mono text-[#6B7280]">
-												{Math.round(
-													batteryLevel *
-														100,
-												)}
-												%
-											</span>
-										</div>
-										<div className="px-1">
-											<input
-												type="range"
-												min="0.05"
-												max="1"
-												step="0.01"
-												value={
-													batteryLevel
-												}
-												onChange={(
-													e,
-												) =>
-													setBatteryLevel(
-														parseFloat(
-															e
-																.target
-																.value,
-														),
-													)
-												}
-												className="w-full h-1.5 bg-[#D6D8DC] rounded-lg appearance-none cursor-pointer accent-[#111827]"
-											/>
-										</div>
-										<div className="grid grid-cols-2 gap-1.5 mt-2 px-1">
-											{(
-												[
-													["manual", "Manual", "18h real-life drain"],
-													["solar", "Solar", "Depletes over one song"],
-												] as const
-											).map(([mode, label, hint]) => (
-												<button
-													key={mode}
-													type="button"
-													onClick={() => setBatteryMode(mode)}
-													title={hint}
-													className={`rounded-lg border px-1.5 py-1 text-[10px] font-semibold leading-tight transition-colors ${
-														batteryMode === mode
-															? "border-[#111827] bg-white/90 text-[#111827]"
-															: "border-[#BEC3CA] bg-white/65 text-[#6B7280] hover:bg-white/80"
-													}`}
-												>
-													{label}
-												</button>
-											))}
-										</div>
-									</div>
-
-									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-										Case Color
-									</h3>
-									<div className="mb-3 grid grid-cols-2 gap-2">
-										<button
-											type="button"
-											onClick={() => {
-												setSkinColor(IPOD_6G_COLORS.case.black);
-												setRingColor(IPOD_6G_COLORS.wheel.dark.surface);
-												setCenterColor(IPOD_6G_COLORS.wheel.dark.center);
-												setBgColor(IPOD_6G_COLORS.background.white);
-											}}
-											className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-2 ${
-												skinColor === IPOD_6G_COLORS.case.black
-													? "border-[#111827] bg-white/90 text-[#111827]"
-													: "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
-											}`}
-										>
-											<span
-												className="w-4 h-4 rounded-full border border-[#B5BBC3] shrink-0"
-												style={{ backgroundColor: IPOD_6G_COLORS.case.black }}
-											/>
-											Black
-										</button>
-										<button
-											type="button"
-											onClick={() => {
-												setSkinColor(IPOD_6G_COLORS.case.white);
-												setRingColor(IPOD_6G_COLORS.wheel.light.surface);
-												setCenterColor(IPOD_6G_COLORS.wheel.light.center);
-												setBgColor(IPOD_6G_COLORS.background.white);
-											}}
-											className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors flex items-center gap-2 ${
-												skinColor === IPOD_6G_COLORS.case.white
-													? "border-[#111827] bg-white/90 text-[#111827]"
-													: "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
-											}`}
-										>
-											<span
-												className="w-4 h-4 rounded-full border border-[#B5BBC3] shrink-0"
-												style={{ backgroundColor: IPOD_6G_COLORS.case.white }}
-											/>
-											White
-										</button>
-									</div>
-									{savedCaseColors.length >
-										0 && (
-										<div className="mb-4">
-											<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-												Recent
-												Custom
-											</h4>
-											<div className="flex flex-wrap gap-2">
-												{savedCaseColors.map(
-													(
-														color,
-													) => (
-														<button
-															key={
-																color
-															}
-															onClick={() =>
-																setSkinColor(
-																	color,
-																)
-															}
-															title={`Custom ${color}`}
-															className={`w-7 h-7 rounded-full border ${
-																skinColor ===
-																color
-																	? "border-[#111827] ring-2 ring-[#CDD1D6]"
-																	: "border-[#B5BBC3]"
-															}`}
-															style={{
-																backgroundColor:
-																	color,
-															}}
-														/>
-													),
-												)}
-											</div>
-										</div>
-									)}
-									<div
-										className="flex items-end gap-1 mb-4 cursor-text"
-										onClick={(e) => {
-											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
-											input?.focus();
-										}}
-									>
-										<HexColorInput
-											value={
-												skinColor
-											}
-											onChange={(
-												color,
-											) => {
-												setSkinColor(
-													color,
-												);
-												saveCustomColor(
-													"case",
-													color,
-												);
-											}}
-										/>
-										{hasEyeDropper && (
-											<button
-												type="button"
-												onClick={() =>
-													openEyeDropper(
-														"case",
-													)
-												}
-												className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
-												title="Pick color from screen"
-												aria-label="Pick case color from screen"
-											>
-												<Pipette className="w-3.5 h-3.5" />
-											</button>
-										)}
-									</div>
-
-									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-										Outer Ring Color
-									</h3>
-									{savedRingColors.length > 0 && (
-										<div className="mb-3">
-											<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-												Recent
-											</h4>
-											<div className="flex flex-wrap gap-2">
-												{savedRingColors.map((color) => (
-													<button
-														key={color}
-														onClick={() => setRingColor(color)}
-														title={`Custom ${color}`}
-														className={`w-7 h-7 rounded-full border ${
-															ringColor === color
-																? "border-[#111827] ring-2 ring-[#CDD1D6]"
-																: "border-[#B5BBC3]"
-														}`}
-														style={{ backgroundColor: color }}
-													/>
-												))}
-											</div>
-										</div>
-									)}
-									<div
-										className="flex items-end gap-1 cursor-text"
-										onClick={(e) => {
-											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
-											input?.focus();
-										}}
-									>
-										<HexColorInput
-											value={ringColor}
-											onChange={(color) => {
-												setRingColor(color);
-												saveCustomColor("ring", color);
-											}}
-										/>
-										{hasEyeDropper && (
-											<button
-												type="button"
-												onClick={() => openEyeDropper("ring")}
-												className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
-												title="Pick color from screen"
-												aria-label="Pick outer ring color from screen"
-											>
-												<Pipette className="w-3.5 h-3.5" />
-											</button>
-										)}
-									</div>
-
-									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-										Inner Ring Color
-									</h3>
-									{savedCenterColors.length > 0 && (
-										<div className="mb-3">
-											<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-												Recent
-											</h4>
-											<div className="flex flex-wrap gap-2">
-												{savedCenterColors.map((color) => (
-													<button
-														key={color}
-														onClick={() => setCenterColor(color)}
-														title={`Custom ${color}`}
-														className={`w-7 h-7 rounded-full border ${
-															centerColor === color
-																? "border-[#111827] ring-2 ring-[#CDD1D6]"
-																: "border-[#B5BBC3]"
-														}`}
-														style={{ backgroundColor: color }}
-													/>
-												))}
-											</div>
-										</div>
-									)}
-									<div
-										className="flex items-end gap-1 cursor-text"
-										onClick={(e) => {
-											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
-											input?.focus();
-										}}
-									>
-										<HexColorInput
-											value={centerColor}
-											onChange={(color) => {
-												setCenterColor(color);
-												saveCustomColor("center", color);
-											}}
-										/>
-										{hasEyeDropper && (
-											<button
-												type="button"
-												onClick={() => openEyeDropper("center")}
-												className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
-												title="Pick color from screen"
-												aria-label="Pick inner ring color from screen"
-											>
-												<Pipette className="w-3.5 h-3.5" />
-											</button>
-										)}
-									</div>
-
-									<h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
-										Background
-									</h3>
-									{savedBgColors.length >
-										0 && (
-										<div className="mt-3">
-											<h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-												Recent
-												Custom
-											</h4>
-											<div className="flex flex-wrap gap-2">
-												{savedBgColors.map(
-													(
-														color,
-													) => (
-														<button
-															key={
-																color
-															}
-															onClick={() =>
-																setBgColor(
-																	color,
-																)
-															}
-															title={`Custom ${color}`}
-															className={`w-6 h-6 rounded-full border ${
-																bgColor ===
-																color
-																	? "border-[#111827] ring-2 ring-[#CDD1D6]"
-																	: "border-[#B5BBC3]"
-															}`}
-															style={{
-																backgroundColor:
-																	color,
-															}}
-														/>
-													),
-												)}
-											</div>
-										</div>
-									)}
-									<div
-										className="flex items-end gap-1 cursor-text"
-										onClick={(e) => {
-											const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
-											input?.focus();
-										}}
-									>
-										<HexColorInput
-											value={
-												bgColor
-											}
-											onChange={(
-												color,
-											) => {
-												setBgColor(
-													color,
-												);
-												saveCustomColor(
-													"bg",
-													color,
-												);
-											}}
-										/>
-										{hasEyeDropper && (
-											<button
-												type="button"
-												onClick={() =>
-													openEyeDropper(
-														"bg",
-													)
-												}
-												className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
-												title="Pick color from screen"
-												aria-label="Pick background color from screen"
-											>
-												<Pipette className="w-3.5 h-3.5" />
-											</button>
-										)}
-									</div>
-
-									<div className="mt-4 pt-3 border-t border-[#D5D7DA]">
-										<div className="grid grid-cols-2 gap-2">
-											<button
-												type="button"
-												data-testid="load-song-snapshot-button"
-												onClick={
-													handleLoadSnapshot
-												}
-												className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-											>
-												Load
-												Snapshot
-											</button>
-											<button
-												type="button"
-												data-testid="save-song-snapshot-button"
-												onClick={
-													handleSaveSnapshot
-												}
-												className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-											>
-												Save
-												Snapshot
-											</button>
-										</div>
-									</div>
-								</div>
-							)}
-						</div>
+						<KumaSettingsPanel
+							showSettings={showSettings}
+							onToggleSettings={handleToggleSettings}
+							isCompactToolbox={isCompactToolbox}
+							hardwarePreset={hardwarePreset}
+							onHardwarePresetChange={handleHardwarePresetChange}
+							interactionModel={interactionModel}
+							onInteractionModelChange={handleInteractionModelChange}
+							batteryLevel={batteryLevel}
+							onBatteryLevelChange={setBatteryLevel}
+							batteryMode={batteryMode}
+							onBatteryModeChange={setBatteryMode}
+							skinColor={skinColor}
+							onSkinColorChange={setSkinColor}
+							ringColor={ringColor}
+							onRingColorChange={setRingColor}
+							centerColor={centerColor}
+							onCenterColorChange={setCenterColor}
+							bgColor={bgColor}
+							onBgColorChange={setBgColor}
+							savedCaseColors={savedCaseColors}
+							savedRingColors={savedRingColors}
+							savedCenterColors={savedCenterColors}
+							savedBgColors={savedBgColors}
+							onSaveCustomColor={saveCustomColor}
+							onLoadSnapshot={handleLoadSnapshot}
+							onSaveSnapshot={handleSaveSnapshot}
+						/>
 
 						{/* View Modes */}
 						<div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
@@ -2112,7 +1542,7 @@ export default function IpodClassicWorkbench() {
 
 				{/* 2D / EXPORT MODE */}
 				<div
-					className={`relative flex items-center justify-center transition-all duration-700 ${
+					className={`relative flex items-center justify-center overflow-hidden transition-opacity duration-700 ${
 						viewMode !== "3d"
 							? "opacity-100"
 							: "opacity-0 pointer-events-none absolute"
@@ -2121,18 +1551,15 @@ export default function IpodClassicWorkbench() {
 						width: `${scaledFrameWidth}px`,
 						height: `${scaledFrameHeight}px`,
 						maxWidth: "calc(100vw - 2rem)",
-						maxHeight: "calc(100dvh - 6rem)",
+						maxHeight: "calc(100dvh - 2rem)",
 					}}
 				>
 					<div
-						className="origin-top-left"
 						style={{
 							width: `${frameWidth}px`,
 							height: `${frameHeight}px`,
 							transform: `scale(${previewScale})`,
-							transformOrigin: "center center",
-							marginLeft: `-${Math.round(frameWidth * (1 - previewScale) / 2)}px`,
-							marginTop: `-${Math.round(frameHeight * (1 - previewScale) / 2)}px`,
+							transformOrigin: "top left",
 						}}
 					>
 						<div

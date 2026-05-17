@@ -554,6 +554,35 @@ pnpm build
 ### OKLCH Spectrum
 Full spectrum color picker with infinite color possibilities
 
+### CIEDE2000 Color Proximity
+
+Shades and palette matches are driven by perceptually uniform color math, not
+naive RGB interpolation:
+
+```
+hex → RGB → CIEXYZ → CIELAB → ΔE 2000
+```
+
+| Step | Formula | Purpose |
+|------|---------|---------|
+| `hex → RGB` | sRGB transfer | Linearize gamma-compressed values |
+| `RGB → XYZ` | CIE 1931 matrix | Device-independent tristimulus |
+| `XYZ → LAB` | CIE 1976 | Perceptually uniform opponent space |
+| `LAB → ΔE` | CIEDE2000 | Industry-standard color difference |
+
+**ΔE 2000** corrects the remaining non-uniformities in CIELAB:
+- **Hue weighting** (`t`): blue region has smaller tolerance than yellow
+- **Lightness compensation** (`sl`): dark colors have smaller JND
+- **Chroma compensation** (`sc`): low-saturation colors behave differently
+- **Hue-chroma rotation** (`rt`): elliptical tolerance in blue region
+
+Shades are displayed only when `ΔE ≤ 15` — beyond that a color is no longer
+meaningfully "a shade of" the target. A ΔE of ~2.3 is JND (just noticeable
+difference); ~1.0 is barely perceptible.
+
+The same pipeline also derives the screen gasket color from the case skin,
+keeping the physical gap cohesive on every theme.
+
 ---
 
 ## 📖 Documentation

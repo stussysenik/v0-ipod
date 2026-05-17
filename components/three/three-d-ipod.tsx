@@ -179,8 +179,8 @@ function PhysicalDetails({ caseColor }: { caseColor: string }) {
 				</mesh>
 			</group>
 
-			{/* Headphone Jack */}
-			<group position={[0.85, DIMS.height / 2 - 0.35, 0]}>
+			{/* Headphone Jack — front-face z-depth matches Hold Switch */}
+			<group position={[0.85, DIMS.height / 2 - 0.35, DIMS.depth / 2 + 0.08]}>
 				<mesh rotation={[0, Math.PI / 2, 0]}>
 					<torusGeometry args={[0.055, 0.015, 16, 32]} />
 					<meshStandardMaterial color="#222" metalness={0.85} roughness={0.25} />
@@ -481,11 +481,23 @@ function SceneCapture({
 	const { gl, scene, camera } = useThree();
 
 	useEffect(() => {
+		const PRODUCT_ANGLE = {
+			position: [0, 3.0, 8.0] as const,
+			lookAt: [0, 0.2, 0] as const,
+		};
+
 		const captureHighRes = async (width = 4096, height = 4096): Promise<Blob | null> => {
 			const originalSize = new THREE.Vector2();
 			gl.getSize(originalSize);
 
 			if (modelResetRef?.current) modelResetRef.current();
+
+			const savedPosition = camera.position.clone();
+			const savedQuaternion = camera.quaternion.clone();
+
+			camera.position.set(...PRODUCT_ANGLE.position);
+			camera.lookAt(...PRODUCT_ANGLE.lookAt);
+			camera.updateProjectionMatrix();
 
 			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
 				samples: 4,
@@ -532,6 +544,9 @@ function SceneCapture({
 				});
 			} finally {
 				renderTarget.dispose();
+				camera.position.copy(savedPosition);
+				camera.quaternion.copy(savedQuaternion);
+				camera.updateProjectionMatrix();
 			}
 		};
 
@@ -658,6 +673,15 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 						height={10}
 						intensity={160}
 						position={[5.5, 0, 0.5]}
+						width={1.5}
+					/>
+
+					{/* Edge Kicker — left side metallic sheen */}
+					<rectAreaLight
+						color="#FFE0C0"
+						height={10}
+						intensity={160}
+						position={[-5.5, 0, 0.5]}
 						width={1.5}
 					/>
 

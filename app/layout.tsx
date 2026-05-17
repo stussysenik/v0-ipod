@@ -83,24 +83,24 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
 			>
 				<ServiceWorkerCleanup deployVersion={deployVersion} />
-				{children}
-				<BuildVersionBadge initialVersion={deployVersion} />
-				<Toaster
-					position="bottom-center"
-					richColors={false}
-					closeButton={false}
-					visibleToasts={2}
-					duration={2200}
-					toastOptions={{
-						style: {
-							border: "1px solid rgba(0,0,0,0.14)",
-							background: "rgba(247,247,245,0.94)",
-							color: "rgba(0,0,0,0.82)",
-							boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
-							backdropFilter: "blur(8px)",
-						},
-					}}
-				/>
+					{children}
+					<BuildVersionBadge initialVersion={deployVersion} />
+					<Toaster
+						position="bottom-center"
+						richColors={false}
+						closeButton={false}
+						visibleToasts={2}
+						duration={2200}
+						toastOptions={{
+							style: {
+								border: "1px solid rgba(0,0,0,0.14)",
+								background: "rgba(247,247,245,0.94)",
+								color: "rgba(0,0,0,0.82)",
+								boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
+								backdropFilter: "blur(8px)",
+							},
+						}}
+					/>
 				{shouldRenderAnalytics ? <Analytics /> : null}
 			</body>
 		</html>

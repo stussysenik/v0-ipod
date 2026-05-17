@@ -52,6 +52,79 @@ screen chrome, or app-specific authoring behavior:
 - If reuse would require iPod-specific prop names, historical assumptions, or
   product-only token lookups, the component stays in `components/ipod/*`.
 
+## Physical Assembly Constraints
+
+Every device surface that touches the shell must observe two hard rules.
+
+### Adaptive Gasket
+
+The screen gasket (the recessed edge between the aluminum shell and the display)
+is derived from the current case color via `deriveGasketColor()` in
+`lib/color-proximity.ts`. It must never be a fixed hex value.
+
+The formula:
+
+```
+L < 0.18  →  #110f0f                  (near-black — dark cases)
+L ≤ 0.7   →  hsl(h, s×0.5, L×ratio)   (smoothed darkening, ratio 0.55→0.88)
+L > 0.7   →  hsl(h, s, L)             (exact skin match — no visible line)
+```
+
+On light cases (L > 0.7) the gasket is indistinguishable from the shell.
+Only the inset box shadow defines the screen boundary — no colored frame.
+
+### Overflow Containment
+
+The outer shell div must carry `overflow-hidden`. Without it, internal surfaces
+(especially the screen gasket, whose `borderRadius` is smaller than the shell's)
+will "leak" their background color past the shell's curved corners.
+
+- `ipod-device-shell.tsx` — already enforced at line 75
+- `ipod-device.tsx` — enforced at the outer shell div
+
+Any new shell assembly that composes a gasket, screen frame, or chamfer overlay
+must include `overflow-hidden` on the parent that carries the shell
+`borderRadius`.
+
+### Alignment Check
+
+When a gasket leak or border misalignment is reported, verify:
+
+1. Shell `overflow-hidden` is present on the correct ancestor.
+2. `deriveGasketColor()` is used; no `bg-[#…]` override.
+3. The gasket's `borderRadius` (`preset.screen.outerRadius`) sits fully inside
+   the shell's padding area — the shell's `paddingX` / `paddingY` must be larger
+   than the gasket's corner radius to avoid the gasket reaching the shell edge.
+4. Inset shadow opacity on the gasket scales with case lightness
+   (`L < 0.45 → 0.5`, otherwise `0.18`).
+
+### Viewport Containment
+
+The device must never overflow or scroll. The constraint stack:
+
+```
+<main>          h-dvh w-full overflow-hidden   ← locks viewport
+  <container>   relative h-full w-full flex    ← strict parent
+                  items-center justify-center
+                  overflow-hidden
+    <wrapper>   width={scaledW} height={scaledH}  ← clips to fit
+                  overflow-hidden
+      <inner>   transform: scale(previewScale)    ← natural size
+                  transformOrigin: top left
+```
+
+Rules:
+- The root `<main>` is always `h-dvh overflow-hidden` — no page scroll.
+- The device wrapper is sized to `frameWidth × previewScale` and clips
+  overflow. The inner div stays at natural frame size with `transform: scale()`
+  and `transformOrigin: top left` — ghost space to the right/bottom is hidden
+  by the wrapper's `overflow-hidden`. No negative margins.
+- `previewScale` reserves horizontal space for container padding plus toolbox
+  chrome. Vertical reserve accounts for the mobile toolbox dock (fixed at
+  bottom). On desktop both reserves tighten.
+- The 3D canvas uses `absolute inset-0` within the `relative` container — it
+  fills the viewport independently of the 2D scaling engine.
+
 ## Migration Path
 
 1. Seed shared semantics in `tokens/shared-ui.json`.

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from "@/lib/export/export-scene";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
+import { deriveGasketColor, hexToHsl } from "@/lib/color-proximity";
 
 /**
  * Physical enclosure for the iPod device.
@@ -39,8 +40,8 @@ export function IPodDeviceShell({
 	dataTestId,
 }: IPodDeviceShellProps) {
 	const shellShadow = exportSafe
-		? "0 8px 20px -10px rgba(0,0,0,0.35)"
-		: "0 18px 40px -24px rgba(0,0,0,0.45), 0 0 0 0.5px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
+		? "0 10px 24px -8px rgba(0,0,0,0.40)"
+		: "0 20px 48px -28px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(0,0,0,0.12)";
 
 	const shellSurfaceStyle = useMemo(
 		() => ({
@@ -52,6 +53,9 @@ export function IPodDeviceShell({
 		}),
 		[skinColor],
 	);
+
+	const gasketColor = useMemo(() => deriveGasketColor(skinColor), [skinColor]);
+	const gasketShadowOpacity = hexToHsl(skinColor).l < 0.45 ? "0.5" : "0.18";
 
 	return (
 		<div
@@ -91,7 +95,7 @@ export function IPodDeviceShell({
 						className="pointer-events-none absolute inset-0"
 						style={{
 							borderRadius: preset.shell.radius,
-							boxShadow: "inset 0 0.5px 0 rgba(255,255,255,0.5), inset 0 -1px 2px rgba(0,0,0,0.08)",
+							boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1.5px 3px rgba(0,0,0,0.10)",
 						}}
 						aria-hidden="true"
 					/>
@@ -134,12 +138,13 @@ export function IPodDeviceShell({
 						aria-hidden="true"
 					/>
 
-					{/* Screen gasket — the physical gap between shell and display */}
+					{/* Screen gasket — recessed edge derived from case color */}
 					<div 
-						className="relative z-10 w-full bg-[#110f0f]"
+						className="relative z-10 w-full"
 						style={{
+							backgroundColor: gasketColor,
 							borderRadius: preset.screen.outerRadius,
-							boxShadow: "inset 0 1px 2px rgba(0,0,0,0.5)",
+							boxShadow: `inset 0 1px 2px rgba(0,0,0,${gasketShadowOpacity})`,
 						}}
 					>
 						{screen}

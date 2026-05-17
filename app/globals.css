@@ -128,3 +128,117 @@
 		transform: translateX(calc(var(--marquee-distance) * -1));
 	}
 }
+
+/* ─── View Transitions API ──────────────────────────────────────────────────────── */
+
+:root {
+	--duration-exit: 150ms;
+	--duration-enter: 210ms;
+	--duration-move: 400ms;
+}
+
+@keyframes vt-fade {
+	from {
+		filter: blur(3px);
+		opacity: 0;
+	}
+	to {
+		filter: blur(0);
+		opacity: 1;
+	}
+}
+
+@keyframes vt-slide {
+	from { translate: var(--slide-offset, 60px); }
+	to { translate: 0; }
+}
+
+@keyframes vt-slide-y {
+	from { transform: translateY(var(--slide-y-offset, 10px)); }
+	to { transform: translateY(0); }
+}
+
+/* Scale (GPU-composited: transform + opacity only) */
+@keyframes vt-scale-down {
+	from { transform: scale(1); opacity: 1; }
+	to { transform: scale(0.85); opacity: 0; }
+}
+@keyframes vt-scale-up {
+	from { transform: scale(0.85); opacity: 0; }
+	to { transform: scale(1); opacity: 1; }
+}
+
+::view-transition-new(.scale-in) {
+	animation: var(--duration-enter) ease-out var(--duration-exit) both vt-scale-up;
+}
+::view-transition-old(.scale-out) {
+	animation: var(--duration-exit) ease-in vt-scale-down;
+}
+
+/* Directional slides — nav-forward (old slides left, new from right) */
+::view-transition-old(.nav-forward) {
+	--slide-offset: -60px;
+	animation:
+		var(--duration-exit) ease-in both vt-fade reverse,
+		var(--duration-move) ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+	--slide-offset: 60px;
+	animation:
+		var(--duration-enter) ease-out var(--duration-exit) both vt-fade,
+		var(--duration-move) ease-in-out both vt-slide;
+}
+
+/* Directional slides — nav-back (old slides right, new from left) */
+::view-transition-old(.nav-back) {
+	--slide-offset: 60px;
+	animation:
+		var(--duration-exit) ease-in both vt-fade reverse,
+		var(--duration-move) ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+	--slide-offset: -60px;
+	animation:
+		var(--duration-enter) ease-out var(--duration-exit) both vt-fade,
+		var(--duration-move) ease-in-out both vt-slide;
+}
+
+/* Shared element morph */
+::view-transition-group(.morph) {
+	animation-duration: var(--duration-move);
+}
+::view-transition-image-pair(.morph) {
+	animation-name: vt-via-blur;
+}
+@keyframes vt-via-blur {
+	30% { filter: blur(3px); }
+}
+
+/* Persistent element isolation */
+::view-transition-group(persistent-nav) {
+	animation: none;
+	z-index: 100;
+}
+::view-transition-old(persistent-nav) {
+	display: none;
+}
+::view-transition-new(persistent-nav) {
+	animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(*),
+	::view-transition-new(*),
+	::view-transition-group(*) {
+		animation-duration: 0s !important;
+		animation-delay: 0s !important;
+	}
+}
+
+/* Settings panel enter/exit */
+::view-transition-old(settings-panel) {
+	animation: var(--duration-exit) ease-in vt-scale-down;
+}
+::view-transition-new(settings-panel) {
+	animation: var(--duration-enter) ease-out var(--duration-exit) both vt-scale-up;
+}
