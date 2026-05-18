@@ -1091,7 +1091,10 @@ export default function IpodClassicWorkbench() {
 		// Reserve space for container padding and toolbox
 		const isSmall = viewportSize.width < 640;
 		const isMedium = viewportSize.width < 1024;
-		const horizontalReserve = isSmall ? 24 : isMedium ? 56 : 80;
+		// horizontalReserve must be >= 32 on all screens to match outer div's
+		// maxWidth: calc(100vw - 2rem) constraint
+		const horizontalReserve = isSmall ? 32 : isMedium ? 56 : 80;
+
 		const verticalReserve = isCompactToolbox ? 144 : 48;
 
 		const availableWidth = Math.max(viewportSize.width - horizontalReserve, 240);
@@ -1542,7 +1545,7 @@ export default function IpodClassicWorkbench() {
 
 				{/* 2D / EXPORT MODE */}
 				<div
-					className={`relative flex items-center justify-center overflow-hidden transition-opacity duration-700 ${
+					className={`relative overflow-hidden transition-opacity duration-700 ${
 						viewMode !== "3d"
 							? "opacity-100"
 							: "opacity-0 pointer-events-none absolute"
