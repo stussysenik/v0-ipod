@@ -836,7 +836,7 @@ export default function IpodClassicWorkbench() {
 
 	const handleWheelSeek = useCallback(
 		(delta: number) => {
-			if (isAuthenticInteraction && osScreen === "menu") {
+			if (osScreen === "menu") {
 				cycleOsMenu(delta);
 				return;
 			}
@@ -853,7 +853,6 @@ export default function IpodClassicWorkbench() {
 		},
 		[
 			cycleOsMenu,
-			isAuthenticInteraction,
 			osScreen,
 			state.currentTime,
 			state.duration,
@@ -902,29 +901,37 @@ export default function IpodClassicWorkbench() {
 	}, []);
 
 	const handleMenuButtonPress = useCallback(() => {
-		if (!isAuthenticInteraction) return;
+		if (!isAuthenticInteraction) {
+			// Direct mode: toggle between menu and now-playing
+			if (osScreen === "menu") {
+				setOsScreen("now-playing");
+			} else {
+				setOsScreen("menu");
+			}
+			return;
+		}
 		dispatch({ type: "SET_OS_NOW_PLAYING_EDITABLE", payload: false });
 		setOsScreen("menu");
-	}, [isAuthenticInteraction, setOsScreen]);
+	}, [isAuthenticInteraction, osScreen, setOsScreen]);
 
 	const handlePreviousButtonPress = useCallback(() => {
-		if (isAuthenticInteraction && osScreen === "menu") {
+		if (osScreen === "menu") {
 			cycleOsMenu(-1);
 			return;
 		}
 		handleSeek(-1);
-	}, [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen]);
+	}, [cycleOsMenu, handleSeek, osScreen]);
 
 	const handleNextButtonPress = useCallback(() => {
-		if (isAuthenticInteraction && osScreen === "menu") {
+		if (osScreen === "menu") {
 			cycleOsMenu(1);
 			return;
 		}
 		handleSeek(1);
-	}, [cycleOsMenu, handleSeek, isAuthenticInteraction, osScreen]);
+	}, [cycleOsMenu, handleSeek, osScreen]);
 
 	const handlePlayPauseButtonPress = useCallback(() => {
-		if (isAuthenticInteraction && osScreen === "menu") {
+		if (osScreen === "menu") {
 			setOsScreen("now-playing");
 			return;
 		}
@@ -934,7 +941,7 @@ export default function IpodClassicWorkbench() {
 
 		const nextIsPlaying = !isPlaying;
 		showSoftNotice(nextIsPlaying ? "Playing" : "Paused");
-	}, [isAuthenticInteraction, osScreen, isPlaying, playClick, showSoftNotice, setOsScreen]);
+	}, [osScreen, isPlaying, playClick, showSoftNotice, setOsScreen]);
 
 	const screenComponent = isAsciiView ? (
 		<IpodAsciiScene state={state} />
@@ -981,7 +988,7 @@ export default function IpodClassicWorkbench() {
 			playClick={playClick}
 			onSeek={handleWheelSeek}
 			onCenterClick={
-				isAuthenticInteraction && osScreen === "menu"
+				osScreen === "menu"
 					? handleOsMenuSelect
 					: handlePlayPauseButtonPress
 			}
@@ -992,7 +999,7 @@ export default function IpodClassicWorkbench() {
 			disabled={
 				isExportCapturing ||
 				isAsciiView ||
-				(!isFlatView && !isFocusView && !isAuthenticInteraction)
+				(osScreen !== "menu" && !isFlatView && !isFocusView && !isAuthenticInteraction)
 			}
 			exportSafe={isExportCapturing}
 		/>

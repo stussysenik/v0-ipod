@@ -62,7 +62,7 @@ export function IpodScreen({
 }: IpodScreenProps) {
 	const remainingAnchorRef = useRef<number | null>(null);
 	const screenTokens = preset.screen;
-	const showOsMenu = isStandardOsInteractionModel(interactionModel) && osScreen === "menu";
+	const showOsMenu = osScreen === "menu";
 	const isNowPlayingLayoutMode =
 		isStandardOsInteractionModel(interactionModel) &&
 		!showOsMenu &&
