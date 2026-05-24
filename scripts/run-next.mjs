@@ -202,7 +202,12 @@ if (port !== basePort) {
 
 const nextBin = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
 
-const nextProcess = spawn(process.execPath, [nextBin, command, "-p", String(port)], {
+const args = [nextBin, command, "-p", String(port)];
+if (command === "dev") {
+	args.push("--turbo");
+}
+
+const nextProcess = spawn(process.execPath, args, {
 	stdio: "inherit",
 	env: process.env,
 });

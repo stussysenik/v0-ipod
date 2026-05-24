@@ -1,5 +1,5 @@
 {
-	"branches": ["main"],
+	"branches": ["main", "feat/architecture-evolution"],
 	"plugins": [
 		"@semantic-release/commit-analyzer",
 		"@semantic-release/release-notes-generator",

@@ -31,7 +31,6 @@ if (requiredTypeArtifacts.some((artifactPath) => !existsSync(artifactPath))) {
 	);
 	const preflightExitCode = runNodeScript(nextBin, [
 		"build",
-		"--no-lint",
 		"--experimental-build-mode",
 		"compile",
 	]);
