@@ -25,7 +25,7 @@ describe("resolveMobileExportDelivery", () => {
 		expect(resolveMobileExportDelivery(createCapabilities())).toBe("auto-download");
 	});
 
-	it("uses direct share on mobile when file sharing still has activation", () => {
+	it("shows share prompt on mobile (re-acquires user activation)", () => {
 		expect(
 			resolveMobileExportDelivery(
 				createCapabilities({
@@ -35,7 +35,7 @@ describe("resolveMobileExportDelivery", () => {
 					isMobile: true,
 				}),
 			),
-		).toBe("auto-share");
+		).toBe("prompt-share");
 	});
 
 	it("switches to a second-tap share prompt after activation has expired", () => {

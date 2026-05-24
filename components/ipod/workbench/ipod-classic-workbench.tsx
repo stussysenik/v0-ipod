@@ -249,10 +249,8 @@ export default function IpodClassicWorkbench() {
 			});
 		} else {
 			void resolveMp4ExportStrategy({
-				targetWidth:
-					exportTarget.offsetWidth || exportTarget.clientWidth || 1,
-				targetHeight:
-					exportTarget.offsetHeight || exportTarget.clientHeight || 1,
+				targetWidth: Math.max(exportTarget.offsetWidth, exportTarget.clientWidth, 1),
+				targetHeight: Math.max(exportTarget.offsetHeight, exportTarget.clientHeight, 1),
 			}).then((strategy) => {
 				if (!cancelled) {
 					setCanMp4Export(strategy !== null);
@@ -263,7 +261,7 @@ export default function IpodClassicWorkbench() {
 		return () => {
 			cancelled = true;
 		};
-	}, [hardwarePreset]);
+	}, [hardwarePreset, viewportSize.width, viewportSize.height]);
 
 	useEffect(() => {
 		setSavedCaseColors(loadCustomColors(CASE_CUSTOM_COLORS_KEY));
@@ -1139,18 +1137,24 @@ export default function IpodClassicWorkbench() {
 	const mp4Busy = activeExportKind === "mp4" && exportStatus !== "idle";
 	const exportProgressPercent = Math.round((exportProgress?.progress ?? 0) * 100);
 	const toolboxDockClass = isCompactToolbox
-		? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
-		: "fixed top-6 right-6";
+		? "fixed right-4 bottom-[calc(var(--safe-inset-bottom)+1rem)]"
+		: "fixed top-[calc(var(--safe-inset-top)+1.5rem)] right-6";
 	const toolboxPanelClass = isCompactToolbox
-		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
+		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem-var(--safe-inset-left)-var(--safe-inset-right))] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
 		: "flex flex-col gap-3";
 
 	return (
 		<FixedEditorProvider resetKey={editorResetKey}>
 			<div
 				ref={containerRef}
-				className="relative h-full w-full flex flex-col items-center justify-center overflow-hidden transition-colors duration-500 p-2 sm:p-4"
-				style={{ backgroundColor: bgColor }}
+				className="relative min-h-dvh w-full flex flex-col items-center justify-center overflow-hidden transition-colors duration-500"
+				style={{
+					backgroundColor: bgColor,
+					paddingTop: `max(0.75rem, var(--safe-inset-top))`,
+					paddingBottom: `max(0.75rem, var(--safe-inset-bottom))`,
+					paddingLeft: `max(0.75rem, var(--safe-inset-left))`,
+					paddingRight: `max(0.75rem, var(--safe-inset-right))`,
+				}}
 			>
 				{/* Floating Tools UI */}
 				<div
@@ -1450,13 +1454,24 @@ export default function IpodClassicWorkbench() {
 				</div>
 
 				{softNotice && exportStatus === "idle" && (
-					<div className="fixed right-6 bottom-6 z-50 rounded-full border border-black/10 bg-white/72 px-3 py-1 text-[11px] font-medium text-black/65 shadow-[0_8px_18px_rgba(0,0,0,0.1)] backdrop-blur-sm">
+					<div
+						className="fixed z-50 rounded-full border border-black/10 bg-white/72 px-3 py-1 text-[11px] font-medium text-black/65 shadow-[0_8px_18px_rgba(0,0,0,0.1)] backdrop-blur-sm"
+						style={{
+							right: `calc(1.5rem + var(--safe-inset-right))`,
+							bottom: `calc(1.5rem + var(--safe-inset-bottom))`,
+						}}
+					>
 						{softNotice}
 					</div>
 				)}
 
 				{exportStatus !== "idle" && exportProgress && (
-					<div className="fixed left-1/2 top-6 z-[92] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-[24px] border border-black/10 bg-white/88 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.16)] backdrop-blur-md">
+					<div
+						className="fixed left-1/2 z-[92] w-[min(30rem,calc(100vw-1.5rem-var(--safe-inset-left)-var(--safe-inset-right)))] -translate-x-1/2 rounded-[24px] border border-black/10 bg-white/88 p-4 shadow-[0_18px_44px_rgba(0,0,0,0.16)] backdrop-blur-md"
+						style={{
+							top: `calc(1.5rem + var(--safe-inset-top))`,
+						}}
+					>
 						<div className="flex items-start justify-between gap-4">
 							<div className="min-w-0">
 								<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">
@@ -1560,8 +1575,8 @@ export default function IpodClassicWorkbench() {
 					style={{
 						width: `${scaledFrameWidth}px`,
 						height: `${scaledFrameHeight}px`,
-						maxWidth: "calc(100vw - 2rem)",
-						maxHeight: "calc(100dvh - 2rem)",
+						maxWidth: `calc(100vw - var(--safe-inset-left) - var(--safe-inset-right) - 1.5rem)`,
+						maxHeight: `calc(100dvh - var(--safe-inset-top) - var(--safe-inset-bottom) - 1.5rem)`,
 					}}
 				>
 					<div

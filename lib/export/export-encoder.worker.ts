@@ -33,6 +33,25 @@ type Mp4State = {
 };
 
 let activeState: GifState | Mp4State | null = null;
+let messageQueue: (() => Promise<void>)[] = [];
+let processing = false;
+
+async function processQueue() {
+	if (processing) return;
+	processing = true;
+	while (messageQueue.length > 0) {
+		const task = messageQueue.shift();
+		if (task) {
+			await task();
+		}
+	}
+	processing = false;
+}
+
+function enqueue(task: () => Promise<void>) {
+	messageQueue.push(task);
+	void processQueue();
+}
 
 function post(response: EncoderWorkerResponse, transfer?: Transferable[]) {
 	self.postMessage(response, transfer ?? []);
@@ -181,11 +200,11 @@ async function handleMp4Frame(message: AppendMp4FrameMessage) {
 
 const yieldWorker = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-self.onmessage = async (event: MessageEvent<EncoderWorkerRequest>) => {
+self.onmessage = (event: MessageEvent<EncoderWorkerRequest>) => {
 	const message = event.data;
-
-	try {
-		switch (message.type) {
+	enqueue(async () => {
+		try {
+			switch (message.type) {
 			case "start-gif": {
 				const canvas = new OffscreenCanvas(message.width, message.height);
 				const ctx = canvas.getContext("2d", {
@@ -449,6 +468,7 @@ self.onmessage = async (event: MessageEvent<EncoderWorkerRequest>) => {
 	} catch (error) {
 		fail(message.id, error);
 	}
+	});
 };
 
 export {};

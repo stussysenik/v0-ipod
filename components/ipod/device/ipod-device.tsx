@@ -19,7 +19,7 @@ export function IpodDevice({
 	wheel,
 }: IpodDeviceProps) {
 	const shellShadow = exportSafe
-		? "0 0 0 1px rgba(82,88,97,0.18), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.08)"
+		? "0 0 0 0.5px rgba(82,88,97,0.10)"
 		: "0 16px 32px -20px rgba(0,0,0,0.45), 0 0 0 1px rgba(88,94,102,0.15), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
 	const gasketColor = deriveGasketColor(skinColor);

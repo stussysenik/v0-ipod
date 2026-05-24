@@ -10,7 +10,6 @@ export interface ExportCapabilities {
 
 export type MobileExportDelivery =
 	| "auto-download"
-	| "auto-share"
 	| "prompt-preview"
 	| "prompt-save"
 	| "prompt-share";
@@ -23,7 +22,7 @@ export function resolveMobileExportDelivery(
 	}
 
 	if (capabilities.canShareFiles) {
-		return capabilities.hasTransientUserActivation ? "auto-share" : "prompt-share";
+		return "prompt-share";
 	}
 
 	if (capabilities.canSaveWithPicker) {

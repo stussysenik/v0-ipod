@@ -54,9 +54,9 @@ const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
 const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v3";
 const GIF_DELAY_QUANTUM_MS = 10;
-const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.24)";
+const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.18)";
 const EXPORT_SHELL_CONTOUR =
-	"0 0 0 1px rgba(70,76,84,0.12), inset 0 2px 0 rgba(255,255,255,0.56), inset 0 -2px 0 rgba(0,0,0,0.06)";
+	"0 0 0 0.5px rgba(70,76,84,0.06), inset 0 0.5px 0 rgba(255,255,255,0.12)";
 
 type NextDataWindow = Window & {
 	__NEXT_DATA__?: {
@@ -291,10 +291,10 @@ function createDetachedExportNode(
       box-shadow: none !important;
     }
     [data-export-layer="wheel"] {
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(0,0,0,0.05) !important;
+      box-shadow: none !important;
     }
     [data-export-layer="wheel-center"] {
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04) !important;
+      box-shadow: none !important;
     }
     [data-marquee-container] {
       mask-image: none !important;
@@ -324,22 +324,22 @@ function sanitizeDetachedCloneForCapture(
 
 	const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
 	if (screen) {
-		screen.style.boxShadow = "inset 0 0 0 1px rgba(0,0,0,0.4), inset 0 1px 2px rgba(0,0,0,0.5)";
+		screen.style.boxShadow = "none";
 	}
 
 	const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
 	if (artwork) {
-		artwork.style.boxShadow = "0 1px 3px rgba(0,0,0,0.14)";
+		artwork.style.boxShadow = "none";
 	}
 
 	const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
 	if (wheel) {
-		wheel.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.05)";
+		wheel.style.boxShadow = "none";
 	}
 
 	const wheelCenter = clone.querySelector<HTMLElement>('[data-export-layer="wheel-center"]');
 	if (wheelCenter) {
-		wheelCenter.style.boxShadow = "inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(0,0,0,0.03)";
+		wheelCenter.style.boxShadow = "none";
 	}
 
 	const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
@@ -819,22 +819,6 @@ function triggerDownloadLinkWithOptions(
 		return true;
 	} catch {
 		return false;
-	}
-}
-
-function openPreparedPopupWindow(): Window | null {
-	try {
-		const popup = window.open("", "_blank");
-		if (popup?.document) {
-			popup.document.title = "Preparing export...";
-			popup.document.body.style.margin = "0";
-			popup.document.body.style.fontFamily = "system-ui, sans-serif";
-			popup.document.body.style.padding = "16px";
-			popup.document.body.textContent = "Preparing image...";
-		}
-		return popup;
-	} catch {
-		return null;
 	}
 }
 
@@ -1430,7 +1414,6 @@ function downloadImageBlobWithOptions(
 		);
 		let opened = false;
 
-		// Fallback: some mobile browsers ignore synthetic clicks.
 		if (!downloaded) {
 			if (options.popupWindow && !options.popupWindow.closed) {
 				options.popupWindow.location.href = url;
@@ -1441,7 +1424,6 @@ function downloadImageBlobWithOptions(
 			}
 		}
 
-		// Safari can fail if blob URL is revoked too quickly.
 		setTimeout(() => {
 			if (url) {
 				URL.revokeObjectURL(url);
@@ -1533,11 +1515,6 @@ export async function exportAnimatedGif(
 	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-	const preparedPopup =
-		capabilities.isMobile && mobileDelivery === "auto-download" && !capabilities.isIOS
-			? openPreparedPopupWindow()
-			: null;
-	let keepPreparedPopupOpen = false;
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
 	element.setAttribute(EXPORT_ATTRIBUTE, "true");
 	let exportNode: HTMLElement | null = null;
@@ -1714,62 +1691,7 @@ export async function exportAnimatedGif(
 			const blob = new Blob([finalized.buffer], {
 				type: finalized.mimeType ?? "image/gif",
 			});
-			if (capabilities.isMobile && mobileDelivery === "auto-share") {
-				onStatusChange?.("sharing");
-				onProgressChange?.(
-					createExportProgress({
-						stage: "sharing",
-						label: "Opening share sheet",
-						detail: "Passing the GIF to the system share dialog",
-						progress: 0.9,
-						currentFrame: plan.frameCount,
-						totalFrames: plan.frameCount,
-					}),
-				);
-				try {
-					const shared = await shareBlobFile(blob, filename, "image/gif");
-					if (shared) {
-						const blobSummary = await summarizeBlob(blob);
-						if (preparedPopup && !preparedPopup.closed) {
-							preparedPopup.close();
-						}
-						console.info("[gif-export:diagnostics] success", {
-							filename,
-							method: "share",
-							capturePath: "detached-html-to-image-gif",
-							frameCount: plan.frameCount,
-							frameDelayMs,
-							captureScale,
-							captureDurationMs: plan.captureDurationMs,
-							captureWidth: plan.captureWidth,
-							captureHeight: plan.captureHeight,
-							...blobSummary,
-							pipelineVersion: EXPORT_PIPELINE_VERSION,
-							...runtimeBuildContext,
-						});
-						onStatusChange?.("success");
-						onProgressChange?.(
-							createExportProgress({
-								stage: "complete",
-								label: "GIF export complete",
-								detail: filename,
-								progress: 1,
-								currentFrame: plan.frameCount,
-								totalFrames: plan.frameCount,
-							}),
-						);
-						return {
-							success: true,
-							method: "share",
-							capturePath: "detached-html-to-image-gif",
-							...blobSummary,
-						};
-					}
-				} catch (error) {
-					console.warn("GIF share failed, trying download fallback:", error);
-				}
-			}
-			if (capabilities.isMobile && mobileDelivery !== "auto-download") {
+			if (capabilities.isMobile) {
 				onStatusChange?.("sharing");
 				onProgressChange?.(
 					createExportProgress({
@@ -1831,7 +1753,6 @@ export async function exportAnimatedGif(
 			);
 			const downloadResult = downloadImageBlobWithOptions(blob, filename, {
 				allowSyntheticClick: useSyntheticDownload,
-				popupWindow: preparedPopup,
 			});
 
 			if (!downloadResult.success) {
@@ -1845,7 +1766,6 @@ export async function exportAnimatedGif(
 			}
 
 			const blobSummary = await summarizeBlob(blob);
-			keepPreparedPopupOpen = downloadResult.usedPopup;
 			console.info("[gif-export:diagnostics] success", {
 				filename,
 				method: "download",
@@ -1908,9 +1828,6 @@ export async function exportAnimatedGif(
 			error: error instanceof Error ? error.message : "Unknown error occurred",
 		};
 	} finally {
-		if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
-			preparedPopup.close();
-		}
 		removeExportNode(exportNode);
 		if (existingExportAttribute === null) {
 			element.removeAttribute(EXPORT_ATTRIBUTE);
@@ -1952,11 +1869,6 @@ export async function exportAnimatedMp4(
 	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-	const preparedPopup =
-		capabilities.isMobile && mobileDelivery === "auto-download" && !capabilities.isIOS
-			? openPreparedPopupWindow()
-			: null;
-	let keepPreparedPopupOpen = false;
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
 	element.setAttribute(EXPORT_ATTRIBUTE, "true");
 	let exportNode: HTMLElement | null = null;
@@ -2157,63 +2069,7 @@ export async function exportAnimatedMp4(
 			const blob = new Blob([finalized.buffer], {
 				type: finalized.mimeType ?? "video/mp4",
 			});
-			if (capabilities.isMobile && mobileDelivery === "auto-share") {
-				onStatusChange?.("sharing");
-				onProgressChange?.(
-					createExportProgress({
-						stage: "sharing",
-						label: "Opening share sheet",
-						detail: "Passing the MP4 to the system share dialog",
-						progress: 0.9,
-						currentFrame: plan.frameCount,
-						totalFrames: plan.frameCount,
-					}),
-				);
-				try {
-					const shared = await shareBlobFile(blob, filename, "video/mp4");
-					if (shared) {
-						const blobSummary = await summarizeBlob(blob);
-						if (preparedPopup && !preparedPopup.closed) {
-							preparedPopup.close();
-						}
-						console.info("[mp4-export:diagnostics] success", {
-							filename,
-							method: "share",
-							capturePath: "detached-html-to-image-mp4",
-							frameCount: plan.frameCount,
-							frameDurationUs,
-							codec: support.codec,
-							captureScale,
-							captureDurationMs: plan.captureDurationMs,
-							captureWidth: plan.captureWidth,
-							captureHeight: plan.captureHeight,
-							...blobSummary,
-							pipelineVersion: EXPORT_PIPELINE_VERSION,
-							...runtimeBuildContext,
-						});
-						onStatusChange?.("success");
-						onProgressChange?.(
-							createExportProgress({
-								stage: "complete",
-								label: "MP4 export complete",
-								detail: filename,
-								progress: 1,
-								currentFrame: plan.frameCount,
-								totalFrames: plan.frameCount,
-							}),
-						);
-						return {
-							success: true,
-							method: "share",
-							capturePath: "detached-html-to-image-mp4",
-							...blobSummary,
-						};
-					}
-				} catch (error) {
-					console.warn("MP4 share failed, trying download fallback:", error);
-				}
-			}
-			if (capabilities.isMobile && mobileDelivery !== "auto-download") {
+			if (capabilities.isMobile) {
 				onStatusChange?.("sharing");
 				onProgressChange?.(
 					createExportProgress({
@@ -2276,7 +2132,6 @@ export async function exportAnimatedMp4(
 			);
 			const downloadResult = downloadImageBlobWithOptions(blob, filename, {
 				allowSyntheticClick: useSyntheticDownload,
-				popupWindow: preparedPopup,
 			});
 			if (!downloadResult.success) {
 				onStatusChange?.("error");
@@ -2289,7 +2144,6 @@ export async function exportAnimatedMp4(
 			}
 
 			const blobSummary = await summarizeBlob(blob);
-			keepPreparedPopupOpen = downloadResult.usedPopup;
 			console.info("[mp4-export:diagnostics] success", {
 				filename,
 				method: "download",
@@ -2353,9 +2207,6 @@ export async function exportAnimatedMp4(
 			error: error instanceof Error ? error.message : "Unknown error occurred",
 		};
 	} finally {
-		if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
-			preparedPopup.close();
-		}
 		removeExportNode(exportNode);
 		if (existingExportAttribute === null) {
 			element.removeAttribute(EXPORT_ATTRIBUTE);
@@ -2365,15 +2216,6 @@ export async function exportAnimatedMp4(
 	}
 }
 
-/**
- * Main export orchestrator - handles all platforms with fallback chain
- *
- * Fallback Chain:
- * 1. Web Share API with File (mobile) → native share sheet
- * 2. Blob URL download (Desktop) → direct download
- * 3. Data URL download (Legacy) → old method
- * 4. Manual instructions (Ultimate fallback)
- */
 export async function exportImage(
 	element: HTMLElement,
 	options: {
@@ -2397,14 +2239,6 @@ export async function exportImage(
 	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
-	// Only open a fallback popup on non-iOS mobile (e.g. Android) where synthetic
-	// clicks may be blocked. iOS uses Web Share API natively; opening a popup on
-	// iOS Safari creates a stuck about:blank tab.
-	const preparedPopup =
-		capabilities.isMobile && mobileDelivery === "auto-download" && !capabilities.isIOS
-			? openPreparedPopupWindow()
-			: null;
-	let keepPreparedPopupOpen = false;
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
 	element.setAttribute(EXPORT_ATTRIBUTE, "true");
 	let capturePath = "none";
@@ -2571,54 +2405,7 @@ export async function exportImage(
 			}
 		}
 
-		// Method 1: Web Share API (triggers native share sheet on all platforms)
-		if (blob && capabilities.isMobile && mobileDelivery === "auto-share") {
-			onStatusChange?.("sharing");
-			onProgressChange?.(
-				createExportProgress({
-					stage: "sharing",
-					label: "Opening share sheet",
-					detail: "Passing the image to the system share dialog",
-					progress: 0.86,
-				}),
-			);
-			try {
-				const shared = await shareBlobFile(blob, filename, "image/png");
-				if (shared) {
-					const blobSummary = await summarizeBlob(blob);
-					if (preparedPopup && !preparedPopup.closed) {
-						preparedPopup.close();
-					}
-					console.info("[export:diagnostics] success", {
-						filename,
-						method: "share",
-						capturePath,
-						...blobSummary,
-						pipelineVersion: EXPORT_PIPELINE_VERSION,
-						...runtimeBuildContext,
-					});
-					onStatusChange?.("success");
-					onProgressChange?.(
-						createExportProgress({
-							stage: "complete",
-							label: "Image export complete",
-							detail: filename,
-							progress: 1,
-						}),
-					);
-					return {
-						success: true,
-						method: "share",
-						capturePath,
-						...blobSummary,
-					};
-				}
-			} catch (error) {
-				console.warn("Share failed, trying download fallback:", error);
-			}
-		}
-
-		if (blob && capabilities.isMobile && mobileDelivery !== "auto-download") {
+		if (blob && capabilities.isMobile) {
 			onStatusChange?.("sharing");
 			onProgressChange?.(
 				createExportProgress({
@@ -2634,9 +2421,6 @@ export async function exportImage(
 				capabilities,
 			});
 			const blobSummary = await summarizeBlob(blob);
-			if (preparedPopup && !preparedPopup.closed) {
-				preparedPopup.close();
-			}
 			console.info("[export:diagnostics] success", {
 				filename,
 				method: promptMethod,
@@ -2674,11 +2458,9 @@ export async function exportImage(
 			);
 			const downloadResult = downloadImageBlobWithOptions(blob, filename, {
 				allowSyntheticClick: useSyntheticDownload,
-				popupWindow: preparedPopup,
 			});
 			if (downloadResult.success) {
 				const blobSummary = await summarizeBlob(blob);
-				keepPreparedPopupOpen = downloadResult.usedPopup;
 				console.info("[export:diagnostics] success", {
 					filename,
 					method: "download",
@@ -2726,11 +2508,9 @@ export async function exportImage(
 			}
 			const downloadResult = downloadImageDataUrlWithOptions(dataUrl, filename, {
 				allowSyntheticClick: useSyntheticDownload,
-				popupWindow: preparedPopup,
 			});
 			if (downloadResult.success) {
 				const blobSummary = await summarizeBlob(dataUrlBlob);
-				keepPreparedPopupOpen = downloadResult.usedPopup;
 				console.info("[export:diagnostics] success", {
 					filename,
 					method: "dataurl",
@@ -2876,9 +2656,6 @@ export async function exportImage(
 			error: error instanceof Error ? error.message : "Unknown error occurred",
 		};
 	} finally {
-		if (preparedPopup && !preparedPopup.closed && !keepPreparedPopupOpen) {
-			preparedPopup.close();
-		}
 		removeExportNode(exportNode);
 		if (existingExportAttribute === null) {
 			element.removeAttribute(EXPORT_ATTRIBUTE);
