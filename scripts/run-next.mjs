@@ -204,7 +204,7 @@ const nextBin = fileURLToPath(new URL("../node_modules/next/dist/bin/next", impo
 
 const args = [nextBin, command, "-p", String(port)];
 if (command === "dev") {
-	args.push("--turbo");
+	args.push("--webpack");
 }
 
 const nextProcess = spawn(process.execPath, args, {

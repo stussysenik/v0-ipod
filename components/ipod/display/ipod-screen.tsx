@@ -15,11 +15,13 @@ import type {
 	IpodOsScreen,
 } from "@/lib/ipod-state/model";
 
+import { IpodStoreContext } from "@/lib/xstate/store";
+
 interface IpodScreenProps {
 	preset: IpodClassicPresetDefinition;
 	skinColor?: string;
 	state: SongMetadata;
-	dispatch: React.Dispatch<IpodWorkbenchAction>;
+	dispatch?: (action: any) => void;
 	playClick: () => void;
 	interactionModel?: IpodInteractionModel;
 	osScreen?: IpodOsScreen;
@@ -44,7 +46,7 @@ export function IpodScreen({
 	preset,
 	skinColor,
 	state,
-	dispatch,
+	dispatch: dispatchProp,
 	playClick,
 	interactionModel = "direct",
 	osScreen = "now-playing",
@@ -60,6 +62,8 @@ export function IpodScreen({
 	onTitleOverflowChange,
 	batteryLevel = 1.0,
 }: IpodScreenProps) {
+	const actor = IpodStoreContext.useActorRef();
+	const send = actor?.send || dispatchProp;
 	const remainingAnchorRef = useRef<number | null>(null);
 	const screenTokens = preset.screen;
 	const showOsMenu = osScreen === "menu";
@@ -90,28 +94,28 @@ export function IpodScreen({
 	const setCurrentTime = useCallback(
 		(currentTime: number, preserveRemaining = false) => {
 			const safeCurrent = Math.max(0, Math.floor(currentTime));
-			dispatch({ type: "UPDATE_CURRENT_TIME", payload: safeCurrent });
+			send({ type: "UPDATE_CURRENT_TIME", payload: safeCurrent });
 
 			if (preserveRemaining && remainingAnchorRef.current !== null) {
-				dispatch({
+				send({
 					type: "UPDATE_DURATION",
 					payload: safeCurrent + remainingAnchorRef.current,
 				});
 			}
 		},
-		[dispatch],
+		[send],
 	);
 
 	const setRemainingTime = useCallback(
 		(remainingSeconds: number) => {
 			const safeRemaining = Math.max(0, Math.floor(remainingSeconds));
 			remainingAnchorRef.current = safeRemaining;
-			dispatch({
+			send({
 				type: "UPDATE_DURATION",
 				payload: state.currentTime + safeRemaining,
 			});
 		},
-		[dispatch, state.currentTime],
+		[send, state.currentTime],
 	);
 
 	return (
@@ -135,7 +139,7 @@ export function IpodScreen({
 				<IpodNowPlayingScene
 					screenTokens={screenTokens}
 					state={state}
-					dispatch={dispatch}
+					dispatch={send as any}
 					renderElement={renderElement}
 					isInlineEditingEnabled={isInlineEditingEnabled}
 					exportSafe={exportSafe}
@@ -155,3 +159,4 @@ export function IpodScreen({
 		</IpodDisplay>
 	);
 }
+

@@ -9,7 +9,7 @@ export function isStandardOsInteractionModel(interactionModel: IpodInteractionMo
 }
 
 export function isPngExportViewMode(viewMode: IpodViewMode): boolean {
-	return viewMode === "flat" || viewMode === "focus";
+	return viewMode === "flat" || viewMode === "focus" || viewMode === "3d";
 }
 
 export function isPreviewViewMode(viewMode: IpodViewMode): boolean {

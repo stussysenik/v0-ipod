@@ -1,6 +1,24 @@
 "use client";
 
+import React from "react";
+import { 
+  Dialog, 
+  DialogTrigger, 
+  Heading, 
+  Button, 
+  Modal, 
+  ModalOverlay, 
+  Slider, 
+  SliderTrack, 
+  SliderThumb, 
+  SliderOutput,
+  Label,
+  ToggleButtonGroup,
+  ToggleButton,
+  Text
+} from "react-aria-components";
 import { Film, Video, X, Zap, Gauge, Maximize, Square } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type {
 	AnimatedExportFormat,
 	AnimatedExportQuality,
@@ -44,192 +62,189 @@ export function AnimatedExportDialog({
 	onLayoutChange,
 	onConfirm,
 }: AnimatedExportDialogProps) {
-	if (!open) {
-		return null;
-	}
-
 	const safeDuration = clampAnimatedExportDurationSeconds(
 		durationSeconds || DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	);
 
 	return (
-		<div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm">
-			<div className="w-full max-w-lg rounded-[28px] border border-white/25 bg-[#F2F1ED] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.35)]">
-				<div className="flex items-start justify-between gap-4">
-					<div>
-						<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B7280]">
-							Animated Export
-						</p>
-						<h2 className="mt-1 text-xl font-semibold text-[#111827]">
-							Start from the live screen state
-						</h2>
-						<p className="mt-2 text-sm leading-6 text-[#4B5563]">
-							The export begins at{" "}
-							<span className="font-semibold text-[#111827]">
-								{currentTimeLabel}
-							</span>{" "}
-							and continues the title marquee plus
-							playback bar from there.
-						</p>
-					</div>
-					<button
-						aria-label="Close animated export dialog"
-						className="rounded-full border border-black/10 p-2 text-[#111827] transition-colors hover:bg-black/5"
-						type="button"
-						onClick={onClose}
-					>
-						<X className="h-4 w-4" />
-					</button>
-				</div>
-
-				<div className="mt-4 grid grid-cols-2 gap-2">
-					<button
-						type="button"
-						onClick={() => onFormatChange("gif")}
-						className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${
-							format === "gif"
-								? "border-[#111827] bg-[#111827] text-white"
-								: "border-[#D1D5DB] bg-white text-[#111827] hover:bg-[#F9FAFB]"
-						}`}
-					>
-						<Film className="h-4 w-4" />
-						`.gif`
-					</button>
-					<button
-						type="button"
-						onClick={() => {
-							if (mp4Supported) {
-								onFormatChange("mp4");
-							}
-						}}
-						className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors ${
-							format === "mp4"
-								? "border-[#111827] bg-[#111827] text-white"
-								: "border-[#D1D5DB] bg-white text-[#111827] hover:bg-[#F9FAFB]"
-						} ${mp4Supported ? "" : "cursor-not-allowed opacity-50"}`}
-						disabled={!mp4Supported}
-					>
-						<Video className="h-4 w-4" />
-						`.mp4`
-					</button>
-				</div>
-
-				<div className="mt-4 grid grid-cols-2 gap-4">
-					<div className="rounded-[24px] border border-black/10 bg-white/85 p-4">
-						<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
-							Quality
-						</p>
-						<div className="mt-3 flex flex-col gap-2">
-							<button
-								type="button"
-								onClick={() => onQualityChange("standard")}
-								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
-									quality === "standard"
-										? "bg-[#111827] text-white"
-										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
-								}`}
-							>
-								<Gauge className="h-3.5 w-3.5" />
-								Standard
-							</button>
-							<button
-								type="button"
-								onClick={() => onQualityChange("pro")}
-								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
-									quality === "pro"
-										? "bg-[#111827] text-white"
-										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
-								}`}
-							>
-								<Zap className="h-3.5 w-3.5" />
-								Pro (1080p)
-							</button>
-						</div>
-					</div>
-
-					<div className="rounded-[24px] border border-black/10 bg-white/85 p-4">
-						<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
-							Aspect Ratio
-						</p>
-						<div className="mt-3 flex flex-col gap-2">
-							<button
-								type="button"
-								onClick={() => onLayoutChange("original")}
-								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
-									layout === "original"
-										? "bg-[#111827] text-white"
-										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
-								}`}
-							>
-								<Square className="h-3.5 w-3.5" />
-								Original
-							</button>
-							<button
-								type="button"
-								onClick={() => onLayoutChange("ig-story")}
-								className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
-									layout === "ig-story"
-										? "bg-[#111827] text-white"
-										: "bg-black/5 text-[#4B5563] hover:bg-black/10"
-								}`}
-							>
-								<Maximize className="h-3.5 w-3.5" />
-								IG Story
-							</button>
-						</div>
-					</div>
-				</div>
-
-				<div className="mt-4 rounded-[24px] border border-black/10 bg-white/85 p-4">
-					<div className="flex items-end justify-between gap-4">
-						<div>
-							<p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
-								Duration
-							</p>
-							<p className="mt-1 text-sm text-[#374151]">
-								Up to 60 seconds of interaction.
-							</p>
-						</div>
-						<div className="text-right">
-							<div className="text-3xl font-semibold leading-none text-[#111827]">
-								{safeDuration}
+		<ModalOverlay
+			isOpen={open}
+			onOpenChange={(isOpen) => !isOpen && onClose()}
+			className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm"
+		>
+			<Modal className="w-full max-w-lg rounded-[32px] border border-white/25 bg-[#F2F1ED] p-7 shadow-[0_40px_100px_rgba(0,0,0,0.45)] outline-none animate-in zoom-in-95 slide-in-from-bottom-4 duration-500">
+				<Dialog className="outline-none">
+					{({ close }) => (
+						<>
+							<div className="flex items-start justify-between gap-4">
+								<div>
+									<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#6B7280]">
+										Studio Capture
+									</p>
+									<Heading slot="title" className="mt-2 text-2xl font-bold text-[#111827] tracking-tight">
+										Record sequence
+									</Heading>
+									<Text slot="description" className="mt-3 text-sm leading-relaxed text-[#4B5563]">
+										Capturing high-fidelity physical assembly snapshot starting at{" "}
+										<span className="font-bold text-[#111827]">
+											{currentTimeLabel}
+										</span>.
+									</Text>
+								</div>
+								<Button
+									onPress={close}
+									data-testid="dialog-close-button"
+									className="rounded-full border border-black/5 p-2.5 text-[#111827] transition-all hover:bg-black/5 outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+								>
+									<X className="h-4 w-4" />
+								</Button>
 							</div>
-							<div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6B7280]">
-								seconds
+
+							<div className="mt-8 grid grid-cols-2 gap-4">
+								<div className="flex flex-col gap-2">
+									<Label className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280] px-1">Format</Label>
+									<div className="flex gap-2">
+										<Button
+											onPress={() => onFormatChange("gif")}
+											data-testid="format-gif-button"
+											className={cn(
+												"flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+												format === "gif" ? "bg-[#111827] text-white border-[#111827]" : "bg-white border-[#D0D4DA] text-[#6B7280] hover:bg-white/80"
+											)}
+										>
+											<Film className="h-4 w-4" />
+											GIF
+										</Button>
+										<Button
+											isDisabled={!mp4Supported}
+											onPress={() => onFormatChange("mp4")}
+											data-testid="format-mp4-button"
+											className={cn(
+												"flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+												format === "mp4" ? "bg-[#111827] text-white border-[#111827]" : "bg-white border-[#D0D4DA] text-[#6B7280] hover:bg-white/80",
+												!mp4Supported && "opacity-40 grayscale"
+											)}
+										>
+											<Video className="h-4 w-4" />
+											MP4
+										</Button>
+									</div>
+								</div>
+
+								<div className="flex flex-col gap-2">
+									<Label className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280] px-1">Canvas</Label>
+									<div className="flex gap-2">
+										<Button
+											onPress={() => onLayoutChange("original")}
+											data-testid="layout-original-button"
+											className={cn(
+												"flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+												layout === "original" ? "bg-[#111827] text-white border-[#111827]" : "bg-white border-[#D0D4DA] text-[#6B7280] hover:bg-white/80"
+											)}
+										>
+											<Square className="h-4 w-4" />
+											1:1
+										</Button>
+										<Button
+											onPress={() => onLayoutChange("ig-story")}
+											data-testid="layout-ig-story-button"
+											className={cn(
+												"flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+												layout === "ig-story" ? "bg-[#111827] text-white border-[#111827]" : "bg-white border-[#D0D4DA] text-[#6B7280] hover:bg-white/80"
+											)}
+										>
+											<Maximize className="h-4 w-4" />
+											9:16
+										</Button>
+									</div>
+								</div>
 							</div>
-						</div>
-					</div>
 
-					<input
-						type="range"
-						min={MIN_ANIMATED_EXPORT_DURATION_SECONDS}
-						max={MAX_ANIMATED_EXPORT_DURATION_SECONDS}
-						step={1}
-						value={safeDuration}
-						onChange={(event) =>
-							onDurationChange(Number(event.target.value))
-						}
-						className="mt-4 w-full"
-					/>
-				</div>
+							<div className="mt-6 flex flex-col gap-2 p-5 rounded-[28px] bg-white/60 border border-black/5 backdrop-blur-sm">
+								<Label className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Quality Profile</Label>
+								<div className="flex gap-2 mt-2">
+									<Button
+										onPress={() => onQualityChange("standard")}
+										data-testid="quality-standard-button"
+										className={cn(
+											"flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all outline-none",
+											quality === "standard" ? "bg-white border-[#111827] shadow-sm text-[#111827]" : "bg-transparent border-transparent text-[#6B7280] hover:bg-black/5"
+										)}
+									>
+										<Gauge className="h-3.5 w-3.5" />
+										Standard
+									</Button>
+									<Button
+										onPress={() => onQualityChange("pro")}
+										data-testid="quality-pro-button"
+										className={cn(
+											"flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-bold transition-all outline-none",
+											quality === "pro" ? "bg-white border-[#111827] shadow-sm text-[#111827]" : "bg-transparent border-transparent text-[#6B7280] hover:bg-black/5"
+										)}
+									>
+										<Zap className="h-3.5 w-3.5" />
+										Ultra Fidelity (50Mbps)
+									</Button>
+								</div>
+							</div>
 
-				<div className="mt-4 flex items-center justify-end gap-2">
-					<button
-						type="button"
-						onClick={onClose}
-						className="rounded-2xl border border-[#D1D5DB] bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition-colors hover:bg-[#F9FAFB]"
-					>
-						Cancel
-					</button>
-					<button
-						type="button"
-						onClick={onConfirm}
-						className="rounded-2xl bg-[#111827] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1F2937]"
-					>
-						Export {format === "gif" ? ".gif" : ".mp4"}
-					</button>
-				</div>
-			</div>
-		</div>
+							<div className="mt-6 p-6 rounded-[28px] bg-white/60 border border-black/5 backdrop-blur-sm">
+								<Slider
+									value={safeDuration}
+									onChange={(val) => onDurationChange(val as number)}
+									minValue={MIN_ANIMATED_EXPORT_DURATION_SECONDS}
+									maxValue={MAX_ANIMATED_EXPORT_DURATION_SECONDS}
+									step={1}
+									className="flex flex-col gap-4"
+								>
+									<div className="flex items-end justify-between">
+										<div className="flex flex-col gap-1">
+											<Label className="text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Capture Duration</Label>
+											<Text className="text-[10px] text-[#6B7280]">Max 60s interaction loop</Text>
+										</div>
+										<SliderOutput className="text-3xl font-bold tabular-nums text-[#111827]">
+											{({state}) => (
+                        <>
+                          {state.getThumbValue(0)}
+                          <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">sec</span>
+                        </>
+                      )}
+										</SliderOutput>
+									</div>
+									<SliderTrack className="relative h-2 w-full rounded-full bg-black/10">
+										{({state}) => (
+											<>
+												<div 
+													className="absolute h-full rounded-full bg-[#111827]" 
+													style={{ width: `${state.getThumbPercent(0) * 100}%` }} 
+												/>
+												<SliderThumb className="h-5 w-5 rounded-full bg-white border-2 border-[#111827] shadow-md outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 transition-shadow top-1/2" />
+											</>
+										)}
+									</SliderTrack>
+								</Slider>
+							</div>
+
+							<div className="mt-10 flex items-center gap-3">
+								<Button
+									onPress={close}
+									data-testid="dialog-cancel-button"
+									className="flex-1 py-4 rounded-2xl border border-[#D0D4DA] bg-white text-sm font-bold text-[#111827] hover:bg-black/5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+								>
+									Cancel
+								</Button>
+								<Button
+									onPress={onConfirm}
+									data-testid="start-rendering-button"
+									className="flex-1 py-4 rounded-2xl bg-[#111827] text-sm font-bold text-white hover:bg-black transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+								>
+									Start Rendering
+								</Button>
+							</div>
+						</>
+					)}
+				</Dialog>
+			</Modal>
+		</ModalOverlay>
 	);
 }

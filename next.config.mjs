@@ -9,7 +9,6 @@ const nextConfig = {
 	...(distDir ? { distDir } : {}),
 	experimental: {
 		viewTransition: true,
-		useOxc: true,
 		optimizePackageImports: [
 			"unocss",
 			"lucide-react",

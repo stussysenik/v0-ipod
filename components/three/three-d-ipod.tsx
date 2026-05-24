@@ -31,6 +31,7 @@ import { PostProcessing } from "./post-processing";
 
 export interface ThreeDIpodHandle {
 	captureHighRes: (width?: number, height?: number) => Promise<Blob | null>;
+	captureFrame: (width: number, height: number) => Promise<ImageBitmap | null>;
 }
 
 export interface ThreeDIpodProps {
@@ -471,10 +472,12 @@ function IpodModel({ screen, wheel, skinColor, ringColor, centerColor, onRegiste
 
 function SceneCapture({
 	onCapture,
+	onFrameCapture,
 	onReady,
 	modelResetRef,
 }: {
 	onCapture: (fn: (w?: number, h?: number) => Promise<Blob | null>) => void;
+	onFrameCapture: (fn: (w: number, h: number) => Promise<ImageBitmap | null>) => void;
 	onReady?: () => void;
 	modelResetRef?: React.MutableRefObject<(() => void) | null>;
 }) {
@@ -550,9 +553,50 @@ function SceneCapture({
 			}
 		};
 
+		const captureFrame = async (width: number, height: number): Promise<ImageBitmap | null> => {
+			// No angle override here — capture from current camera for live interaction recording
+			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
+				samples: 4,
+				type: THREE.UnsignedByteType,
+				format: THREE.RGBAFormat,
+			});
+
+			try {
+				gl.setRenderTarget(renderTarget);
+				gl.render(scene, camera);
+
+				const buffer = new Uint8Array(width * height * 4);
+				gl.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+				gl.setRenderTarget(null);
+
+				const canvas = document.createElement("canvas");
+				canvas.width = width;
+				canvas.height = height;
+				const ctx = canvas.getContext("2d");
+				if (!ctx) return null;
+
+				const imageData = ctx.createImageData(width, height);
+				for (let y = 0; y < height; y++) {
+					for (let x = 0; x < width; x++) {
+						const srcIdx = ((height - y - 1) * width + x) * 4;
+						const dstIdx = (y * width + x) * 4;
+						imageData.data[dstIdx] = buffer[srcIdx]!;
+						imageData.data[dstIdx + 1] = buffer[srcIdx + 1]!;
+						imageData.data[dstIdx + 2] = buffer[srcIdx + 2]!;
+						imageData.data[dstIdx + 3] = buffer[srcIdx + 3]!;
+					}
+				}
+				ctx.putImageData(imageData, 0, 0);
+				return await createImageBitmap(canvas);
+			} finally {
+				renderTarget.dispose();
+			}
+		};
+
 		onCapture(captureHighRes);
+		onFrameCapture(captureFrame);
 		onReady?.();
-	}, [gl, scene, camera, onCapture, onReady, modelResetRef]);
+	}, [gl, scene, camera, onCapture, onFrameCapture, onReady, modelResetRef]);
 
 	return null;
 }
@@ -585,6 +629,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 	(props, ref) => {
 		const { onReady, ...modelProps } = props;
 		const captureRef = useRef<((w?: number, h?: number) => Promise<Blob | null>) | null>(null);
+		const frameCaptureRef = useRef<((w: number, h: number) => Promise<ImageBitmap | null>) | null>(null);
 		const modelResetRef = useRef<(() => void) | null>(null);
 		const [turntable, setTurntable] = useState(false);
 
@@ -593,10 +638,19 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 				if (captureRef.current) return captureRef.current(width, height);
 				return null;
 			},
+			captureFrame: async (width: number, height: number) => {
+				if (frameCaptureRef.current) return frameCaptureRef.current(width, height);
+				return null;
+			},
 		}));
 
 		const handleCapture = useCallback(
 			(fn: (w?: number, h?: number) => Promise<Blob | null>) => { captureRef.current = fn; },
+			[],
+		);
+
+		const handleFrameCapture = useCallback(
+			(fn: (w: number, h: number) => Promise<ImageBitmap | null>) => { frameCaptureRef.current = fn; },
 			[],
 		);
 
@@ -752,6 +806,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 					<SceneCapture
 						modelResetRef={modelResetRef}
 						onCapture={handleCapture}
+						onFrameCapture={handleFrameCapture}
 						onReady={onReady}
 					/>
 				</Canvas>

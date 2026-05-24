@@ -1,7 +1,20 @@
 "use client";
 
+import React from "react";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import { deriveGasketColor, hexToHsl } from "@/lib/color-proximity";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { ipodDeviceVariants } from "./ipod-device-variants";
+
+import { liveTheme, captureTheme, vars } from "@/lib/ipod-state/theme.css";
+
+/**
+ * Utility to merge tailwind/unocss classes safely
+ */
+function cn(...inputs: ClassValue[]) {
+	return twMerge(clsx(inputs));
+}
 
 interface IpodDeviceProps {
 	preset: IpodClassicPresetDefinition;
@@ -9,6 +22,8 @@ interface IpodDeviceProps {
 	exportSafe?: boolean;
 	screen: React.ReactNode;
 	wheel: React.ReactNode;
+	viewMode?: "flat" | "3d" | "focus" | "preview" | "ascii";
+	className?: string;
 }
 
 export function IpodDevice({
@@ -17,6 +32,8 @@ export function IpodDevice({
 	exportSafe = false,
 	screen,
 	wheel,
+	viewMode = "flat",
+	className,
 }: IpodDeviceProps) {
 	const shellShadow = exportSafe
 		? "0 0 0 1px rgba(82,88,97,0.18), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.08)"
@@ -24,49 +41,64 @@ export function IpodDevice({
 
 	const gasketColor = deriveGasketColor(skinColor);
 	const gasketShadowOpacity = hexToHsl(skinColor).l < 0.45 ? "0.5" : "0.18";
+	const activeTheme = exportSafe ? captureTheme : liveTheme;
 
 	return (
 		<div
-			className="relative flex flex-col items-center overflow-hidden transition-all duration-300"
+			className={cn(
+				"flex flex-col items-center overflow-hidden",
+				ipodDeviceVariants({ 
+					viewMode, 
+					preset: (preset.id as any) || "custom",
+					materiality: viewMode === "ascii" ? "flat" : "physical"
+				}),
+				activeTheme,
+				className
+			)}
 			style={{
 				width: preset.shell.width,
 				height: preset.shell.height,
 				backgroundColor: skinColor,
-				boxShadow: shellShadow,
+				boxShadow: viewMode === "ascii" ? "none" : shellShadow,
 				borderRadius: preset.shell.radius,
 				paddingLeft: preset.shell.paddingX,
 				paddingRight: preset.shell.paddingX,
 				paddingTop: preset.shell.paddingTop,
 				paddingBottom: preset.shell.paddingBottom,
-			}}
+				"--skin-color": skinColor,
+				"--gasket-color": gasketColor,
+			} as React.CSSProperties}
 			data-export-layer="shell"
 		>
-			{/* Machined chamfer — the key edge that reads as anodized aluminum */}
-			<div
-				className="pointer-events-none absolute inset-0"
-				aria-hidden="true"
-				style={{
-					borderRadius: preset.shell.radius,
-					boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -1.5px 3px rgba(0,0,0,0.14)",
-				}}
-			/>
+			{/* Machined chamfer — only visible in non-ASCII modes */}
+			{viewMode !== "ascii" && (
+				<div
+					className="pointer-events-none absolute inset-0"
+					aria-hidden="true"
+					style={{
+						borderRadius: preset.shell.radius,
+						boxShadow: vars.material.chamferShadow,
+					}}
+				/>
+			)}
 
-			{/* Specular sheen — unified top-left light source */}
-			<div
-				className="pointer-events-none absolute inset-[2px]"
-				aria-hidden="true"
-				style={{
-					borderRadius: preset.shell.innerRadius,
-					background:
-						"radial-gradient(ellipse at 24% 8%, rgba(255,255,255,0.16) 0%, transparent 55%)",
-				}}
-			/>
+			{/* Specular sheen — only visible in non-ASCII modes */}
+			{viewMode !== "ascii" && (
+				<div
+					className="pointer-events-none absolute inset-[2px]"
+					aria-hidden="true"
+					style={{
+						borderRadius: preset.shell.innerRadius,
+						background: vars.material.specularSheen,
+					}}
+				/>
+			)}
 
-			{/* Screen gasket — recessed edge derived from case color */}
+			{/* Screen gasket */}
 			<div
 				className="relative z-10 w-full"
 				style={{
-					backgroundColor: gasketColor,
+					backgroundColor: vars.material.gasketColor,
 					borderRadius: preset.screen.outerRadius,
 					boxShadow: `inset 0 1px 2px rgba(0,0,0,${gasketShadowOpacity})`,
 				}}

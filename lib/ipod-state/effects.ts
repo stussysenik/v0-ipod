@@ -183,8 +183,21 @@ export async function exportWorkbenchPng(
 		backgroundColor: string;
 		onStatusChange: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
+		threeDIpodHandle?: ThreeDIpodHandle | null;
 	},
 ) {
+	if (options.threeDIpodHandle) {
+		options.onStatusChange("encoding");
+		const blob = await options.threeDIpodHandle.captureHighRes();
+		if (blob) {
+			const { downloadImageBlobWithOptions, summarizeBlob } = await import("@/lib/export-utils");
+			const summary = await summarizeBlob(blob);
+			downloadImageBlobWithOptions(blob, options.filename, { allowSyntheticClick: true });
+			options.onStatusChange("success");
+			return { success: true, ...summary };
+		}
+	}
+
 	await waitForFrameBoundary();
 	const { exportImage } = await import("@/lib/export-utils");
 
@@ -198,6 +211,8 @@ export async function exportWorkbenchPng(
 	});
 }
 
+import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+
 export async function exportWorkbenchGif(
 	element: HTMLElement,
 	options: {
@@ -208,21 +223,25 @@ export async function exportWorkbenchGif(
 		layout?: AnimatedExportLayout;
 		onStatusChange: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
+		threeDIpodHandle?: ThreeDIpodHandle | null;
 	},
 ) {
-	await waitForFrameBoundary();
-	const { exportAnimatedGif } = await import("@/lib/export-utils");
+	const { runExportPipeline } = await import("@/lib/export/effect-pipeline");
+	const { Effect } = await import("effect");
 
-	return exportAnimatedGif(element, {
+	const program = runExportPipeline(element, {
 		filename: options.filename,
 		backgroundColor: options.backgroundColor,
-		constrainedFrame: true,
-		durationSeconds: options.durationSeconds,
-		quality: options.quality,
-		layout: options.layout,
+		format: "gif",
+		durationSeconds: options.durationSeconds ?? 4,
+		quality: options.quality ?? "standard",
+		layout: options.layout ?? "original",
 		onStatusChange: options.onStatusChange,
-		onProgressChange: options.onProgressChange,
+		onProgress: options.onProgressChange || (() => {}),
+		threeDIpodHandle: options.threeDIpodHandle,
 	});
+
+	return Effect.runPromise(program);
 }
 
 export async function exportWorkbenchMp4(
@@ -235,19 +254,23 @@ export async function exportWorkbenchMp4(
 		layout?: AnimatedExportLayout;
 		onStatusChange: (status: ExportStatus) => void;
 		onProgressChange?: (progress: ExportProgress) => void;
+		threeDIpodHandle?: ThreeDIpodHandle | null;
 	},
 ) {
-	await waitForFrameBoundary();
-	const { exportAnimatedMp4 } = await import("@/lib/export-utils");
+	const { runExportPipeline } = await import("@/lib/export/effect-pipeline");
+	const { Effect, Runtime } = await import("effect");
 
-	return exportAnimatedMp4(element, {
+	const program = runExportPipeline(element, {
 		filename: options.filename,
 		backgroundColor: options.backgroundColor,
-		constrainedFrame: true,
-		durationSeconds: options.durationSeconds,
-		quality: options.quality,
-		layout: options.layout,
+		format: "mp4",
+		durationSeconds: options.durationSeconds ?? 4,
+		quality: options.quality ?? "standard",
+		layout: options.layout ?? "original",
 		onStatusChange: options.onStatusChange,
-		onProgressChange: options.onProgressChange,
+		onProgress: options.onProgressChange || (() => {}),
+		threeDIpodHandle: options.threeDIpodHandle,
 	});
+
+	return Effect.runPromise(program);
 }
