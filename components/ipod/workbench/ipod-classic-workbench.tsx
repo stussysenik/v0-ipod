@@ -53,6 +53,10 @@ import { FixedEditorProvider } from "../editors/fixed-editor";
 import { IpodScreen } from "../display/ipod-screen";
 import { IpodAsciiScene } from "../scenes/ipod-ascii-scene";
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
+import {
+	CLASSIC_OS_MENU_ITEMS,
+	useIpodClickWheelControls,
+} from "../hooks/use-ipod-click-wheel-controls";
 import { IpodDevice } from "../device/ipod-device";
 import {
 	BG_CUSTOM_COLORS_KEY,
@@ -80,7 +84,6 @@ import {
 	type IpodInteractionModel,
 	type IpodHardwarePresetId,
 	type IpodNowPlayingLayoutState,
-	type IpodOsScreen,
 	type IpodViewMode,
 } from "@/lib/ipod-state/model";
 import {
@@ -116,18 +119,6 @@ function slugifyExportSegment(value: string): string {
 			.replace(/^-+|-+$/g, "") || "snapshot"
 	);
 }
-
-const CLASSIC_OS_MENU_ITEMS = [
-	{ id: "music", label: "Music" },
-	{ id: "videos", label: "Videos" },
-	{ id: "photos", label: "Photos" },
-	{ id: "podcasts", label: "Podcasts" },
-	{ id: "extras", label: "Extras" },
-	{ id: "settings", label: "Settings" },
-	{ id: "shuffle-songs", label: "Shuffle Songs" },
-	{ id: "now-playing", label: "Now Playing" },
-	{ id: "about", label: "About" },
-] as const;
 
 /**
  * Top-level authoring workbench for the iPod experience.
@@ -221,9 +212,6 @@ export default function IpodClassicWorkbench() {
 	}, []);
 	const setRangeEndTime = useCallback((nextValue: number | null) => {
 		dispatch({ type: "SET_RANGE_END_TIME", payload: nextValue });
-	}, []);
-	const setOsScreen = useCallback((nextScreen: IpodOsScreen) => {
-		dispatch({ type: "SET_OS_SCREEN", payload: nextScreen });
 	}, []);
 	const setOsNowPlayingLayout = useCallback((nextLayout: IpodNowPlayingLayoutState) => {
 		dispatch({ type: "SET_OS_NOW_PLAYING_LAYOUT", payload: nextLayout });
@@ -821,125 +809,30 @@ export default function IpodClassicWorkbench() {
 		[resetInteractionChrome],
 	);
 
-	const cycleOsMenu = useCallback(
-		(direction: number) => {
-			dispatch({
-				type: "CYCLE_OS_MENU",
-				payload: { direction, total: CLASSIC_OS_MENU_ITEMS.length },
-			});
-			playClick();
-		},
-		[playClick],
-	);
-
-	const handleWheelSeek = useCallback(
-		(delta: number) => {
-			if (osScreen === "menu") {
-				cycleOsMenu(delta);
-				return;
-			}
-
-			const step = 2;
-			const nextTime = Math.max(
-				0,
-				Math.min(state.duration, state.currentTime + delta * step),
-			);
-			if (Math.floor(nextTime) !== Math.floor(state.currentTime)) {
-				dispatch({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
-				if (Math.abs(delta) > 0.5) playClick();
-			}
-		},
-		[
-			cycleOsMenu,
-			osScreen,
-			state.currentTime,
-			state.duration,
-			playClick,
-		],
-	);
-
-	const handleSeek = useCallback(
-		(direction: number) => {
-			const step = 15;
-			const nextTime = Math.max(
-				0,
-				Math.min(state.duration, state.currentTime + direction * step),
-			);
-			dispatch({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
-			playClick();
-		},
-		[state.currentTime, state.duration, playClick],
-	);
-
-	const handleOsMenuSelect = useCallback(() => {
-		const activeItem = CLASSIC_OS_MENU_ITEMS[osMenuIndex];
-		if (!activeItem) return;
-
-		switch (activeItem.id) {
-			case "music":
-			case "now-playing":
-			case "shuffle-songs":
-				setOsScreen("now-playing");
-				return;
-			case "settings":
-				if (isCompactToolbox) {
-					setIsToolboxOpen(true);
-				}
-				setShowSettings(true);
-				return;
-			default:
-				showSoftNotice(
-					`${activeItem.label} is queued for the fuller OS pass`,
-				);
+	const handleOpenSettingsFromMenu = useCallback(() => {
+		if (isCompactToolbox) {
+			setIsToolboxOpen(true);
 		}
-	}, [isCompactToolbox, osMenuIndex, showSoftNotice, setOsScreen]);
+		setShowSettings(true);
+	}, [isCompactToolbox]);
 
-	const handleNowPlayingCenterClick = useCallback(() => {
-		dispatch({ type: "TOGGLE_OS_NOW_PLAYING_EDITABLE" });
-	}, []);
-
-	const handleMenuButtonPress = useCallback(() => {
-		if (!isAuthenticInteraction) {
-			// Direct mode: toggle between menu and now-playing
-			if (osScreen === "menu") {
-				setOsScreen("now-playing");
-			} else {
-				setOsScreen("menu");
-			}
-			return;
-		}
-		dispatch({ type: "SET_OS_NOW_PLAYING_EDITABLE", payload: false });
-		setOsScreen("menu");
-	}, [isAuthenticInteraction, osScreen, setOsScreen]);
-
-	const handlePreviousButtonPress = useCallback(() => {
-		if (osScreen === "menu") {
-			cycleOsMenu(-1);
-			return;
-		}
-		handleSeek(-1);
-	}, [cycleOsMenu, handleSeek, osScreen]);
-
-	const handleNextButtonPress = useCallback(() => {
-		if (osScreen === "menu") {
-			cycleOsMenu(1);
-			return;
-		}
-		handleSeek(1);
-	}, [cycleOsMenu, handleSeek, osScreen]);
-
-	const handlePlayPauseButtonPress = useCallback(() => {
-		if (osScreen === "menu") {
-			setOsScreen("now-playing");
-			return;
-		}
-
-		dispatch({ type: "TOGGLE_IS_PLAYING" });
-		playClick();
-
-		const nextIsPlaying = !isPlaying;
-		showSoftNotice(nextIsPlaying ? "Playing" : "Paused");
-	}, [osScreen, isPlaying, playClick, showSoftNotice, setOsScreen]);
+	// Click-wheel interaction logic (menu cycling, seek, select, transport) is
+	// owned by a shared controller so the focused 3D stage drives the wheel with
+	// identical behavior. Chrome-specific side effects are injected here.
+	const {
+		handleWheelSeek,
+		handleOsMenuSelect,
+		handleMenuButtonPress,
+		handlePreviousButtonPress,
+		handleNextButtonPress,
+		handlePlayPauseButtonPress,
+	} = useIpodClickWheelControls({
+		model,
+		dispatch,
+		playClick,
+		onOpenSettings: handleOpenSettingsFromMenu,
+		onNotice: showSoftNotice,
+	});
 
 	const screenComponent = isAsciiView ? (
 		<IpodAsciiScene state={state} />
@@ -1557,6 +1450,7 @@ export default function IpodClassicWorkbench() {
 				{/* 3D MODE (R3F) */}
 				{viewMode === "3d" && (
 					<ThreeDIpod
+						preset={activePreset}
 						skinColor={skinColor}
 						ringColor={ringColor || undefined}
 						centerColor={centerColor || undefined}
