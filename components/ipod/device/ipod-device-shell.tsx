@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from "@/lib/export/export-scene";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
-import { deriveGasketColor, hexToHsl } from "@/lib/color-proximity";
+import { deriveGasketColor } from "@/lib/color-proximity";
 
 /**
  * Physical enclosure for the iPod device.
@@ -55,7 +55,6 @@ export function IPodDeviceShell({
 	);
 
 	const gasketColor = useMemo(() => deriveGasketColor(skinColor), [skinColor]);
-	const gasketShadowOpacity = hexToHsl(skinColor).l < 0.45 ? "0.5" : "0.18";
 
 	return (
 		<div
@@ -144,7 +143,6 @@ export function IPodDeviceShell({
 						style={{
 							backgroundColor: gasketColor,
 							borderRadius: preset.screen.outerRadius,
-							boxShadow: `inset 0 1px 2px rgba(0,0,0,${gasketShadowOpacity})`,
 						}}
 					>
 						{screen}
