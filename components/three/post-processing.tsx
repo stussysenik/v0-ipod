@@ -1,27 +1,23 @@
 "use client";
 
-import { ChromaticAberration, EffectComposer, Noise, Vignette } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
+import { EffectComposer, Vignette } from "@react-three/postprocessing";
 
 interface PostProcessingProps {
 	enabled?: boolean;
 }
 
+/**
+ * Minimal composite. A product render wants a clean frame, not film grit — so
+ * the only pass is a whisper of vignette to seat the device against the black
+ * backdrop. No chromatic aberration (it draws colored fringe lines on every
+ * edge) and no noise (it muddies the chrome).
+ */
 export function PostProcessing({ enabled = true }: PostProcessingProps) {
 	if (!enabled) return null;
 
 	return (
 		<EffectComposer>
-			<ChromaticAberration
-				radialModulation
-				modulationOffset={0.15}
-				offset={[0.0003, 0.0003]}
-			/>
-			<Noise
-				blendFunction={BlendFunction.OVERLAY}
-				opacity={0.006}
-			/>
-			<Vignette darkness={0.12} offset={0.18} />
+			<Vignette darkness={0.18} offset={0.32} />
 		</EffectComposer>
 	);
 }

@@ -81,8 +81,10 @@ export function deriveIpod3DDimensions(
 		height: SCENE_HEIGHT,
 		depth: SCENE_HEIGHT * DEPTH_RATIO,
 		radius: shell.radius * unit,
-		// ~1.2mm rim of polished steel framing the aluminum face.
-		seam: (1.2 / PHYSICAL_HEIGHT_MM) * SCENE_HEIGHT,
+		// Hairline parting line where the aluminum face meets the steel edge.
+		// Kept thin so the front reads as one clean aluminum plane rather than a
+		// black-framed inset; the chrome only shows at the rolled rim.
+		seam: (0.35 / PHYSICAL_HEIGHT_MM) * SCENE_HEIGHT,
 		screenW: screen.frameWidth * unit,
 		screenH: screen.frameHeight * unit,
 		screenRadius: screen.outerRadius * unit,

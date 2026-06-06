@@ -6,9 +6,7 @@ import {
 	Float,
 	Html,
 	Lightformer,
-	MeshTransmissionMaterial,
 	PerspectiveCamera,
-	RoundedBox,
 } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import React, {
@@ -335,8 +333,8 @@ function PhysicalDetails({ dims, caseColor }: { dims: Ipod3DDimensions; caseColo
 
 function ScreenBezel({ dims, z }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers> }) {
 	const bezelGeo = useMemo(() => {
-		const w = dims.screenW + 0.14;
-		const h = dims.screenH + 0.14;
+		const w = dims.screenW + 0.07;
+		const h = dims.screenH + 0.07;
 		const r = 0.03;
 		const shape = new THREE.Shape();
 		shape.moveTo(-w / 2 + r, -h / 2);
@@ -353,12 +351,10 @@ function ScreenBezel({ dims, z }: { dims: Ipod3DDimensions; z: ReturnType<typeof
 
 	return (
 		<group position={[0, dims.screenCenterY, z.screenBezel]}>
+			{/* Single matte black mask framing the LCD — no concentric overlay
+			   ring, so the screen reads as one clean inset aperture. */}
 			<mesh geometry={bezelGeo}>
-				<meshStandardMaterial color="#0d0d0d" metalness={0.1} roughness={0.55} />
-			</mesh>
-			<mesh position={[0, 0, 0.008]}>
-				<ringGeometry args={[dims.screenW / 2 - 0.03, dims.screenW / 2 + 0.03, 64]} />
-				<meshStandardMaterial color="#000" roughness={0.9} side={THREE.DoubleSide} transparent opacity={0.6} />
+				<meshStandardMaterial color="#0a0a0a" metalness={0.0} roughness={0.62} />
 			</mesh>
 		</group>
 	);
@@ -373,6 +369,7 @@ function ClickWheel3D({
 	ringColor,
 	centerColor,
 	wheelHtml,
+	bodyRef,
 }: {
 	dims: Ipod3DDimensions;
 	z: ReturnType<typeof zLayers>;
@@ -380,6 +377,7 @@ function ClickWheel3D({
 	ringColor?: string;
 	centerColor?: string;
 	wheelHtml: React.ReactNode;
+	bodyRef: React.RefObject<THREE.Mesh>;
 }) {
 	const wheelColors = useMemo(
 		() => deriveWheelColors(ringColor || skinColor),
@@ -388,43 +386,42 @@ function ClickWheel3D({
 
 	return (
 		<group position={[0, dims.wheelCenterY, 0]}>
-			{/* Wheel cavity — recessed depression */}
+			{/* Wheel well floor — one dark recessed disc backing the entire bore,
+			   from just under the center button out past the aluminum edge. It
+			   fills both the bore clearance and the center clearance so the
+			   polished steel body never peeks through as a bright ring; the only
+			   circles left are the wheel boundary and the center button. */}
 			<mesh position={[0, 0, z.wheelRecess]}>
-				<ringGeometry args={[dims.wheelInnerR - 0.04, dims.wheelOuterR + 0.05, 96]} />
-				<meshStandardMaterial color={new THREE.Color(skinColor).multiplyScalar(0.82)} metalness={0.15} roughness={0.45} />
+				<circleGeometry args={[dims.wheelOuterR + 0.02, 96]} />
+				<meshStandardMaterial color={new THREE.Color(skinColor).multiplyScalar(0.6)} metalness={0.0} roughness={0.9} />
 			</mesh>
 
-			{/* Touch ring — polycarbonate surface */}
+			{/* Touch ring — matte satin plastic. No clearcoat or sheen: those add a
+			   wet rim highlight that reads as yet another raised edge. */}
 			<mesh position={[0, 0, z.wheelSurface]}>
 				<ringGeometry args={[dims.wheelInnerR, dims.wheelOuterR, 96]} />
 				<meshPhysicalMaterial
-					clearcoat={0.85}
-					clearcoatRoughness={0.08}
+					clearcoat={0.05}
+					clearcoatRoughness={0.6}
 					color={wheelColors.gradient.via}
-					envMapIntensity={0.9}
+					envMapIntensity={0.3}
 					metalness={0.0}
-					roughness={0.16}
-					sheen={0.28}
-					sheenColor={wheelColors.gradient.from}
-					sheenRoughness={0.38}
+					roughness={0.62}
 				/>
 			</mesh>
 
-			{/* Center button cavity */}
-			<mesh position={[0, 0, z.wheelRecess + 0.001]}>
-				<ringGeometry args={[dims.centerR - 0.02, dims.centerR + 0.05, 72]} />
-				<meshStandardMaterial color={new THREE.Color(skinColor).multiplyScalar(0.7)} metalness={0.1} roughness={0.5} />
-			</mesh>
-
-			{/* Center button */}
+			{/* Center button — same matte plastic family as the touch ring,
+			   only marginally smoother so it reads as a discrete part without
+			   turning glossy. */}
 			<mesh position={[0, 0, z.wheelCenter]}>
 				<circleGeometry args={[dims.centerR, 72]} />
 				<meshPhysicalMaterial
-					clearcoat={0.4}
+					clearcoat={0.06}
+					clearcoatRoughness={0.55}
 					color={centerColor || wheelColors.centerGradient.via}
-					envMapIntensity={1.1}
-					metalness={0.55}
-					roughness={0.22}
+					envMapIntensity={0.3}
+					metalness={0.0}
+					roughness={0.55}
 				/>
 			</mesh>
 
@@ -432,7 +429,7 @@ function ClickWheel3D({
 			<Html
 				transform
 				className="select-none pointer-events-none"
-				occlude={false}
+				occlude={[bodyRef]}
 				position={[0, 0, z.wheelHtml]}
 				scale={dims.unit * 40}
 				style={{
@@ -472,6 +469,9 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, capacityLabel, onRegisterReset }: IpodModelProps) {
 	const groupRef = useRef<THREE.Group>(null);
+	// The steel body, used to occlude the live screen/wheel HTML portals so they
+	// don't bleed through (mirrored) when the camera swings behind the device.
+	const bodyRef = useRef<THREE.Mesh>(null!);
 	const lcdMaterial = useLcdShader();
 	const brushedTexture = useMemo(() => createBrushedMetalTexture(), []);
 	const dims = useMemo(() => deriveIpod3DDimensions(preset), [preset]);
@@ -480,8 +480,12 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, c
 	// ── Steel back shell: a thin rounded-rect slab, extruded with a generous
 	//    bevel so the back/sides pillow over and the front cap stays flat. ──
 	const bodyGeo = useMemo(() => {
-		const bevelT = Math.min(0.16, dims.depth * 0.32);
-		const bevelS = 0.13;
+		// Tight machined edge: the steel back rolls over the sides with a small
+		// radius and meets the aluminum face at a crisp seam. A large bevel here
+		// balloons the silhouette into a fat chrome band that clips to white —
+		// the real chassis edge is a fraction of the body depth.
+		const bevelT = Math.min(0.05, dims.depth * 0.1);
+		const bevelS = 0.03;
 		const shape = new THREE.Shape();
 		drawRoundedRect(shape, 0, 0, dims.width, dims.height, dims.radius);
 		const geo = new THREE.ExtrudeGeometry(shape, {
@@ -511,22 +515,25 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, c
 			screenHole,
 			0,
 			dims.screenCenterY,
-			dims.screenW + 0.12,
-			dims.screenH + 0.12,
-			dims.screenRadius + 0.02,
+			dims.screenW + 0.05,
+			dims.screenH + 0.05,
+			dims.screenRadius + 0.01,
 		);
 		shape.holes.push(screenHole);
 
 		const wheelHole = new THREE.Path();
-		wheelHole.absarc(0, dims.wheelCenterY, dims.wheelOuterR + 0.045, 0, Math.PI * 2, false);
+		wheelHole.absarc(0, dims.wheelCenterY, dims.wheelOuterR + 0.014, 0, Math.PI * 2, false);
 		shape.holes.push(wheelHole);
 
+		// Hairline chamfer only. A fat bevel here rounds the screen aperture and
+		// wheel bore into soft lips, stacking extra radii on top of the wheel's
+		// own rings — the real machined edges are nearly crisp.
 		const geo = new THREE.ExtrudeGeometry(shape, {
 			depth: 0.05,
 			bevelEnabled: true,
-			bevelThickness: 0.012,
-			bevelSize: 0.012,
-			bevelSegments: 3,
+			bevelThickness: 0.006,
+			bevelSize: 0.005,
+			bevelSegments: 2,
 			curveSegments: 28,
 		});
 		geo.computeVertexNormals();
@@ -551,15 +558,15 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, c
 				<group>
 					{/* ── BODY / BACK SHELL (Deep-drawn, mirror-polished stainless steel) ──
 					   One subtractive part: flat front cap, pillowed back + sides. */}
-					<mesh geometry={bodyGeo}>
+					<mesh ref={bodyRef} geometry={bodyGeo}>
 						<meshPhysicalMaterial
-							clearcoat={0.5}
-							clearcoatRoughness={0.06}
-							color="#d9dde1"
-							envMapIntensity={1.25}
+							clearcoat={0.35}
+							clearcoatRoughness={0.1}
+							color="#cfd3d7"
+							envMapIntensity={0.8}
 							metalness={1.0}
-							reflectivity={0.9}
-							roughness={0.1}
+							reflectivity={0.7}
+							roughness={0.16}
 						/>
 					</mesh>
 
@@ -571,13 +578,17 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, c
 						 aperture and wheel bore cut clean through it — the screen and
 						 wheel seat into these pockets. */}
 					<mesh geometry={faceGeo} position={[0, 0, dims.depth / 2 - 0.002]}>
+						{/* Black anodized aluminum: a dielectric oxide layer over metal,
+							so it reads matte/satin — low metalness, high roughness, almost
+							no clearcoat, and a faint env so the panel holds as a solid
+							plane instead of mirroring the studio and glowing. */}
 						<meshPhysicalMaterial
-							clearcoat={0.18}
-							clearcoatRoughness={0.35}
+							clearcoat={0.04}
+							clearcoatRoughness={0.6}
 							color={skinColor}
-							envMapIntensity={0.7}
-							metalness={0.45}
-							roughness={0.52}
+							envMapIntensity={0.28}
+							metalness={0.1}
+							roughness={0.62}
 							roughnessMap={brushedTexture}
 						/>
 					</mesh>
@@ -595,7 +606,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, c
 					<Html
 						transform
 						className="select-none pointer-events-none"
-						occlude={false}
+						occlude={[bodyRef]}
 						position={[0, dims.screenCenterY, z.screenHtml]}
 						scale={dims.unit * 40}
 						style={{
@@ -610,28 +621,27 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, c
 						<div>{screen}</div>
 					</Html>
 
-					{/* ── SCREEN GLASS ── */}
-					<group position={[0, dims.screenCenterY, z.screenGlass]}>
-						<RoundedBox args={[dims.screenW, dims.screenH, 0.018]} radius={0.045} smoothness={6}>
-							<MeshTransmissionMaterial
-								anisotropicBlur={0.01}
-								backside
-								backsideThickness={0.025}
-								chromaticAberration={0.001}
-								color="#ffffff"
-								distortion={0.006}
-								ior={1.49}
-								iridescence={0}
-								roughness={0.015}
-								temporalDistortion={0}
-								thickness={0.04}
-								transmission={0.97}
-							/>
-						</RoundedBox>
-					</group>
+					{/* ── SCREEN GLASS ──
+						 A thin, near-transparent glossy plane — just a clearcoat
+						 sheen over the LCD. No transmission buffer (that pass re-renders
+						 the whole scene every frame and tanks the framerate), and a
+						 single flat plane instead of a rounded solid. */}
+					<mesh position={[0, dims.screenCenterY, z.screenGlass]}>
+						<planeGeometry args={[dims.screenW, dims.screenH]} />
+						<meshPhysicalMaterial
+							clearcoat={1}
+							clearcoatRoughness={0.08}
+							color="#ffffff"
+							envMapIntensity={0.25}
+							metalness={0}
+							opacity={0.06}
+							roughness={0.12}
+							transparent
+						/>
+					</mesh>
 
 					{/* ── CLICK WHEEL ── */}
-					<ClickWheel3D dims={dims} z={z} skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} wheelHtml={wheel} />
+					<ClickWheel3D dims={dims} z={z} skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} wheelHtml={wheel} bodyRef={bodyRef} />
 
 					{/* ── PHYSICAL DETAILS ── */}
 					<PhysicalDetails dims={dims} caseColor={skinColor} />
@@ -911,7 +921,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			<div className="w-full h-full min-h-screen absolute inset-0 bg-black">
 				<Canvas
 					shadows
-					dpr={[1, 2]}
+					dpr={[1, 1.5]}
 					gl={{
 						antialias: true,
 						toneMapping: THREE.ACESFilmicToneMapping,
@@ -929,24 +939,22 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 					<ambientLight color="#eef1f5" intensity={0.22} />
 
 					{/* Key Light — warm, top-right */}
-					<spotLight castShadow angle={0.32} color="#FFF5E0" intensity={300} penumbra={0.95} position={[9, 13, 11]} shadow-bias={-0.0001} shadow-mapSize={[2048, 2048]} />
+					<spotLight castShadow angle={0.32} color="#FFF5E0" intensity={240} penumbra={0.95} position={[9, 13, 11]} shadow-bias={-0.0001} shadow-mapSize={[1024, 1024]} />
 
 					{/* Fill Light — cool, left */}
-					<spotLight angle={0.55} color="#d8e8ff" intensity={80} penumbra={0.95} position={[-11, 5, 9]} />
+					<spotLight angle={0.55} color="#d8e8ff" intensity={70} penumbra={0.95} position={[-11, 5, 9]} />
 
-					{/* Rim Light — separates from background */}
-					<spotLight angle={0.65} color="#D8E8FF" intensity={220} penumbra={0.95} position={[0, 1.5, -9]} />
+					{/* Rim Light — gentle separation from the backdrop without
+					   clipping the steel edge to pure white. */}
+					<spotLight angle={0.65} color="#D8E8FF" intensity={55} penumbra={0.98} position={[0, 1.5, -9]} />
 
-					{/* Edge Kickers — soft metallic sheen on the chrome sides */}
-					<rectAreaLight color="#FFE8D0" height={9} intensity={70} position={[5.5, 0, 0.8]} width={1.2} />
-					<rectAreaLight color="#E8F0FF" height={9} intensity={70} position={[-5.5, 0, 0.8]} width={1.2} />
-
-					{/* Screen illumination — subtle LCD glow */}
-					<rectAreaLight color="#c8d8c0" height={3} intensity={1.8} position={[0, 1.2, 6]} width={4} />
-
-					{/* HDRI Studio Environment — softbox reflections without blowing highlights */}
-					<Environment background={false} blur={0.5} environmentIntensity={0.42} preset="studio">
-						<Lightformer color="white" intensity={0.9} position={[0, 9, 1]} scale={[14, 0.5, 1]} />
+					{/* HDRI Studio Environment — softbox reflections without blowing
+					   highlights. The chrome/aluminum sheen comes from these env
+					   reflections, so the per-pixel rectAreaLights that used to do
+					   that job (3 of them, very GPU-heavy) are gone. frames={1}
+					   bakes the env once instead of every frame. */}
+					<Environment background={false} blur={0.5} environmentIntensity={0.4} frames={1} preset="studio">
+						<Lightformer color="white" intensity={0.6} position={[0, 9, 1]} scale={[14, 0.5, 1]} />
 						<Lightformer color="#fff4e6" intensity={0.6} position={[6, 4, 4]} scale={[7, 4, 1]} />
 						<Lightformer color="#e6f0ff" intensity={0.5} position={[-6, 2, 4]} scale={[7, 4, 1]} />
 						<Lightformer color="#f0f0f0" intensity={0.25} position={[0, -5, 2]} scale={[12, 1.5, 1]} />
@@ -959,7 +967,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 						onRegisterReset={handleRegisterReset}
 					/>
 
-					<ContactShadows blur={1.5} color="#000000" far={9} opacity={0.4} position={[0, -3.5, 0]} resolution={2048} scale={22} />
+					<ContactShadows blur={1.5} color="#000000" far={9} frames={60} opacity={0.4} position={[0, -3.5, 0]} resolution={512} scale={22} />
 
 					<PostProcessing />
 

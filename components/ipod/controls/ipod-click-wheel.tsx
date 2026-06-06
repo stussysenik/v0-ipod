@@ -34,6 +34,13 @@ interface IpodClickWheelProps {
 	style?: React.CSSProperties;
 	disabled?: boolean;
 	exportSafe?: boolean;
+	/**
+	 * Render only the interactive labels + hit areas, with no painted surface,
+	 * materiality VFX, or center-button chrome. Used when the wheel is layered
+	 * over a 3D model that already provides the real material — otherwise the
+	 * flat 2D chrome (rings, sheen, center glow) fights the rendered geometry.
+	 */
+	chromeless?: boolean;
 }
 
 /**
@@ -55,6 +62,7 @@ export function IpodClickWheel({
 	style,
 	disabled = false,
 	exportSafe = false,
+	chromeless = false,
 }: IpodClickWheelProps) {
 	const wheelRef = useRef<HTMLDivElement>(null);
 	const derived = skinColor ? deriveWheelColors(skinColor) : null;
@@ -67,9 +75,9 @@ export function IpodClickWheel({
 	const wheelLabelColor = effectiveLabelColor;
 	const wheelTokens = preset.wheel;
 
-	// Wheel surface: the ring color
+	// Wheel surface: the ring color (transparent when the 3D geometry paints it)
 	const wheelSurfaceStyle = {
-		background: effectiveRingColor,
+		background: chromeless ? "transparent" : effectiveRingColor,
 	};
 
 	useEffect(() => {
@@ -170,7 +178,7 @@ export function IpodClickWheel({
 				data-export-layer="wheel"
 				data-testid="click-wheel"
 			>
-				{FEATURE_FLAGS.ENABLE_MATERIALITY && (
+				{!chromeless && FEATURE_FLAGS.ENABLE_MATERIALITY && (
 					<>
 						{/* VFX 1: Directional rim light — top-left catches key light, bottom-right fades to shadow */}
 						<div
@@ -385,7 +393,15 @@ padding: "0.7rem 1rem 1rem",
 				style={{
 					width: wheelTokens.centerSize,
 					height: wheelTokens.centerSize,
-					...(FEATURE_FLAGS.ENABLE_MATERIALITY
+					...(chromeless
+						? {
+								// 3D geometry paints the center button; HTML is just the hit area.
+								background: "transparent",
+								border: "none",
+								outline: "none",
+								boxShadow: "none",
+							}
+						: FEATURE_FLAGS.ENABLE_MATERIALITY
 						? {
 								background: centerColor
 									? centerColor

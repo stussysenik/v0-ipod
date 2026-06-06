@@ -89,6 +89,7 @@ export function Ipod3DStage() {
 
 	const wheelComponent = (
 		<IpodClickWheel
+			chromeless
 			preset={activePreset}
 			skinColor={presentation.skinColor}
 			ringColor={presentation.ringColor || undefined}
