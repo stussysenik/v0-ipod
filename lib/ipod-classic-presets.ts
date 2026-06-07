@@ -62,6 +62,12 @@ export interface IpodClassicPresetDefinition {
 	shortLabel: string;
 	yearLabel: string;
 	notes: string;
+	/**
+	 * Engraved/advertised storage of this hardware revision, e.g. "160GB". The
+	 * single source of truth for capacity — both the on-screen title and the laser
+	 * etching on the steel back read this one value, so they can never drift apart.
+	 */
+	capacityLabel: string;
 	defaultShellColor: string;
 	defaultBackdropColor: string;
 	shell: ShellPresetTokens;
@@ -78,6 +84,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		label: "Classic 2007 · 6th Gen",
 		shortLabel: "2007",
 		yearLabel: "2007",
+		capacityLabel: "160GB",
 		notes: "Original all-metal iPod classic launch proportions.",
 		defaultShellColor: DEFAULT_SHELL_COLOR,
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
@@ -134,6 +141,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		label: "Classic 2008 · 6.5 Gen",
 		shortLabel: "2008",
 		yearLabel: "2008",
+		capacityLabel: "120GB",
 		notes: "The refined 120GB revision with improved display density.",
 		defaultShellColor: "#E8E8E8",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
@@ -190,6 +198,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		label: "Classic 2008 · Black",
 		shortLabel: "2008 Black",
 		yearLabel: "2008",
+		capacityLabel: "120GB",
 		notes: "Black version of the 120GB revision.",
 		defaultShellColor: "#1b1818",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
@@ -246,6 +255,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		label: "Classic 2008 · Silver",
 		shortLabel: "2008 Silver",
 		yearLabel: "2008",
+		capacityLabel: "120GB",
 		notes: "Silver version of the 120GB revision.",
 		defaultShellColor: "#E8E8E8",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
@@ -302,6 +312,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		label: "Classic 2009 · Late 160GB",
 		shortLabel: "2009",
 		yearLabel: "2009",
+		capacityLabel: "160GB",
 		notes: "Late thin revision with tighter wheel and calmer screen chrome.",
 		defaultShellColor: "#F7F7F7",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,

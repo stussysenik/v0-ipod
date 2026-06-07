@@ -13,6 +13,10 @@ interface IpodDisplayProps {
 	frameRef: React.MutableRefObject<HTMLDivElement | null>;
 	children: React.ReactNode;
 	batteryLevel?: number;
+	/** Override the status-bar label (e.g. the active portfolio screen). */
+	statusBarTitle?: string;
+	/** Force-hide the playback indicator for non-music screens. */
+	showPlayIndicator?: boolean;
 }
 
 export function IpodDisplay({
@@ -23,6 +27,8 @@ export function IpodDisplay({
 	frameRef,
 	children,
 	batteryLevel = 1.0,
+	statusBarTitle,
+	showPlayIndicator,
 }: IpodDisplayProps) {
 	const screenTokens = preset.screen;
 	return (
@@ -56,6 +62,8 @@ export function IpodDisplay({
 					screenTokens={screenTokens}
 					showOsMenu={showOsMenu}
 					batteryLevel={batteryLevel}
+					title={statusBarTitle}
+					showPlayIndicator={showPlayIndicator}
 				/>
 				{children}
 				<IpodGlassOverlay exportSafe={exportSafe} />

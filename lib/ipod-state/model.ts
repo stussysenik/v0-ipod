@@ -1,4 +1,4 @@
-import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR } from "@/lib/color-manifest";
+import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR, deriveWheelColors } from "@/lib/color-manifest";
 import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 
@@ -62,9 +62,18 @@ export interface IpodPresentationState {
 	bgColor: string;
 	ringColor: string;
 	centerColor: string;
+	/** Mirror-polished stainless back shell. */
+	backColor: string;
+	/** Matte mask framing the LCD aperture. */
+	bezelColor: string;
 	viewMode: IpodViewMode;
 	hardwarePreset: IpodHardwarePresetId;
 }
+
+/** Factory defaults for the steel back and screen bezel — the two body parts that
+ *  were previously hardcoded in the 3D renderer and are now part of the model. */
+export const DEFAULT_BACK_COLOR = "#cfd3d7";
+export const DEFAULT_BEZEL_COLOR = "#0a0a0a";
 
 export interface IpodInteractionState {
 	interactionModel: IpodInteractionModel;
@@ -98,6 +107,8 @@ export interface IpodUiState {
 	bgColor: string;
 	ringColor: string;
 	centerColor: string;
+	backColor: string;
+	bezelColor: string;
 	viewMode: IpodViewMode;
 	hardwarePreset: IpodHardwarePresetId;
 	interactionModel: IpodInteractionModel;
@@ -127,6 +138,10 @@ export interface LegacySongSnapshot {
 
 export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 	const defaultPreset = getIpodClassicPreset(DEFAULT_HARDWARE_PRESET_ID);
+	// Derive the default wheel from the default case so first-load matches what
+	// clicking the matching finish produces — no flat hardcoded ring that merges
+	// into a dark anodized case.
+	const defaultWheel = deriveWheelColors(defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR);
 
 	return {
 		metadata: INITIAL_SONG_METADATA,
@@ -140,8 +155,10 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 		presentation: {
 			skinColor: defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR,
 			bgColor: defaultPreset.defaultBackdropColor ?? DEFAULT_BACKDROP_COLOR,
-			ringColor: "#1c1a1b",
-			centerColor: "#2c2a2b",
+			ringColor: defaultWheel.gradient.via,
+			centerColor: defaultWheel.centerGradient.via,
+			backColor: DEFAULT_BACK_COLOR,
+			bezelColor: DEFAULT_BEZEL_COLOR,
 			viewMode: "flat",
 			hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
 		},

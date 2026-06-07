@@ -2,6 +2,8 @@ import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import {
 	createInitialIpodWorkbenchModel,
+	DEFAULT_BACK_COLOR,
+	DEFAULT_BEZEL_COLOR,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
 	DEFAULT_SELECTION_KIND,
 	SONG_SNAPSHOT_SCHEMA_VERSION,
@@ -28,6 +30,8 @@ export type IpodWorkbenchAction =
 	| { type: "SET_BG_COLOR"; payload: string }
 	| { type: "SET_RING_COLOR"; payload: string }
 	| { type: "SET_CENTER_COLOR"; payload: string }
+	| { type: "SET_BACK_COLOR"; payload: string }
+	| { type: "SET_BEZEL_COLOR"; payload: string }
 	| {
 			type: "SET_HARDWARE_PRESET";
 			payload: IpodWorkbenchModel["presentation"]["hardwarePreset"];
@@ -141,6 +145,8 @@ export function buildPersistedUiState(model: IpodWorkbenchModel): IpodUiState {
 		bgColor: model.presentation.bgColor,
 		ringColor: model.presentation.ringColor,
 		centerColor: model.presentation.centerColor,
+		backColor: model.presentation.backColor,
+		bezelColor: model.presentation.bezelColor,
 		viewMode: model.presentation.viewMode,
 		hardwarePreset: model.presentation.hardwarePreset,
 		interactionModel: model.interaction.interactionModel,
@@ -184,6 +190,8 @@ export function applySongSnapshotToModel(
 			bgColor: snapshot.ui.bgColor,
 			ringColor: snapshot.ui.ringColor ?? "",
 			centerColor: snapshot.ui.centerColor ?? "",
+			backColor: snapshot.ui.backColor ?? DEFAULT_BACK_COLOR,
+			bezelColor: snapshot.ui.bezelColor ?? DEFAULT_BEZEL_COLOR,
 			viewMode: snapshot.ui.viewMode,
 			hardwarePreset: snapshot.ui.hardwarePreset,
 		},
@@ -278,6 +286,16 @@ export function ipodWorkbenchReducer(
 				...state,
 				presentation: { ...state.presentation, centerColor: action.payload },
 			});
+		case "SET_BACK_COLOR":
+			return normalizeModel({
+				...state,
+				presentation: { ...state.presentation, backColor: action.payload },
+			});
+		case "SET_BEZEL_COLOR":
+			return normalizeModel({
+				...state,
+				presentation: { ...state.presentation, bezelColor: action.payload },
+			});
 		case "SET_HARDWARE_PRESET": {
 			const preset = getIpodClassicPreset(action.payload);
 
@@ -290,6 +308,8 @@ export function ipodWorkbenchReducer(
 					bgColor: preset.defaultBackdropColor,
 					ringColor: "",
 					centerColor: "",
+					backColor: DEFAULT_BACK_COLOR,
+					bezelColor: DEFAULT_BEZEL_COLOR,
 				},
 			});
 		}

@@ -25,6 +25,8 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 		bgColor: "#F4F4EF",
 		ringColor: "",
 		centerColor: "",
+		backColor: "#cfd3d7",
+		bezelColor: "#0a0a0a",
 		viewMode: "flat",
 		hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
 		interactionModel: "direct",

@@ -24,6 +24,22 @@ const PHYSICAL_HEIGHT_MM = 103.5;
 const PHYSICAL_DEPTH_MM = 10.5;
 const DEPTH_RATIO = PHYSICAL_DEPTH_MM / PHYSICAL_HEIGHT_MM;
 
+// ── Click-wheel form — projected directly from the 2D preset tokens ──
+// The 2D presets are the dimensional authority for the whole device (see file
+// header). An earlier pass overrode the wheel with a hand-tuned 0.55×body-width
+// ratio that drew it far too SMALL — it left a wide dead band on the lower face
+// ("not used fully") and stopped matching the 2D form. We now derive the wheel's
+// diameter, select-button size, and vertical seat straight from `preset.wheel`
+// and `shell.controlMarginTop`, exactly like the screen — so the 3D wheel is a
+// faithful projection of the design, not an approximation. For the default 2008
+// that is 272/350 ≈ 0.78 of body width with the center at ~0.74 of body height,
+// which matches a real 6th-gen face (wheel center measured at 0.734H).
+//
+// The touch annulus's inner edge is seated just inside the select button so the
+// button laps slightly over it — one clean disc in the ring, no deep recessed
+// groove pooling into a hard black moat (a fidelity note carried from review).
+const WHEEL_INNER_TO_BUTTON = 0.92; // annulus inner radius ÷ select-button radius
+
 export interface Ipod3DDimensions {
 	/** World units per preset pixel — the master conversion factor. */
 	unit: number;
@@ -65,15 +81,20 @@ export function deriveIpod3DDimensions(
 
 	// Screen vertical center (px from shell center, +y up), then → world units.
 	const screenCenterPx = halfH - shell.paddingTop - screen.frameHeight / 2;
-	// Wheel vertical center, stacked below the screen by the control margin.
-	const wheelCenterPx =
-		halfH -
-		shell.paddingTop -
-		screen.frameHeight -
-		shell.controlMarginTop -
-		wheel.size / 2;
 
+	// ── Wheel circles, projected straight from the 2D wheel tokens ──
+	// Same authority as the screen: the wheel reads at the design's true scale, so
+	// it fills the lower face the way the 2D workbench (and the real device) does.
+	const wheelDiameterPx = wheel.size;
+	const wheelOuterR = (wheelDiameterPx / 2) * unit;
 	const centerR = (wheel.centerSize / 2) * unit;
+	const wheelInnerR = centerR * WHEEL_INNER_TO_BUTTON;
+
+	// Seat the wheel the 2D way: a fixed control-margin gap below the screen (NOT
+	// centered in the open region, which floated it low and opened a dead band
+	// right under the screen). This lands the center at ~0.74H — the real face.
+	const wheelTopPx = halfH - shell.paddingTop - screen.frameHeight - shell.controlMarginTop;
+	const wheelCenterPx = wheelTopPx - wheelDiameterPx / 2;
 
 	return {
 		unit,
@@ -89,12 +110,13 @@ export function deriveIpod3DDimensions(
 		screenH: screen.frameHeight * unit,
 		screenRadius: screen.outerRadius * unit,
 		screenCenterY: screenCenterPx * unit,
-		wheelOuterR: (wheel.size / 2) * unit,
-		// The touch ring's inner edge — a small gap around the center button.
-		wheelInnerR: centerR + wheel.centerSize * 0.18 * unit,
+		wheelOuterR,
+		wheelInnerR,
 		centerR,
 		wheelCenterY: wheelCenterPx * unit,
 		screenHtmlPx: { width: screen.frameWidth, height: screen.frameHeight },
-		wheelHtmlPx: { width: wheel.size, height: wheel.size },
+		// The live label/hit overlay matches the corrected wheel diameter so MENU
+		// and the transport icons land on the real annulus, not the oversized one.
+		wheelHtmlPx: { width: wheelDiameterPx, height: wheelDiameterPx },
 	};
 }

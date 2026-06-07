@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ThreeDFocusPage() {
 	return (
-		<main className="min-h-dvh w-full overflow-hidden bg-black">
+		<main className="min-h-dvh w-full overflow-hidden bg-white">
 			<Ipod3DStage />
 		</main>
 	);

@@ -1,6 +1,8 @@
 import type { SongMetadata } from "@/types/ipod";
 import type { BatteryMode } from "@/lib/ipod-state/model";
 import {
+	DEFAULT_BACK_COLOR,
+	DEFAULT_BEZEL_COLOR,
 	DEFAULT_INTERACTION_MODEL,
 	DEFAULT_MENU_INDEX,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
@@ -295,6 +297,8 @@ export function loadSongSnapshot(): SongSnapshot | null {
 			bgColor: partialUi.bgColor,
 			ringColor: partialUi.ringColor ?? "",
 			centerColor: partialUi.centerColor ?? "",
+			backColor: partialUi.backColor ?? DEFAULT_BACK_COLOR,
+			bezelColor: partialUi.bezelColor ?? DEFAULT_BEZEL_COLOR,
 			viewMode: partialUi.viewMode,
 			hardwarePreset: partialUi.hardwarePreset ?? DEFAULT_HARDWARE_PRESET_ID,
 			interactionModel: partialUi.interactionModel ?? DEFAULT_INTERACTION_MODEL,

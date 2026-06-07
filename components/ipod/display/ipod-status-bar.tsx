@@ -9,10 +9,22 @@ interface IpodStatusBarProps {
 	screenTokens: IpodClassicPresetDefinition["screen"];
 	showOsMenu: boolean;
 	batteryLevel?: number;
+	/** Override the status label. Defaults to the music-OS title. */
+	title?: string;
+	/** Whether to show the playback indicator. Defaults to `!showOsMenu`. */
+	showPlayIndicator?: boolean;
 }
 
-export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: IpodStatusBarProps) {
+export function IpodStatusBar({
+	screenTokens,
+	showOsMenu,
+	batteryLevel = 1.0,
+	title,
+	showPlayIndicator,
+}: IpodStatusBarProps) {
 	const statusBarTokens = screenChromeTokens.statusBar;
+	const label = title ?? (showOsMenu ? "RE:MIX" : "Now Playing");
+	const playVisible = showPlayIndicator ?? !showOsMenu;
 
 	return (
 		<div
@@ -34,10 +46,10 @@ export function IpodStatusBar({ screenTokens, showOsMenu, batteryLevel = 1.0 }: 
 				}}
 				data-testid="screen-status-label"
 			>
-				<span>{showOsMenu ? "RE:MIX" : "Now Playing"}</span>
+				<span>{label}</span>
 			</div>
 			<div className="flex items-center gap-[5px]">
-				{!showOsMenu && (
+				{playVisible && (
 					<div className="relative flex items-center justify-center" style={{ width: 14, height: 14 }}>
 						<svg
 							aria-hidden="true"
