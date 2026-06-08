@@ -1,5 +1,33 @@
 # Lessons
 
+## 2026-06-09 — /3d export side-effects
+
+- **Export must show a LIVING song, even from a paused transport.** The now-playing clock
+  (`ipod-3d-stage.tsx`) ticked only `if (interaction.isPlaying)`, so exporting a clip while
+  paused froze the progress bar / elapsed time. Rule: a clip export force-advances the clock
+  (`isPlaying || exportingClip`) so the re-sampled screen captures progression. Marquee already
+  scrolls via its always-on rAF (`animate={studio.marquee}`), independent of play state.
+- **rAF-gated awaits hang when the tab is backgrounded → the UI wedges.** `nextPaint`'s
+  double-`requestAnimationFrame` never resolves if the user tabs away mid-export, leaving
+  `exportState` non-idle and the loading veil stuck. Always race rAF against a `setTimeout`
+  fallback for any await that gates a user-visible state machine. ("treat all the side effects.")
+- **Every timer/interval/listener needs an unmount cleanup.** `noticeTimer` had none → a pending
+  `setNotice` could fire after the stage unmounts. Audit each `useEffect`/`useCallback` that
+  arms a timer for a teardown path.
+
+## 2026-06-09 — /3d studio iteration
+
+- **"Make the carrot better / a better shape" meant improve the EXISTING carrot, not swap it.**
+  I read "choose a better fruit" as "replace the carrot" and shipped a pear → "I still want my
+  carrot, unacceptable!". Rule: when the user names a thing they own ("my carrot"), default to
+  refining it, not replacing it. Confirm before substituting a deliberate brand/maker's-mark.
+- **Black washed grey under the studio rig = the bright env IBL lifting near-black albedo.**
+  Fix at the material: diffuse it (lower envMapIntensity, lower metalness, raise roughness, cut
+  clearcoat) so albedo dominates → black reads black, white stays white, hues stay true. Don't
+  re-art the global light rig for a per-material fidelity problem.
+- **/3d is client-only state (localStorage: model, presets, shots, pose).** SSR of the stage
+  guarantees a hydration mismatch. Render it via `dynamic(ssr:false)`, not field-by-field patches.
+
 ## 2026-06-07 — /3d now-playing build
 
 - **Deliver the headline; don't stop at a checkpoint when the core ask is unbuilt.**

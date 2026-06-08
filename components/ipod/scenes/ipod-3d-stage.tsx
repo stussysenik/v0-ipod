@@ -224,14 +224,20 @@ export function Ipod3DStage() {
 		playbackRef.current.currentTime = model.metadata.currentTime;
 		playbackRef.current.duration = model.metadata.duration;
 	}, [model.metadata.currentTime, model.metadata.duration]);
+	// A clip export must show a LIVING song: marquee scrolling AND the progress
+	// bar / elapsed time advancing — regardless of whether the transport happened
+	// to be paused when the user hit export. The clip re-samples the live screen
+	// DOM, so advancing this clock here is what the exported frames capture. Stills
+	// are a single frame, so only clips force the tick; otherwise it's play-gated.
+	const exportingClip = exportState.startsWith("clip");
 	useEffect(() => {
-		if (!model.interaction.isPlaying) return;
+		if (!model.interaction.isPlaying && !exportingClip) return;
 		const id = window.setInterval(() => {
 			const { currentTime, duration } = playbackRef.current;
 			dispatch({ type: "UPDATE_CURRENT_TIME", payload: (currentTime + 1) % (duration + 1) });
 		}, 1000);
 		return () => window.clearInterval(id);
-	}, [model.interaction.isPlaying, dispatch]);
+	}, [model.interaction.isPlaying, exportingClip, dispatch]);
 
 	const playClick = useCallback(() => {
 		playClickAudio(audioRef);
@@ -241,6 +247,11 @@ export function Ipod3DStage() {
 		if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
 		setNotice(message);
 		noticeTimer.current = window.setTimeout(() => setNotice(null), 1800);
+	}, []);
+	// Clear a pending notice timer on unmount so it can't fire setState after the
+	// stage is gone (a stale-update side effect when navigating away mid-notice).
+	useEffect(() => () => {
+		if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
 	}, []);
 
 	// ── Playhead transport ──
@@ -288,9 +299,20 @@ export function Ipod3DStage() {
 	// otherwise the user sees those temporary frames flash through.
 	const nextPaint = useCallback(
 		() =>
-			new Promise<void>((resolve) =>
-				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-			),
+			new Promise<void>((resolve) => {
+				let settled = false;
+				const finish = () => {
+					if (settled) return;
+					settled = true;
+					resolve();
+				};
+				requestAnimationFrame(() => requestAnimationFrame(finish));
+				// rAF is frozen while the tab is backgrounded. Without a fallback, awaiting
+				// it during export would hang forever — wedging exportState non-idle and
+				// leaving the loading veil stuck on screen ("the logic gets stuck"). The
+				// timeout guarantees the export always proceeds even if the user tabs away.
+				window.setTimeout(finish, 200);
+			}),
 		[],
 	);
 
