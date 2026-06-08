@@ -145,6 +145,49 @@ function hslToHex(h: number, s: number, l: number): string {
 	return `#${to(r)}${to(g)}${to(b)}`;
 }
 
+/** A complete coordinated look: every exterior surface + the stage behind it. */
+interface DeviceLook {
+	id: string;
+	label: string;
+	skinColor: string;
+	backColor: string;
+	bezelColor: string;
+	bgColor: string;
+}
+
+/**
+ * My curated /3d looks — full coordinated combinations, not just a case colour. Each pairs an
+ * anodized case with a bezel that's a deep shade of the SAME hue, the factory steel back, and a
+ * stage chosen to separate the silhouette (light case → dark-ish stage and vice-versa). Picking
+ * one sets the whole device in a tap; the wheel re-derives from the case.
+ */
+const CURATED_LOOKS: readonly DeviceLook[] = [
+	{ id: "graphite", label: "Graphite", skinColor: "#2A2D31", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070809", bgColor: "#0B0D12" },
+	{ id: "bondi", label: "Bondi", skinColor: "#0E7C9B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#06171D", bgColor: "#F2F6F7" },
+	{ id: "crimson", label: "Crimson", skinColor: "#B5121B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A0606", bgColor: "#FBEDED" },
+	{ id: "gold", label: "Gold", skinColor: "#C9A86A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A1408", bgColor: "#FAF6EE" },
+	{ id: "cobalt", label: "Cobalt", skinColor: "#2B4C8C", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070B16", bgColor: "#EEF1F8" },
+	{ id: "sage", label: "Sage", skinColor: "#7E8C6A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#10130C", bgColor: "#F2F4ED" },
+] as const;
+
+/**
+ * A random but *compatible* combination — "compatibility shades". One base hue drives the case
+ * and (as a deep low-light shade) the bezel; the stage takes an analogous hue at the OPPOSITE
+ * lightness so the device always separates from its backdrop. Coherent by construction, so a
+ * shuffle never lands on a clashing or invisible combo.
+ */
+function randomCompatibleLook(): DeviceLook {
+	const baseH = Math.floor(Math.random() * 360);
+	const s = 45 + Math.floor(Math.random() * 35);
+	const l = 38 + Math.floor(Math.random() * 26);
+	const skinColor = hslToHex(baseH, s, l);
+	const accentH = (baseH + (Math.random() < 0.5 ? 32 : -32) + 360) % 360;
+	const lightStage = l < 50;
+	const bgColor = lightStage ? hslToHex(accentH, 10, 94) : hslToHex(accentH, 16, 10);
+	const bezelColor = hslToHex(baseH, 18, 8);
+	return { id: "random", label: "Random", skinColor, backColor: DEFAULT_BACK_COLOR, bezelColor, bgColor };
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────────
 
 interface Ipod3DColorCockpitProps {
@@ -169,6 +212,18 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 		dispatch({ type: "SET_BG_COLOR", payload: f.bgColor });
 		// Re-derive the wheel from the new case so the look stays coherent.
 		const d = deriveWheelColors(f.skinColor);
+		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
+		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
+	};
+
+	// Apply a complete coordinated look (curated or random): every surface + stage + a wheel
+	// re-derived from the new case, so the device stays one coherent object.
+	const applyLook = (look: DeviceLook) => {
+		dispatch({ type: "SET_SKIN_COLOR", payload: look.skinColor });
+		dispatch({ type: "SET_BACK_COLOR", payload: look.backColor });
+		dispatch({ type: "SET_BEZEL_COLOR", payload: look.bezelColor });
+		dispatch({ type: "SET_BG_COLOR", payload: look.bgColor });
+		const d = deriveWheelColors(look.skinColor);
 		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
 		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
 	};
@@ -249,6 +304,33 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 				})}
 			</div>
 
+			{/* Looks — my curated full-device combinations (case + bezel + back + stage) */}
+			<div className="border-t border-black/[0.06] px-3.5 py-2.5">
+				<Label>Looks</Label>
+				<div className="mt-2 grid grid-cols-3 gap-1.5">
+					{CURATED_LOOKS.map((look) => {
+						const active = normalizeHex(look.skinColor) === normalizeHex(presentation.skinColor);
+						return (
+							<button
+								key={look.id}
+								type="button"
+								onClick={() => applyLook(look)}
+								aria-pressed={active}
+								className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
+									active ? "border-black/80 text-black" : "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+								}`}
+							>
+								<span
+									className="h-3 w-3 shrink-0 rounded-full border border-black/15"
+									style={{ backgroundColor: look.skinColor }}
+								/>
+								{look.label}
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
 			{/* Quick favorites — one-tap case swaps */}
 			<div className="border-t border-black/[0.06] px-3.5 py-2.5">
 				<Label>Quick</Label>
@@ -280,7 +362,9 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 			<div className="flex items-center gap-3 border-t border-black/[0.06] px-3.5 py-2.5">
 				<HelperButton onClick={deriveWheelFromCase}>Derive wheel</HelperButton>
 				<span className="h-3 w-px bg-black/10" />
-				<HelperButton onClick={shuffle}>Shuffle</HelperButton>
+				<HelperButton onClick={shuffle}>Shuffle case</HelperButton>
+				<span className="h-3 w-px bg-black/10" />
+				<HelperButton onClick={() => applyLook(randomCompatibleLook())}>Random look</HelperButton>
 			</div>
 		</div>
 	);
