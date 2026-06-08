@@ -213,6 +213,12 @@ export interface ClipRenderOptions {
 interface CaptureHooks {
 	prepare: () => Promise<void>;
 	restore: () => void;
+	/**
+	 * Re-rasterize the live (already-animating) Now Playing screen onto the LCD
+	 * plane mid-clip. The clip recorder calls this on a bounded cadence so the
+	 * marquee/progress/time advance in the exported video without a per-frame bake.
+	 */
+	refreshScreen: () => Promise<void>;
 }
 
 export type IpodCameraFocus = "product" | "front" | "back";
@@ -928,7 +934,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		const bakeNodeOnto = async (
 			node: HTMLElement | null,
 			mesh: THREE.Mesh | null,
-			opts: { transparent?: boolean; showMesh?: boolean; width?: number; height?: number } = {},
+			opts: { transparent?: boolean; showMesh?: boolean; width?: number; height?: number; cacheBust?: boolean } = {},
 		) => {
 			if (!node || !mesh) return;
 			// drei `<Html occlude>` sets `display:none` on a wrapper whenever the
@@ -968,7 +974,9 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				);
 				const dataUrl = await htmlToImage.toPng(node, {
 					pixelRatio: 3,
-					cacheBust: true,
+					// First bake busts the cache to guarantee fresh fonts/art; per-frame
+					// re-bakes (animated screen) reuse the warm cache for speed.
+					cacheBust: opts.cacheBust ?? true,
 					width,
 					height,
 				});
@@ -986,7 +994,19 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					toneMapped: false,
 					transparent: opts.transparent ?? false,
 				});
-				captureRestores.current.push({ mesh, material: mesh.material, visible: mesh.visible, tex, mat });
+				// Re-bake safety: a throttled clip export re-bakes the SAME mesh many times
+				// to animate the screen. Reuse the mesh's existing restore entry (keeping the
+				// ORIGINAL material/visible) and dispose the previous baked tex/mat, so repeat
+				// bakes neither leak GPU resources nor capture a baked material as the "original".
+				const existing = captureRestores.current.find((r) => r.mesh === mesh);
+				if (existing) {
+					existing.tex.dispose();
+					existing.mat.dispose();
+					existing.tex = tex;
+					existing.mat = mat;
+				} else {
+					captureRestores.current.push({ mesh, material: mesh.material, visible: mesh.visible, tex, mat });
+				}
 				mesh.material = mat;
 				if (opts.showMesh) mesh.visible = true;
 			} finally {
@@ -1025,6 +1045,28 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			}
 		};
 
+		// Re-sample ONLY the LCD (the animated screen) mid-clip. The overlays are
+		// hidden (visibility) for the live canvas during capture; html-to-image copies
+		// computed style, so a hidden node bakes blank — momentarily un-hide the screen
+		// for the rasterize, then restore. Reuses the warm cache (cacheBust:false).
+		const refreshScreen = async () => {
+			const node = screenDomRef.current;
+			if (!node) return;
+			const prevVisibility = node.style.visibility;
+			node.style.visibility = "";
+			try {
+				await bakeNodeOnto(node, lcdMeshRef.current, {
+					width: dims.screenHtmlPx.width,
+					height: dims.screenHtmlPx.height,
+					cacheBust: false,
+				});
+			} catch (error) {
+				console.warn("[3d-export] screen re-bake failed; holding last frame", error);
+			} finally {
+				node.style.visibility = prevVisibility;
+			}
+		};
+
 		const restore = () => {
 			for (const r of captureRestores.current) {
 				r.mesh.material = r.material;
@@ -1036,7 +1078,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			setOverlaysHidden(false);
 		};
 
-		onRegisterCapture({ prepare, restore });
+		onRegisterCapture({ prepare, restore, refreshScreen });
 	}, [onRegisterCapture, dims]);
 
 	useFrame((state, delta) => {
@@ -1739,6 +1781,27 @@ function SceneCapture({
 			const ssH = Math.round(height * supersample);
 			const total = Math.max(1, Math.round((durationMs / 1000) * fps));
 
+			// ── Phase 1 screen-refresh budget (animated Now Playing screen) ──
+			// The live screen DOM keeps animating during the export (the marquee rAF and
+			// the progress interval run while the loop awaits the encoder), but the LCD
+			// texture is baked only once — freezing the screen. Re-sample it on a CAPPED
+			// cadence so the marquee/progress/time advance, with rasterizations DECOUPLED
+			// from frame count: at most ~15 screen bakes/sec and a hard total cap, holding
+			// the texture between updates while the camera renders every frame. A 60s@30fps
+			// clip thus costs ≤ SCREEN_BAKE_CAP bakes, never ~1800.
+			const SCREEN_REFRESH_FPS_CAP = 15;
+			const SCREEN_BAKE_CAP = 120;
+			const canRefreshScreen = typeof captureHooksRef?.current?.refreshScreen === "function";
+			const screenRefreshFps = Math.min(fps, SCREEN_REFRESH_FPS_CAP);
+			const screenStride = Math.max(1, Math.round(fps / screenRefreshFps));
+			let screenBakes = 0;
+			if (canRefreshScreen) {
+				console.info(
+					`[3d-export] screen re-bake: ~${screenRefreshFps}fps, ` +
+						`≤${SCREEN_BAKE_CAP} bakes over ${total} frames (stride ${screenStride})`,
+				);
+			}
+
 			await captureHooksRef?.current?.prepare();
 			capturingRef.current = true;
 			// Stop the real-time frameloop: an offline deterministic render must be the
@@ -1797,6 +1860,15 @@ function SceneCapture({
 
 			try {
 				for (let i = 0; i < total; i++) {
+					// Re-sample the live (already-animating) screen onto the LCD on the capped
+					// cadence. The previous frame's `await onFrame` yielded the event loop, so
+					// the marquee rAF + progress interval have advanced the DOM since the last
+					// bake; this re-rasterization carries that motion into the clip.
+					if (canRefreshScreen && i > 0 && screenBakes < SCREEN_BAKE_CAP && i % screenStride === 0) {
+						await captureHooksRef!.current!.refreshScreen();
+						screenBakes++;
+					}
+
 					// Global clip progress → per-cycle phase, repeating `cycles` whole loops
 					// (fixed cadence at any length) yet still closing on the hero seam.
 					// `hold` is motion-free: every frame pins the composed hero pose, so the
