@@ -1,8 +1,6 @@
 "use client";
 
 import { Backdrop, Environment, Lightformer } from "@react-three/drei";
-import { useMemo } from "react";
-import * as THREE from "three";
 
 /**
  * The named default studio rig for `/3d` — "Apple Product".
@@ -98,56 +96,26 @@ export const APPLE_PRODUCT_RIG: StudioLightingConfig = {
 };
 
 /**
- * Studio sweep — a seamless cyclorama backdrop behind the device.
+ * Studio field — a uniform, unlit backdrop behind the device.
  *
- * Why this exists (3d-export "pop", design D13): the baseline export floated the device on a
- * flat `scene.background` colour, so it read as a render, not a hero product photograph. Real
- * product studios shoot against a seamless sweep (paper curving from floor to back wall), lit
- * so it is brightest behind the subject and falls off to the frame edges — that falloff is what
- * gives depth and pushes the subject forward.
+ * This used to carry a radial-gradient sweep (brightest behind the subject, falling off to the
+ * frame edges) to fake studio depth. But a gradient is fixed in world space: the instant the
+ * camera moves, the device slides across a *varying* background, so a motion loop reads
+ * inconsistent and the falloff competes with the Now Playing screen for the eye. The single job
+ * of this surface is to be recessive negative space, so it's now a FLAT field — every pixel the
+ * exact Stage colour regardless of the cove's curvature or the camera angle (an unlit
+ * `meshBasicMaterial`, `toneMapped={false}`, so it's perfectly predictable and WYSIWYG between
+ * the live canvas and the export, immune to the env-first rig).
  *
- * We build that with drei's `<Backdrop>` cove geometry carrying an UNLIT radial-gradient texture
- * (`toneMapped={false}`) so the sweep is exactly predictable and WYSIWYG between the live canvas
- * and the export — it does NOT depend on the env-first rig, which would otherwise blow a white
- * sweep out to flat white and erase the gradient. The contact shadow (a separate shadow-catcher)
- * grounds the device on the cove floor. The gradient is tinted from the user's Stage colour so
- * the colour cockpit still drives the backdrop.
+ * Constant every frame → the device reads identically through the whole move and the exports
+ * land neutral, matching the clean 2D plate. Grounding comes from the separate ContactShadows
+ * shadow-catcher, not from any backdrop gradient. The Stage colour still drives it, so the
+ * colour cockpit keeps full control — it just drives a uniform field now, not a gradient.
  */
-function makeSweepTexture(stageColor: string): THREE.CanvasTexture | null {
-	if (typeof document === "undefined") return null;
-	const size = 512;
-	const canvas = document.createElement("canvas");
-	canvas.width = size;
-	canvas.height = size;
-	const ctx = canvas.getContext("2d");
-	if (!ctx) return null;
-
-	const base = new THREE.Color(stageColor);
-	const edge = base.clone().multiplyScalar(0.76); // falloff toward the frame edge — separates the silhouette
-	const toHex = (c: THREE.Color) => `#${c.getHexString()}`;
-
-	// Hotspot sits slightly above centre — where the device body meets the cove.
-	const grad = ctx.createRadialGradient(
-		size * 0.5, size * 0.6, size * 0.05,
-		size * 0.5, size * 0.6, size * 0.72,
-	);
-	grad.addColorStop(0, toHex(base));
-	grad.addColorStop(1, toHex(edge));
-	ctx.fillStyle = grad;
-	ctx.fillRect(0, 0, size, size);
-
-	const tex = new THREE.CanvasTexture(canvas);
-	tex.colorSpace = THREE.SRGBColorSpace;
-	tex.needsUpdate = true;
-	return tex;
-}
-
 export function StudioBackdrop({ stageColor = "#ffffff" }: { stageColor?: string }) {
-	const texture = useMemo(() => makeSweepTexture(stageColor), [stageColor]);
-	if (!texture) return null;
 	return (
 		<Backdrop floor={1.5} position={[0, -3.55, -7]} receiveShadow={false} scale={[46, 26, 14]} segments={24}>
-			<meshBasicMaterial map={texture} toneMapped={false} />
+			<meshBasicMaterial color={stageColor} toneMapped={false} />
 		</Backdrop>
 	);
 }

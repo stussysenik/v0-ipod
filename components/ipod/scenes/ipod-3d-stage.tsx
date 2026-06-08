@@ -3,14 +3,14 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
-import type { ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+import type { CameraPreviewState, ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import { playClickAudio } from "@/lib/ipod-state/effects";
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recorder";
 import { downloadBlob } from "@/lib/three-export";
-import type { CameraMove, StudioPose } from "@/lib/studio-camera";
+import { CAMERA_MOVES, type CameraMove, type StudioPose } from "@/lib/studio-camera";
 
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodScreen } from "../display/ipod-screen";
@@ -18,11 +18,38 @@ import { useIpodClickWheelControls } from "../hooks/use-ipod-click-wheel-control
 import { Ipod3DBatteryCockpit } from "./ipod-3d-battery-cockpit";
 import { Ipod3DCameraCockpit } from "./ipod-3d-camera-cockpit";
 import { Ipod3DColorCockpit } from "./ipod-3d-color-cockpit";
-import { Ipod3DExportDock, type Ipod3DExportState } from "./ipod-3d-export-dock";
+import {
+	Ipod3DExportDock,
+	type ClipExportOptions,
+	type ExportAspect,
+	type Ipod3DExportState,
+	type StillExportOptions,
+} from "./ipod-3d-export-dock";
+import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
 
 /** localStorage key for the locked hero perspective (design D13). */
 const LOCKED_POSE_KEY = "ipod-3d-locked-pose";
+
+/**
+ * Export dimensions per aspect — stills are 2160-wide PNGs, clips are 1080-wide MP4s.
+ * The capture/clip framing recomputes camera distance from `width/height`, so any
+ * aspect fills the frame without cropping (see frameForCapture/frameForHero).
+ */
+const ASPECT_DIMS: Record<ExportAspect, { still: [number, number]; clip: [number, number] }> = {
+	story: { still: [2160, 3840], clip: [1080, 1920] }, // 9:16
+	portrait: { still: [2160, 2700], clip: [1080, 1350] }, // 4:5
+	square: { still: [2160, 2160], clip: [1080, 1080] }, // 1:1
+};
+
+/** Clip encode settings per quality tier (mirrors the 2D MP4_QUALITY_CONFIG intent). */
+const CLIP_QUALITY: Record<
+	ClipExportOptions["quality"],
+	{ fps: number; bitsPerSecond: number; supersample: number }
+> = {
+	standard: { fps: 24, bitsPerSecond: 12_000_000, supersample: 1 },
+	pro: { fps: 30, bitsPerSecond: 22_000_000, supersample: 1.5 },
+};
 
 const ThreeDIpod = dynamic(
 	() => import("@/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
@@ -54,6 +81,23 @@ export function Ipod3DStage() {
 	const [notice, setNotice] = useState<string | null>(null);
 	const noticeTimer = useRef<number | null>(null);
 	const [exportState, setExportState] = useState<Ipod3DExportState>("idle");
+	// Export progress (0–1) for the loading veil; null = indeterminate (stills).
+	const [exportProgress, setExportProgress] = useState<number | null>(null);
+	// Playhead — the selected move + live transport. `previewT` is the position over
+	// the full clip (0–1); the rig reports it back while playing so the scrubber
+	// tracks. Clip length is lifted here so the preview cadence matches the export.
+	const [durationSec, setDurationSec] = useState(5);
+	const [previewMove, setPreviewMove] = useState<CameraMove>(CAMERA_MOVES[0].id);
+	const [previewPlaying, setPreviewPlaying] = useState(false);
+	const [previewT, setPreviewT] = useState(0);
+	// The rig flies the move only when the playhead is "engaged" — playing, or
+	// scrubbed off the hero seam. At t=0 paused we hand the camera back so the user
+	// can compose freely (phase 0 ≈ the composed hero anyway).
+	const previewEngaged = previewPlaying || previewT > 0.0001;
+	const preview: CameraPreviewState | null =
+		previewEngaged && exportState === "idle"
+			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec }
+			: null;
 	// Mobile control drawer. Desktop ignores this (the panels float at the corners);
 	// on narrow viewports the controls collapse into a bottom sheet so they never
 	// overlap the device.
@@ -125,6 +169,33 @@ export function Ipod3DStage() {
 		});
 	}, []);
 
+	// Progress the now-playing clock while the iPod is playing — the on-screen
+	// elapsed time + progress bar advance one second per second (wrapping at the
+	// track end). So hitting play on the wheel/screen makes the device read as
+	// genuinely playing, and that live position is what a still or clip bakes on
+	// at capture.
+	//
+	// The interval reads the latest time from a ref rather than depending on
+	// `currentTime`, so it's created ONCE per play session and fires at a true
+	// 1s cadence — depending on `currentTime` would tear down and rebuild the
+	// timer every tick (and stack under StrictMode), running the clock fast.
+	const playbackRef = useRef({
+		currentTime: model.metadata.currentTime,
+		duration: model.metadata.duration,
+	});
+	useEffect(() => {
+		playbackRef.current.currentTime = model.metadata.currentTime;
+		playbackRef.current.duration = model.metadata.duration;
+	}, [model.metadata.currentTime, model.metadata.duration]);
+	useEffect(() => {
+		if (!model.interaction.isPlaying) return;
+		const id = window.setInterval(() => {
+			const { currentTime, duration } = playbackRef.current;
+			dispatch({ type: "UPDATE_CURRENT_TIME", payload: (currentTime + 1) % (duration + 1) });
+		}, 1000);
+		return () => window.clearInterval(id);
+	}, [model.interaction.isPlaying, dispatch]);
+
 	const playClick = useCallback(() => {
 		playClickAudio(audioRef);
 	}, []);
@@ -135,54 +206,127 @@ export function Ipod3DStage() {
 		noticeTimer.current = window.setTimeout(() => setNotice(null), 1800);
 	}, []);
 
-	const handleExportPng = useCallback(async (framing: ExportFraming) => {
-		const api = ipodApiRef.current;
-		if (!api || exportState !== "idle") return;
-		setExportState(`png:${framing}`);
-		try {
-			const blob = await api.captureHighRes(2160, 3840, framing);
-			if (!blob) throw new Error("capture returned no image");
-			downloadBlob(blob, `ipod-3d-${framing}-${Date.now()}.png`);
-			showNotice(framing === "hero" ? "Saved Hero PNG" : "Saved Front PNG");
-		} catch (error) {
-			console.error("[3d-export] png failed", error);
-			showNotice("Export failed");
-		} finally {
-			setExportState("idle");
+	// ── Playhead transport ──
+	// The hero the move orbits = the pose composed the instant the playhead first
+	// engages this session. Captured synchronously from the live camera (still at
+	// the composed angle before the rig starts flying), held for the whole session,
+	// and fed to BOTH the preview and the export — so a clip/Hero still always
+	// anchors on the angle you composed, even if you export with the scrubber parked
+	// mid-move. Cleared when the playhead disengages so the next session re-captures.
+	const heroAnchorRef = useRef<StudioPose | null>(null);
+	const captureHeroIfNeeded = useCallback(() => {
+		if (heroAnchorRef.current === null) {
+			heroAnchorRef.current = ipodApiRef.current?.getCameraPose() ?? null;
 		}
-	}, [exportState, showNotice]);
+	}, []);
+	const handleTogglePlay = useCallback(() => {
+		setPreviewPlaying((p) => {
+			if (!p) captureHeroIfNeeded(); // engaging
+			return !p;
+		});
+	}, [captureHeroIfNeeded]);
+	const handleScrub = useCallback(
+		(t: number) => {
+			captureHeroIfNeeded();
+			setPreviewPlaying(false); // grabbing the scrubber pauses playback
+			setPreviewT(t);
+		},
+		[captureHeroIfNeeded],
+	);
+	const handleResetPlayhead = useCallback(() => {
+		setPreviewPlaying(false);
+		setPreviewT(0); // disengages preview → camera eases back to the composed hero
+	}, []);
+	// Drop the captured hero whenever the playhead fully disengages, so recomposing
+	// freely (drag) then re-engaging anchors on the NEW angle, not a stale one.
+	useEffect(() => {
+		if (!previewEngaged) heroAnchorRef.current = null;
+	}, [previewEngaged]);
+	const handlePreviewMoveChange = useCallback((move: CameraMove) => setPreviewMove(move), []);
+	// The rig reports the playing head position back so the scrubber tracks it.
+	const handlePreviewTick = useCallback((t: number) => setPreviewT(t), []);
+
+	// Yield two frames so React paints the loading veil BEFORE the heavy capture
+	// work (snap-to-rest, screen bake, offline render) mutates the live scene —
+	// otherwise the user sees those temporary frames flash through.
+	const nextPaint = useCallback(
+		() =>
+			new Promise<void>((resolve) =>
+				requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+			),
+		[],
+	);
+
+	const handleExportPng = useCallback(
+		async (framing: ExportFraming, options: StillExportOptions) => {
+			const api = ipodApiRef.current;
+			if (!api || exportState !== "idle") return;
+			setPreviewPlaying(false); // hand the camera back to the still framing
+			setExportState(`png:${framing}`);
+			setExportProgress(null); // stills are quick — indeterminate veil
+			await nextPaint(); // let the veil cover before the scene snaps for capture
+			try {
+				const [w, h] = ASPECT_DIMS[options.aspect].still;
+				// Hero still anchors on the composed hero (held by the playhead) so a
+				// parked scrubber can't tilt the shot; Front ignores it.
+				const blob = await api.captureHighRes(w, h, framing, heroAnchorRef.current);
+				if (!blob) throw new Error("capture returned no image");
+				downloadBlob(blob, `ipod-3d-${framing}-${options.aspect}-${Date.now()}.png`);
+				showNotice(framing === "hero" ? "Saved Hero PNG" : "Saved Front PNG");
+			} catch (error) {
+				console.error("[3d-export] png failed", error);
+				showNotice("Export failed");
+			} finally {
+				setExportState("idle");
+				setExportProgress(null);
+			}
+		},
+		[exportState, showNotice, nextPaint],
+	);
 
 	const handleExportClip = useCallback(
-		async (move: CameraMove) => {
+		async (move: CameraMove, options: ClipExportOptions) => {
 			const api = ipodApiRef.current;
 			if (!api || exportState !== "idle") return;
 			if (!isClipRecordingSupported()) {
 				showNotice("Clips need Chrome/Edge");
 				return;
 			}
+			setPreviewPlaying(false); // freeze the playhead; the offline render owns the camera
 			setExportState(`clip:${move}`);
+			setExportProgress(0);
+			await nextPaint(); // veil covers before snap-to-rest / screen bake / offline frames
 			try {
-				// Anchor the move on whatever pose is composed in the camera cockpit.
-				const anchor = api.getCameraPose() ?? undefined;
+				// Anchor the move on the composed hero held by the playhead (so a parked
+				// scrubber can't shift it); fall back to the live pose when disengaged.
+				const anchor = heroAnchorRef.current ?? api.getCameraPose() ?? undefined;
+				const [width, height] = ASPECT_DIMS[options.aspect].clip;
+				const q = CLIP_QUALITY[options.quality];
 				const blob = await recordIpodClip(api, {
-					durationMs: 5000,
+					durationMs: Math.round(options.durationSec * 1000),
+					fps: q.fps,
+					bitsPerSecond: q.bitsPerSecond,
+					supersample: q.supersample,
+					width,
+					height,
 					move,
 					anchor,
 					onProgress: (encoded, total) => {
-						showNotice(`Rendering ${Math.round((encoded / total) * 100)}%`);
+						setExportProgress(encoded / total);
 					},
 				});
 				if (!blob) throw new Error("recorder returned no clip");
-				downloadBlob(blob, `ipod-3d-${move}-${Date.now()}.mp4`);
+				downloadBlob(blob, `ipod-3d-${move}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`);
 				showNotice("Saved MP4");
 			} catch (error) {
 				console.error("[3d-export] clip failed", error);
 				showNotice("Clip failed");
 			} finally {
 				setExportState("idle");
+				setExportProgress(null);
 			}
 		},
-		[exportState, showNotice],
+		[exportState, showNotice, nextPaint],
 	);
 
 	const controls = useIpodClickWheelControls({
@@ -248,6 +392,8 @@ export function Ipod3DStage() {
 				focus={focus}
 				onFocusChange={setFocus}
 				cameraLocked={cameraLocked}
+				preview={preview}
+				onPreviewTick={handlePreviewTick}
 				skinColor={presentation.skinColor}
 				ringColor={presentation.ringColor || undefined}
 				centerColor={presentation.centerColor || undefined}
@@ -289,13 +435,14 @@ export function Ipod3DStage() {
 				}`}
 			>
 				{/* Left group — color + camera */}
-				<div className="flex flex-col gap-3 lg:pointer-events-none lg:absolute lg:left-4 lg:top-16 lg:z-10 lg:max-h-[calc(100dvh-5rem)] lg:w-[230px] lg:overflow-y-auto">
+				<div className="flex flex-col gap-3 lg:pointer-events-none lg:absolute lg:left-4 lg:top-16 lg:z-10 lg:max-h-[calc(100dvh-5rem)] lg:w-[262px] lg:overflow-y-auto">
+					<Ipod3DNowPlayingCockpit metadata={model.metadata} dispatch={dispatch} />
 					<Ipod3DColorCockpit presentation={presentation} dispatch={dispatch} />
 					<Ipod3DCameraCockpit apiRef={ipodApiRef} locked={cameraLocked} onToggleLock={toggleCameraLock} />
 				</div>
 
 				{/* Right group — battery + export */}
-				<div className="flex flex-col gap-3 lg:absolute lg:right-4 lg:top-16 lg:z-10 lg:w-[230px]">
+				<div className="flex flex-col gap-3 lg:pointer-events-none lg:absolute lg:right-4 lg:top-16 lg:z-10 lg:max-h-[calc(100dvh-5rem)] lg:w-[262px] lg:overflow-y-auto lg:pb-4">
 					<Ipod3DBatteryCockpit
 						batteryLevel={interaction.batteryLevel}
 						batteryMode={interaction.batteryMode}
@@ -303,6 +450,15 @@ export function Ipod3DStage() {
 					/>
 					<Ipod3DExportDock
 						exportState={exportState}
+						durationSec={durationSec}
+						onDurationChange={setDurationSec}
+						previewMove={previewMove}
+						previewPlaying={previewPlaying}
+						previewT={previewT}
+						onPreviewMoveChange={handlePreviewMoveChange}
+						onTogglePlay={handleTogglePlay}
+						onScrub={handleScrub}
+						onResetPlayhead={handleResetPlayhead}
 						onExportPng={handleExportPng}
 						onExportClip={handleExportClip}
 					/>
@@ -318,6 +474,35 @@ export function Ipod3DStage() {
 				dispatch={dispatch}
 				onNotice={showNotice}
 			/>
+
+			{/* Export veil — covers the canvas the instant a render starts, so the
+			    snap-to-rest, screen bake, and offline frames are never seen. A frosted
+			    sweep over the live Stage colour with a calm progress bar; lifts the
+			    moment the file is ready. */}
+			{exportState !== "idle" && (
+				<div
+					className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-5 backdrop-blur-xl transition-opacity duration-200"
+					style={{ backgroundColor: `${presentation.bgColor}D9` }}
+				>
+					<div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-black/55">
+						{exportState.startsWith("clip:") ? "Rendering clip" : "Capturing still"}
+					</div>
+					<div className="h-1 w-48 overflow-hidden rounded-full bg-black/10">
+						{exportProgress === null ? (
+							<div className="h-full w-1/3 animate-[veilSlide_1.1s_ease-in-out_infinite] rounded-full bg-black/55" />
+						) : (
+							<div
+								className="h-full rounded-full bg-black/70 transition-[width] duration-150 ease-out"
+								style={{ width: `${Math.round(exportProgress * 100)}%` }}
+							/>
+						)}
+					</div>
+					<div className="font-mono text-[11px] tabular-nums text-black/45">
+						{exportProgress === null ? "Compositing…" : `${Math.round(exportProgress * 100)}%`}
+					</div>
+					<style>{`@keyframes veilSlide{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}`}</style>
+				</div>
+			)}
 
 			{/* Transient notice */}
 			{notice && (

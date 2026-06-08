@@ -92,6 +92,41 @@ export const CAMERA_MOVES: readonly MoveSpec[] = [
 ] as const;
 
 /**
+ * Natural cycle time per move, in seconds — the length of ONE satisfying loop
+ * of the motion at IG cadence (a turntable revolution, an orbit sway, a sweep
+ * arc). A clip of any length repeats this cycle a whole number of times rather
+ * than stretching a single loop across the whole duration, so the cadence stays
+ * constant and lively whether the clip is 5s or 60s.
+ */
+export const MOVE_CYCLE_SECONDS: Record<CameraMove, number> = {
+	orbit: 5,
+	turntable: 6,
+	sweep: 7,
+	robo: 6,
+};
+
+/**
+ * How many whole motion cycles fill a clip of `durationSec`. Rounded to the
+ * nearest integer (min 1) so a 30s turntable spins ~5× and a 60s ~10× — a crisp,
+ * constant cadence at any length — while the INTEGER count guarantees the global
+ * progress maps phase 0 → 1 → 0, i.e. pose(end) === pose(start): a seam-free IG
+ * loop with no first/last-frame pop. See `phaseForProgress`.
+ */
+export function cyclesForDuration(move: CameraMove, durationSec: number): number {
+	return Math.max(1, Math.round(durationSec / MOVE_CYCLE_SECONDS[move]));
+}
+
+/**
+ * Map global clip progress `p ∈ [0,1)` (0 = start of clip, 1 = end) to the
+ * per-cycle phase a pose generator expects, repeating `cycles` whole loops. At
+ * p=1 the phase is `cycles % 1 === 0`, so the export's final frame (i=total-1)
+ * sits just shy of the seam and the loop closes cleanly back onto the hero pose.
+ */
+export function phaseForProgress(p: number, cycles: number): number {
+	return (p * cycles) % 1;
+}
+
+/**
  * The base orbit: a gentle multi-axis sway centered on the hero framing —
  * the product at rest, barely breathing. Tight dolly keeps the device the
  * same apparent size through the loop so it reads as one clean shot.

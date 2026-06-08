@@ -13,13 +13,14 @@ import * as THREE from "three";
  * "exports look significantly darker" bug.
  *
  * The fix is a single fullscreen resolve pass that samples the linear scene target and
- * reproduces the live composer's tail EXACTLY: the same DEFAULT-technique vignette, then
- * the sRGB OETF. We write the already-encoded bytes from a raw `ShaderMaterial` (three does
- * not append its colorspace_fragment to raw shaders, so our output is passed through
- * untouched) into a byte target, then read those bytes back — so the exported PNG/MP4 is
- * pixel-faithful to what the user composed on screen.
+ * reproduces the live composer's tail EXACTLY: the sRGB OETF. We write the already-encoded
+ * bytes from a raw `ShaderMaterial` (three does not append its colorspace_fragment to raw
+ * shaders, so our output is passed through untouched) into a byte target, then read those
+ * bytes back — so the exported PNG/MP4 is pixel-faithful to what the user composed on screen.
  *
- * Keep the vignette uniforms in lockstep with `<Vignette>` in `post-processing.tsx`.
+ * The live composer carries NO vignette (a product plate wants a clean, uniform field — see
+ * `post-processing.tsx`), so this resolve is a straight encode with nothing to keep in
+ * lockstep beyond the colour-space transform.
  */
 
 const RESOLVE_VERT = /* glsl */ `
@@ -34,8 +35,6 @@ const RESOLVE_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D tDiffuse;
-uniform float uVignetteOffset;
-uniform float uVignetteDarkness;
 
 // IEC 61966-2-1 linear → sRGB, matching three's getLinearToSRGB output encode.
 vec3 linearToSRGB(vec3 c) {
@@ -46,25 +45,12 @@ vec3 linearToSRGB(vec3 c) {
 
 void main() {
 	vec4 src = texture2D(tDiffuse, vUv);
-	vec3 color = src.rgb;
-
-	// postprocessing Vignette, DEFAULT technique — applied in linear, before the encode,
-	// exactly as the live EffectPass does.
-	const vec2 center = vec2(0.5);
-	float d = distance(vUv, center);
-	color *= smoothstep(0.8, uVignetteOffset * 0.799, d * (uVignetteDarkness + uVignetteOffset));
-
-	color = linearToSRGB(color);
+	// Straight linear → sRGB encode. No vignette: a product plate wants a clean, uniform
+	// field, so the live composer carries no darkening and neither does the export.
+	vec3 color = linearToSRGB(src.rgb);
 	gl_FragColor = vec4(color, src.a);
 }
 `;
-
-export interface ColorResolveOptions {
-	/** Mirror `<Vignette offset>` in post-processing.tsx. */
-	vignetteOffset?: number;
-	/** Mirror `<Vignette darkness>` in post-processing.tsx. */
-	vignetteDarkness?: number;
-}
 
 export class ColorResolvePass {
 	private readonly scene = new THREE.Scene();
@@ -73,14 +59,12 @@ export class ColorResolvePass {
 	private readonly quad: THREE.Mesh;
 	private outRT: THREE.WebGLRenderTarget | null = null;
 
-	constructor(options: ColorResolveOptions = {}) {
+	constructor() {
 		this.material = new THREE.ShaderMaterial({
 			vertexShader: RESOLVE_VERT,
 			fragmentShader: RESOLVE_FRAG,
 			uniforms: {
 				tDiffuse: { value: null },
-				uVignetteOffset: { value: options.vignetteOffset ?? 0.32 },
-				uVignetteDarkness: { value: options.vignetteDarkness ?? 0.18 },
 			},
 			depthTest: false,
 			depthWrite: false,
