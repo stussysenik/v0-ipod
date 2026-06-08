@@ -26,6 +26,9 @@ interface Ipod3DStudioCockpitProps {
 	interaction: IpodInteractionState;
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
+	/** On-canvas mobile touch camera controls (gizmo + orbit-pad + pinch). */
+	touchControls: boolean;
+	onToggleTouchControls: () => void;
 }
 
 const MODES: readonly { id: IpodInteractionModel; label: string }[] = [
@@ -34,7 +37,13 @@ const MODES: readonly { id: IpodInteractionModel; label: string }[] = [
 	{ id: "ipod-os-original", label: "Original" },
 ] as const;
 
-export function Ipod3DStudioCockpit({ interaction, studio, dispatch }: Ipod3DStudioCockpitProps) {
+export function Ipod3DStudioCockpit({
+	interaction,
+	studio,
+	dispatch,
+	touchControls,
+	onToggleTouchControls,
+}: Ipod3DStudioCockpitProps) {
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
 			{/* Interaction mode — segmented, mirrors the 2D workbench */}
@@ -76,6 +85,14 @@ export function Ipod3DStudioCockpit({ interaction, studio, dispatch }: Ipod3DStu
 				hint="Scroll overflowing track titles"
 				on={studio.marquee}
 				onToggle={() => dispatch({ type: "TOGGLE_MARQUEE" })}
+			/>
+
+			{/* Touch controls — the mobile on-canvas gizmo + orbit-pad + pinch */}
+			<ToggleRow
+				label="Touch controls"
+				hint="On-screen orbit, snap & pinch (mobile)"
+				on={touchControls}
+				onToggle={onToggleTouchControls}
 			/>
 		</div>
 	);

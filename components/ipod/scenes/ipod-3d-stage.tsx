@@ -32,6 +32,7 @@ import {
 } from "./ipod-3d-export-dock";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
+import { Ipod3DTouchControls } from "./ipod-3d-touch-controls";
 
 /** localStorage key for the locked hero perspective (design D13). */
 const LOCKED_POSE_KEY = "ipod-3d-locked-pose";
@@ -117,6 +118,14 @@ export function Ipod3DStage() {
 	// on narrow viewports the controls collapse into a bottom sheet so they never
 	// overlap the device.
 	const [controlsOpen, setControlsOpen] = useState(false);
+
+	// Mobile on-canvas touch camera controls. Defaults ON for coarse pointers
+	// (touch) and OFF for desktop; the cockpit toggle then overrides either way.
+	const [touchControls, setTouchControls] = useState(false);
+	useEffect(() => {
+		if (typeof window === "undefined" || !window.matchMedia) return;
+		setTouchControls(window.matchMedia("(pointer: coarse)").matches);
+	}, []);
 	// Camera orientation (Product / Front / Back) — owned here so the bottom bar can
 	// place the snaps alongside the saved studio shots.
 	const [focus, setFocus] = useState<IpodCameraFocus>("product");
@@ -509,7 +518,13 @@ export function Ipod3DStage() {
 			>
 				{/* Left group — interaction + now-playing + colour + camera */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:left-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
-					<Ipod3DStudioCockpit interaction={interaction} studio={studio} dispatch={dispatch} />
+					<Ipod3DStudioCockpit
+						interaction={interaction}
+						studio={studio}
+						dispatch={dispatch}
+						touchControls={touchControls}
+						onToggleTouchControls={() => setTouchControls((v) => !v)}
+					/>
 					<Ipod3DNowPlayingCockpit metadata={model.metadata} dispatch={dispatch} />
 					<Ipod3DColorCockpit presentation={presentation} dispatch={dispatch} />
 					<Ipod3DCameraCockpit
@@ -566,6 +581,11 @@ export function Ipod3DStage() {
 				dispatch={dispatch}
 				onNotice={showNotice}
 			/>
+
+			{/* Mobile on-canvas camera controls — floats above the bottom bar, within
+			    one-thumb reach. Unmounted (listeners detached) when toggled off; the
+			    component is `lg:hidden` so desktop never shows it even if enabled. */}
+			{touchControls && <Ipod3DTouchControls apiRef={ipodApiRef} />}
 
 			{/* Export veil — a cinematic shutter that covers the canvas for the render.
 			    It uses 'shutter' optics: a high-speed blade snap followed by a white
