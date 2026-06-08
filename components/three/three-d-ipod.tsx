@@ -182,6 +182,8 @@ export interface ThreeDIpodHandle {
 	getCameraPose: () => StudioPose | null;
 	/** Ease the live camera toward a studio pose (partial — omitted dials hold). */
 	setCameraGoal: (pose: Partial<Omit<StudioPose, "target">>) => void;
+	/** Snap the live camera back to the current focus's default framing ("home"). */
+	resetCamera: () => void;
 }
 
 export interface ClipRenderOptions {
@@ -259,6 +261,10 @@ export interface ThreeDIpodProps {
 	stageClassName?: string;
 	/** Solid background baked into exports (the live canvas stays transparent). */
 	captureBackground?: string;
+	/** Show a small origin gizmo (centre crosshair) to help compose against centre. */
+	showOrigin?: boolean;
+	/** Polished-back roughness (dev "Back finish" dial: mirror ↔ brushed). */
+	backRoughness?: number;
 	onReady?: () => void;
 	/**
 	 * Imperative handle as a plain prop. `next/dynamic` (used to lazy-load this
@@ -278,6 +284,8 @@ interface IpodModelProps {
 	backColor?: string;
 	bezelColor?: string;
 	capacityLabel: string;
+	/** Polished-back GGX roughness (dev "Back finish" dial). Defaults to the crawl-safe floor. */
+	backRoughness?: number;
 	/** "Lights Off / Technical": render every metal surface as flat unlit albedo. */
 	technicalFlat?: boolean;
 	onRegisterCapture?: (hooks: CaptureHooks) => void;
@@ -749,7 +757,7 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", bezelColor = "#0a0a0a", capacityLabel, technicalFlat = false, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, onRegisterCapture }: IpodModelProps) {
 	const groupRef = useRef<THREE.Group>(null);
 	// The steel body, used to occlude the live screen/wheel HTML portals so they
 	// don't bleed through (mirrored) when the camera swings behind the device.
@@ -1045,7 +1053,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 								envMapIntensity={0.85}
 								metalness={1.0}
 								reflectivity={1.0}
-								roughness={STEEL_ROUGHNESS_FLOOR}
+								roughness={backRoughness}
 							/>
 						)}
 					</mesh>
@@ -1202,6 +1210,8 @@ function focusToSpherical(focus: IpodCameraFocus): { sph: Spherical; target: THR
 interface OrbitCameraApi {
 	getPose: () => StudioPose;
 	setGoal: (pose: Partial<Omit<StudioPose, "target">>) => void;
+	/** Ease the camera back to the current focus's default framing (the "home" angle). */
+	resetCamera: () => void;
 }
 
 function OrbitRig({
@@ -1236,6 +1246,9 @@ function OrbitRig({
 	// current value without re-binding every toggle.
 	const lockedRef = useRef(locked);
 	useEffect(() => { lockedRef.current = locked; }, [locked]);
+	// Mirror `focus` so resetCamera (registered once) always homes to the CURRENT framing.
+	const focusRef = useRef(focus);
+	useEffect(() => { focusRef.current = focus; }, [focus]);
 
 	// ── Playhead preview state ──
 	// `preview` flips the rig from "ease toward goal" to "fly the move directly".
@@ -1345,6 +1358,18 @@ function OrbitRig({
 				if (pose.reach !== undefined) {
 					goal.current.rad = THREE.MathUtils.clamp(pose.reach, REACH_RANGE[0], REACH_RANGE[1]);
 				}
+			},
+			resetCamera: () => {
+				// Home = the current focus's default framing. Same path the focus buttons take:
+				// unwrap azimuth to the nearest equivalent so we ease the short way, and honor the
+				// responsive fit floor so home never crops the device on a narrow viewport.
+				const next = focusToSpherical(focusRef.current);
+				const twoPi = Math.PI * 2;
+				let az = next.sph.az;
+				while (az - cur.current.az > Math.PI) az -= twoPi;
+				while (az - cur.current.az < -Math.PI) az += twoPi;
+				goal.current = { az, pol: next.sph.pol, rad: Math.max(next.sph.rad, fitReachRef.current) };
+				target.current.copy(next.target);
 			},
 		});
 	}, [onRegisterCamera]);
@@ -1811,9 +1836,31 @@ function FocusControls({ focus, onFocus }: { focus: IpodCameraFocus; onFocus: (f
 
 // ─── Main Export ─────────────────────────────────────────────────────────────────
 
+/**
+ * Origin gizmo — a compose-time aid that marks world centre (the camera's look-at
+ * target / turntable pivot). Rendered as a drei `<Html>` crosshair, NOT scene geometry,
+ * so it's a constant-size screen overlay that tracks the origin as the camera orbits and
+ * — because exports read the WebGL canvas, never the DOM — can never bake into a still or
+ * clip. Purely informational: pointer-events off so it never steals a drag.
+ */
+function OriginMarker() {
+	return (
+		<Html position={[0, 0, 0]} center zIndexRange={[15, 0]} pointerEvents="none" style={{ pointerEvents: "none" }}>
+			<div className="relative grid h-5 w-5 place-items-center" aria-hidden>
+				<span className="absolute h-5 w-px bg-black/45" />
+				<span className="absolute h-px w-5 bg-black/45" />
+				<span className="h-1.5 w-1.5 rounded-full bg-black/70 ring-1 ring-white/70" />
+				<span className="absolute -bottom-3.5 whitespace-nowrap font-mono text-[8px] uppercase tracking-[0.14em] text-black/40">
+					origin
+				</span>
+			</div>
+		</Html>
+	);
+}
+
 export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 	(props, ref) => {
-		const { onReady, preset, capacityLabel = "160GB", stageClassName = "bg-black", apiRef, captureBackground, focus: focusProp, onFocusChange, cameraLocked = false, preview = null, onPreviewTick, lighting, technicalFlat = false, ...modelProps } = props;
+		const { onReady, preset, capacityLabel = "160GB", stageClassName = "bg-black", apiRef, captureBackground, showOrigin = false, focus: focusProp, onFocusChange, cameraLocked = false, preview = null, onPreviewTick, lighting, technicalFlat = false, ...modelProps } = props;
 		// In the flat technical view the device is rendered as unlit albedo (a material swap),
 		// so the rig is a neutral one that only keeps the LCD legible — see FlatFinish.
 		// The render OWNS the finish: reshape the curated rig to the chosen colours so any
@@ -1872,6 +1919,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 				},
 				getCameraPose: () => cameraApiRef.current?.getPose() ?? null,
 				setCameraGoal: (pose) => cameraApiRef.current?.setGoal(pose),
+				resetCamera: () => cameraApiRef.current?.resetCamera(),
 			}),
 			[],
 		);
@@ -1958,6 +2006,10 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 					{/* Seamless studio sweep tinted by the Stage colour — grounds the device
 					   in a real cove instead of floating it on flat colour (design D13). */}
 					<StudioBackdrop stageColor={captureBackground} />
+
+					{/* Origin gizmo — a designer aid to see world centre while composing. Not
+					   captured: suppressed during export/preview so it never bakes into a frame. */}
+					{showOrigin && !preview && <OriginMarker />}
 
 					<IpodModel
 						preset={preset}

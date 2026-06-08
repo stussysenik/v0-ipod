@@ -47,9 +47,22 @@ interface Ipod3DCameraCockpitProps {
 	locked?: boolean;
 	/** Toggle the locked perspective (persists the pose; drives Hero/clip exports). */
 	onToggleLock?: () => void;
+	/** Snap the camera back to the default "home" framing (the origin view). */
+	onResetCamera?: () => void;
+	/** Whether the world-origin gizmo is showing. */
+	showOrigin?: boolean;
+	/** Toggle the origin gizmo (compose-time aid; never baked into exports). */
+	onToggleOrigin?: () => void;
 }
 
-export function Ipod3DCameraCockpit({ apiRef, locked = false, onToggleLock }: Ipod3DCameraCockpitProps) {
+export function Ipod3DCameraCockpit({
+	apiRef,
+	locked = false,
+	onToggleLock,
+	onResetCamera,
+	showOrigin = false,
+	onToggleOrigin,
+}: Ipod3DCameraCockpitProps) {
 	const [pose, setPose] = useState<StudioPose | null>(null);
 	const [presets, setPresets] = useState<SavedPose[]>([]);
 	const counter = useRef(1);
@@ -165,6 +178,33 @@ export function Ipod3DCameraCockpit({ apiRef, locked = false, onToggleLock }: Ip
 						</span>
 					</div>
 				))}
+			</div>
+
+			{/* Home + origin — reset the angles to the default framing, and a compose-time
+			   gizmo to see world centre. Both sit right under the axes (the "angles"). */}
+			<div className="flex items-center gap-2 border-t border-black/[0.06] px-3.5 py-2.5">
+				<button
+					type="button"
+					onClick={onResetCamera}
+					disabled={locked}
+					title="Snap the camera back to the default framing"
+					className="flex items-center gap-1 text-[11px] font-medium text-black/55 transition-colors hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-black/55"
+				>
+					<span aria-hidden>⌂</span> Home
+				</button>
+				<button
+					type="button"
+					onClick={onToggleOrigin}
+					aria-pressed={showOrigin}
+					title="Show a centre crosshair to compose against the origin"
+					className={`ml-auto flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] transition-colors ${
+						showOrigin
+							? "border-black/80 bg-black text-white"
+							: "border-black/10 text-black/40 hover:border-black/40 hover:text-black"
+					}`}
+				>
+					<span aria-hidden>✛</span> Origin
+				</button>
 			</div>
 
 			{/* Saved poses */}

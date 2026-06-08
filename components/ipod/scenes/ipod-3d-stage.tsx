@@ -13,6 +13,7 @@ import { downloadBlob } from "@/lib/three-export";
 import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
 import { CAMERA_MOVES, type CameraMove, type LoopStyle, type StudioPose } from "@/lib/studio-camera";
+import { STEEL_ROUGHNESS_FLOOR } from "@/lib/studio-owned-finish";
 
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodScreen } from "../display/ipod-screen";
@@ -125,6 +126,11 @@ export function Ipod3DStage() {
 	// rig (via ThreeDIpod) and the cockpit toggle.
 	const [cameraLocked, setCameraLocked] = useState(false);
 	const lockedPoseRef = useRef<StudioPose | null>(null);
+	// Compose-time origin gizmo (camera cockpit toggle) — never baked into exports.
+	const [showOrigin, setShowOrigin] = useState(false);
+	// Dev "Back finish" dial — polished-back roughness (mirror ↔ brushed). Defaults to the
+	// crawl-safe floor that the owned-finish render ships; stage-local, not persisted.
+	const [backRoughness, setBackRoughness] = useState(STEEL_ROUGHNESS_FLOOR);
 
 	// Export history from PocketBase.
 	const [exportHistory, setExportHistory] = useState<ExportRecord[]>([]);
@@ -485,6 +491,8 @@ export function Ipod3DStage() {
 				backColor={presentation.backColor}
 				bezelColor={presentation.bezelColor}
 				captureBackground={presentation.bgColor}
+				showOrigin={showOrigin}
+				backRoughness={backRoughness}
 				lighting={studio.lighting}
 				technicalFlat={studio.technicalFlat}
 				screen={screenComponent}
@@ -503,12 +511,24 @@ export function Ipod3DStage() {
 					<Ipod3DStudioCockpit interaction={interaction} studio={studio} dispatch={dispatch} />
 					<Ipod3DNowPlayingCockpit metadata={model.metadata} dispatch={dispatch} />
 					<Ipod3DColorCockpit presentation={presentation} dispatch={dispatch} />
-					<Ipod3DCameraCockpit apiRef={ipodApiRef} locked={cameraLocked} onToggleLock={toggleCameraLock} />
+					<Ipod3DCameraCockpit
+						apiRef={ipodApiRef}
+						locked={cameraLocked}
+						onToggleLock={toggleCameraLock}
+						onResetCamera={() => ipodApiRef.current?.resetCamera()}
+						showOrigin={showOrigin}
+						onToggleOrigin={() => setShowOrigin((v) => !v)}
+					/>
 				</div>
 
 				{/* Right group — light + battery + export */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:right-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
-					<Ipod3DLightingCockpit studio={studio} dispatch={dispatch} />
+					<Ipod3DLightingCockpit
+						studio={studio}
+						dispatch={dispatch}
+						backRoughness={backRoughness}
+						onBackRoughnessChange={setBackRoughness}
+					/>
 					<Ipod3DBatteryCockpit
 						batteryLevel={interaction.batteryLevel}
 						batteryMode={interaction.batteryMode}

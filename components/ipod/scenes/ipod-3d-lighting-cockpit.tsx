@@ -34,7 +34,14 @@ import {
 interface Ipod3DLightingCockpitProps {
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
+	/** Dev "Back finish" dial — polished-back roughness (mirror ↔ brushed). */
+	backRoughness?: number;
+	onBackRoughnessChange?: (value: number) => void;
 }
+
+/** The crawl-safe shipped default for the polished back (mirrors STEEL_ROUGHNESS_FLOOR). */
+const BACK_FINISH_DEFAULT = 0.13;
+const BACK_FINISH_MIRROR = 0.05;
 
 const SPOTS: readonly { role: SpotRole; label: string; hint: string }[] = [
 	{ role: "key", label: "Key", hint: "Warm soft top-right" },
@@ -42,9 +49,17 @@ const SPOTS: readonly { role: SpotRole; label: string; hint: string }[] = [
 	{ role: "rim", label: "Rim", hint: "Separation edge from behind" },
 ] as const;
 
-export function Ipod3DLightingCockpit({ studio, dispatch }: Ipod3DLightingCockpitProps) {
+export function Ipod3DLightingCockpit({
+	studio,
+	dispatch,
+	backRoughness = BACK_FINISH_DEFAULT,
+	onBackRoughnessChange,
+}: Ipod3DLightingCockpitProps) {
 	const { lighting, technicalFlat } = studio;
 	const dimmed = technicalFlat;
+
+	// The named rig this config is based on — the source of truth for per-section "reset".
+	const defaults = RIG_PRESETS.find((p) => p.config.name === lighting.name)?.config ?? RIG_PRESETS[0].config;
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -104,8 +119,69 @@ export function Ipod3DLightingCockpit({ studio, dispatch }: Ipod3DLightingCockpi
 					</div>
 				</div>
 
+				{/* Back finish — dev dial for the polished back: mirror ↔ brushed. The shipped
+				   default sits at the crawl-safe floor; Mirror re-introduces the turntable
+				   strobe on purpose so you can see the difference. */}
+				{onBackRoughnessChange ? (
+					<Section
+						title="Back finish"
+						hint="Mirror ↔ brushed steel"
+						onReset={
+							backRoughness !== BACK_FINISH_DEFAULT
+								? () => onBackRoughnessChange(BACK_FINISH_DEFAULT)
+								: undefined
+						}
+					>
+						<div className="mb-1 flex gap-1">
+							{[
+								{ label: "Mirror", value: BACK_FINISH_MIRROR },
+								{ label: "Default", value: BACK_FINISH_DEFAULT },
+								{ label: "Brushed", value: 0.24 },
+							].map((opt) => {
+								const active = Math.abs(backRoughness - opt.value) < 0.005;
+								return (
+									<button
+										key={opt.label}
+										type="button"
+										onClick={() => onBackRoughnessChange(opt.value)}
+										aria-pressed={active}
+										className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
+											active
+												? "border-black/80 text-black"
+												: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+										}`}
+									>
+										{opt.label}
+									</button>
+								);
+							})}
+						</div>
+						<Slider
+							label="Roughness"
+							value={backRoughness}
+							min={BACK_FINISH_MIRROR}
+							max={0.4}
+							step={0.01}
+							onChange={onBackRoughnessChange}
+						/>
+					</Section>
+				) : null}
+
 				{/* Environment — the master brightness the metal mirrors */}
-				<Section title="Environment" hint="The wall the metal reflects — master brightness">
+				<Section
+					title="Environment"
+					hint="The wall the metal reflects — master brightness"
+					onReset={() =>
+						dispatch({
+							type: "PATCH_ENV",
+							payload: {
+								preset: defaults.env.preset,
+								intensity: defaults.env.intensity,
+								blur: defaults.env.blur,
+							},
+						})
+					}
+				>
 					<PresetRow
 						value={lighting.env.preset}
 						onChange={(preset) => dispatch({ type: "PATCH_ENV", payload: { preset } })}
@@ -129,7 +205,16 @@ export function Ipod3DLightingCockpit({ studio, dispatch }: Ipod3DLightingCockpi
 				</Section>
 
 				{/* Ambient — the flat floor of light */}
-				<Section title="Ambient" hint="Flat base fill">
+				<Section
+					title="Ambient"
+					hint="Flat base fill"
+					onReset={() =>
+						dispatch({
+							type: "PATCH_AMBIENT",
+							payload: { color: defaults.ambient.color, intensity: defaults.ambient.intensity },
+						})
+					}
+				>
 					<ColorRow
 						label="Colour"
 						value={lighting.ambient.color}
@@ -152,6 +237,7 @@ export function Ipod3DLightingCockpit({ studio, dispatch }: Ipod3DLightingCockpi
 						label={label}
 						hint={hint}
 						spot={lighting[role]}
+						defaultSpot={defaults[role]}
 						onPatch={(patch) => dispatch({ type: "PATCH_LIGHT", payload: { role, patch } })}
 					/>
 				))}
@@ -178,11 +264,13 @@ function LightSection({
 	label,
 	hint,
 	spot,
+	defaultSpot,
 	onPatch,
 }: {
 	label: string;
 	hint: string;
 	spot: SpotSpec;
+	defaultSpot: SpotSpec;
 	onPatch: (patch: Partial<SpotSpec>) => void;
 }) {
 	const [x, y, z] = spot.position;
@@ -191,9 +279,29 @@ function LightSection({
 		next[axis] = v;
 		onPatch({ position: next });
 	};
+	// Restore just the geometry sliders (position + cone + softness) to the rig default —
+	// the "reset sliders near the angles" affordance, without touching colour/intensity.
+	const resetShape = () =>
+		onPatch({
+			position: [...defaultSpot.position],
+			angle: defaultSpot.angle,
+			penumbra: defaultSpot.penumbra,
+		});
 
 	return (
-		<Section title={label} hint={hint}>
+		<Section
+			title={label}
+			hint={hint}
+			onReset={() =>
+				onPatch({
+					color: defaultSpot.color,
+					intensity: defaultSpot.intensity,
+					position: [...defaultSpot.position],
+					angle: defaultSpot.angle,
+					penumbra: defaultSpot.penumbra,
+				})
+			}
+		>
 			<div className="flex items-center justify-between">
 				<ColorRow label="Colour" value={spot.color} onChange={(color) => onPatch({ color })} inline />
 			</div>
@@ -209,6 +317,17 @@ function LightSection({
 				<summary className="flex cursor-pointer list-none items-center gap-1 py-1 text-[10px] font-medium text-black/35 hover:text-black/60">
 					<span className="transition-transform group-open:rotate-90">›</span>
 					Shape · position
+					<button
+						type="button"
+						onClick={(e) => {
+							e.preventDefault();
+							resetShape();
+						}}
+						title="Reset position / cone / softness to the rig default"
+						className="ml-auto rounded px-1 text-[10px] text-black/30 transition-colors hover:text-black/70"
+					>
+						↺ reset
+					</button>
 				</summary>
 				<div className="pl-2">
 					<Slider label="X" value={x} min={-30} max={30} step={0.1} onChange={(v) => setAxis(0, v)} />
@@ -241,17 +360,32 @@ function LightSection({
 function Section({
 	title,
 	hint,
+	onReset,
 	children,
 }: {
 	title: string;
 	hint?: string;
+	/** When provided, a hairline reset glyph appears in the header to restore this section. */
+	onReset?: () => void;
 	children: React.ReactNode;
 }) {
 	return (
 		<div className="border-b border-black/[0.05] px-3.5 py-2.5 last:border-b-0">
 			<div className="flex items-baseline justify-between">
 				<Label>{title}</Label>
-				{hint ? <span className="text-[9px] text-black/25">{hint}</span> : null}
+				<span className="flex items-baseline gap-1.5">
+					{hint ? <span className="text-[9px] text-black/25">{hint}</span> : null}
+					{onReset ? (
+						<button
+							type="button"
+							onClick={onReset}
+							title={`Reset ${title} to the rig default`}
+							className="text-[10px] leading-none text-black/30 transition-colors hover:text-black/70"
+						>
+							↺
+						</button>
+					) : null}
+				</span>
 			</div>
 			<div className="mt-1.5">{children}</div>
 		</div>
