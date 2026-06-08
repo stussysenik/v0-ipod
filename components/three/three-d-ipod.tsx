@@ -8,8 +8,10 @@ import {
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as htmlToImage from "html-to-image";
 import React, {
+	createContext,
 	forwardRef,
 	useCallback,
+	useContext,
 	useEffect,
 	useImperativeHandle,
 	useMemo,
@@ -41,6 +43,82 @@ import {
 } from "@/lib/studio-camera";
 
 import { StudioBackdrop, StudioLighting } from "./studio-lighting";
+import {
+	APPLE_PRODUCT_RIG,
+	FLAT_TECHNICAL_RIG,
+	type StudioLightingConfig,
+} from "@/lib/studio-lighting-config";
+import { STEEL_ROUGHNESS_FLOOR, deriveOwnedRig } from "@/lib/studio-owned-finish";
+
+// ─── Technical-Flat ("Lights Off") material mode ───────────────────────────────────
+
+/**
+ * "Lights Off / Technical" flat view.
+ *
+ * The device's shells and wheel are real `meshPhysicalMaterial` *metal* (metalness ≈ 1.0).
+ * A metal has no diffuse colour of its own — it only reflects the environment — so you cannot
+ * make it read as a flat, lit-by-nothing spec-sheet colour just by dimming the lights: kill
+ * the env and pure metal goes black. The honest flat view therefore *swaps the material*, not
+ * the rig: every machined surface renders as an unlit `meshBasicMaterial` of its true finish
+ * hex, `toneMapped={false}`, so every pixel is exactly the chosen colour — zero reflections,
+ * zero shadows, fully deterministic and WYSIWYG with the export.
+ *
+ *   pseudocode  surface(flat):
+ *       if flat:  return basic(colour)          // pixel == colour, no light term at all
+ *       else:     return physical(colour, env)  // colour × reflected environment
+ *
+ * The flag rides a React context so the four geometry components (model, bezel, wheel, back)
+ * each opt into the swap with one `useTechnicalFlat()` line — no boolean threaded through
+ * every prop signature.
+ */
+const TechnicalFlatContext = createContext(false);
+const useTechnicalFlat = () => useContext(TechnicalFlatContext);
+
+/**
+ * Unlit finish for the Technical view — renders the designer's hex VERBATIM.
+ *
+ * ┌─ EXCEPTION: colour fidelity is enforced over physical correctness ───────────────┐
+ * │ Everywhere else the device is dyed metal, so the displayed colour is             │
+ * │ `albedo × lighting` — a specified #000000 case reads as a lit dark-grey, which is │
+ * │ physically right but is NOT the hex the designer typed. The Technical view is the │
+ * │ one place where the chosen hex is SACRED: black must be black, white must be      │
+ * │ white. We guarantee that by deliberately bypassing the whole light/colour         │
+ * │ pipeline:                                                                         │
+ * │   • `meshBasicMaterial`  → unlit; no light, no env reflection touches the colour. │
+ * │   • `toneMapped={false}` → no filmic/tone curve lifts or rolls off the value.     │
+ * │   • the canvas already runs `NoToneMapping` + sRGB output, so three's sRGB→linear │
+ * │     →sRGB round-trip is loss-free: the exact hex survives to the pixel.           │
+ * │   • NO luminance floor / saturation clamp is applied (those would drift #000000   │
+ * │     toward grey) — the value is passed straight through.                          │
+ * │ This intentionally opts out of the env-first material model; do not "fix" it to   │
+ * │ react to lights, that would defeat the point of the Technical/color-true view.    │
+ * └──────────────────────────────────────────────────────────────────────────────────┘
+ */
+function FlatFinish({
+	color = "#ffffff",
+	map = null,
+	transparent = false,
+	opacity = 1,
+	depthWrite = true,
+}: {
+	color?: THREE.ColorRepresentation;
+	map?: THREE.Texture | null;
+	transparent?: boolean;
+	opacity?: number;
+	depthWrite?: boolean;
+}) {
+	return (
+		<meshBasicMaterial
+			color={color}
+			map={map ?? undefined}
+			// EXCEPTION (see block above): hold the exact specified hex — no tone mapping.
+			toneMapped={false}
+			transparent={transparent}
+			opacity={opacity}
+			depthWrite={depthWrite}
+		/>
+	);
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
@@ -147,6 +225,13 @@ export interface ThreeDIpodProps {
 	/** Engraved capacity on the back plate, e.g. "160GB". */
 	capacityLabel?: string;
 	/**
+	 * The live studio lighting rig. Defaults to the Apple Product rig. When `technicalFlat`
+	 * is on, this is bypassed for the flat technical rig and an unlit material swap.
+	 */
+	lighting?: StudioLightingConfig;
+	/** "Lights Off / Technical": flat, unlit, deterministic CAD view of the device. */
+	technicalFlat?: boolean;
+	/**
 	 * Controlled camera focus (orientation). When provided, the in-canvas
 	 * Product/Front/Back pill is suppressed so the host can render its own bottom
 	 * bar (e.g. alongside saved studio shots). Uncontrolled when omitted.
@@ -193,6 +278,8 @@ interface IpodModelProps {
 	backColor?: string;
 	bezelColor?: string;
 	capacityLabel: string;
+	/** "Lights Off / Technical": render every metal surface as flat unlit albedo. */
+	technicalFlat?: boolean;
 	onRegisterCapture?: (hooks: CaptureHooks) => void;
 }
 
@@ -226,15 +313,71 @@ function drawRoundedRect(
 	p.quadraticCurveTo(x, y, x + rr, y);
 }
 
-// ─── Z-Layer Stack (derived from real depth) ──────────────────────────────────────
+// ─── Mechanical Datum & Tolerance Reference ────────────────────────────────────────
 
 /**
- * Front-to-back ordering of the device surfaces. Offsets are absolute (in world
- * units) measured from the front face so they stay crisp regardless of the
- * preset-derived body thickness.
+ * The device's machined form, named in the language of mechanical design so the geometry
+ * reads like a drawing, not a pile of magic numbers. All values are in world units (the
+ * scene's millimetre-analogue); see `ipod-3d-dimensions.ts` for the mm→world derivation.
+ *
+ * DATUMS (the reference planes every feature is measured from):
+ *   • DATUM A — the front face plane, at z = +depth/2. Every Z offset in `zLayers()` is a
+ *     signed distance from this datum: +out toward the lens, −in toward the back.
+ *   • DATUM B — the wheel-bore axis (the z-axis through x=0, y=wheelCenterY). The touch
+ *     ring, select button, and the bore cut in the face are all CONCENTRIC to it, so the
+ *     wheel reads as one true disc with no eccentric moat.
+ *   • The screen aperture is concentric to the LCD's own centre (y=screenCenterY); the
+ *     bezel mask, glass, and lit plane share that axis.
+ *
+ * EDGE BREAKS (no real machined edge is a zero-radius knife — each gets a fillet or chamfer):
+ *   • FILLET  — a rounded edge (the steel back's deep-drawn roll-over the sides).
+ *   • CHAMFER — a flat angled cut (the crisp hairline break around the screen aperture and
+ *     wheel bore in the anodized face).
+ * Oversize these and the silhouette balloons into a fat chrome band that clips to white, or
+ * the apertures soften into rubbery lips — so they're kept to a true fraction of body depth.
+ *
+ * FITS / CLEARANCE — a cut pocket is opened slightly larger than the part that seats into it
+ * (the screen/wheel sit in their bores with a hairline gap), the mechanical-design equivalent
+ * of a clearance fit rather than an interference fit.
+ *
+ * FINISH — the face is anodized aluminium: a DYED dielectric over metal (albedo-true colour
+ * under a thin clearcoat), not a chromed mirror. See the face material for why that matters.
+ *
+ *   pseudocode  buildFace():
+ *       sketch  = roundedRect(faceOutline) on DATUM A          // 2D profile
+ *       sketch -= roundedRect(screenAperture + CLEARANCE)      // cut the screen pocket
+ *       sketch -= circle(wheelBore + CLEARANCE) about DATUM B  // cut the wheel bore
+ *       solid   = extrude(sketch, FACE_PLATE_DEPTH)
+ *       solid   = chamfer(solid.edges, FACE_CHAMFER)           // break the aperture edges
+ *       seat(solid, at = DATUM A − parting_seam)               // recess by the parting line
+ */
+const MECHANICAL = {
+	/** Steel back roll-over: a forming fillet capped at this radius, else floors at body·ratio. */
+	bodyFilletMax: 0.05,
+	bodyFilletDepthRatio: 0.1,
+	/** Lateral fillet size of the back's deep-drawn edge. */
+	bodyFillet: 0.03,
+	/** Crisp hairline chamfer that breaks the screen-aperture and wheel-bore edges of the face. */
+	faceChamfer: { thickness: 0.006, size: 0.005 },
+	/** Plate thickness of the extruded aluminium face. */
+	facePlateDepth: 0.05,
+	/** Edge break on the matte bezel mask. */
+	bezelEdgeBreak: 0.004,
+	/** Clearance fit: how much larger the cut aperture is than the part that seats in it. */
+	screenApertureClearance: 0.05,
+	wheelBoreClearance: 0.014,
+} as const;
+
+// ─── Z-Layer Stack (datum-referenced) ──────────────────────────────────────────────
+
+/**
+ * Front-to-back ordering of the device surfaces as signed offsets from DATUM A (the front
+ * face plane, z = +depth/2). Absolute world-unit offsets — not depth-relative — so the stack
+ * stays crisp regardless of the preset-derived body thickness. Think of each as a feature's
+ * height above (+) or depth below (−) the face datum on the drawing.
  */
 function zLayers(depth: number) {
-	const f = depth / 2;
+	const f = depth / 2; // DATUM A — the front face plane
 	return {
 		front: f,
 		frontFace: f + 0.012,
@@ -417,6 +560,7 @@ function useLcdShader() {
 // ─── Screen Bezel ────────────────────────────────────────────────────────────────
 
 function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; color?: string }) {
+	const flat = useTechnicalFlat();
 	const bezelGeo = useMemo(() => {
 		const w = dims.screenW + 0.07;
 		const h = dims.screenH + 0.07;
@@ -431,7 +575,7 @@ function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z
 		shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
 		shape.lineTo(-w / 2, -h / 2 + r);
 		shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
-		return new THREE.ExtrudeGeometry(shape, { depth: 0.015, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2 });
+		return new THREE.ExtrudeGeometry(shape, { depth: 0.015, bevelEnabled: true, bevelThickness: MECHANICAL.bezelEdgeBreak, bevelSize: MECHANICAL.bezelEdgeBreak, bevelSegments: 2 });
 	}, [dims.screenW, dims.screenH]);
 
 	return (
@@ -439,7 +583,11 @@ function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z
 			{/* Single matte black mask framing the LCD — no concentric overlay
 			   ring, so the screen reads as one clean inset aperture. */}
 			<mesh geometry={bezelGeo}>
-				<meshStandardMaterial color={color} metalness={0.0} roughness={0.62} />
+				{flat ? (
+					<FlatFinish color={color} />
+				) : (
+					<meshStandardMaterial color={color} metalness={0.0} roughness={0.62} />
+				)}
 			</mesh>
 		</group>
 	);
@@ -470,6 +618,7 @@ function ClickWheel3D({
 	domRef: React.RefObject<HTMLDivElement | null>;
 	glyphMeshRef: React.RefObject<THREE.Mesh | null>;
 }) {
+	const flat = useTechnicalFlat();
 	const wheelColors = useMemo(
 		() => deriveWheelColors(ringColor || skinColor),
 		[skinColor, ringColor],
@@ -499,7 +648,11 @@ function ClickWheel3D({
 				{/* Well floor matches the ring EXACTLY — no 0.82 darkening. That tint drew a
 				   dark groove ring that, on a light/white finish, read as a stark cartoon
 				   outline; same colour keeps the wheel reading as one clean disc. */}
-				<meshStandardMaterial color={ringPlastic} metalness={0.0} roughness={0.9} />
+				{flat ? (
+					<FlatFinish color={ringPlastic} />
+				) : (
+					<meshStandardMaterial color={ringPlastic} metalness={0.0} roughness={0.9} />
+				)}
 			</mesh>
 
 			{/* Touch ring — a smooth molded panel, NOT a dead-matte pad. The real
@@ -510,28 +663,36 @@ function ClickWheel3D({
 			   annulus reading as one seamless face instead of a flat sticker. */}
 			<mesh position={[0, 0, z.wheelSurface]}>
 				<ringGeometry args={[dims.wheelInnerR, dims.wheelOuterR, 96]} />
-				<meshPhysicalMaterial
-					clearcoat={0.15}
-					clearcoatRoughness={0.7}
-					color={ringPlastic}
-					envMapIntensity={0.16}
-					metalness={0.0}
-					roughness={0.55}
-				/>
+				{flat ? (
+					<FlatFinish color={ringPlastic} />
+				) : (
+					<meshPhysicalMaterial
+						clearcoat={0.15}
+						clearcoatRoughness={0.7}
+						color={ringPlastic}
+						envMapIntensity={0.16}
+						metalness={0.0}
+						roughness={0.55}
+					/>
+				)}
 			</mesh>
 
 			{/* Select button — the same smooth molded surface as the ring, a hair
 			   slicker so it reads as a discrete part seated in the center bore. */}
 			<mesh position={[0, 0, z.wheelCenter]}>
 				<circleGeometry args={[dims.centerR, 72]} />
-				<meshPhysicalMaterial
-					clearcoat={0.15}
-					clearcoatRoughness={0.62}
-					color={centerPlastic}
-					envMapIntensity={0.16}
-					metalness={0.0}
-					roughness={0.52}
-				/>
+				{flat ? (
+					<FlatFinish color={centerPlastic} />
+				) : (
+					<meshPhysicalMaterial
+						clearcoat={0.15}
+						clearcoatRoughness={0.62}
+						color={centerPlastic}
+						envMapIntensity={0.16}
+						metalness={0.0}
+						roughness={0.52}
+					/>
+				)}
 			</mesh>
 
 			{/* Interactive HTML overlay — sized 1:1 with the 2D wheel, scaled by unit */}
@@ -566,6 +727,7 @@ function ClickWheel3D({
 // ─── Polished Steel Back ─────────────────────────────────────────────────────────
 
 function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; capacityLabel: string }) {
+	const flat = useTechnicalFlat();
 	const engraving = useMemo(() => createBackEngravingTexture(capacityLabel), [capacityLabel]);
 
 	useEffect(() => {
@@ -576,14 +738,18 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 		// Engraving plane faces -Z; rotate 180° about Y so the canvas reads correctly.
 		<mesh position={[0, 0, z.backEngraving]} rotation={[0, Math.PI, 0]}>
 			<planeGeometry args={[dims.width * 0.84, dims.height * 0.9]} />
-			<meshStandardMaterial map={engraving} transparent depthWrite={false} metalness={0.2} roughness={0.5} />
+			{flat ? (
+				<FlatFinish map={engraving} transparent depthWrite={false} />
+			) : (
+				<meshStandardMaterial map={engraving} transparent depthWrite={false} metalness={0.2} roughness={0.5} />
+			)}
 		</mesh>
 	);
 }
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", bezelColor = "#0a0a0a", capacityLabel, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", bezelColor = "#0a0a0a", capacityLabel, technicalFlat = false, onRegisterCapture }: IpodModelProps) {
 	const groupRef = useRef<THREE.Group>(null);
 	// The steel body, used to occlude the live screen/wheel HTML portals so they
 	// don't bleed through (mirrored) when the camera swings behind the device.
@@ -630,8 +796,8 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		// radius and meets the aluminum face at a crisp seam. A large bevel here
 		// balloons the silhouette into a fat chrome band that clips to white —
 		// the real chassis edge is a fraction of the body depth.
-		const bevelT = Math.min(0.05, dims.depth * 0.1);
-		const bevelS = 0.03;
+		const bevelT = Math.min(MECHANICAL.bodyFilletMax, dims.depth * MECHANICAL.bodyFilletDepthRatio);
+		const bevelS = MECHANICAL.bodyFillet;
 		const shape = new THREE.Shape();
 		drawRoundedRect(shape, 0, 0, dims.width, dims.height, dims.radius);
 		const geo = new THREE.ExtrudeGeometry(shape, {
@@ -656,29 +822,31 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		const shape = new THREE.Shape();
 		drawRoundedRect(shape, 0, 0, faceW, faceH, faceR);
 
+		// Cut the screen pocket with a clearance fit (aperture opened slightly larger than the LCD).
 		const screenHole = new THREE.Path();
 		drawRoundedRect(
 			screenHole,
 			0,
 			dims.screenCenterY,
-			dims.screenW + 0.05,
-			dims.screenH + 0.05,
+			dims.screenW + MECHANICAL.screenApertureClearance,
+			dims.screenH + MECHANICAL.screenApertureClearance,
 			dims.screenRadius + 0.01,
 		);
 		shape.holes.push(screenHole);
 
+		// Cut the wheel bore concentric to DATUM B, with its own clearance fit.
 		const wheelHole = new THREE.Path();
-		wheelHole.absarc(0, dims.wheelCenterY, dims.wheelOuterR + 0.014, 0, Math.PI * 2, false);
+		wheelHole.absarc(0, dims.wheelCenterY, dims.wheelOuterR + MECHANICAL.wheelBoreClearance, 0, Math.PI * 2, false);
 		shape.holes.push(wheelHole);
 
-		// Hairline chamfer only. A fat bevel here rounds the screen aperture and
+		// Hairline CHAMFER only. A fat bevel here rounds the screen aperture and
 		// wheel bore into soft lips, stacking extra radii on top of the wheel's
 		// own rings — the real machined edges are nearly crisp.
 		const geo = new THREE.ExtrudeGeometry(shape, {
-			depth: 0.05,
+			depth: MECHANICAL.facePlateDepth,
 			bevelEnabled: true,
-			bevelThickness: 0.006,
-			bevelSize: 0.005,
+			bevelThickness: MECHANICAL.faceChamfer.thickness,
+			bevelSize: MECHANICAL.faceChamfer.size,
 			bevelSegments: 2,
 			curveSegments: 28,
 		});
@@ -719,15 +887,15 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		const bakeNodeOnto = async (
 			node: HTMLElement | null,
 			mesh: THREE.Mesh | null,
-			opts: { transparent?: boolean; showMesh?: boolean } = {},
+			opts: { transparent?: boolean; showMesh?: boolean; width?: number; height?: number } = {},
 		) => {
 			if (!node || !mesh) return;
 			// drei `<Html occlude>` sets `display:none` on a wrapper whenever the
 			// portal is occluded — e.g. the live camera is behind the device (a recalled
-			// back-view studio shot). A hidden ancestor makes getBoundingClientRect 0,
-			// so the bake would silently skip and the export would keep the idle LCD
-			// shader. The still always reframes to the FRONT, so force any hidden
-			// ancestor measurable for the rasterize, then restore drei's value.
+			// back-view studio shot). A hidden ancestor makes dimensions 0, so the bake
+			// would silently skip and the export would keep the idle LCD shader. The
+			// still always reframes to the FRONT, so force any hidden ancestor
+			// measurable for the rasterize, then restore drei's value.
 			const rehidden: Array<[HTMLElement, string]> = [];
 			for (let a: HTMLElement | null = node, i = 0; a && i < 8; a = a.parentElement, i++) {
 				if (a.style.display === "none") {
@@ -736,8 +904,14 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				}
 			}
 			try {
-				const rect = node.getBoundingClientRect();
-				if (rect.width < 1 || rect.height < 1) return;
+				// Use explicit dimensions if provided, else fall back to the node's
+				// natural (untransformed) offset size. getBoundingClientRect() returns
+				// the transformed/scaled size in the viewport, which makes the capture
+				// non-deterministic and misaligned as the camera moves.
+				const width = opts.width ?? node.offsetWidth;
+				const height = opts.height ?? node.offsetHeight;
+				if (width < 1 || height < 1) return;
+
 				// Guarantee every glyph and the album art are present before we rasterize.
 				// html-to-image snapshots synchronously, so a webfont still swapping in or an
 				// artwork <img> mid-decode would bake a blank/fallback frame — the "screen not
@@ -754,8 +928,8 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				const dataUrl = await htmlToImage.toPng(node, {
 					pixelRatio: 3,
 					cacheBust: true,
-					width: Math.round(rect.width),
-					height: Math.round(rect.height),
+					width,
+					height,
 				});
 				const img = new Image();
 				img.src = dataUrl;
@@ -794,10 +968,15 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			snapToRest();
 			captureRestores.current = [];
 			try {
-				await bakeNodeOnto(screenDomRef.current, lcdMeshRef.current);
+				await bakeNodeOnto(screenDomRef.current, lcdMeshRef.current, {
+					width: dims.screenHtmlPx.width,
+					height: dims.screenHtmlPx.height,
+				});
 				await bakeNodeOnto(wheelDomRef.current, wheelGlyphMeshRef.current, {
 					transparent: true,
 					showMesh: true,
+					width: dims.wheelHtmlPx.width,
+					height: dims.wheelHtmlPx.height,
 				});
 				setOverlaysHidden(true);
 			} catch (error) {
@@ -817,7 +996,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		};
 
 		onRegisterCapture({ prepare, restore });
-	}, [onRegisterCapture]);
+	}, [onRegisterCapture, dims]);
 
 	useFrame((state, delta) => {
 		lcdMaterial.uniforms.time.value = state.clock.elapsedTime;
@@ -839,6 +1018,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 	});
 
 	return (
+		<TechnicalFlatContext.Provider value={technicalFlat}>
 		<group ref={groupRef}>
 			{/* No ambient <Float>: a continuous bob never lets the device rest, and during an
 			   offline capture (frameloop "never") it freezes at a RANDOM phase — baking a stray
@@ -849,15 +1029,25 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					{/* ── BODY / BACK SHELL (Deep-drawn, mirror-polished stainless steel) ──
 					   One subtractive part: flat front cap, pillowed back + sides. */}
 					<mesh ref={bodyRef} geometry={bodyGeo}>
-						<meshPhysicalMaterial
-							clearcoat={0.3}
-							clearcoatRoughness={0.1}
-							color={backColor}
-							envMapIntensity={0.4}
-							metalness={0.3}
-							reflectivity={0.5}
-							roughness={0.16}
-						/>
+						{technicalFlat ? (
+							<FlatFinish color={backColor} />
+						) : (
+							// Polished stainless, NOT chrome. A near-mirror back (roughness ~0.05)
+							// strobes under a turntable — see STEEL_ROUGHNESS_FLOOR for the physics.
+							// The floor widens the GGX lobe enough to melt the env's bright spots into
+							// a smooth moving gradient; clearcoat 1.0 keeps the wet polish and
+							// envMapIntensity 0.85 trims peak reflected contrast. Reads as satin-
+							// polished steel — what a real stainless iPod back is.
+							<meshPhysicalMaterial
+								clearcoat={1.0}
+								clearcoatRoughness={0.18}
+								color={backColor}
+								envMapIntensity={0.85}
+								metalness={1.0}
+								reflectivity={1.0}
+								roughness={STEEL_ROUGHNESS_FLOOR}
+							/>
+						)}
 					</mesh>
 
 					{/* ── BACK ENGRAVING ── */}
@@ -877,15 +1067,19 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 							A whisper of metalness keeps a cool anodized glint without washing the
 							albedo out. Rougher than the smooth wheel below, so the wheel still
 							reads as the slicker part. */}
-						<meshPhysicalMaterial
-							clearcoat={0.15}
-							clearcoatRoughness={0.55}
-							color={skinColor}
-							envMapIntensity={0.18}
-							metalness={0.0}
-							roughness={0.48}
-							roughnessMap={brushedTexture}
-						/>
+						{technicalFlat ? (
+							<FlatFinish color={skinColor} />
+						) : (
+							<meshPhysicalMaterial
+								clearcoat={0.25}
+								clearcoatRoughness={0.45}
+								color={skinColor}
+								envMapIntensity={0.65}
+								metalness={0.12}
+								roughness={0.35}
+								roughnessMap={brushedTexture}
+							/>
+						)}
 					</mesh>
 
 					{/* ── SCREEN BEZEL ── */}
@@ -934,7 +1128,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						 sheen over the LCD. No transmission buffer (that pass re-renders
 						 the whole scene every frame and tanks the framerate), and a
 						 single flat plane instead of a rounded solid. */}
-			<mesh position={[0, dims.screenCenterY, z.screenGlass]}>
+			<mesh position={[0, dims.screenCenterY, z.screenGlass]} visible={!technicalFlat}>
 				<planeGeometry args={[dims.screenW, dims.screenH]} />
 				<meshPhysicalMaterial
 					clearcoat={0.38}
@@ -952,6 +1146,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					<ClickWheel3D dims={dims} z={z} skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} wheelHtml={wheel} bodyRef={bodyRef} domRef={wheelDomRef} glyphMeshRef={wheelGlyphMeshRef} />
 				</group>
 		</group>
+		</TechnicalFlatContext.Provider>
 	);
 }
 
@@ -1618,7 +1813,25 @@ function FocusControls({ focus, onFocus }: { focus: IpodCameraFocus; onFocus: (f
 
 export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 	(props, ref) => {
-		const { onReady, preset, capacityLabel = "160GB", stageClassName = "bg-black", apiRef, captureBackground, focus: focusProp, onFocusChange, cameraLocked = false, preview = null, onPreviewTick, ...modelProps } = props;
+		const { onReady, preset, capacityLabel = "160GB", stageClassName = "bg-black", apiRef, captureBackground, focus: focusProp, onFocusChange, cameraLocked = false, preview = null, onPreviewTick, lighting, technicalFlat = false, ...modelProps } = props;
+		// In the flat technical view the device is rendered as unlit albedo (a material swap),
+		// so the rig is a neutral one that only keeps the LCD legible — see FlatFinish.
+		// The render OWNS the finish: reshape the curated rig to the chosen colours so any
+		// colour × motion exports cleanly (separation, no crush/wash). Skipped for the flat
+		// spec-sheet view, which wants the neutral rig untouched. One derived rig drives both
+		// the live preview and the offline export → WYSIWYG. See studio-owned-finish.
+		const baseLighting = technicalFlat ? FLAT_TECHNICAL_RIG : (lighting ?? APPLE_PRODUCT_RIG);
+		const activeLighting = useMemo(
+			() =>
+				technicalFlat
+					? baseLighting
+					: deriveOwnedRig(baseLighting, {
+							skin: modelProps.skinColor,
+							back: modelProps.backColor,
+							stage: captureBackground ?? "#ffffff",
+						}),
+			[baseLighting, technicalFlat, modelProps.skinColor, modelProps.backColor, captureBackground],
+		);
 		const captureRef = useRef<((w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) | null>(null);
 		const canvasRef = useRef<HTMLCanvasElement | null>(null);
 		const captureHooksRef = useRef<CaptureHooks | null>(null);
@@ -1736,10 +1949,11 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 
 					<OrbitRig capturingRef={capturingRef} focus={focus} locked={cameraLocked} preview={preview} onPreviewTick={onPreviewTick} onRegisterCamera={handleRegisterCamera} />
 
-					{/* Named default rig — "Apple Product". Env-first brightness so the dyed
-					   metal reads true (the big front-fill softbox is what lifts Silver out
-					   of black); spots add soft shaping only. Data-driven for Phase 3 tuning. */}
-					<StudioLighting />
+					{/* Live, controllable studio rig (Lighting Cockpit). Env-first brightness so
+					   the dyed metal reads true (the big front-fill softbox is what lifts Silver
+					   out of black); spots add soft shaping only. In Technical/Lights-Off mode
+					   this collapses to a neutral rig while the device renders as flat albedo. */}
+					<StudioLighting config={activeLighting} />
 
 					{/* Seamless studio sweep tinted by the Stage colour — grounds the device
 					   in a real cove instead of floating it on flat colour (design D13). */}
@@ -1748,11 +1962,25 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 					<IpodModel
 						preset={preset}
 						capacityLabel={capacityLabel}
+						technicalFlat={technicalFlat}
 						{...modelProps}
 						onRegisterCapture={handleRegisterCapture}
 					/>
 
-					<ContactShadows blur={1.5} color="#000000" far={9} frames={60} opacity={0.4} position={[0, -3.5, 0]} resolution={512} scale={22} />
+					{/* Grounding contact shadow — suppressed in the Technical view, which is a
+					   shadowless spec-sheet render. */}
+					{!technicalFlat && (
+						<ContactShadows
+							blur={2.4}
+							color="#000000"
+							far={10}
+							frames={1}
+							opacity={0.65}
+							position={[0, -3.52, 0]}
+							resolution={1024}
+							scale={24}
+						/>
+					)}
 
 					{!isFocusControlled && <FocusControls focus={focus} onFocus={setFocus} />}
 
