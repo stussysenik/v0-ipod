@@ -4,11 +4,13 @@ import {
 	loadLastExportedBatteryLevel,
 	loadMetadata,
 	loadSongSnapshot,
+	loadStudioState,
 	loadUiState,
 	saveExportCounter,
 	saveLastExportedBatteryLevel,
 	saveMetadata,
 	saveSongSnapshot,
+	saveStudioState,
 	saveUiState,
 } from "@/lib/ipod-state/storage";
 import type { ExportProgress, ExportStatus } from "@/lib/export-utils";
@@ -80,12 +82,14 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 			batteryLevel: savedUi?.batteryLevel ?? fallback.interaction.batteryLevel,
 			batteryMode: savedUi?.batteryMode ?? fallback.interaction.batteryMode,
 		},
+		studio: loadStudioState() ?? fallback.studio,
 	};
 }
 
 export function persistWorkbenchModel(model: IpodWorkbenchModel): void {
 	saveMetadata(model.metadata);
 	saveUiState(buildPersistedUiState(model));
+	saveStudioState(model.studio);
 }
 
 export function loadPersistedExportCounter(): number {

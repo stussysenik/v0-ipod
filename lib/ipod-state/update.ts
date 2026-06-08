@@ -1,7 +1,16 @@
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import {
+	APPLE_PRODUCT_RIG,
+	cloneLightingConfig,
+	type SoftboxSpec,
+	type SpotRole,
+	type SpotSpec,
+	type StudioLightingConfig,
+} from "@/lib/studio-lighting-config";
 import type { SongMetadata } from "@/types/ipod";
 import {
 	createInitialIpodWorkbenchModel,
+	createInitialStudioState,
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
@@ -9,6 +18,7 @@ import {
 	SONG_SNAPSHOT_SCHEMA_VERSION,
 	type BatteryMode,
 	type IpodNowPlayingLayoutState,
+	type IpodStudioState,
 	type IpodWorkbenchModel,
 	type IpodUiState,
 	type SnapshotSelectionKind,
@@ -62,7 +72,20 @@ export type IpodWorkbenchAction =
 	| { type: "SET_BATTERY_MODE"; payload: BatteryMode }
 	| { type: "RESTORE_MODEL"; payload: IpodWorkbenchModel }
 	| { type: "RESET_MODEL" }
-	| { type: "APPLY_SONG_SNAPSHOT"; payload: SongSnapshot };
+	| { type: "APPLY_SONG_SNAPSHOT"; payload: SongSnapshot }
+	// ── Studio (the /3d lighting + presentation slice) ──────────────────────────────
+	| { type: "SET_LIGHTING"; payload: StudioLightingConfig }
+	| { type: "PATCH_LIGHT"; payload: { role: SpotRole; patch: Partial<SpotSpec> } }
+	| { type: "PATCH_AMBIENT"; payload: Partial<{ color: string; intensity: number }> }
+	| { type: "PATCH_ENV"; payload: Partial<Pick<StudioLightingConfig["env"], "preset" | "intensity" | "blur">> }
+	| { type: "PATCH_SOFTBOX"; payload: { index: number; patch: Partial<SoftboxSpec> } }
+	| { type: "RESET_LIGHTING" }
+	| { type: "SET_TECHNICAL_FLAT"; payload: boolean }
+	| { type: "TOGGLE_TECHNICAL_FLAT" }
+	| { type: "SET_INTERACTION_LOCK"; payload: boolean }
+	| { type: "TOGGLE_INTERACTION_LOCK" }
+	| { type: "SET_MARQUEE"; payload: boolean }
+	| { type: "TOGGLE_MARQUEE" };
 
 export function clampSnapshotTime(value: number | null, duration: number): number | null {
 	if (value === null) {
@@ -136,6 +159,9 @@ function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 				1,
 			),
 		},
+		// Studio is plain data; pass it straight through. The `??` guards a legacy model
+		// restored from storage before this slice existed.
+		studio: model.studio ?? createInitialStudioState(),
 	};
 }
 
@@ -206,6 +232,9 @@ export function applySongSnapshotToModel(
 			batteryLevel: snapshot.ui.batteryLevel ?? 1.0,
 			batteryMode: snapshot.ui.batteryMode ?? "manual",
 		},
+		// A song snapshot describes the track + finish, not the studio rig — keep the live
+		// studio direction the user has set rather than resetting their lights.
+		studio: current.studio ?? createInitialStudioState(),
 	});
 }
 
@@ -455,7 +484,79 @@ export function ipodWorkbenchReducer(
 			return createInitialIpodWorkbenchModel();
 		case "APPLY_SONG_SNAPSHOT":
 			return applySongSnapshotToModel(state, action.payload);
+
+		// ── Studio: lighting ────────────────────────────────────────────────────────────
+		// The cockpit edits a private clone of the rig; each PATCH_* mutates one sub-record
+		// immutably so React re-renders and `saveWorkbenchModel` re-persists. SET/RESET swap
+		// the whole rig (presets, "restore default").
+		case "SET_LIGHTING":
+			return patchStudio(state, { lighting: cloneLightingConfig(action.payload) });
+		case "PATCH_LIGHT":
+			return patchStudio(state, {
+				lighting: {
+					...state.studio.lighting,
+					[action.payload.role]: {
+						...state.studio.lighting[action.payload.role],
+						...action.payload.patch,
+					},
+				},
+			});
+		case "PATCH_AMBIENT":
+			return patchStudio(state, {
+				lighting: {
+					...state.studio.lighting,
+					ambient: { ...state.studio.lighting.ambient, ...action.payload },
+				},
+			});
+		case "PATCH_ENV":
+			return patchStudio(state, {
+				lighting: {
+					...state.studio.lighting,
+					env: { ...state.studio.lighting.env, ...action.payload },
+				},
+			});
+		case "PATCH_SOFTBOX":
+			return patchStudio(state, {
+				lighting: {
+					...state.studio.lighting,
+					env: {
+						...state.studio.lighting.env,
+						softboxes: state.studio.lighting.env.softboxes.map((box, i) =>
+							i === action.payload.index ? { ...box, ...action.payload.patch } : box,
+						),
+					},
+				},
+			});
+		case "RESET_LIGHTING":
+			return patchStudio(state, { lighting: cloneLightingConfig(APPLE_PRODUCT_RIG) });
+
+		// ── Studio: presentation toggles ─────────────────────────────────────────────────
+		case "SET_TECHNICAL_FLAT":
+			return patchStudio(state, { technicalFlat: action.payload });
+		case "TOGGLE_TECHNICAL_FLAT":
+			return patchStudio(state, { technicalFlat: !state.studio.technicalFlat });
+		case "SET_INTERACTION_LOCK":
+			return patchStudio(state, { interactionLocked: action.payload });
+		case "TOGGLE_INTERACTION_LOCK":
+			return patchStudio(state, { interactionLocked: !state.studio.interactionLocked });
+		case "SET_MARQUEE":
+			return patchStudio(state, { marquee: action.payload });
+		case "TOGGLE_MARQUEE":
+			return patchStudio(state, { marquee: !state.studio.marquee });
+
 		default:
 			return state;
 	}
+}
+
+/**
+ * Immutably merge a partial studio slice. Studio is plain presentation data with no
+ * cross-field invariants, so it skips `normalizeModel` (which only clamps song/playback
+ * numbers) and merges directly — cheaper and avoids re-cloning unrelated slices each tick.
+ */
+function patchStudio(
+	state: IpodWorkbenchModel,
+	patch: Partial<IpodStudioState>,
+): IpodWorkbenchModel {
+	return { ...state, studio: { ...state.studio, ...patch } };
 }

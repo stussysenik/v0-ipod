@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { ExportFraming } from "@/components/three/three-d-ipod";
 import { CAMERA_MOVES, type CameraMove, cyclesForDuration, type LoopStyle } from "@/lib/studio-camera";
+import { getExportVideoUrl, type ExportRecord } from "@/lib/pocketbase";
 
 /**
  * Export dock for the /3d now-playing stage.
@@ -82,6 +83,7 @@ interface Ipod3DExportDockProps {
 	onResetPlayhead: () => void;
 	onExportPng: (framing: ExportFraming, options: StillExportOptions) => void;
 	onExportClip: (move: CameraMove, options: ClipExportOptions) => void;
+	history?: ExportRecord[];
 }
 
 export function Ipod3DExportDock({
@@ -101,6 +103,7 @@ export function Ipod3DExportDock({
 	onResetPlayhead,
 	onExportPng,
 	onExportClip,
+	history = [],
 }: Ipod3DExportDockProps) {
 	const busy = exportState !== "idle";
 	const [aspect, setAspect] = useState<ExportAspect>("story");
@@ -290,6 +293,41 @@ export function Ipod3DExportDock({
 					onClick={() => onExportPng("front", still)}
 				/>
 			</div>
+
+			{/* Export History — past 1080p clips saved to PocketBase. */}
+			{history.length > 0 && (
+				<div className="flex flex-col gap-2 border-t border-black/[0.06] px-4 py-3.5">
+					<div className="flex items-center justify-between">
+						<Label>Recent Exports</Label>
+						<span className="text-[10px] font-medium text-black/35">1080p</span>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						{history.map((record) => (
+							<div
+								key={record.id}
+								className="group flex items-center justify-between rounded-lg bg-black/[0.03] px-3 py-2 transition-colors hover:bg-black/[0.06]"
+							>
+								<div className="flex min-w-0 flex-col">
+									<span className="truncate text-[11px] font-semibold text-black/75">
+										{record.title}
+									</span>
+									<span className="font-mono text-[9px] uppercase tracking-tight text-black/40">
+										{record.move} · {record.aspect} · {record.duration}s
+									</span>
+								</div>
+								<a
+									href={getExportVideoUrl(record)}
+									target="_blank"
+									rel="noreferrer"
+									className="flex h-7 items-center rounded-md border border-black/10 bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-black/60 shadow-sm transition-all hover:border-black/30 hover:text-black active:scale-[0.97]"
+								>
+									View
+								</a>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
 
 			<p className="border-t border-black/[0.06] px-4 py-2.5 text-[10px] leading-snug text-black/35">
 				Stills are high-res PNG; the clip is a seamless H.264/MP4 up to 60s — loop,

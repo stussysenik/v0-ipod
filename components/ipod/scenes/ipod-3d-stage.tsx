@@ -10,6 +10,8 @@ import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recorder";
 import { downloadBlob } from "@/lib/three-export";
+import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
+import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
 import { CAMERA_MOVES, type CameraMove, type LoopStyle, type StudioPose } from "@/lib/studio-camera";
 
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
@@ -18,6 +20,8 @@ import { useIpodClickWheelControls } from "../hooks/use-ipod-click-wheel-control
 import { Ipod3DBatteryCockpit } from "./ipod-3d-battery-cockpit";
 import { Ipod3DCameraCockpit } from "./ipod-3d-camera-cockpit";
 import { Ipod3DColorCockpit } from "./ipod-3d-color-cockpit";
+import { Ipod3DLightingCockpit } from "./ipod-3d-lighting-cockpit";
+import { Ipod3DStudioCockpit } from "./ipod-3d-studio-cockpit";
 import {
 	Ipod3DExportDock,
 	type ClipExportOptions,
@@ -74,8 +78,14 @@ export function Ipod3DStage() {
 	const [model, dispatch] = useReducer(
 		ipodWorkbenchReducer,
 		undefined,
-		createInitialIpodWorkbenchModel,
+		() => loadWorkbenchModel() ?? createInitialIpodWorkbenchModel(),
 	);
+
+	// Persist the hard-earned user state on every change.
+	useEffect(() => {
+		saveWorkbenchModel(model);
+	}, [model]);
+
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const ipodApiRef = useRef<ThreeDIpodHandle | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
@@ -115,6 +125,14 @@ export function Ipod3DStage() {
 	// rig (via ThreeDIpod) and the cockpit toggle.
 	const [cameraLocked, setCameraLocked] = useState(false);
 	const lockedPoseRef = useRef<StudioPose | null>(null);
+
+	// Export history from PocketBase.
+	const [exportHistory, setExportHistory] = useState<ExportRecord[]>([]);
+
+	// Hydrate history on mount.
+	useEffect(() => {
+		getExportHistory().then(setExportHistory).catch(() => {});
+	}, []);
 
 	// Hydrate the locked pose once; re-apply it to the rig as soon as the canvas mounts.
 	useEffect(() => {
@@ -323,10 +341,22 @@ export function Ipod3DStage() {
 				});
 				if (!blob) throw new Error("recorder returned no clip");
 				// Name by the motion that actually played — "hold" for a motion-free angle,
-				// the move (with a boomerang tag) otherwise — so the file reads at a glance.
 				const motionTag =
 					options.loop === "hold" ? "hold" : options.loop === "boomerang" ? `${move}-boomerang` : move;
-				downloadBlob(blob, `ipod-3d-${motionTag}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`);
+				const filename = `ipod-3d-${motionTag}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`;
+
+				downloadBlob(blob, filename);
+
+				// Persist to PocketBase history.
+				saveExportToHistory(blob, filename, {
+					title: model.metadata.title,
+					move: motionTag,
+					aspect: options.aspect,
+					duration: options.durationSec,
+				}).then((record) => {
+					if (record) setExportHistory((prev) => [record, ...prev].slice(0, 10));
+				});
+
 				showNotice("Saved MP4");
 			} catch (error) {
 				console.error("[3d-export] clip failed", error);
@@ -336,7 +366,7 @@ export function Ipod3DStage() {
 				setExportProgress(null);
 			}
 		},
-		[exportState, showNotice, nextPaint],
+		[exportState, showNotice, nextPaint, model.metadata.title],
 	);
 
 	const controls = useIpodClickWheelControls({
@@ -347,7 +377,7 @@ export function Ipod3DStage() {
 		onNotice: showNotice,
 	});
 
-	const { presentation, interaction } = model;
+	const { presentation, interaction, studio } = model;
 	const activePreset = useMemo(
 		() => getIpodClassicPreset(presentation.hardwarePreset),
 		[presentation.hardwarePreset],
@@ -365,7 +395,13 @@ export function Ipod3DStage() {
 			osMenuItems={controls.menuItems}
 			osMenuIndex={interaction.menuIndex}
 			batteryLevel={interaction.batteryLevel}
-			isEditable
+			// Marquee revival: drive the scrolling-text engine live in the 3D view. Passing
+			// `animateText` makes EditableText set both `animate` + `preview`, so an overflowing
+			// title/artist/album scrolls on the device exactly as it does on a real iPod — this
+			// is what "wasn't brought over" into /3d. Off → text stays static (and truncates).
+			animateText={studio.marquee}
+			// Presentation lock: freeze inline editing into a clean, screenshot-ready state.
+			isEditable={!studio.interactionLocked}
 		/>
 	);
 
@@ -395,6 +431,45 @@ export function Ipod3DStage() {
 			className="relative h-dvh w-full overflow-hidden transition-colors duration-500"
 			style={{ backgroundColor: presentation.bgColor }}
 		>
+			{/* Shell Header — a high-performance navigation bar that bounds the experience.
+			    It holds the product identity and the primary menu toggle, ensuring the flow
+			    is consistent across mobile and desktop. */}
+			<header className="absolute inset-x-0 top-0 z-[60] flex h-16 items-center justify-between px-6 pointer-events-none">
+				<div className="flex flex-col">
+					<div className="text-[10px] font-bold uppercase tracking-[0.25em] text-black/40 leading-none">
+						iPod · Now Playing
+					</div>
+					<div className="mt-1 text-[11px] font-medium text-black/55 tabular-nums">
+						{activePreset.label} · {activePreset.capacityLabel}
+					</div>
+				</div>
+
+				<nav className="shell-nav flex items-center gap-4 pointer-events-auto">
+					{/* Shell Nav Button — a high-performance anchor for the creation flow. */}
+					<span>
+						<button
+							type="button"
+							onClick={() => setControlsOpen((o) => !o)}
+							className={`group relative flex h-10 items-center gap-3 rounded-full border px-4 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.94] ${
+								controlsOpen 
+									? "border-black/20 bg-black text-white shadow-2xl" 
+									: "border-black/10 bg-white/70 text-black/80 backdrop-blur-xl hover:border-black/30 hover:bg-white/90"
+							}`}
+							aria-expanded={controlsOpen}
+						>
+							<span className="text-[10px] font-black uppercase tracking-[0.2em]">
+								{controlsOpen ? "Close" : "Menu"}
+							</span>
+							<div className="relative flex h-3 w-4 flex-col justify-between overflow-hidden">
+								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "bg-white rotate-45 translate-y-[5.25px]" : "bg-current"}`} />
+								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "translate-x-6 opacity-0" : "bg-current"}`} />
+								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "bg-white -rotate-45 -translate-y-[5.25px]" : "bg-current"}`} />
+							</div>
+						</button>
+					</span>
+				</nav>
+			</header>
+
 			<ThreeDIpod
 				apiRef={ipodApiRef}
 				preset={activePreset}
@@ -410,49 +485,30 @@ export function Ipod3DStage() {
 				backColor={presentation.backColor}
 				bezelColor={presentation.bezelColor}
 				captureBackground={presentation.bgColor}
+				lighting={studio.lighting}
+				technicalFlat={studio.technicalFlat}
 				screen={screenComponent}
 				wheel={wheelComponent}
 				stageClassName="bg-transparent"
 			/>
 
-			{/* Title — always pinned top-left, non-interactive, compact */}
-			<div className="pointer-events-none absolute left-4 top-4 z-30 text-left">
-				<div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-black/40">
-					iPod · Now Playing
-				</div>
-				<div className="text-[11px] font-medium text-black/60">{activePreset.label} · {activePreset.capacityLabel}</div>
-			</div>
-
-			{/* Mobile-only drawer toggle. Hidden on lg where panels float at the corners. */}
-			<button
-				type="button"
-				onClick={() => setControlsOpen((o) => !o)}
-				className="pointer-events-auto fixed bottom-4 right-4 z-40 rounded-full border border-black/10 bg-white/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-black/70 shadow-sm backdrop-blur-md transition-colors hover:text-black lg:hidden"
-				aria-expanded={controlsOpen}
-			>
-				{controlsOpen ? "Close" : "Controls"}
-			</button>
-
-			{/*
-			 * Responsive control surface — one DOM tree, two layouts.
-			 *   • < lg: a bottom sheet (this wrapper IS the drawer); children stack and scroll.
-			 *   • ≥ lg: `lg:contents` dissolves the wrapper so the two groups position
-			 *     themselves absolutely at the screen corners as a floating HUD.
-			 */}
+			{/* Responsive control surface — one DOM tree, two layouts. */}
 			<div
-				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[62dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-2xl border-t border-black/10 bg-white/85 p-4 pb-20 backdrop-blur-md transition-transform duration-300 lg:contents ${
-					controlsOpen ? "translate-y-0" : "translate-y-full lg:translate-y-0"
+				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) lg:contents ${
+					controlsOpen ? "translate-y-0 shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)]" : "translate-y-full lg:translate-y-0"
 				}`}
 			>
-				{/* Left group — color + camera */}
-				<div className="flex flex-col gap-3 lg:pointer-events-none lg:absolute lg:left-4 lg:top-16 lg:z-10 lg:max-h-[calc(100dvh-5rem)] lg:w-[262px] lg:overflow-y-auto">
+				{/* Left group — interaction + now-playing + colour + camera */}
+				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:left-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
+					<Ipod3DStudioCockpit interaction={interaction} studio={studio} dispatch={dispatch} />
 					<Ipod3DNowPlayingCockpit metadata={model.metadata} dispatch={dispatch} />
 					<Ipod3DColorCockpit presentation={presentation} dispatch={dispatch} />
 					<Ipod3DCameraCockpit apiRef={ipodApiRef} locked={cameraLocked} onToggleLock={toggleCameraLock} />
 				</div>
 
-				{/* Right group — battery + export */}
-				<div className="flex flex-col gap-3 lg:pointer-events-none lg:absolute lg:right-4 lg:top-16 lg:z-10 lg:max-h-[calc(100dvh-5rem)] lg:w-[262px] lg:overflow-y-auto lg:pb-4">
+				{/* Right group — light + battery + export */}
+				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:right-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
+					<Ipod3DLightingCockpit studio={studio} dispatch={dispatch} />
 					<Ipod3DBatteryCockpit
 						batteryLevel={interaction.batteryLevel}
 						batteryMode={interaction.batteryMode}
@@ -475,11 +531,12 @@ export function Ipod3DStage() {
 						onResetPlayhead={handleResetPlayhead}
 						onExportPng={handleExportPng}
 						onExportClip={handleExportClip}
+						history={exportHistory}
 					/>
 				</div>
 			</div>
 
-			{/* Bottom bar — orientation snaps + saved studio shots (angle + finish) */}
+			{/* Bottom bar — orientation snaps + saved studio shots */}
 			<Ipod3DStudioShots
 				apiRef={ipodApiRef}
 				focus={focus}
@@ -489,32 +546,55 @@ export function Ipod3DStage() {
 				onNotice={showNotice}
 			/>
 
-			{/* Export veil — covers the canvas the instant a render starts, so the
-			    snap-to-rest, screen bake, and offline frames are never seen. A frosted
-			    sweep over the live Stage colour with a calm progress bar; lifts the
-			    moment the file is ready. */}
+			{/* Export veil — a cinematic shutter that covers the canvas for the render.
+			    It uses 'shutter' optics: a high-speed blade snap followed by a white
+			    optic flash, then settling into a technical encoding state. */}
 			{exportState !== "idle" && (
 				<div
-					className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-5 backdrop-blur-xl transition-opacity duration-200"
-					style={{ backgroundColor: `${presentation.bgColor}D9` }}
+					className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-8 backdrop-blur-3xl transition-all duration-300 animate-in fade-in"
+					style={{ backgroundColor: `${presentation.bgColor}F8` }}
 				>
-					<div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-black/55">
-						{exportState.startsWith("clip:") ? "Rendering clip" : "Capturing still"}
+					{/* Optic Flash — eye-physics 'pop' at the instant of capture. */}
+					<div className="absolute inset-0 bg-white z-[110] animate-[shutterFlash_0.6s_ease-out_forwards] pointer-events-none" />
+
+					{/* Shutter Blades — ultra-high-speed mechanical snap. */}
+					<div className="absolute inset-0 overflow-hidden pointer-events-none z-[105]">
+						<div className="absolute top-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeDown_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards]" />
+						<div className="absolute bottom-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeUp_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards]" />
 					</div>
-					<div className="h-1 w-48 overflow-hidden rounded-full bg-black/10">
-						{exportProgress === null ? (
-							<div className="h-full w-1/3 animate-[veilSlide_1.1s_ease-in-out_infinite] rounded-full bg-black/55" />
-						) : (
-							<div
-								className="h-full rounded-full bg-black/70 transition-[width] duration-150 ease-out"
-								style={{ width: `${Math.round(exportProgress * 100)}%` }}
-							/>
-						)}
+
+					<div className="relative z-[120] flex flex-col items-center gap-8 animate-in slide-in-from-bottom-6 duration-700 delay-100 fill-mode-both">
+						<div className="flex flex-col items-center gap-2">
+							<div className="text-[10px] font-black uppercase tracking-[0.45em] text-black/80">
+								{exportState.startsWith("clip:") ? "Cinematic Render" : "Optic Capture"}
+							</div>
+							<div className="h-[2px] w-12 bg-black/30" />
+						</div>
+						
+						<div className="flex flex-col items-center gap-4">
+							<div className="relative h-[2px] w-80 overflow-hidden rounded-full bg-black/5">
+								{exportProgress === null ? (
+									<div className="h-full w-1/3 animate-[shutterScan_0.5s_infinite_linear] rounded-full bg-black/60" />
+								) : (
+									<div
+										className="h-full bg-black/95 transition-all duration-100 ease-out"
+										style={{ width: `${Math.max(1, Math.round(exportProgress * 100))}%` }}
+									/>
+								)}
+							</div>
+							<div className="flex w-full items-center justify-between px-1 font-mono text-[10px] font-black tabular-nums tracking-tighter text-black/50">
+								<span className="animate-pulse">{exportProgress === null ? "CALIBRATING" : "ENCODING"}</span>
+								<span>{exportProgress === null ? "READY" : `${Math.round(exportProgress * 100)}%`}</span>
+							</div>
+						</div>
 					</div>
-					<div className="font-mono text-[11px] tabular-nums text-black/45">
-						{exportProgress === null ? "Compositing…" : `${Math.round(exportProgress * 100)}%`}
-					</div>
-					<style>{`@keyframes veilSlide{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}`}</style>
+
+					<style>{`
+						@keyframes shutterFlash { 0% { opacity: 0; } 2% { opacity: 1; } 100% { opacity: 0; } }
+						@keyframes shutterBladeDown { 0% { transform: translateY(-100%); } 15% { transform: translateY(0); } 85% { transform: translateY(0); } 100% { transform: translateY(-82%); } }
+						@keyframes shutterBladeUp { 0% { transform: translateY(100%); } 15% { transform: translateY(0); } 85% { transform: translateY(0); } 100% { transform: translateY(82%); } }
+						@keyframes shutterScan { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+					`}</style>
 				</div>
 			)}
 

@@ -1,5 +1,11 @@
 import type { SongMetadata } from "@/types/ipod";
-import type { BatteryMode } from "@/lib/ipod-state/model";
+import {
+	createInitialStudioState,
+	type BatteryMode,
+	type IpodStudioState,
+	type IpodWorkbenchModel,
+} from "@/lib/ipod-state/model";
+import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
@@ -29,6 +35,9 @@ const UI_STORAGE_KEY = "ipodSnapshotUiState";
 const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
 const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
 const LAST_EXPORTED_BATTERY_KEY = "ipodSnapshotLastBattery";
+// The /3d studio slice (lighting rig, flat/lock/marquee toggles, camera pose) rides its own
+// key rather than the whitelisted SongSnapshot.ui, since it carries a nested lighting record.
+const STUDIO_STORAGE_KEY = "ipodSnapshotStudio";
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 export function loadMetadata(): Partial<SongMetadata> | null {
@@ -433,6 +442,98 @@ export function loadLastExportedBatteryLevel(): number {
 		return Math.min(Math.max(parsed, 0.08), 1.0);
 	} catch {
 		return 1.0;
+	}
+}
+
+export function saveWorkbenchModel(model: IpodWorkbenchModel): void {
+	const snapshot: SongSnapshot = {
+		schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
+		metadata: model.metadata,
+		ui: {
+			skinColor: model.presentation.skinColor,
+			bgColor: model.presentation.bgColor,
+			ringColor: model.presentation.ringColor,
+			centerColor: model.presentation.centerColor,
+			backColor: model.presentation.backColor,
+			bezelColor: model.presentation.bezelColor,
+			viewMode: model.presentation.viewMode,
+			hardwarePreset: model.presentation.hardwarePreset,
+			interactionModel: model.interaction.interactionModel,
+			selectionKind: model.playback.selectionKind,
+			rangeStartTime: model.playback.rangeStartTime,
+			rangeEndTime: model.playback.rangeEndTime,
+			osScreen: model.interaction.osScreen,
+			menuIndex: model.interaction.menuIndex,
+			osOriginalMenuSplit: model.interaction.osOriginalMenuSplit,
+			osNowPlayingLayout: model.interaction.osNowPlayingLayout,
+			isPlaying: model.interaction.isPlaying,
+			batteryLevel: model.interaction.batteryLevel,
+			batteryMode: model.interaction.batteryMode,
+		},
+		playback: model.playback,
+	};
+	saveSongSnapshot(snapshot);
+	saveStudioState(model.studio);
+}
+
+export function loadWorkbenchModel(): IpodWorkbenchModel | null {
+	const snapshot = loadSongSnapshot();
+	if (!snapshot) return null;
+
+	return {
+		metadata: snapshot.metadata,
+		playback: snapshot.playback,
+		presentation: {
+			skinColor: snapshot.ui.skinColor,
+			bgColor: snapshot.ui.bgColor,
+			ringColor: snapshot.ui.ringColor,
+			centerColor: snapshot.ui.centerColor,
+			backColor: snapshot.ui.backColor,
+			bezelColor: snapshot.ui.bezelColor,
+			viewMode: snapshot.ui.viewMode,
+			hardwarePreset: snapshot.ui.hardwarePreset,
+		},
+		interaction: {
+			interactionModel: snapshot.ui.interactionModel,
+			osScreen: snapshot.ui.osScreen,
+			menuIndex: snapshot.ui.menuIndex,
+			osOriginalMenuSplit: snapshot.ui.osOriginalMenuSplit,
+			osNowPlayingLayout: snapshot.ui.osNowPlayingLayout,
+			isNowPlayingEditable: false,
+			isPlaying: snapshot.ui.isPlaying,
+			batteryLevel: snapshot.ui.batteryLevel,
+			batteryMode: snapshot.ui.batteryMode,
+		},
+		// Studio rides its own key; default to a fresh slice if absent or corrupt.
+		studio: loadStudioState() ?? createInitialStudioState(),
+	};
+}
+
+export function saveStudioState(studio: IpodStudioState): void {
+	try {
+		localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(studio));
+	} catch {
+		// Ignore quota errors
+	}
+}
+
+export function loadStudioState(): IpodStudioState | null {
+	try {
+		const raw = localStorage.getItem(STUDIO_STORAGE_KEY);
+		if (!raw) return null;
+		const parsed: unknown = JSON.parse(raw);
+		if (typeof parsed !== "object" || parsed === null) return null;
+		const c = parsed as Partial<IpodStudioState>;
+		const base = createInitialStudioState();
+		return {
+			lighting: sanitizeLightingConfig(c.lighting),
+			technicalFlat: typeof c.technicalFlat === "boolean" ? c.technicalFlat : base.technicalFlat,
+			interactionLocked:
+				typeof c.interactionLocked === "boolean" ? c.interactionLocked : base.interactionLocked,
+			marquee: typeof c.marquee === "boolean" ? c.marquee : base.marquee,
+		};
+	} catch {
+		return null;
 	}
 }
 

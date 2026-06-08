@@ -1,5 +1,10 @@
 import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR, deriveWheelColors } from "@/lib/color-manifest";
 import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import {
+	APPLE_PRODUCT_RIG,
+	cloneLightingConfig,
+	type StudioLightingConfig,
+} from "@/lib/studio-lighting-config";
 import type { SongMetadata } from "@/types/ipod";
 
 export type IpodViewMode = "flat" | "3d" | "focus" | "preview" | "ascii";
@@ -95,11 +100,45 @@ export interface IpodPlaybackSnapshot {
 	rangeEndTime: number | null;
 }
 
+/**
+ * The `/3d` studio slice — everything about *how the device is presented and lit* in the
+ * 3D focus view, as opposed to what song/finish it shows. Kept separate from `presentation`
+ * (physical finish colours) and `interaction` (on-device OS state) because it is studio
+ * direction, not the product itself. All of it is plain JSON so it persists across refresh.
+ */
+export interface IpodStudioState {
+	/** The live, editable lighting rig (defaults to APPLE_PRODUCT_RIG). */
+	lighting: StudioLightingConfig;
+	/** "Lights Off / Technical": swap metal materials for flat/unlit albedo (CAD-flat view). */
+	technicalFlat: boolean;
+	/** Freeze on-screen editing into a clean presentation/export state (distinct from camera lock). */
+	interactionLocked: boolean;
+	/** Run the scrolling marquee on overflowing track text in the live 3D view. */
+	marquee: boolean;
+}
+// Camera framing already survives reload through the camera-lock persistence
+// (LOCKED_POSE_KEY in the stage), so it deliberately does NOT live in this slice.
+
+export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
+	technicalFlat: false,
+	interactionLocked: false,
+	marquee: true,
+};
+
+/** A fresh studio slice with its own private clone of the default rig. */
+export function createInitialStudioState(): IpodStudioState {
+	return {
+		lighting: cloneLightingConfig(APPLE_PRODUCT_RIG),
+		...DEFAULT_STUDIO_STATE,
+	};
+}
+
 export interface IpodWorkbenchModel {
 	metadata: SongMetadata;
 	playback: IpodPlaybackSnapshot;
 	presentation: IpodPresentationState;
 	interaction: IpodInteractionState;
+	studio: IpodStudioState;
 }
 
 export interface IpodUiState {
@@ -173,5 +212,6 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			batteryLevel: 1.0,
 			batteryMode: "manual",
 		},
+		studio: createInitialStudioState(),
 	};
 }
