@@ -48,14 +48,14 @@ work so we stop carrying it in conversation context.
   seam match the preview at the same playhead position. *(Landed; ratified.)*
 - **Boomerang loop + motion speed** — the loop plays as a seam-free **boomerang**
   (ping-pong) and the motion **speed** is user-settable, applied identically in the live
-  preview and the export. *(Pending.)*
+  preview and the export. *(Landed.)*
 - **Custom-angle / motion-free export** — any landed camera pose can be saved as a
   reusable preset and exported (still or clip) with **no motion preset** applied — exports
-  are not bound only to the motion moves. *(Pending.)*
+  are not bound only to the motion moves. *(Landed.)*
 - **Control focus + responsiveness** — the control surface renders **above** the iPod
   canvas (clear z-order / focus priority), and the layout is **non-overlapping, fluid, and
   web-responsive** at every width so it uses the shown space and never feels unusable.
-  *(Pending.)*
+  *(Landed.)*
 
 ## Impact
 

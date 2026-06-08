@@ -31,6 +31,7 @@ import {
 	cyclesForDuration,
 	DEFAULT_TARGET,
 	ELEVATION_RANGE,
+	type LoopStyle,
 	phaseForProgress,
 	poseForMove,
 	poseToPosition,
@@ -66,6 +67,10 @@ export interface CameraPreviewState {
 	t: number;
 	/** Clip length in seconds — sets the cadence (cycles) so preview === export. */
 	durationSec: number;
+	/** Cadence multiplier (1 = natural). Scales cycles identically in preview + export. */
+	speed: number;
+	/** loop / boomerang / hold — same time map the export uses, so preview === export. */
+	loop: LoopStyle;
 }
 
 export interface ThreeDIpodHandle {
@@ -112,6 +117,10 @@ export interface ClipRenderOptions {
 	fps: number;
 	/** Which camera move to fly. Defaults to the gentle orbit. */
 	move?: CameraMove;
+	/** Cadence multiplier (1 = natural). Must match the preview's speed. */
+	speed?: number;
+	/** loop / boomerang / hold. `hold` pins the hero pose for a motion-free clip. */
+	loop?: LoopStyle;
 	/** Hero framing the move is anchored on. Defaults to the still's hero angle. */
 	anchor?: StudioPose;
 }
@@ -1178,9 +1187,17 @@ function OrbitRig({
 			} else {
 				previewPhase.current = pv.t; // parent-controlled scrub
 			}
-			const cycles = cyclesForDuration(pv.move, pv.durationSec);
-			const phase = phaseForProgress(previewPhase.current, cycles);
-			const pose = poseForMove(pv.move, phase, previewAnchor.current);
+			// `hold` is motion-free: rest on the composed hero for the whole clip (the
+			// scrubber still advances so the transport reads, but the pose never moves).
+			// Otherwise fly the move with the SAME cadence + time map the export uses.
+			let pose: StudioPose;
+			if (pv.loop === "hold") {
+				pose = previewAnchor.current;
+			} else {
+				const cycles = cyclesForDuration(pv.move, pv.durationSec, pv.speed, pv.loop);
+				const phase = phaseForProgress(previewPhase.current, cycles, pv.loop);
+				pose = poseForMove(pv.move, phase, previewAnchor.current);
+			}
 			const p = poseToPosition(pose, previewVec.current);
 			camera.position.copy(p);
 			// Keep the orbit state synced to the live preview pose, so when preview
@@ -1441,7 +1458,7 @@ function SceneCapture({
 			opts: ClipRenderOptions,
 			onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
 		) => {
-			const { width, height, supersample = 1, durationMs, fps, move = "orbit", anchor } = opts;
+			const { width, height, supersample = 1, durationMs, fps, move = "orbit", speed = 1, loop = "loop", anchor } = opts;
 			const ssW = Math.round(width * supersample);
 			const ssH = Math.round(height * supersample);
 			const total = Math.max(1, Math.round((durationMs / 1000) * fps));
@@ -1495,7 +1512,9 @@ function SceneCapture({
 			// Repeat the move's natural cycle a whole number of times across the clip
 			// so a long clip keeps a crisp constant cadence (a 60s turntable spins ~10×,
 			// not one sluggish rotation) while still closing seamlessly on the hero pose.
-			const cycles = cyclesForDuration(move, durationMs / 1000);
+			// `speed`/`loop` enter here exactly as they do in the preview, so the encoded
+			// clip flies the same cadence + boomerang the user dialed in live.
+			const cycles = cyclesForDuration(move, durationMs / 1000, speed, loop);
 
 			const camPos = new THREE.Vector3();
 			const lookAt = new THREE.Vector3();
@@ -1504,8 +1523,12 @@ function SceneCapture({
 				for (let i = 0; i < total; i++) {
 					// Global clip progress → per-cycle phase, repeating `cycles` whole loops
 					// (fixed cadence at any length) yet still closing on the hero seam.
-					const phase = phaseForProgress(i / total, cycles);
-					const pose = poseForMove(move, phase, hero);
+					// `hold` is motion-free: every frame pins the composed hero pose, so the
+					// clip is a held angle (the studio-shot / locked perspective) as video.
+					const pose =
+						loop === "hold"
+							? hero
+							: poseForMove(move, phaseForProgress(i / total, cycles, loop), hero);
 					poseToPosition(pose, camPos);
 					camera.position.copy(camPos);
 					camera.lookAt(lookAt.set(pose.target[0], pose.target[1], pose.target[2]));

@@ -1,7 +1,7 @@
 import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
-import type { CameraMove, StudioPose } from "@/lib/studio-camera";
+import type { CameraMove, LoopStyle, StudioPose } from "@/lib/studio-camera";
 
 /**
  * Encode a high-fidelity MP4 of the 3D iPod.
@@ -31,6 +31,10 @@ export interface ClipRecorderOptions {
 	supersample?: number;
 	/** Which camera move to fly. Defaults to the gentle orbit. */
 	move?: CameraMove;
+	/** Cadence multiplier (1 = natural); matches the live preview. */
+	speed?: number;
+	/** loop / boomerang / hold — `hold` renders a motion-free held angle. */
+	loop?: LoopStyle;
 	/** Hero framing the move is anchored on (the composed pose). */
 	anchor?: StudioPose;
 	/** Progress callback: frames encoded so far, total frames. */
@@ -92,6 +96,8 @@ export async function recordIpodClip(
 		height = 1920,
 		supersample = 1,
 		move = "orbit",
+		speed = 1,
+		loop = "loop",
 		anchor,
 		onProgress,
 	} = options;
@@ -127,7 +133,7 @@ export async function recordIpodClip(
 
 	try {
 		await handle.renderClipFrames(
-			{ width, height, supersample, durationMs, fps, move, anchor },
+			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor },
 			async (frameCanvas, index, total) => {
 				if (encodeError) throw encodeError;
 

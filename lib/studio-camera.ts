@@ -71,6 +71,34 @@ export function easeInOut(t: number): number {
 	return x * x * x * (x * (x * 6 - 15) + 10);
 }
 
+/**
+ * How a clip threads time through a move.
+ *   • loop      — phase ramps 0→1 (and wraps); the move plays in one direction,
+ *                 seamless because each move's generator closes on the hero pose.
+ *   • boomerang — phase ping-pongs 0→1→0; the move plays forward then reverses,
+ *                 the IG "boomerang" signature. Smoothed so the turnaround has no
+ *                 velocity snap.
+ *   • hold      — no motion; the camera rests on the composed hero pose for the
+ *                 whole clip (a still rendered as video, or a motion-free export).
+ */
+export type LoopStyle = "loop" | "boomerang" | "hold";
+
+/**
+ * Smooth ping-pong: each unit interval of `x` maps 0 → 1 → 0. We build a raw
+ * triangle then ease it, which makes the curve C¹-continuous everywhere —
+ * including the turnaround at the peak, where the triangle's velocity would
+ * otherwise flip sign instantly. `easeInOut` has a zero derivative at 0 and 1,
+ * so by the chain rule the eased turnaround decelerates into the reversal and
+ * accelerates back out: a boomerang that breathes instead of snapping. At every
+ * INTEGER `x` the curve returns exactly to 0 (the hero pose), so a boomerang clip
+ * closes on the seam just like a loop.
+ */
+export function pingPong(x: number): number {
+	const f = x - Math.floor(x); // unit phase ∈ [0,1)
+	const tri = f < 0.5 ? f * 2 : 2 - f * 2; // triangle 0→1→0
+	return easeInOut(tri);
+}
+
 // ─── Moves ─────────────────────────────────────────────────────────────────────────
 // Each move maps loop time t ∈ [0,1) to a pose, anchored on a `hero` framing (the
 // pose the user composed). Phases are whole turns of sin/cos so pose(1) === pose(0)
@@ -111,9 +139,21 @@ export const MOVE_CYCLE_SECONDS: Record<CameraMove, number> = {
  * constant cadence at any length — while the INTEGER count guarantees the global
  * progress maps phase 0 → 1 → 0, i.e. pose(end) === pose(start): a seam-free IG
  * loop with no first/last-frame pop. See `phaseForProgress`.
+ *
+ * `speed` scales the cadence directly (2× → twice the cycles → twice as lively)
+ * without touching the clip length, so the playhead and the encoder agree on the
+ * same number of cycles. `loop` halves the count for a boomerang, because one
+ * boomerang cycle is a ROUND-TRIP (forward + back) and so covers twice the path
+ * of a one-way loop — halving keeps each leg at the move's natural pace.
  */
-export function cyclesForDuration(move: CameraMove, durationSec: number): number {
-	return Math.max(1, Math.round(durationSec / MOVE_CYCLE_SECONDS[move]));
+export function cyclesForDuration(
+	move: CameraMove,
+	durationSec: number,
+	speed = 1,
+	loop: LoopStyle = "loop",
+): number {
+	const raw = (durationSec * speed) / MOVE_CYCLE_SECONDS[move];
+	return Math.max(1, Math.round(loop === "boomerang" ? raw / 2 : raw));
 }
 
 /**
@@ -121,9 +161,15 @@ export function cyclesForDuration(move: CameraMove, durationSec: number): number
  * per-cycle phase a pose generator expects, repeating `cycles` whole loops. At
  * p=1 the phase is `cycles % 1 === 0`, so the export's final frame (i=total-1)
  * sits just shy of the seam and the loop closes cleanly back onto the hero pose.
+ *
+ * In `boomerang` mode the phase ping-pongs (0→1→0) each cycle instead of ramping,
+ * so the move plays forward then reverses; the same integer-cycle guarantee makes
+ * the boomerang close on the hero seam too. (`hold` carries no phase — the caller
+ * pins the hero pose directly — so it falls through to the linear map harmlessly.)
  */
-export function phaseForProgress(p: number, cycles: number): number {
-	return (p * cycles) % 1;
+export function phaseForProgress(p: number, cycles: number, loop: LoopStyle = "loop"): number {
+	const x = p * cycles;
+	return loop === "boomerang" ? pingPong(x) : x % 1;
 }
 
 /**

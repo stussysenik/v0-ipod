@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { ExportFraming } from "@/components/three/three-d-ipod";
-import { CAMERA_MOVES, type CameraMove, cyclesForDuration } from "@/lib/studio-camera";
+import { CAMERA_MOVES, type CameraMove, cyclesForDuration, type LoopStyle } from "@/lib/studio-camera";
 
 /**
  * Export dock for the /3d now-playing stage.
@@ -31,7 +31,20 @@ export interface ClipExportOptions {
 	durationSec: number;
 	quality: ExportQuality;
 	aspect: ExportAspect;
+	/** Cadence multiplier (1 = natural). */
+	speed: number;
+	/** loop / boomerang / hold — `hold` exports the composed angle with no motion. */
+	loop: LoopStyle;
 }
+
+const LOOP_STYLES: ReadonlyArray<{ id: LoopStyle; label: string; hint: string }> = [
+	{ id: "loop", label: "Loop", hint: "one-way seamless" },
+	{ id: "boomerang", label: "Boomerang", hint: "forward + back" },
+	{ id: "hold", label: "Hold", hint: "no motion" },
+];
+
+/** Speed multiplier stops — sub-1 slows the cadence, >1 quickens it. */
+const SPEED_STOPS = [0.5, 0.75, 1, 1.5, 2] as const;
 export interface StillExportOptions {
 	aspect: ExportAspect;
 }
@@ -57,6 +70,12 @@ interface Ipod3DExportDockProps {
 	previewPlaying: boolean;
 	/** Live playhead position over the full clip, t ∈ [0,1). */
 	previewT: number;
+	/** Cadence multiplier (1 = natural) — drives preview + export identically. */
+	speed: number;
+	onSpeedChange: (speed: number) => void;
+	/** loop / boomerang / hold — drives preview + export identically. */
+	loopStyle: LoopStyle;
+	onLoopStyleChange: (loop: LoopStyle) => void;
 	onPreviewMoveChange: (move: CameraMove) => void;
 	onTogglePlay: () => void;
 	onScrub: (t: number) => void;
@@ -72,6 +91,10 @@ export function Ipod3DExportDock({
 	previewMove,
 	previewPlaying,
 	previewT,
+	speed,
+	onSpeedChange,
+	loopStyle,
+	onLoopStyleChange,
 	onPreviewMoveChange,
 	onTogglePlay,
 	onScrub,
@@ -84,11 +107,14 @@ export function Ipod3DExportDock({
 	const [quality, setQuality] = useState<ExportQuality>("standard");
 
 	const still: StillExportOptions = { aspect };
-	const clip: ClipExportOptions = { durationSec, quality, aspect };
+	const clip: ClipExportOptions = { durationSec, quality, aspect, speed, loop: loopStyle };
 
+	const hold = loopStyle === "hold";
 	const moveSpec = CAMERA_MOVES.find((m) => m.id === previewMove) ?? CAMERA_MOVES[0];
-	const cycles = cyclesForDuration(previewMove, durationSec);
+	const cycles = cyclesForDuration(previewMove, durationSec, speed, loopStyle);
 	const elapsed = previewT * durationSec;
+	// What the clip button promises: a held angle, or N× of the selected move.
+	const clipHint = hold ? "no motion" : `${cycles}× · ${moveSpec.label}`;
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -137,13 +163,29 @@ export function Ipod3DExportDock({
 				</div>
 			</div>
 
-			{/* Playhead — select a move, then scrub/play it LIVE before exporting */}
+			{/*
+			 * Preview — the live transport, set off from the export settings above by
+			 * its own labelled header so it reads as "what you dial in" vs. "how it
+			 * renders." Pick a move + style, scrub/play it LIVE, then export the exact
+			 * loop you see (true WYSIWYG).
+			 */}
 			<div className="flex flex-col gap-2.5 border-b border-black/[0.06] px-4 py-3.5">
-				<Row label="Motion">
+				<div className="flex items-center justify-between">
+					<Label>Preview</Label>
 					<span className="font-mono text-[10px] uppercase tracking-tight text-black/35">
-						{cycles}× · {moveSpec.hint}
+						{hold ? "still" : `${cycles}× · ${moveSpec.hint}`}
 					</span>
-				</Row>
+				</div>
+
+				{/* Style — loop / boomerang / hold (hold freezes the composed angle) */}
+				<Segmented
+					options={LOOP_STYLES.map((s) => ({ id: s.id, label: s.label }))}
+					value={loopStyle}
+					onChange={(v) => onLoopStyleChange(v as LoopStyle)}
+					disabled={busy}
+				/>
+
+				{/* Move picker — irrelevant under Hold, so it dims out. */}
 				<div className="grid grid-cols-2 gap-1 rounded-lg bg-black/[0.04] p-0.5">
 					{CAMERA_MOVES.map((m) => {
 						const active = m.id === previewMove;
@@ -151,7 +193,7 @@ export function Ipod3DExportDock({
 							<button
 								key={m.id}
 								type="button"
-								disabled={busy}
+								disabled={busy || hold}
 								onClick={() => onPreviewMoveChange(m.id)}
 								className={`rounded-[7px] px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 									active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
@@ -161,6 +203,29 @@ export function Ipod3DExportDock({
 							</button>
 						);
 					})}
+				</div>
+
+				{/* Speed — cadence multiplier; also moot under Hold. */}
+				<div className="flex items-center justify-between gap-3">
+					<Label>Speed</Label>
+					<div className="flex gap-1 rounded-lg bg-black/[0.04] p-0.5">
+						{SPEED_STOPS.map((s) => {
+							const active = s === speed;
+							return (
+								<button
+									key={s}
+									type="button"
+									disabled={busy || hold}
+									onClick={() => onSpeedChange(s)}
+									className={`rounded-[7px] px-2 py-1.5 font-mono text-[10px] tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+										active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
+									}`}
+								>
+									{s}×
+								</button>
+							);
+						})}
+					</div>
 				</div>
 
 				{/* Transport — play/pause · scrub · reset · time readout */}
@@ -206,7 +271,7 @@ export function Ipod3DExportDock({
 				<DockButton
 					busy={exportState === `clip:${previewMove}`}
 					disabled={busy}
-					hint={`${durationSec}s · ${moveSpec.label}`}
+					hint={`${durationSec}s · ${clipHint}`}
 					label="Export clip"
 					onClick={() => onExportClip(previewMove, clip)}
 				/>
@@ -227,9 +292,10 @@ export function Ipod3DExportDock({
 			</div>
 
 			<p className="border-t border-black/[0.06] px-4 py-2.5 text-[10px] leading-snug text-black/35">
-				Stills are high-res PNG; the clip is a seamless-loop H.264/MP4 up to 60s. Hero +
-				clip fly the composed/locked pose; Front is the dead-on fidelity shot. The
-				now-playing screen is baked on at capture.
+				Stills are high-res PNG; the clip is a seamless H.264/MP4 up to 60s — loop,
+				boomerang, or Hold (the composed angle, no motion). Hero + clip fly the
+				composed/locked pose; Front is the dead-on fidelity shot. The now-playing
+				screen is baked on at capture.
 			</p>
 		</div>
 	);

@@ -10,7 +10,7 @@ import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recorder";
 import { downloadBlob } from "@/lib/three-export";
-import { CAMERA_MOVES, type CameraMove, type StudioPose } from "@/lib/studio-camera";
+import { CAMERA_MOVES, type CameraMove, type LoopStyle, type StudioPose } from "@/lib/studio-camera";
 
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodScreen } from "../display/ipod-screen";
@@ -90,13 +90,17 @@ export function Ipod3DStage() {
 	const [previewMove, setPreviewMove] = useState<CameraMove>(CAMERA_MOVES[0].id);
 	const [previewPlaying, setPreviewPlaying] = useState(false);
 	const [previewT, setPreviewT] = useState(0);
+	// Motion shaping — cadence multiplier + time map (loop / boomerang / hold). Lifted
+	// here so the live preview and the export read the SAME values (WYSIWYG parity).
+	const [speed, setSpeed] = useState(1);
+	const [loopStyle, setLoopStyle] = useState<LoopStyle>("loop");
 	// The rig flies the move only when the playhead is "engaged" — playing, or
 	// scrubbed off the hero seam. At t=0 paused we hand the camera back so the user
 	// can compose freely (phase 0 ≈ the composed hero anyway).
 	const previewEngaged = previewPlaying || previewT > 0.0001;
 	const preview: CameraPreviewState | null =
 		previewEngaged && exportState === "idle"
-			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec }
+			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec, speed, loop: loopStyle }
 			: null;
 	// Mobile control drawer. Desktop ignores this (the panels float at the corners);
 	// on narrow viewports the controls collapse into a bottom sheet so they never
@@ -310,13 +314,19 @@ export function Ipod3DStage() {
 					width,
 					height,
 					move,
+					speed: options.speed,
+					loop: options.loop,
 					anchor,
 					onProgress: (encoded, total) => {
 						setExportProgress(encoded / total);
 					},
 				});
 				if (!blob) throw new Error("recorder returned no clip");
-				downloadBlob(blob, `ipod-3d-${move}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`);
+				// Name by the motion that actually played — "hold" for a motion-free angle,
+				// the move (with a boomerang tag) otherwise — so the file reads at a glance.
+				const motionTag =
+					options.loop === "hold" ? "hold" : options.loop === "boomerang" ? `${move}-boomerang` : move;
+				downloadBlob(blob, `ipod-3d-${motionTag}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`);
 				showNotice("Saved MP4");
 			} catch (error) {
 				console.error("[3d-export] clip failed", error);
@@ -455,6 +465,10 @@ export function Ipod3DStage() {
 						previewMove={previewMove}
 						previewPlaying={previewPlaying}
 						previewT={previewT}
+						speed={speed}
+						onSpeedChange={setSpeed}
+						loopStyle={loopStyle}
+						onLoopStyleChange={setLoopStyle}
 						onPreviewMoveChange={handlePreviewMoveChange}
 						onTogglePlay={handleTogglePlay}
 						onScrub={handleScrub}
