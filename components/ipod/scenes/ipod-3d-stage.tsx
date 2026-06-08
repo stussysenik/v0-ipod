@@ -489,6 +489,7 @@ export function Ipod3DStage() {
 				ringColor={presentation.ringColor || undefined}
 				centerColor={presentation.centerColor || undefined}
 				backColor={presentation.backColor}
+				edgeColor={presentation.edgeColor}
 				bezelColor={presentation.bezelColor}
 				captureBackground={presentation.bgColor}
 				showOrigin={showOrigin}

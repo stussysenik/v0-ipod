@@ -41,6 +41,7 @@ export type IpodWorkbenchAction =
 	| { type: "SET_RING_COLOR"; payload: string }
 	| { type: "SET_CENTER_COLOR"; payload: string }
 	| { type: "SET_BACK_COLOR"; payload: string }
+	| { type: "SET_EDGE_COLOR"; payload: string }
 	| { type: "SET_BEZEL_COLOR"; payload: string }
 	| {
 			type: "SET_HARDWARE_PRESET";
@@ -172,6 +173,7 @@ export function buildPersistedUiState(model: IpodWorkbenchModel): IpodUiState {
 		ringColor: model.presentation.ringColor,
 		centerColor: model.presentation.centerColor,
 		backColor: model.presentation.backColor,
+		edgeColor: model.presentation.edgeColor,
 		bezelColor: model.presentation.bezelColor,
 		viewMode: model.presentation.viewMode,
 		hardwarePreset: model.presentation.hardwarePreset,
@@ -217,6 +219,9 @@ export function applySongSnapshotToModel(
 			ringColor: snapshot.ui.ringColor ?? "",
 			centerColor: snapshot.ui.centerColor ?? "",
 			backColor: snapshot.ui.backColor ?? DEFAULT_BACK_COLOR,
+			// Legacy snapshots predate the separate edge zone — fall back to the
+			// back colour so they reload visually unchanged (edge == back).
+			edgeColor: snapshot.ui.edgeColor ?? snapshot.ui.backColor ?? DEFAULT_BACK_COLOR,
 			bezelColor: snapshot.ui.bezelColor ?? DEFAULT_BEZEL_COLOR,
 			viewMode: snapshot.ui.viewMode,
 			hardwarePreset: snapshot.ui.hardwarePreset,
@@ -320,6 +325,11 @@ export function ipodWorkbenchReducer(
 				...state,
 				presentation: { ...state.presentation, backColor: action.payload },
 			});
+		case "SET_EDGE_COLOR":
+			return normalizeModel({
+				...state,
+				presentation: { ...state.presentation, edgeColor: action.payload },
+			});
 		case "SET_BEZEL_COLOR":
 			return normalizeModel({
 				...state,
@@ -338,6 +348,7 @@ export function ipodWorkbenchReducer(
 					ringColor: "",
 					centerColor: "",
 					backColor: DEFAULT_BACK_COLOR,
+					edgeColor: DEFAULT_BACK_COLOR,
 					bezelColor: DEFAULT_BEZEL_COLOR,
 				},
 			});

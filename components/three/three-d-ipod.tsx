@@ -100,15 +100,19 @@ function FlatFinish({
 	transparent = false,
 	opacity = 1,
 	depthWrite = true,
+	attach,
 }: {
 	color?: THREE.ColorRepresentation;
 	map?: THREE.Texture | null;
 	transparent?: boolean;
 	opacity?: number;
 	depthWrite?: boolean;
+	/** Slot for material arrays, e.g. "material-0" / "material-1". */
+	attach?: string;
 }) {
 	return (
 		<meshBasicMaterial
+			attach={attach}
 			color={color}
 			map={map ?? undefined}
 			// EXCEPTION (see block above): hold the exact specified hex — no tone mapping.
@@ -222,6 +226,8 @@ export interface ThreeDIpodProps {
 	centerColor?: string;
 	/** Mirror-polished stainless back shell. Defaults to factory steel. */
 	backColor?: string;
+	/** Side/rim band of the chassis. Defaults to `backColor` (edge == back). */
+	edgeColor?: string;
 	/** Matte mask framing the LCD aperture. Defaults to near-black. */
 	bezelColor?: string;
 	/** Engraved capacity on the back plate, e.g. "160GB". */
@@ -282,6 +288,7 @@ interface IpodModelProps {
 	ringColor?: string;
 	centerColor?: string;
 	backColor?: string;
+	edgeColor?: string;
 	bezelColor?: string;
 	capacityLabel: string;
 	/** Polished-back GGX roughness (dev "Back finish" dial). Defaults to the crawl-safe floor. */
@@ -467,62 +474,85 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 
 	ctx.textAlign = "center";
 
-	// Carrot maker's-mark (drawn vector, no emoji/font dependency) — a tapered
-	// root with three fronds, etched as a single dark silhouette like every other mark.
+	// Carrot maker's-mark (drawn vector, no emoji/font dependency) — a tapered root
+	// on gentle S-curves to a clean point, crowned by five leafy fronds that fan from
+	// the shoulder with the centre blade tallest. Etched as one dark silhouette like
+	// every other mark; the fuller frond fan and smoother taper give it a more
+	// expressive, deliberately-drawn shape than the old three-blade sketch.
 	const cx = w / 2;
-	const logoY = h * 0.32;
-	const s = 60;
+	const logoY = h * 0.31;
+	const s = 66;
 	const carrot = () => {
-		const topY = logoY;
-		const tipY = logoY + s * 1.02;
-		const halfW = s * 0.3;
-		// Root — shoulders rounded at the top, sides bulging gently in to a point.
+		const topY = logoY; // shoulder line
+		const tipY = logoY + s * 1.12; // root tip
+		const halfW = s * 0.34;
+		// Root — broad rounded shoulders tapering on symmetric S-curves to a sharp tip.
 		ctx.beginPath();
 		ctx.moveTo(cx - halfW, topY);
-		ctx.quadraticCurveTo(cx - halfW * 0.7, topY + s * 0.55, cx, tipY);
-		ctx.quadraticCurveTo(cx + halfW * 0.7, topY + s * 0.55, cx + halfW, topY);
-		ctx.quadraticCurveTo(cx, topY - s * 0.16, cx - halfW, topY);
+		ctx.bezierCurveTo(cx - halfW * 0.92, topY + s * 0.42, cx - halfW * 0.32, topY + s * 0.82, cx, tipY);
+		ctx.bezierCurveTo(cx + halfW * 0.32, topY + s * 0.82, cx + halfW * 0.92, topY + s * 0.42, cx + halfW, topY);
+		ctx.quadraticCurveTo(cx, topY - s * 0.2, cx - halfW, topY);
 		ctx.closePath();
 		ctx.fill();
-		// Three leafy fronds fanning up from the shoulder.
-		const blade = (tipX: number, tipDY: number, baseHalf: number) => {
+		// Fronds — leafy blades fanning from the shoulder, the centre one tallest.
+		const blade = (angleDeg: number, len: number, baseHalf: number) => {
+			const a = (angleDeg * Math.PI) / 180;
+			const tipX = cx + Math.sin(a) * len;
+			const tipDY = Math.cos(a) * len;
+			const midX = cx + Math.sin(a) * len * 0.5;
+			const midY = topY - Math.cos(a) * len * 0.5;
 			ctx.beginPath();
 			ctx.moveTo(cx - baseHalf, topY);
-			ctx.quadraticCurveTo((cx + tipX) / 2 - baseHalf, (topY + (topY - tipDY)) / 2, tipX, topY - tipDY);
-			ctx.quadraticCurveTo((cx + tipX) / 2 + baseHalf, (topY + (topY - tipDY)) / 2, cx + baseHalf, topY);
+			ctx.quadraticCurveTo(midX - baseHalf, midY, tipX, topY - tipDY);
+			ctx.quadraticCurveTo(midX + baseHalf, midY, cx + baseHalf, topY);
 			ctx.closePath();
 			ctx.fill();
 		};
-		blade(cx - s * 0.3, s * 0.44, s * 0.1); // left
-		blade(cx, s * 0.56, s * 0.1); // center
-		blade(cx + s * 0.3, s * 0.44, s * 0.1); // right
+		blade(-36, s * 0.5, s * 0.085); // far left
+		blade(-18, s * 0.64, s * 0.092); // left
+		blade(0, s * 0.74, s * 0.098); // centre, tallest
+		blade(18, s * 0.64, s * 0.092); // right
+		blade(36, s * 0.5, s * 0.085); // far right
 	};
 	etch(carrot);
 
-	// iPod wordmark
+	// iPod wordmark — the real engraving is the iPod logotype: a tight, medium-weight
+	// setting (lowercase i, cap P). SF Pro Display ≈ the shipped face; negative tracking
+	// pulls the glyphs into the close-set logo lockup instead of loose body text.
+	const sansDisplay = "-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+	const sansText = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 	etch(() => {
-		ctx.font = "600 92px -apple-system, 'SF Pro Display', Helvetica, Arial, sans-serif";
-		ctx.fillText("iPod", cx, h * 0.46);
+		ctx.font = `590 98px ${sansDisplay}`;
+		ctx.letterSpacing = "-4px";
+		ctx.fillText("iPod", cx, h * 0.452);
+		ctx.letterSpacing = "0px";
 	});
 
-	// Capacity
+	// Capacity — sits just under the wordmark, lighter and a touch tracked so it reads
+	// as a spec line, not part of the logo.
 	etch(() => {
-		ctx.font = "400 38px -apple-system, 'SF Pro Text', Helvetica, Arial, sans-serif";
-		ctx.fillText(capacity, cx, h * 0.51);
+		ctx.font = `380 30px ${sansText}`;
+		ctx.letterSpacing = "0.5px";
+		ctx.fillText(capacity, cx, h * 0.5);
+		ctx.letterSpacing = "0px";
 	});
 
-	// Regulatory fine print near the base
+	// Regulatory fine print near the base — the real back stacks a designed/assembled
+	// line, a model/regulatory line, and a rating/copyright line in tiny tracked type.
+	// Kept tight, evenly led, and centred to read as genuine laser etching.
 	const fineLines = [
-		"Designed by Stüssy Senik",
-		"Manufactured in Czech Republic",
-		"Model No. A1238   EMC No. 2151",
-		"Rated 5-30V ⏚  Capacity " + capacity,
+		"Designed by Stüssy Senik · Assembled in Czech Republic",
+		"Model No. A1238   EMC No. 2151   IC: 579C-A1238",
+		`⎓ Rated 5–30V · Capacity ${capacity} · © 2008 Stüssy Senik`,
 	];
 	etch(() => {
-		ctx.font = "400 17px -apple-system, 'SF Pro Text', Helvetica, Arial, sans-serif";
+		ctx.font = `400 15px ${sansText}`;
+		ctx.letterSpacing = "0.4px";
+		const baseY = h * 0.85;
 		fineLines.forEach((line, i) => {
-			ctx.fillText(line, cx, h * 0.86 + i * 26);
+			ctx.fillText(line, cx, baseY + i * 23);
 		});
+		ctx.letterSpacing = "0px";
 	});
 
 	const texture = new THREE.CanvasTexture(canvas);
@@ -757,7 +787,10 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, onRegisterCapture }: IpodModelProps) {
+	// Edge defaults to the back colour so an un-edited device is pixel-identical
+	// to the single-material chassis (edge == back until the user sets it).
+	const resolvedEdgeColor = edgeColor ?? backColor;
 	const groupRef = useRef<THREE.Group>(null);
 	// The steel body, used to occlude the live screen/wheel HTML portals so they
 	// don't bleed through (mirrored) when the camera swings behind the device.
@@ -873,7 +906,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 	useEffect(() => {
 		settle.current.value = 1;
 		settle.current.velocity = 0;
-	}, [skinColor, ringColor, centerColor, backColor, bezelColor]);
+	}, [skinColor, ringColor, centerColor, backColor, resolvedEdgeColor, bezelColor]);
 
 	useEffect(() => {
 		if (!onRegisterCapture) return;
@@ -1036,25 +1069,48 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			<group>
 					{/* ── BODY / BACK SHELL (Deep-drawn, mirror-polished stainless steel) ──
 					   One subtractive part: flat front cap, pillowed back + sides. */}
+					{/* ExtrudeGeometry emits two groups: index 0 = the flat front/back caps,
+					    index 1 = the extruded side + bevel walls (the visible rim). We render
+					    the mesh with a two-material array so the back cap keeps `backColor`
+					    while the rolled-over rim takes its own `edgeColor`. The front cap is
+					    hidden behind `faceGeo`, so painting it with the back material is moot.
+					    Edge defaults to back, so an un-edited device looks exactly as before. */}
 					<mesh ref={bodyRef} geometry={bodyGeo}>
 						{technicalFlat ? (
-							<FlatFinish color={backColor} />
+							<>
+								<FlatFinish attach="material-0" color={backColor} />
+								<FlatFinish attach="material-1" color={resolvedEdgeColor} />
+							</>
 						) : (
 							// Polished stainless, NOT chrome. A near-mirror back (roughness ~0.05)
 							// strobes under a turntable — see STEEL_ROUGHNESS_FLOOR for the physics.
 							// The floor widens the GGX lobe enough to melt the env's bright spots into
 							// a smooth moving gradient; clearcoat 1.0 keeps the wet polish and
 							// envMapIntensity 0.85 trims peak reflected contrast. Reads as satin-
-							// polished steel — what a real stainless iPod back is.
-							<meshPhysicalMaterial
-								clearcoat={1.0}
-								clearcoatRoughness={0.18}
-								color={backColor}
-								envMapIntensity={0.85}
-								metalness={1.0}
-								reflectivity={1.0}
-								roughness={backRoughness}
-							/>
+							// polished steel — what a real stainless iPod back is. Both cap and rim
+							// share this steel treatment; only the albedo colour differs.
+							<>
+								<meshPhysicalMaterial
+									attach="material-0"
+									clearcoat={1.0}
+									clearcoatRoughness={0.18}
+									color={backColor}
+									envMapIntensity={0.85}
+									metalness={1.0}
+									reflectivity={1.0}
+									roughness={backRoughness}
+								/>
+								<meshPhysicalMaterial
+									attach="material-1"
+									clearcoat={1.0}
+									clearcoatRoughness={0.18}
+									color={resolvedEdgeColor}
+									envMapIntensity={0.85}
+									metalness={1.0}
+									reflectivity={1.0}
+									roughness={backRoughness}
+								/>
+							</>
 						)}
 					</mesh>
 
@@ -1079,12 +1135,12 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 							<FlatFinish color={skinColor} />
 						) : (
 							<meshPhysicalMaterial
-								clearcoat={0.25}
-								clearcoatRoughness={0.45}
+								clearcoat={0.08}
+								clearcoatRoughness={0.55}
 								color={skinColor}
-								envMapIntensity={0.65}
-								metalness={0.12}
-								roughness={0.35}
+								envMapIntensity={0.18}
+								metalness={0.08}
+								roughness={0.52}
 								roughnessMap={brushedTexture}
 							/>
 						)}

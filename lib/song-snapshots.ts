@@ -26,6 +26,7 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 		ringColor: "",
 		centerColor: "",
 		backColor: "#cfd3d7",
+		edgeColor: "#cfd3d7",
 		bezelColor: "#0a0a0a",
 		viewMode: "flat",
 		hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type Dispatch } from "react";
+import { useEffect, useMemo, useState, type Dispatch } from "react";
 
 import {
 	CASE_CURATED_FAVORITES,
@@ -8,6 +8,7 @@ import {
 	IPOD_6G_BLACK,
 	IPOD_6G_SILVER,
 } from "@/lib/color-manifest";
+import { parseColor } from "@/lib/color-format";
 import {
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
@@ -78,6 +79,7 @@ type PartAction = Extract<
 			| "SET_RING_COLOR"
 			| "SET_CENTER_COLOR"
 			| "SET_BACK_COLOR"
+			| "SET_EDGE_COLOR"
 			| "SET_BEZEL_COLOR"
 			| "SET_BG_COLOR";
 	}
@@ -105,6 +107,7 @@ const PARTS: readonly PartRow[] = [
 		value: (p, d) => p.centerColor || d.centerGradient.via,
 	},
 	{ id: "back", label: "Back", action: "SET_BACK_COLOR", value: (p) => p.backColor },
+	{ id: "edge", label: "Edges", action: "SET_EDGE_COLOR", value: (p) => p.edgeColor || p.backColor },
 	{ id: "bezel", label: "Bezel", action: "SET_BEZEL_COLOR", value: (p) => p.bezelColor },
 	{ id: "bg", label: "Stage", action: "SET_BG_COLOR", value: (p) => p.bgColor },
 ] as const;
@@ -188,6 +191,99 @@ function randomCompatibleLook(): DeviceLook {
 	return { id: "random", label: "Random", skinColor, backColor: DEFAULT_BACK_COLOR, bezelColor, bgColor };
 }
 
+// ─── Harmony suggestions (deterministic) ────────────────────────────────────────────
+//
+// Both the inline per-part shade strips and the full-device Combinations strip draw from
+// one shared, *pure* harmony logic so they feel like a single tool: identical input palette
+// always yields identical suggestions (no per-render Math.random in the inline UI). Wheel and
+// centre route through the case's recession ladder (`deriveWheelColors`); the painted shells
+// route through a hue-holding lightness ladder plus one analogous sibling — the same shared/
+// analogous-hue idea `randomCompatibleLook` uses, made deterministic.
+
+/** The full resolved device palette (wheel/centre fall back to the case-derived values). */
+interface PartPalette {
+	case: string;
+	ring: string;
+	center: string;
+	back: string;
+	edge: string;
+	bezel: string;
+	stage: string;
+}
+
+function paletteOf(
+	p: IpodPresentationState,
+	d: ReturnType<typeof deriveWheelColors>,
+): PartPalette {
+	return {
+		case: p.skinColor,
+		ring: p.ringColor || d.gradient.via,
+		center: p.centerColor || d.centerGradient.via,
+		back: p.backColor,
+		edge: p.edgeColor || p.backColor,
+		bezel: p.bezelColor,
+		stage: p.bgColor,
+	};
+}
+
+function hexToHsl(hex: string): [number, number, number] {
+	const c = parseColor(hex) ?? "#000000";
+	const r = Number.parseInt(c.slice(1, 3), 16) / 255;
+	const g = Number.parseInt(c.slice(3, 5), 16) / 255;
+	const b = Number.parseInt(c.slice(5, 7), 16) / 255;
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	const l = (max + min) / 2;
+	if (max === min) return [0, 0, l * 100];
+	const dd = max - min;
+	const s = l > 0.5 ? dd / (2 - max - min) : dd / (max + min);
+	let h = 0;
+	if (max === r) h = (g - b) / dd + (g < b ? 6 : 0);
+	else if (max === g) h = (b - r) / dd + 2;
+	else h = (r - g) / dd + 4;
+	return [(h * 60 + 360) % 360, s * 100, l * 100];
+}
+
+const clampL = (l: number) => Math.max(6, Math.min(95, l));
+
+function dedupeShades(shades: string[]): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const s of shades) {
+		const key = normalizeHex(s);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push(s);
+	}
+	return out;
+}
+
+/** A small ordered set of harmonious shades for `partId`, given the current palette. */
+function deriveRelatedShades(partId: string, palette: PartPalette): string[] {
+	if (partId === "ring" || partId === "center") {
+		const w = deriveWheelColors(palette.case);
+		const ladder =
+			partId === "ring"
+				? [w.gradient.from, w.gradient.via, w.gradient.to]
+				: [w.centerGradient.from, w.centerGradient.via, w.centerGradient.to];
+		return dedupeShades(ladder);
+	}
+	const base =
+		partId === "back"
+			? palette.back
+			: partId === "edge"
+				? palette.edge
+				: partId === "bezel"
+					? palette.bezel
+					: partId === "bg"
+						? palette.stage
+						: palette.case;
+	const [h, s, l] = hexToHsl(base);
+	const shades = [-22, -11, 11, 22].map((dl) => hslToHex(h, s, clampL(l + dl)));
+	shades.push(hslToHex((h + 24) % 360, s, clampL(l))); // one analogous sibling
+	return dedupeShades(shades);
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────────
 
 interface Ipod3DColorCockpitProps {
@@ -201,6 +297,9 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 		[presentation.skinColor],
 	);
 
+	// The full resolved palette feeds the deterministic shade strips below each row.
+	const palette = useMemo(() => paletteOf(presentation, derived), [presentation, derived]);
+
 	const activeFinish = PRELOADED_FINISHES.find(
 		(f) => normalizeHex(f.skinColor) === normalizeHex(presentation.skinColor),
 	)?.id;
@@ -208,6 +307,8 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 	const applyFinish = (f: FinishAsset) => {
 		dispatch({ type: "SET_SKIN_COLOR", payload: f.skinColor });
 		dispatch({ type: "SET_BACK_COLOR", payload: f.backColor });
+		// Keep the rim matched to the back until the user sets it apart.
+		dispatch({ type: "SET_EDGE_COLOR", payload: f.backColor });
 		dispatch({ type: "SET_BEZEL_COLOR", payload: f.bezelColor });
 		dispatch({ type: "SET_BG_COLOR", payload: f.bgColor });
 		// Re-derive the wheel from the new case so the look stays coherent.
@@ -221,6 +322,7 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 	const applyLook = (look: DeviceLook) => {
 		dispatch({ type: "SET_SKIN_COLOR", payload: look.skinColor });
 		dispatch({ type: "SET_BACK_COLOR", payload: look.backColor });
+		dispatch({ type: "SET_EDGE_COLOR", payload: look.backColor });
 		dispatch({ type: "SET_BEZEL_COLOR", payload: look.bezelColor });
 		dispatch({ type: "SET_BG_COLOR", payload: look.bgColor });
 		const d = deriveWheelColors(look.skinColor);
@@ -268,63 +370,94 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 				</div>
 			</div>
 
-			{/* Per-part color rows */}
-			<div className="px-3.5 py-2">
+			{/* Per-part color rows — label, an editable hex/rgb/hsl field, and the native
+			    swatch each keep their own air; a strip of harmonious shades for that part
+			    sits directly beneath, attached to its owning row. */}
+			<div className="px-4 py-3">
 				{PARTS.map((part) => {
 					const value = part.value(presentation, derived);
+					const swatchHex = (parseColor(value) ?? "#000000").toLowerCase();
+					const shades = deriveRelatedShades(part.id, palette);
 					return (
-						<label
-							key={part.id}
-							className="group flex h-8 cursor-pointer items-center justify-between"
-						>
-							<span className="text-[11px] font-medium text-black/55 group-hover:text-black/80">
-								{part.label}
-							</span>
-							<span className="flex items-center gap-2">
-								<span className="font-mono text-[10px] uppercase tracking-tight text-black/35 group-hover:text-black/55">
-									{value}
+						<div key={part.id} className="group py-1.5">
+							<div className="flex h-7 items-center justify-between gap-3">
+								<span className="text-xs font-medium text-black/60 group-hover:text-black/85">
+									{part.label}
 								</span>
-								<span
-									className="relative h-5 w-5 rounded-md border border-black/15 transition-transform group-hover:scale-105"
-									style={{ backgroundColor: value }}
-								>
-									<input
-										type="color"
+								<div className="flex items-center gap-3">
+									<ColorField
 										value={value}
-										onChange={(e) =>
-											dispatch({ type: part.action, payload: e.target.value })
-										}
-										className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-										aria-label={`${part.label} color`}
+										label={part.label}
+										onCommit={(hex) => dispatch({ type: part.action, payload: hex })}
 									/>
-								</span>
-							</span>
-						</label>
+									<label
+										className="relative h-6 w-6 cursor-pointer rounded-md border border-black/15 shadow-sm transition-transform hover:scale-105"
+										style={{ backgroundColor: swatchHex }}
+									>
+										<input
+											type="color"
+											value={swatchHex}
+											onChange={(e) =>
+												dispatch({ type: part.action, payload: e.target.value })
+											}
+											className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+											aria-label={`${part.label} color`}
+										/>
+									</label>
+								</div>
+							</div>
+							<ShadeStrip
+								shades={shades}
+								current={value}
+								label={part.label}
+								onPick={(hex) => dispatch({ type: part.action, payload: hex })}
+							/>
+						</div>
 					);
 				})}
 			</div>
 
-			{/* Looks — my curated full-device combinations (case + bezel + back + stage) */}
+			{/* Combinations — full-device palettes. Each chip previews the whole device
+			    (case + wheel + centre + back + bezel) as mini-dots; one tap applies them
+			    all coherently (the wheel re-derives from the case), so the device stays one
+			    object. Coherent by construction from the curated looks + harmony logic. */}
 			<div className="border-t border-black/[0.06] px-3.5 py-2.5">
-				<Label>Looks</Label>
+				<Label>Combinations</Label>
 				<div className="mt-2 grid grid-cols-3 gap-1.5">
 					{CURATED_LOOKS.map((look) => {
-						const active = normalizeHex(look.skinColor) === normalizeHex(presentation.skinColor);
+						const d = deriveWheelColors(look.skinColor);
+						const dots = [
+							look.skinColor,
+							d.gradient.via,
+							d.centerGradient.via,
+							look.backColor,
+							look.bezelColor,
+						];
+						const active =
+							normalizeHex(look.skinColor) === normalizeHex(palette.case) &&
+							normalizeHex(look.bezelColor) === normalizeHex(palette.bezel) &&
+							normalizeHex(look.bgColor) === normalizeHex(palette.stage);
 						return (
 							<button
 								key={look.id}
 								type="button"
 								onClick={() => applyLook(look)}
 								aria-pressed={active}
-								className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
+								aria-label={`Apply ${look.label} combination`}
+								className={`flex flex-col gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
 									active ? "border-black/80 text-black" : "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
 								}`}
 							>
-								<span
-									className="h-3 w-3 shrink-0 rounded-full border border-black/15"
-									style={{ backgroundColor: look.skinColor }}
-								/>
-								{look.label}
+								<span className="flex">
+									{dots.map((c, i) => (
+										<span
+											key={`${look.id}-${i}`}
+											className="-ml-0.5 h-2.5 w-2.5 rounded-full border border-black/15 first:ml-0"
+											style={{ backgroundColor: c }}
+										/>
+									))}
+								</span>
+								<span className="text-left">{look.label}</span>
 							</button>
 						);
 					})}
@@ -366,6 +499,109 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 				<span className="h-3 w-px bg-black/10" />
 				<HelperButton onClick={() => applyLook(randomCompatibleLook())}>Random look</HelperButton>
 			</div>
+		</div>
+	);
+}
+
+/**
+ * Editable colour field accepting hex (`#rgb`/`#rrggbb`), `rgb()`/`rgba()`, or
+ * `hsl()`/`hsla()`. Commits on blur/Enter via `parseColor`; invalid input is
+ * rejected non-destructively (the field flashes red and reverts to the last
+ * valid value). Stays in sync when the value changes elsewhere (swatch/preset).
+ */
+function ColorField({
+	value,
+	label,
+	onCommit,
+}: {
+	value: string;
+	label: string;
+	onCommit: (hex: string) => void;
+}) {
+	const [draft, setDraft] = useState(value);
+	const [invalid, setInvalid] = useState(false);
+
+	// Resync when the stored value changes from outside (picker, preset, shade strip).
+	useEffect(() => {
+		setDraft(value);
+		setInvalid(false);
+	}, [value]);
+
+	const commit = () => {
+		const parsed = parseColor(draft);
+		if (!parsed) {
+			setInvalid(true);
+			setDraft(value); // revert — never mutate state on bad input
+			return;
+		}
+		setInvalid(false);
+		setDraft(parsed);
+		if (normalizeHex(parsed) !== normalizeHex(value)) onCommit(parsed);
+	};
+
+	return (
+		<input
+			type="text"
+			spellCheck={false}
+			value={draft}
+			onChange={(e) => {
+				setDraft(e.target.value);
+				if (invalid) setInvalid(false);
+			}}
+			onBlur={commit}
+			onKeyDown={(e) => {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					e.currentTarget.blur();
+				} else if (e.key === "Escape") {
+					setDraft(value);
+					setInvalid(false);
+					e.currentTarget.blur();
+				}
+			}}
+			aria-label={`${label} colour value — accepts hex, rgb(), or hsl()`}
+			aria-invalid={invalid}
+			className={`w-[120px] bg-transparent text-right font-mono text-[11px] uppercase tracking-tight tabular-nums outline-none transition-colors ${
+				invalid
+					? "text-red-500"
+					: "text-black/40 focus:text-black/80 group-hover:text-black/65"
+			}`}
+		/>
+	);
+}
+
+/** A row of deterministic harmonious shades for one part. Tapping sets only that part. */
+function ShadeStrip({
+	shades,
+	current,
+	label,
+	onPick,
+}: {
+	shades: string[];
+	current: string;
+	label: string;
+	onPick: (hex: string) => void;
+}) {
+	if (shades.length === 0) return null;
+	return (
+		<div className="mt-1.5 flex gap-1" role="group" aria-label={`${label} related shades`}>
+			{shades.map((shade) => {
+				const active = normalizeHex(shade) === normalizeHex(current);
+				return (
+					<button
+						key={shade}
+						type="button"
+						title={`${label} related shade ${shade}`}
+						aria-label={`${label} related shade ${shade}`}
+						aria-pressed={active}
+						onClick={() => onPick(shade)}
+						className={`h-3.5 flex-1 rounded-[3px] border transition-transform hover:scale-y-150 ${
+							active ? "border-black/70 ring-1 ring-black/25" : "border-black/10"
+						}`}
+						style={{ backgroundColor: shade }}
+					/>
+				);
+			})}
 		</div>
 	);
 }

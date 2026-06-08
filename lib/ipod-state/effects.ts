@@ -61,6 +61,8 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 			ringColor: savedUi?.ringColor ?? fallback.presentation.ringColor,
 			centerColor: savedUi?.centerColor ?? fallback.presentation.centerColor,
 			backColor: savedUi?.backColor ?? fallback.presentation.backColor,
+			edgeColor:
+				savedUi?.edgeColor ?? savedUi?.backColor ?? fallback.presentation.edgeColor,
 			bezelColor: savedUi?.bezelColor ?? fallback.presentation.bezelColor,
 			viewMode: savedUi?.viewMode ?? fallback.presentation.viewMode,
 			hardwarePreset:

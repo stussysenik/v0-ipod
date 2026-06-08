@@ -31,6 +31,7 @@ interface ShotLook {
 	ringColor: string;
 	centerColor: string;
 	backColor: string;
+	edgeColor: string;
 	bezelColor: string;
 	bgColor: string;
 }
@@ -98,6 +99,7 @@ export function Ipod3DStudioShots({
 			ringColor: presentation.ringColor,
 			centerColor: presentation.centerColor,
 			backColor: presentation.backColor,
+			edgeColor: presentation.edgeColor,
 			bezelColor: presentation.bezelColor,
 			bgColor: presentation.bgColor,
 		};
@@ -113,6 +115,8 @@ export function Ipod3DStudioShots({
 			dispatch({ type: "SET_RING_COLOR", payload: shot.look.ringColor });
 			dispatch({ type: "SET_CENTER_COLOR", payload: shot.look.centerColor });
 			dispatch({ type: "SET_BACK_COLOR", payload: shot.look.backColor });
+			// Legacy shots predate the edge zone — fall back to back so they recall unchanged.
+			dispatch({ type: "SET_EDGE_COLOR", payload: shot.look.edgeColor ?? shot.look.backColor });
 			dispatch({ type: "SET_BEZEL_COLOR", payload: shot.look.bezelColor });
 			dispatch({ type: "SET_BG_COLOR", payload: shot.look.bgColor });
 			apiRef.current?.setCameraGoal({

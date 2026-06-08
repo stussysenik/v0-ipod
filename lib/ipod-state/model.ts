@@ -69,6 +69,9 @@ export interface IpodPresentationState {
 	centerColor: string;
 	/** Mirror-polished stainless back shell. */
 	backColor: string;
+	/** Side/rim band around the device edge. Defaults to `backColor` so an
+	 *  un-edited device is unchanged; set independently for a contrasting trim. */
+	edgeColor: string;
 	/** Matte mask framing the LCD aperture. */
 	bezelColor: string;
 	viewMode: IpodViewMode;
@@ -147,6 +150,7 @@ export interface IpodUiState {
 	ringColor: string;
 	centerColor: string;
 	backColor: string;
+	edgeColor: string;
 	bezelColor: string;
 	viewMode: IpodViewMode;
 	hardwarePreset: IpodHardwarePresetId;
@@ -197,6 +201,7 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			ringColor: defaultWheel.gradient.via,
 			centerColor: defaultWheel.centerGradient.via,
 			backColor: DEFAULT_BACK_COLOR,
+			edgeColor: DEFAULT_BACK_COLOR,
 			bezelColor: DEFAULT_BEZEL_COLOR,
 			viewMode: "flat",
 			hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
