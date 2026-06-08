@@ -1793,7 +1793,16 @@ function SceneCapture({
 			const SCREEN_BAKE_CAP = 120;
 			const canRefreshScreen = typeof captureHooksRef?.current?.refreshScreen === "function";
 			const screenRefreshFps = Math.min(fps, SCREEN_REFRESH_FPS_CAP);
-			const screenStride = Math.max(1, Math.round(fps / screenRefreshFps));
+			// Stride = the WIDER of the cadence cap and "spread the bake budget across the
+			// whole clip". Without the second term a flat ~15fps stride burns all
+			// SCREEN_BAKE_CAP bakes in the first ~8s of a long clip, then the screen FREEZES
+			// for the rest (the reported "stops updating on minute-long videos"). Widening
+			// the stride to ⌈total / cap⌉ spreads ≤cap bakes end-to-end, so the marquee +
+			// clock keep advancing for the full duration while rasterizations stay bounded.
+			const screenStride = Math.max(
+				Math.max(1, Math.round(fps / screenRefreshFps)),
+				Math.ceil(total / SCREEN_BAKE_CAP),
+			);
 			let screenBakes = 0;
 			if (canRefreshScreen) {
 				console.info(

@@ -2,11 +2,19 @@
 
 ## 2026-06-09 — /3d export side-effects
 
-- **Export must show a LIVING song, even from a paused transport.** The now-playing clock
-  (`ipod-3d-stage.tsx`) ticked only `if (interaction.isPlaying)`, so exporting a clip while
-  paused froze the progress bar / elapsed time. Rule: a clip export force-advances the clock
-  (`isPlaying || exportingClip`) so the re-sampled screen captures progression. Marquee already
-  scrolls via its always-on rAF (`animate={studio.marquee}`), independent of play state.
+- **A clip export must drive the screen by CLIP-time, not wall-clock.** The camera flies on
+  clip-t (`phaseForProgress(i/total, …)`), so anything else that advances on a different clock
+  desyncs in the final video. My first try force-advanced the song with a realtime 1s interval
+  during export — it tracked export wall-clock, so a slow hi-res render fast-forwarded the song
+  ("suddenly accelerated"). Fix: drive `currentTime` from the recorder's `onProgress`
+  (`encoded/total` = clip-t) and SUPPRESS the live interval while exporting, so 1 video-second =
+  1 song-second. Throttle the dispatch to whole seconds (display resolution) or you pay 1800
+  re-renders + localStorage writes on a 60s clip.
+- **A frame-count-decoupled "cap" must be SPREAD across the clip, not front-loaded.** The screen
+  re-bake budget (`SCREEN_BAKE_CAP = 120`) was spent on the first 120 stride-hits, so a 60s clip
+  froze the screen after ~8s ("stops updating on long videos"). Rule: stride = `max(cadenceCap,
+  ⌈total/cap⌉)` so ≤cap bakes cover the WHOLE duration. A cap that bounds cost must also bound
+  *where* the cost lands.
 - **rAF-gated awaits hang when the tab is backgrounded → the UI wedges.** `nextPaint`'s
   double-`requestAnimationFrame` never resolves if the user tabs away mid-export, leaving
   `exportState` non-idle and the loading veil stuck. Always race rAF against a `setTimeout`

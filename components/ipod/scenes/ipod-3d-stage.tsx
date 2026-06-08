@@ -224,20 +224,20 @@ export function Ipod3DStage() {
 		playbackRef.current.currentTime = model.metadata.currentTime;
 		playbackRef.current.duration = model.metadata.duration;
 	}, [model.metadata.currentTime, model.metadata.duration]);
-	// A clip export must show a LIVING song: marquee scrolling AND the progress
-	// bar / elapsed time advancing — regardless of whether the transport happened
-	// to be paused when the user hit export. The clip re-samples the live screen
-	// DOM, so advancing this clock here is what the exported frames capture. Stills
-	// are a single frame, so only clips force the tick; otherwise it's play-gated.
-	const exportingClip = exportState.startsWith("clip");
+	// Live playback clock: advance the now-playing time 1s per real second while the
+	// transport plays AND we're not exporting. During a clip export the clock is
+	// driven by CLIP-time instead (handleExportClip → onProgress), so the exported
+	// video advances exactly one song-second per video-second. A realtime interval
+	// must NOT also run then: it tracks export wall-clock, which differs from clip
+	// time, so the two together fast-forwarded the song on slow renders.
 	useEffect(() => {
-		if (!model.interaction.isPlaying && !exportingClip) return;
+		if (!model.interaction.isPlaying || exportState !== "idle") return;
 		const id = window.setInterval(() => {
 			const { currentTime, duration } = playbackRef.current;
 			dispatch({ type: "UPDATE_CURRENT_TIME", payload: (currentTime + 1) % (duration + 1) });
 		}, 1000);
 		return () => window.clearInterval(id);
-	}, [model.interaction.isPlaying, exportingClip, dispatch]);
+	}, [model.interaction.isPlaying, exportState, dispatch]);
 
 	const playClick = useCallback(() => {
 		playClickAudio(audioRef);
@@ -355,12 +355,23 @@ export function Ipod3DStage() {
 			setExportState(`clip:${move}`);
 			setExportProgress(0);
 			await nextPaint(); // veil covers before snap-to-rest / screen bake / offline frames
+			// The playhead the user composed on — declared outside the try so `finally`
+			// can restore it after the clip-time drive has advanced it during the export.
+			const baseTime = playbackRef.current.currentTime;
+			const songDuration = playbackRef.current.duration;
 			try {
 				// Anchor the move on the composed hero held by the playhead (so a parked
 				// scrubber can't shift it); fall back to the live pose when disengaged.
 				const anchor = heroAnchorRef.current ?? api.getCameraPose() ?? undefined;
 				const [width, height] = ASPECT_DIMS[options.aspect].clip;
 				const q = CLIP_QUALITY[options.quality];
+				// Drive the now-playing clock by CLIP-time across the export. `encoded/total`
+				// is the clip's own 0→1 timeline (the same one the camera move flies), so the
+				// song advances one second per video-second — never faster (slow renders) and
+				// never frozen past the screen-bake cap on long clips. Throttled to whole
+				// seconds (the display's resolution) to avoid 1800 re-renders + localStorage
+				// writes on a 60s clip. The realtime live interval is suppressed while exporting.
+				let lastSecond = -1;
 				const blob = await recordIpodClip(api, {
 					durationMs: Math.round(options.durationSec * 1000),
 					fps: q.fps,
@@ -374,6 +385,15 @@ export function Ipod3DStage() {
 					anchor,
 					onProgress: (encoded, total) => {
 						setExportProgress(encoded / total);
+						const elapsed = (encoded / total) * options.durationSec;
+						const second =
+							songDuration > 0
+								? Math.floor(baseTime + elapsed) % (songDuration + 1)
+								: Math.floor(baseTime + elapsed);
+						if (second !== lastSecond) {
+							lastSecond = second;
+							dispatch({ type: "UPDATE_CURRENT_TIME", payload: second });
+						}
 					},
 				});
 				if (!blob) throw new Error("recorder returned no clip");
@@ -399,11 +419,14 @@ export function Ipod3DStage() {
 				console.error("[3d-export] clip failed", error);
 				showNotice("Clip failed");
 			} finally {
+				// Restore the composed playhead the clip-time drive advanced during export,
+				// so the live screen returns to exactly where the user was parked.
+				dispatch({ type: "UPDATE_CURRENT_TIME", payload: baseTime });
 				setExportState("idle");
 				setExportProgress(null);
 			}
 		},
-		[exportState, showNotice, nextPaint, model.metadata.title],
+		[exportState, showNotice, nextPaint, model.metadata.title, dispatch],
 	);
 
 	const controls = useIpodClickWheelControls({
