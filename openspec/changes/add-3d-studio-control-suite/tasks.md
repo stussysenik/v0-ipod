@@ -118,9 +118,9 @@ Each step captures a real export, reads it back, and judges it vs the baseline +
 - [ ] Verify live: palette runs every action; dev panel tunes scene; HUD shows live state
 
 ## 4. Motion presets
-- [ ] Make move presets additive + toggleable (orbit/robo/turntable/sweep retained)
-- [ ] Add MKBHD-style robotic-crane move in `lib/studio-camera.ts` (seamless loop)
-- [ ] Wire crane into export dock + palette
+- [x] Make move presets additive + toggleable (orbit/robo/turntable/sweep retained)
+- [x] Add MKBHD-style robotic-crane move in `lib/studio-camera.ts` (seamless loop)
+- [x] Wire crane into export dock + palette
 - [ ] Verify: switch presets without losing others; crane loop seam continuous (extend `tests/3d-clip-verify.spec.ts`)
 
 ## 5. Static front .mp4 export

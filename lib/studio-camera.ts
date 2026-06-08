@@ -104,7 +104,7 @@ export function pingPong(x: number): number {
 // pose the user composed). Phases are whole turns of sin/cos so pose(1) === pose(0)
 // — derivatives included — giving a seam-free IG loop with no first/last-frame pop.
 
-export type CameraMove = "orbit" | "robo" | "turntable" | "sweep";
+export type CameraMove = "orbit" | "robo" | "turntable" | "sweep" | "crane";
 
 export interface MoveSpec {
 	id: CameraMove;
@@ -117,6 +117,7 @@ export const CAMERA_MOVES: readonly MoveSpec[] = [
 	{ id: "turntable", label: "Turntable", hint: "Z-axis 360 spin" },
 	{ id: "sweep", label: "Sweep", hint: "overhead arc" },
 	{ id: "robo", label: "Robo", hint: "diagonal dolly" },
+	{ id: "crane", label: "Crane", hint: "robotic lift arc" },
 ] as const;
 
 /**
@@ -131,6 +132,7 @@ export const MOVE_CYCLE_SECONDS: Record<CameraMove, number> = {
 	turntable: 6,
 	sweep: 7,
 	robo: 6,
+	crane: 8,
 };
 
 /**
@@ -246,6 +248,26 @@ export function sweepPose(t: number, hero: StudioPose): StudioPose {
 	};
 }
 
+/**
+ * Crane — the MKBHD-style robotic cinebot move. The arm arcs laterally (±24°)
+ * while the lens cranes up and settles back; a second-harmonic elevation term
+ * (`sin 2φ`) gives the cinebot's signature "lift → hover → descend" beat within
+ * ONE loop, and a precise dolly breathes in and out at the crest. Like every
+ * move here it is built from whole-turn sin/cos of `φ = 2πt`, so pose(1) ===
+ * pose(0) with matched derivatives — a seam-free loop with no first/last-frame
+ * pop. Statelier than `robo` (8s natural cycle): a deliberate, mechanical glide.
+ */
+export function cranePose(t: number, hero: StudioPose): StudioPose {
+	const phase = t * Math.PI * 2;
+	const arc = Math.sin(phase);
+	return {
+		azimuth: hero.azimuth + 24 * arc,
+		elevation: hero.elevation + 16 * arc + 6 * Math.sin(2 * phase),
+		reach: hero.reach + 1.1 - 1.1 * Math.cos(phase),
+		target: hero.target,
+	};
+}
+
 /** Resolve a move id to its pose generator. */
 export function poseForMove(move: CameraMove, t: number, hero: StudioPose): StudioPose {
 	switch (move) {
@@ -255,6 +277,8 @@ export function poseForMove(move: CameraMove, t: number, hero: StudioPose): Stud
 			return sweepPose(t, hero);
 		case "robo":
 			return roboDiagonalPose(t, hero);
+		case "crane":
+			return cranePose(t, hero);
 		default:
 			return orbitPose(t, hero);
 	}
