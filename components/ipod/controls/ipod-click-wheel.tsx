@@ -379,7 +379,7 @@ padding: "0.7rem 1rem 1rem",
 			</div>
 
 			<div
-				className={`absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+				className={`group absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full ${
 					FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK
 						? "transition-[transform,box-shadow] duration-[80ms] ease-out"
 						: "transition-all duration-100"
@@ -435,7 +435,22 @@ padding: "0.7rem 1rem 1rem",
 					if (FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK) return;
 					handleControlPress(onCenterClick);
 				}}
-			/>
+			>
+				{/* Press-depress feedback for the 3D view. In chromeless mode the hit-area is
+					transparent (the 3D mesh paints the button), so the 2D's visible depress was
+					lost — leaving the click feeling dead even though the sound + action fire. This
+					overlay flashes a quick inset shadow on :active so the button visibly pushes IN
+					over the 3D mesh, restoring the satisfying mechanical press. */}
+				{chromeless && FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK && !disabled ? (
+					<span
+						className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-75 ease-out group-active:opacity-100"
+						style={{
+							boxShadow: "inset 0 6px 12px -3px rgba(0,0,0,0.4), inset 0 -2px 4px rgba(255,255,255,0.18)",
+							background: "radial-gradient(circle at 50% 42%, rgba(0,0,0,0.14), rgba(0,0,0,0) 72%)",
+						}}
+					/>
+				) : null}
+			</div>
 		</div>
 	);
 }
