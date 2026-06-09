@@ -161,6 +161,8 @@ export function Ipod3DExportDock({
 						value={durationSec}
 						disabled={busy}
 						onChange={(e) => onDurationChange(Number(e.target.value))}
+						data-testid="clip-length-slider"
+						aria-label="Clip length (seconds)"
 						className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-black disabled:cursor-not-allowed disabled:opacity-40"
 					/>
 				</div>
