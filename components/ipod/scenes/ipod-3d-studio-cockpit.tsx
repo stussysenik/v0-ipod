@@ -9,6 +9,8 @@ import type {
 } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * The studio/interaction cockpit for /3d — the controls that the 2D workbench had but the
  * 3D focus view was missing, which is why composing in 3D felt "stuck": you couldn't change
@@ -23,6 +25,8 @@ import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
  */
 
 interface Ipod3DStudioCockpitProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	interaction: IpodInteractionState;
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
@@ -38,6 +42,7 @@ const MODES: readonly { id: IpodInteractionModel; label: string }[] = [
 ] as const;
 
 export function Ipod3DStudioCockpit({
+	index,
 	interaction,
 	studio,
 	dispatch,
@@ -46,6 +51,7 @@ export function Ipod3DStudioCockpit({
 }: Ipod3DStudioCockpitProps) {
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
+			<Ipod3DCockpitHeader index={index} title="Studio" />
 			{/* Interaction mode — segmented, mirrors the 2D workbench */}
 			<div className="border-b border-black/[0.06] px-3.5 pb-3 pt-3">
 				<Label>Interaction</Label>

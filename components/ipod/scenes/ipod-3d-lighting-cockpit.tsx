@@ -13,6 +13,8 @@ import {
 	type SpotSpec,
 } from "@/lib/studio-lighting-config";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * The lighting cockpit for the /3d studio — the "Phase 3 dev panel" the rig was always
  * designed to grow into. Same control-strip design language as the colour cockpit: one
@@ -32,6 +34,8 @@ import {
  */
 
 interface Ipod3DLightingCockpitProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 	/** Dev "Back finish" dial — polished-back roughness (mirror ↔ brushed). */
@@ -50,6 +54,7 @@ const SPOTS: readonly { role: SpotRole; label: string; hint: string }[] = [
 ] as const;
 
 export function Ipod3DLightingCockpit({
+	index,
 	studio,
 	dispatch,
 	backRoughness = BACK_FINISH_DEFAULT,
@@ -64,27 +69,30 @@ export function Ipod3DLightingCockpit({
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
 			{/* Header — title + the one-tap Lights Off / Technical switch */}
-			<div className="flex items-center justify-between border-b border-black/[0.06] px-3.5 pb-3 pt-3">
-				<Label>Light</Label>
-				<button
-					type="button"
-					onClick={() => dispatch({ type: "TOGGLE_TECHNICAL_FLAT" })}
-					aria-pressed={technicalFlat}
-					title="Flat, unlit technical view — no reflections or shadows"
-					className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-all duration-300 active:scale-[0.96] ${
-						technicalFlat
-							? "border-black/80 bg-black text-white"
-							: "border-black/10 text-black/55 hover:border-black/30 hover:text-black/80"
-					}`}
-				>
-					<span
-						className={`h-1.5 w-1.5 rounded-full transition-colors ${
-							technicalFlat ? "bg-white/90" : "bg-amber-400"
+			<Ipod3DCockpitHeader
+				index={index}
+				title="Light"
+				right={
+					<button
+						type="button"
+						onClick={() => dispatch({ type: "TOGGLE_TECHNICAL_FLAT" })}
+						aria-pressed={technicalFlat}
+						title="Flat, unlit technical view — no reflections or shadows"
+						className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-all duration-300 active:scale-[0.96] ${
+							technicalFlat
+								? "border-black/80 bg-black text-white"
+								: "border-black/10 text-black/55 hover:border-black/30 hover:text-black/80"
 						}`}
-					/>
-					{technicalFlat ? "Lights Off" : "Lights On"}
-				</button>
-			</div>
+					>
+						<span
+							className={`h-1.5 w-1.5 rounded-full transition-colors ${
+								technicalFlat ? "bg-white/90" : "bg-amber-400"
+							}`}
+						/>
+						{technicalFlat ? "Lights Off" : "Lights On"}
+					</button>
+				}
+			/>
 
 			{/* Body — dimmed while flat/technical, since the rig is bypassed there */}
 			<div

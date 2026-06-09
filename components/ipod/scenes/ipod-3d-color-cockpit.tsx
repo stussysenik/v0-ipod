@@ -16,6 +16,8 @@ import {
 } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * The monochrome color cockpit for the /3d now-playing stage.
  *
@@ -287,11 +289,13 @@ function deriveRelatedShades(partId: string, palette: PartPalette): string[] {
 // ─── Component ─────────────────────────────────────────────────────────────────────
 
 interface Ipod3DColorCockpitProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	presentation: IpodPresentationState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 }
 
-export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpitProps) {
+export function Ipod3DColorCockpit({ index, presentation, dispatch }: Ipod3DColorCockpitProps) {
 	const derived = useMemo(
 		() => deriveWheelColors(presentation.skinColor),
 		[presentation.skinColor],
@@ -345,6 +349,7 @@ export function Ipod3DColorCockpit({ presentation, dispatch }: Ipod3DColorCockpi
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
+			<Ipod3DCockpitHeader index={index} title="Color" />
 			{/* Finish — the preloaded assets */}
 			<div className="border-b border-black/[0.06] px-3.5 pb-3 pt-3">
 				<Label>Finish</Label>

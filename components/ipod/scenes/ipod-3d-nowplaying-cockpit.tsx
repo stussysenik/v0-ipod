@@ -8,6 +8,8 @@ import { ImageUpload } from "@/components/ipod/editors/image-upload";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 import type { SongMetadata } from "@/types/ipod";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * The Now-Playing cockpit for the /3d stage — edit the track that's baked into
  * every export (song title, artist, album, album cover, rating, track number).
@@ -22,16 +24,18 @@ import type { SongMetadata } from "@/types/ipod";
  */
 
 interface Ipod3DNowPlayingCockpitProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	metadata: SongMetadata;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 }
 
-export function Ipod3DNowPlayingCockpit({ metadata, dispatch }: Ipod3DNowPlayingCockpitProps) {
+export function Ipod3DNowPlayingCockpit({ index, metadata, dispatch }: Ipod3DNowPlayingCockpitProps) {
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<div className="border-b border-black/[0.06] px-4 pb-4 pt-3.5">
-				<Label>Now Playing</Label>
-				<div className="mt-3 flex gap-3">
+			<Ipod3DCockpitHeader index={index} title="Now Playing" />
+			<div className="border-b border-black/[0.06] px-4 pb-4 pt-3">
+				<div className="flex gap-3">
 					{/* Album cover — tap to upload */}
 					<div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-lg border border-black/10">
 						<ImageUpload

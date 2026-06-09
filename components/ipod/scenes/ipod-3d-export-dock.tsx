@@ -6,6 +6,8 @@ import type { ExportFraming } from "@/components/three/three-d-ipod";
 import { CAMERA_MOVES, type CameraMove, cyclesForDuration, type LoopStyle } from "@/lib/studio-camera";
 import { getExportVideoUrl, type ExportRecord } from "@/lib/pocketbase";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * Export dock for the /3d now-playing stage.
  *
@@ -62,6 +64,8 @@ const MIN_DURATION = 2;
 const MAX_DURATION = 60;
 
 interface Ipod3DExportDockProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	exportState: Ipod3DExportState;
 	/** Clip length in seconds — lifted to the stage so the playhead cadence matches. */
 	durationSec: number;
@@ -87,6 +91,7 @@ interface Ipod3DExportDockProps {
 }
 
 export function Ipod3DExportDock({
+	index,
 	exportState,
 	durationSec,
 	onDurationChange,
@@ -121,9 +126,7 @@ export function Ipod3DExportDock({
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<div className="border-b border-black/[0.06] px-4 pb-3 pt-3.5">
-				<Label>Export</Label>
-			</div>
+			<Ipod3DCockpitHeader index={index} title="Export" />
 
 			{/* Presets — aspect · quality · length (spacious, tactile controls) */}
 			<div className="flex flex-col gap-3 border-b border-black/[0.06] px-4 py-3.5">

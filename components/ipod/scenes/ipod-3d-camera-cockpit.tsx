@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import { type StudioPose } from "@/lib/studio-camera";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * The camera cockpit for the /3d now-playing stage — a designer-facing readout of
  * the live camera in *studio coordinates* (the language a DP programs a motion-
@@ -42,6 +44,8 @@ interface SavedPose {
 }
 
 interface Ipod3DCameraCockpitProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	apiRef: React.MutableRefObject<ThreeDIpodHandle | null>;
 	/** When true, the perspective is locked — drag/wheel are frozen and recompose is off. */
 	locked?: boolean;
@@ -56,6 +60,7 @@ interface Ipod3DCameraCockpitProps {
 }
 
 export function Ipod3DCameraCockpit({
+	index,
 	apiRef,
 	locked = false,
 	onToggleLock,
@@ -136,29 +141,30 @@ export function Ipod3DCameraCockpit({
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<div className="flex items-center justify-between border-b border-black/[0.06] px-3.5 pb-2.5 pt-3">
-				<span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-black/35">
-					Camera
-				</span>
-				{onToggleLock ? (
-					<button
-						type="button"
-						onClick={onToggleLock}
-						aria-pressed={locked}
-						title={locked ? "Unlock to recompose" : "Lock this perspective for exports"}
-						className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] transition-colors ${
-							locked
-								? "border-black/80 bg-black text-white"
-								: "border-black/10 text-black/40 hover:border-black/40 hover:text-black"
-						}`}
-					>
-						<span aria-hidden>{locked ? "🔒" : "🔓"}</span>
-						{locked ? "Locked" : "Lock"}
-					</button>
-				) : (
-					<span className="text-[9px] font-medium text-black/25">drag to compose</span>
-				)}
-			</div>
+			<Ipod3DCockpitHeader
+				index={index}
+				title="Camera"
+				right={
+					onToggleLock ? (
+						<button
+							type="button"
+							onClick={onToggleLock}
+							aria-pressed={locked}
+							title={locked ? "Unlock to recompose" : "Lock this perspective for exports"}
+							className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] transition-colors ${
+								locked
+									? "border-black/80 bg-black text-white"
+									: "border-black/10 text-black/40 hover:border-black/40 hover:text-black"
+							}`}
+						>
+							<span aria-hidden>{locked ? "🔒" : "🔓"}</span>
+							{locked ? "Locked" : "Lock"}
+						</button>
+					) : (
+						<span className="text-[9px] font-medium text-black/25">drag to compose</span>
+					)
+				}
+			/>
 
 			{/* Studio-coordinate axes */}
 			<div className="px-3.5 py-2">

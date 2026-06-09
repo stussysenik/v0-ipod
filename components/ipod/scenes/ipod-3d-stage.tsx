@@ -573,18 +573,30 @@ export function Ipod3DStage() {
 					controlsOpen ? "translate-y-0 shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)]" : "translate-y-full lg:translate-y-0"
 				}`}
 			>
-				{/* Left group — interaction + now-playing + colour + camera */}
+				{/* Left group — the "subject": how you interact (01), what the device looks
+				    like (02), what's on screen (03), its charge state (04), your angle (05).
+				    Numbered 01→05 so the column reads top-to-bottom as a shoot pipeline. */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:left-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
 					<Ipod3DStudioCockpit
+						index={1}
 						interaction={interaction}
 						studio={studio}
 						dispatch={dispatch}
 						touchControls={touchControls}
 						onToggleTouchControls={() => setTouchControls((v) => !v)}
 					/>
-					<Ipod3DNowPlayingCockpit metadata={model.metadata} dispatch={dispatch} />
-					<Ipod3DColorCockpit presentation={presentation} dispatch={dispatch} />
+					<Ipod3DColorCockpit index={2} presentation={presentation} dispatch={dispatch} />
+					<Ipod3DNowPlayingCockpit index={3} metadata={model.metadata} dispatch={dispatch} />
+					{/* Battery lives with the screen state it drives (the status-bar cell),
+					    not stranded between Light and Export as it was before. */}
+					<Ipod3DBatteryCockpit
+						index={4}
+						batteryLevel={interaction.batteryLevel}
+						batteryMode={interaction.batteryMode}
+						dispatch={dispatch}
+					/>
 					<Ipod3DCameraCockpit
+						index={5}
 						apiRef={ipodApiRef}
 						locked={cameraLocked}
 						onToggleLock={toggleCameraLock}
@@ -594,20 +606,17 @@ export function Ipod3DStage() {
 					/>
 				</div>
 
-				{/* Right group — light + battery + export */}
+				{/* Right group — the "scene & capture": light it (06), then export it (07). */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:right-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
 					<Ipod3DLightingCockpit
+						index={6}
 						studio={studio}
 						dispatch={dispatch}
 						backRoughness={backRoughness}
 						onBackRoughnessChange={setBackRoughness}
 					/>
-					<Ipod3DBatteryCockpit
-						batteryLevel={interaction.batteryLevel}
-						batteryMode={interaction.batteryMode}
-						dispatch={dispatch}
-					/>
 					<Ipod3DExportDock
+						index={7}
 						exportState={exportState}
 						durationSec={durationSec}
 						onDurationChange={setDurationSec}

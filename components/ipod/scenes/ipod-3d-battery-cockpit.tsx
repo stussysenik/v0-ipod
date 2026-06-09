@@ -5,6 +5,8 @@ import type { Dispatch } from "react";
 import type { BatteryMode } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 
+import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+
 /**
  * Battery cockpit for the /3d stage.
  *
@@ -14,6 +16,8 @@ import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
  * state, forwards intent.
  */
 interface Ipod3DBatteryCockpitProps {
+	/** Position in the control surface, rendered as the header's number chip. */
+	index: number;
 	batteryLevel: number;
 	batteryMode: BatteryMode;
 	dispatch: Dispatch<IpodWorkbenchAction>;
@@ -25,6 +29,7 @@ const MODES: readonly { id: BatteryMode; label: string }[] = [
 ] as const;
 
 export function Ipod3DBatteryCockpit({
+	index,
 	batteryLevel,
 	batteryMode,
 	dispatch,
@@ -32,12 +37,11 @@ export function Ipod3DBatteryCockpit({
 	const pct = Math.round(batteryLevel * 100);
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<div className="flex items-center justify-between border-b border-black/[0.06] px-3.5 pb-2.5 pt-3">
-				<span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-black/35">
-					Battery
-				</span>
-				<span className="font-mono text-[11px] tabular-nums text-black/55">{pct}%</span>
-			</div>
+			<Ipod3DCockpitHeader
+				index={index}
+				title="Battery"
+				right={<span className="font-mono text-[11px] tabular-nums text-black/55">{pct}%</span>}
+			/>
 
 			<div className="flex flex-col gap-3 px-3.5 py-3">
 				<input
