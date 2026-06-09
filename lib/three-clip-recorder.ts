@@ -37,8 +37,14 @@ export interface ClipRecorderOptions {
 	loop?: LoopStyle;
 	/** Hero framing the move is anchored on (the composed pose). */
 	anchor?: StudioPose;
-	/** Progress callback: frames encoded so far, total frames. */
+	/** Progress callback: frames encoded so far, total frames. Drives the veil %. */
 	onProgress?: (encoded: number, total: number) => void;
+	/**
+	 * Called with clip progress (0→1) right before each screen re-bake. Forwarded
+	 * straight to `renderClipFrames` so the app can pin the marquee + song clock to
+	 * the deterministic clip timeline at bake time. See lib/export-clock.ts.
+	 */
+	onClipProgress?: (progress: number) => void;
 }
 
 export function isClipRecordingSupported(): boolean {
@@ -100,6 +106,7 @@ export async function recordIpodClip(
 		loop = "loop",
 		anchor,
 		onProgress,
+		onClipProgress,
 	} = options;
 
 	if (!isClipRecordingSupported()) return null;
@@ -133,7 +140,7 @@ export async function recordIpodClip(
 
 	try {
 		await handle.renderClipFrames(
-			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor },
+			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor, onClipProgress },
 			async (frameCanvas, index, total) => {
 				if (encodeError) throw encodeError;
 

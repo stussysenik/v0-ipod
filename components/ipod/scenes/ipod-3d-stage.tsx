@@ -1,9 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { flushSync } from "react-dom";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import type { CameraPreviewState, ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+import { setCaptureElapsedMs } from "@/lib/capture-clock";
+import { clipMarqueeElapsedMs, clipSongSecond } from "@/lib/export-clock";
 import { playClickAudio } from "@/lib/ipod-state/effects";
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
@@ -359,18 +362,20 @@ export function Ipod3DStage() {
 			// can restore it after the clip-time drive has advanced it during the export.
 			const baseTime = playbackRef.current.currentTime;
 			const songDuration = playbackRef.current.duration;
+			// Pin the marquee to clip-time 0 before the first bake so frame 0 is
+			// deterministic; the per-bake `onClipProgress` advances it from here.
+			setCaptureElapsedMs(0);
 			try {
 				// Anchor the move on the composed hero held by the playhead (so a parked
 				// scrubber can't shift it); fall back to the live pose when disengaged.
 				const anchor = heroAnchorRef.current ?? api.getCameraPose() ?? undefined;
 				const [width, height] = ASPECT_DIMS[options.aspect].clip;
 				const q = CLIP_QUALITY[options.quality];
-				// Drive the now-playing clock by CLIP-time across the export. `encoded/total`
-				// is the clip's own 0→1 timeline (the same one the camera move flies), so the
-				// song advances one second per video-second — never faster (slow renders) and
-				// never frozen past the screen-bake cap on long clips. Throttled to whole
-				// seconds (the display's resolution) to avoid 1800 re-renders + localStorage
-				// writes on a 60s clip. The realtime live interval is suppressed while exporting.
+				// Drive EVERY looping element on the screen off one deterministic clip-clock
+				// (`i / total`, sampled at bake time via `onClipProgress`), not wall-clock rAF
+				// (marquee) or async encoder progress (song) — the two clocks that used to
+				// freeze partway through a long export. `onProgress` now only feeds the veil %.
+				// See lib/export-clock.ts for the (unit-tested) clock math.
 				let lastSecond = -1;
 				const blob = await recordIpodClip(api, {
 					durationMs: Math.round(options.durationSec * 1000),
@@ -383,16 +388,21 @@ export function Ipod3DStage() {
 					speed: options.speed,
 					loop: options.loop,
 					anchor,
-					onProgress: (encoded, total) => {
-						setExportProgress(encoded / total);
-						const elapsed = (encoded / total) * options.durationSec;
-						const second =
-							songDuration > 0
-								? Math.floor(baseTime + elapsed) % (songDuration + 1)
-								: Math.floor(baseTime + elapsed);
+					onProgress: (encoded, total) => setExportProgress(encoded / total),
+					onClipProgress: (progress) => {
+						// Marquee: imperative + synchronous, so the very next bake captures it.
+						setCaptureElapsedMs(clipMarqueeElapsedMs(progress, options.durationSec));
+						// Song time: React state, so `flushSync` it to the DOM before the bake
+						// rasterizes the screen. Throttled to whole seconds (the display's
+						// resolution) to avoid needless re-renders.
+						const second = clipSongSecond(progress, {
+							baseTime,
+							durationSec: options.durationSec,
+							songDuration,
+						});
 						if (second !== lastSecond) {
 							lastSecond = second;
-							dispatch({ type: "UPDATE_CURRENT_TIME", payload: second });
+							flushSync(() => dispatch({ type: "UPDATE_CURRENT_TIME", payload: second }));
 						}
 					},
 				});
@@ -419,8 +429,10 @@ export function Ipod3DStage() {
 				console.error("[3d-export] clip failed", error);
 				showNotice("Clip failed");
 			} finally {
-				// Restore the composed playhead the clip-time drive advanced during export,
-				// so the live screen returns to exactly where the user was parked.
+				// Release the marquee back to its live wall-clock rAF animation, and restore
+				// the composed playhead the clip-time drive advanced during export so the live
+				// screen returns to exactly where the user was parked.
+				setCaptureElapsedMs(null);
 				dispatch({ type: "UPDATE_CURRENT_TIME", payload: baseTime });
 				setExportState("idle");
 				setExportProgress(null);

@@ -207,6 +207,14 @@ export interface ClipRenderOptions {
 	loop?: LoopStyle;
 	/** Hero framing the move is anchored on. Defaults to the still's hero angle. */
 	anchor?: StudioPose;
+	/**
+	 * Called synchronously with the clip progress (0→1) immediately before each
+	 * screen re-bake. It lets the app pin every looping element on the LCD (marquee,
+	 * song clock, progress bar) to the deterministic clip timeline `i / total`,
+	 * instead of wall-clock rAF or encoder progress — the two clocks that used to
+	 * freeze mid-export. See lib/export-clock.ts.
+	 */
+	onClipProgress?: (progress: number) => void;
 }
 
 /** Swap the LCD shader for a baked screen texture during capture, then revert. */
@@ -1874,6 +1882,12 @@ function SceneCapture({
 					// the marquee rAF + progress interval have advanced the DOM since the last
 					// bake; this re-rasterization carries that motion into the clip.
 					if (canRefreshScreen && i > 0 && screenBakes < SCREEN_BAKE_CAP && i % screenStride === 0) {
+						// Pin the screen's looping elements to clip-time BEFORE rasterizing, so
+						// this bake captures the marquee + song position for exactly this frame.
+						// `i / total` is the only deterministic clock here; driving the screen off
+						// it (not wall-clock / encoder progress) is what keeps a 60s export
+						// scrolling and playing continuously instead of freezing partway.
+						opts.onClipProgress?.(i / total);
 						await captureHooksRef!.current!.refreshScreen();
 						screenBakes++;
 					}
