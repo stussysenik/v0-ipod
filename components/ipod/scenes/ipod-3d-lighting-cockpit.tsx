@@ -321,9 +321,9 @@ function LightSection({
 				step={1}
 				onChange={(intensity) => onPatch({ intensity })}
 			/>
-			<details className="group mt-0.5">
+			<details className="group/shape mt-0.5">
 				<summary className="flex cursor-pointer list-none items-center gap-1 py-1 text-[10px] font-medium text-black/35 hover:text-black/60">
-					<span className="transition-transform group-open:rotate-90">›</span>
+					<span className="transition-transform group-open/shape:rotate-90">›</span>
 					Shape · position
 					<button
 						type="button"
@@ -377,16 +377,31 @@ function Section({
 	onReset?: () => void;
 	children: React.ReactNode;
 }) {
+	// Progressive disclosure: each tuning section is collapsed by default so the cockpit's
+	// ONE message stays "pick a rig". The body only appears when you open it. We name the
+	// group (`group/section`) so a section's chevron isn't also rotated by the nested
+	// Shape disclosure inside the light sections. The hint is shown only when open — when
+	// collapsed the title alone keeps the stack scannable.
 	return (
-		<div className="border-b border-black/[0.05] px-3.5 py-2.5 last:border-b-0">
-			<div className="flex items-baseline justify-between">
-				<Label>{title}</Label>
+		<details className="group/section border-b border-black/[0.05] px-3.5 py-2.5 last:border-b-0">
+			<summary className="flex cursor-pointer list-none items-baseline justify-between">
 				<span className="flex items-baseline gap-1.5">
-					{hint ? <span className="text-[9px] text-black/25">{hint}</span> : null}
+					<span className="text-[9px] leading-none text-black/30 transition-transform group-open/section:rotate-90">
+						›
+					</span>
+					<Label>{title}</Label>
+				</span>
+				<span className="flex items-baseline gap-1.5">
+					{hint ? (
+						<span className="hidden text-[9px] text-black/25 group-open/section:inline">{hint}</span>
+					) : null}
 					{onReset ? (
 						<button
 							type="button"
-							onClick={onReset}
+							onClick={(e) => {
+								e.preventDefault(); // don't toggle the disclosure when resetting
+								onReset();
+							}}
 							title={`Reset ${title} to the rig default`}
 							className="text-[10px] leading-none text-black/30 transition-colors hover:text-black/70"
 						>
@@ -394,9 +409,9 @@ function Section({
 						</button>
 					) : null}
 				</span>
-			</div>
+			</summary>
 			<div className="mt-1.5">{children}</div>
-		</div>
+		</details>
 	);
 }
 

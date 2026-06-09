@@ -299,14 +299,21 @@ export function Ipod3DExportDock({
 				/>
 			</div>
 
-			{/* Export History — past 1080p clips saved to PocketBase. */}
+			{/* Export History — past 1080p clips saved to PocketBase. Collapsed by default so
+			    the dock's one message stays "set up & capture"; the past work is one tap away. */}
 			{history.length > 0 && (
-				<div className="flex flex-col gap-2 border-t border-black/[0.06] px-4 py-3.5">
-					<div className="flex items-center justify-between">
-						<Label>Recent Exports</Label>
+				<details className="group/recent border-t border-black/[0.06] px-4 py-3.5">
+					<summary className="flex cursor-pointer list-none items-center justify-between">
+						<span className="flex items-center gap-1.5">
+							<span className="text-[9px] leading-none text-black/30 transition-transform group-open/recent:rotate-90">
+								›
+							</span>
+							<Label>Recent Exports</Label>
+							<span className="text-[10px] font-medium text-black/30">{history.length}</span>
+						</span>
 						<span className="text-[10px] font-medium text-black/35">1080p</span>
-					</div>
-					<div className="flex flex-col gap-1.5">
+					</summary>
+					<div className="mt-2 flex flex-col gap-1.5">
 						{history.map((record) => (
 							<div
 								key={record.id}
@@ -331,14 +338,12 @@ export function Ipod3DExportDock({
 							</div>
 						))}
 					</div>
-				</div>
+				</details>
 			)}
 
 			<p className="border-t border-black/[0.06] px-4 py-2.5 text-[10px] leading-snug text-black/35">
-				Stills are high-res PNG; the clip is a seamless H.264/MP4 up to 60s — loop,
-				boomerang, or Hold (the composed angle, no motion). Hero + clip fly the
-				composed/locked pose; Front is the dead-on fidelity shot. The now-playing
-				screen is baked on at capture.
+				Stills export as PNG, clips as seamless MP4 up to 60s. The now-playing screen is
+				baked on at capture.
 			</p>
 		</div>
 	);
