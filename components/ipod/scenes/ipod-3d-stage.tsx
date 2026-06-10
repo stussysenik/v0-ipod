@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { flushSync } from "react-dom";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useActorRef, useSelector } from "@xstate/react";
 
 import type { CameraPreviewState, ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import { setCaptureElapsedMs } from "@/lib/capture-clock";
@@ -17,6 +18,7 @@ import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
 import { CAMERA_MOVES, type CameraMove, type LoopStyle, type StudioPose } from "@/lib/studio-camera";
 import { STEEL_ROUGHNESS_FLOOR } from "@/lib/studio-owned-finish";
+import { exportJobOf, exportMachine, exportProgressOf } from "@/lib/xstate/export-machine";
 
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodScreen } from "../display/ipod-screen";
@@ -95,9 +97,18 @@ export function Ipod3DStage() {
 	const ipodApiRef = useRef<ThreeDIpodHandle | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
 	const noticeTimer = useRef<number | null>(null);
-	const [exportState, setExportState] = useState<Ipod3DExportState>("idle");
+	// Export lifecycle — a central XState machine (spec: 3d-export-reliability).
+	// The machine forbids re-entrancy and ignores stale callbacks after a reset;
+	// the veil + dock derive their display state from its snapshot instead of an
+	// ad-hoc string union.
+	const exportActorRef = useActorRef(exportMachine);
+	const exportSnapshot = useSelector(exportActorRef, (snapshot) => snapshot);
+	const sendExport = exportActorRef.send;
+	const exporting = !exportSnapshot.matches("idle");
+	const exportState: Ipod3DExportState =
+		(exportJobOf(exportSnapshot) ?? "idle") as Ipod3DExportState;
 	// Export progress (0–1) for the loading veil; null = indeterminate (stills).
-	const [exportProgress, setExportProgress] = useState<number | null>(null);
+	const exportProgress = exportProgressOf(exportSnapshot);
 	// Playhead — the selected move + live transport. `previewT` is the position over
 	// the full clip (0–1); the rig reports it back while playing so the scrubber
 	// tracks. Clip length is lifted here so the preview cadence matches the export.
@@ -114,7 +125,7 @@ export function Ipod3DStage() {
 	// can compose freely (phase 0 ≈ the composed hero anyway).
 	const previewEngaged = previewPlaying || previewT > 0.0001;
 	const preview: CameraPreviewState | null =
-		previewEngaged && exportState === "idle"
+		previewEngaged && !exporting
 			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec, speed, loop: loopStyle }
 			: null;
 	// Mobile control drawer. Desktop ignores this (the panels float at the corners);
@@ -234,13 +245,13 @@ export function Ipod3DStage() {
 	// must NOT also run then: it tracks export wall-clock, which differs from clip
 	// time, so the two together fast-forwarded the song on slow renders.
 	useEffect(() => {
-		if (!model.interaction.isPlaying || exportState !== "idle") return;
+		if (!model.interaction.isPlaying || exporting) return;
 		const id = window.setInterval(() => {
 			const { currentTime, duration } = playbackRef.current;
 			dispatch({ type: "UPDATE_CURRENT_TIME", payload: (currentTime + 1) % (duration + 1) });
 		}, 1000);
 		return () => window.clearInterval(id);
-	}, [model.interaction.isPlaying, exportState, dispatch]);
+	}, [model.interaction.isPlaying, exporting, dispatch]);
 
 	const playClick = useCallback(() => {
 		playClickAudio(audioRef);
@@ -322,41 +333,46 @@ export function Ipod3DStage() {
 	const handleExportPng = useCallback(
 		async (framing: ExportFraming, options: StillExportOptions) => {
 			const api = ipodApiRef.current;
-			if (!api || exportState !== "idle") return;
+			// The machine also rejects EXPORT outside idle; this early return just
+			// skips the veil paint for a click that can't start anything.
+			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
 			setPreviewPlaying(false); // hand the camera back to the still framing
-			setExportState(`png:${framing}`);
-			setExportProgress(null); // stills are quick — indeterminate veil
+			sendExport({ type: "EXPORT", job: `png:${framing}`, progress: null });
 			await nextPaint(); // let the veil cover before the scene snaps for capture
 			try {
+				sendExport({ type: "PREPARED" });
 				const [w, h] = ASPECT_DIMS[options.aspect].still;
 				// Hero still anchors on the composed hero (held by the playhead) so a
 				// parked scrubber can't tilt the shot; Front ignores it.
 				const blob = await api.captureHighRes(w, h, framing, heroAnchorRef.current);
 				if (!blob) throw new Error("capture returned no image");
+				sendExport({ type: "ENCODED" });
 				downloadBlob(blob, `ipod-3d-${framing}-${options.aspect}-${Date.now()}.png`);
+				sendExport({ type: "SAVED" });
 				showNotice(framing === "hero" ? "Saved Hero PNG" : "Saved Front PNG");
 			} catch (error) {
 				console.error("[3d-export] png failed", error);
+				sendExport({ type: "FAIL", error: error instanceof Error ? error.message : String(error) });
 				showNotice("Export failed");
 			} finally {
-				setExportState("idle");
-				setExportProgress(null);
+				// No-op after SAVED (machine is already idle); from error it returns to
+				// idle so the veil can never stay wedged on screen.
+				sendExport({ type: "RESET" });
 			}
 		},
-		[exportState, showNotice, nextPaint],
+		[exportActorRef, sendExport, showNotice, nextPaint],
 	);
 
 	const handleExportClip = useCallback(
 		async (move: CameraMove, options: ClipExportOptions) => {
 			const api = ipodApiRef.current;
-			if (!api || exportState !== "idle") return;
+			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
 			if (!isClipRecordingSupported()) {
 				showNotice("Clips need Chrome/Edge");
 				return;
 			}
 			setPreviewPlaying(false); // freeze the playhead; the offline render owns the camera
-			setExportState(`clip:${move}`);
-			setExportProgress(0);
+			sendExport({ type: "EXPORT", job: `clip:${move}`, progress: 0 });
 			await nextPaint(); // veil covers before snap-to-rest / screen bake / offline frames
 			// The playhead the user composed on — declared outside the try so `finally`
 			// can restore it after the clip-time drive has advanced it during the export.
@@ -377,6 +393,7 @@ export function Ipod3DStage() {
 				// freeze partway through a long export. `onProgress` now only feeds the veil %.
 				// See lib/export-clock.ts for the (unit-tested) clock math.
 				let lastSecond = -1;
+				sendExport({ type: "PREPARED" });
 				const blob = await recordIpodClip(api, {
 					durationMs: Math.round(options.durationSec * 1000),
 					fps: q.fps,
@@ -388,7 +405,7 @@ export function Ipod3DStage() {
 					speed: options.speed,
 					loop: options.loop,
 					anchor,
-					onProgress: (encoded, total) => setExportProgress(encoded / total),
+					onProgress: (encoded, total) => sendExport({ type: "PROGRESS", encoded, total }),
 					onClipProgress: (progress) => {
 						// Marquee: imperative + synchronous, so the very next bake captures it.
 						setCaptureElapsedMs(clipMarqueeElapsedMs(progress, options.durationSec));
@@ -407,6 +424,7 @@ export function Ipod3DStage() {
 					},
 				});
 				if (!blob) throw new Error("recorder returned no clip");
+				sendExport({ type: "ENCODED" });
 				// Name by the motion that actually played — "hold" for a motion-free angle,
 				const motionTag =
 					options.loop === "hold" ? "hold" : options.loop === "boomerang" ? `${move}-boomerang` : move;
@@ -424,21 +442,23 @@ export function Ipod3DStage() {
 					if (record) setExportHistory((prev) => [record, ...prev].slice(0, 10));
 				});
 
+				sendExport({ type: "SAVED" });
 				showNotice("Saved MP4");
 			} catch (error) {
 				console.error("[3d-export] clip failed", error);
+				sendExport({ type: "FAIL", error: error instanceof Error ? error.message : String(error) });
 				showNotice("Clip failed");
 			} finally {
 				// Release the marquee back to its live wall-clock rAF animation, and restore
 				// the composed playhead the clip-time drive advanced during export so the live
-				// screen returns to exactly where the user was parked.
+				// screen returns to exactly where the user was parked. RESET returns the
+				// machine to idle from error (no-op after SAVED) — the veil cannot wedge.
 				setCaptureElapsedMs(null);
 				dispatch({ type: "UPDATE_CURRENT_TIME", payload: baseTime });
-				setExportState("idle");
-				setExportProgress(null);
+				sendExport({ type: "RESET" });
 			}
 		},
-		[exportState, showNotice, nextPaint, model.metadata.title, dispatch],
+		[exportActorRef, sendExport, showNotice, nextPaint, model.metadata.title, dispatch],
 	);
 
 	const controls = useIpodClickWheelControls({
@@ -656,7 +676,7 @@ export function Ipod3DStage() {
 			{/* Export veil — a cinematic shutter that covers the canvas for the render.
 			    It uses 'shutter' optics: a high-speed blade snap followed by a white
 			    optic flash, then settling into a technical encoding state. */}
-			{exportState !== "idle" && (
+			{exporting && (
 				<div
 					className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-8 backdrop-blur-3xl transition-all duration-300 animate-in fade-in"
 					style={{ backgroundColor: `${presentation.bgColor}F8` }}

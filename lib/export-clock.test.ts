@@ -78,4 +78,23 @@ describe("clipSongSecond", () => {
 		expect(clipSongSecond(0.5, unknown)).toBe(30);
 		expect(clipSongSecond(1, unknown)).toBe(60);
 	});
+
+	// Spec contract (design D9): for ANY clip length, the elapsed label at clip
+	// end equals baseTime + durationSec (mod song) — the clock cycles the FULL
+	// clip duration, exactly like the marquee, never freezing partway.
+	it("end-of-clip property: final second = baseTime + durationSec (mod song) for any clip length", () => {
+		const durations = [1, 3, 5, 12, 20, 37, 60, 90, 181, 600];
+		const baseTimes = [0, 7, 15, 119];
+		const songDurations = [6, 20, 200];
+		for (const durationSec of durations) {
+			for (const baseTime of baseTimes) {
+				for (const songDuration of songDurations) {
+					const opts = { baseTime, durationSec, songDuration };
+					expect(clipSongSecond(1, opts)).toBe(
+						Math.floor(baseTime + durationSec) % (songDuration + 1),
+					);
+				}
+			}
+		}
+	});
 });

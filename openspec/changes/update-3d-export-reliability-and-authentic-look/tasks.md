@@ -35,17 +35,26 @@
 
 ## 2. 3d-export-reliability
 
-- [ ] 2.1 TDD: machine spec test first — `lib/xstate/export-machine.test.ts`
+- [x] 2.1 TDD: machine spec test first — `lib/xstate/export-machine.test.ts`
       (idle→preparing→rendering→encoding→saving→idle; error path; re-entrancy guard)
-- [ ] 2.2 Port/adapt XState central machine; drive `Ipod3DExportState` veil from it
-- [ ] 2.3 Replace `exportState` string unions in `ipod-3d-stage.tsx` with machine state
-- [ ] 2.4 Keep song-clock contract: screen elapsed label cycles the FULL clip
-      duration (unit: `clipSongSecond` end-of-clip property test)
-- [ ] 2.5 e2e: extend `tests/3d-export-continuity.spec.ts` with a blank-screen
+      — 6 tests incl. stale-callback immunity after RESET
+- [x] 2.2 Port/adapt XState central machine; drive `Ipod3DExportState` veil from it
+      — landed as `lib/xstate/export-machine.ts` (setup() pattern matching
+      color-machine); veil + dock derive from the snapshot via exportJobOf/exportProgressOf
+- [x] 2.3 Replace `exportState` string unions in `ipod-3d-stage.tsx` with machine state
+      — useActorRef/useSelector; PREPARED/PROGRESS/ENCODED/SAVED/FAIL/RESET sent at
+      pipeline milestones; RESET in finally guarantees the veil can never wedge
+- [x] 2.4 Keep song-clock contract: screen elapsed label cycles the FULL clip
+      duration (unit: `clipSongSecond` end-of-clip property test) — property test over
+      10 durations × 4 base times × 3 song lengths
+- [x] 2.5 e2e: extend `tests/3d-export-continuity.spec.ts` with a blank-screen
       assertion (per-frame screen-region variance > threshold for sampled frames)
-- [ ] 2.6 e2e: two consecutive exports in one session both download (Chrome
+      — 12 sampled frames, screen-region luma spread ≈192 vs floor 40; plus a
+      console guard that hold-last-good never fired
+- [x] 2.6 e2e: two consecutive exports in one session both download (Chrome
       multi-download policy needs a user gesture per export — verify via Playwright)
-- [ ] 2.7 Run `pnpm test:exports` + continuity green on main
+      — verified green: both rounds download and the machine returns to idle
+- [x] 2.7 Run `pnpm test:exports` + continuity green on main — continuity 2/2 passed (1.1m)
 
 ## 3. 3d-authentic-finish
 
