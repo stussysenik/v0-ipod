@@ -11,16 +11,27 @@
 
 ## 1. Branch consolidation (do FIRST in the next session)
 
-- [ ] 1.1 Merge `feat/3d-owned-finish` → `main` (fast-forward; main has no extra commits)
-- [ ] 1.2 Delete merged branch pointers: `feat/3d-studio-control-suite`,
+- [x] 1.1 Merge `feat/3d-owned-finish` → `main` (fast-forward; main has no extra commits)
+- [x] 1.2 Delete merged branch pointers: `feat/3d-studio-control-suite`,
       `feat/3d-studio-marquee-light-lock`, `feature/ipod-3d-focus` (already in main)
-- [ ] 1.3 From `feat/architecture-evolution` cherry-pick ONLY:
+- [x] 1.3 From `feat/architecture-evolution` cherry-pick ONLY:
       `lib/xstate/central-machine.ts`, `lib/xstate/store.tsx`, `uno.config.ts`,
       `unocss.d.ts`, `components/ipod/export/export-progress-overlay.tsx`,
       `lib/export/effect-pipeline.ts` (review each; do NOT take the workbench rewrite)
-- [ ] 1.4 Extract material constants from `origin/moonbit-version:ipod/color.mbt`
+      — review verdicts: `export-progress-overlay.tsx` taken (idle stage typed, `as any`
+      removed); central-machine + store taken as the adapted export machine in 2.1/2.2
+      (verbatim port doesn't compile against main's model layout and would duplicate
+      `ipodWorkbenchReducer`); `effect-pipeline.ts` REJECTED (depends on ten
+      `export-utils` helpers that only exist in the branch's workbench rewrite + the
+      `effect` dep; /3d export path already covered by `three-clip-recorder`);
+      `uno.config.ts`/`unocss.d.ts` REJECTED for now (no cockpit conversion is tasked
+      in this change; inert config + a global attributify type augmentation would
+      weaken TSX prop checking repo-wide; branch remains on origin for later adoption)
+- [x] 1.4 Extract material constants from `origin/moonbit-version:ipod/color.mbt`
       into `lib/color-manifest.ts` (never merge that branch — unrelated history)
-- [ ] 1.5 Push consolidated `main`; subsequent work branches off main
+      — wheel colorway bands + dark/mid/light gradient sets landed as typed data;
+      finish material classes (polycarbonate vs anodized) added per generation
+- [x] 1.5 Push consolidated `main`; subsequent work branches off main
 
 ## 2. 3d-export-reliability
 

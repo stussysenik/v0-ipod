@@ -17,6 +17,36 @@ export interface AuthenticFinish {
 	notes: string;
 }
 
+/**
+ * Physical construction of the case front — drives the PBR parameter set:
+ * - `polycarbonate`: 1G–5G/U2 era. Dielectric plastic, glossy clearcoat, no brush.
+ * - `anodized-aluminum`: 6G/7G/RED. Dyed metal, low metalness, brushed roughness.
+ * (The polished-steel back is shared by every generation; it is not a finish.)
+ */
+export type FinishMaterialClass = "polycarbonate" | "anodized-aluminum";
+
+/**
+ * Construction history, encoded: Apple switched the Classic line from
+ * polycarbonate fronts to anodized aluminum with the 6G (2007). The U2
+ * edition was 4G/5G-era polycarbonate; (PRODUCT)RED is anodized.
+ */
+const MATERIAL_CLASS_BY_FINISH_ID: Record<string, FinishMaterialClass> = {
+	"white-1g": "polycarbonate",
+	"white-4g": "polycarbonate",
+	"white-5g": "polycarbonate",
+	"black-5g": "polycarbonate",
+	"u2-special": "polycarbonate",
+	"silver-6g": "anodized-aluminum",
+	"black-6g": "anodized-aluminum",
+	"charcoal-7g": "anodized-aluminum",
+	"black-7g": "anodized-aluminum",
+	"product-red": "anodized-aluminum",
+};
+
+export function getFinishMaterialClass(finishId: string): FinishMaterialClass {
+	return MATERIAL_CLASS_BY_FINISH_ID[finishId] ?? "anodized-aluminum";
+}
+
 export interface SurfaceToken {
 	hex: string;
 	role: string;
@@ -208,6 +238,53 @@ export interface DerivedWheelColors {
 	labelColor: string;
 	centerBorder: string;
 	centerGradient: { from: string; via: string; to: string };
+}
+
+/*
+ * Measured wheel colorways ported as data from the `moonbit-version` branch
+ * (`ipod/color.mbt`, silver-assembly work). That branch shares no git history
+ * with this repo, so its knowledge crosses over as constants — never a merge.
+ * These are the authentic molded-plastic colors, banded by case luminance;
+ * `deriveWheelColors` above remains the continuous derivation for arbitrary
+ * case colors, and these anchors let tests pin the authentic finishes.
+ */
+export const WHEEL_LUMINANCE_BANDS = {
+	/** below this relative luminance: authentic 6G black wheel shader */
+	dark: 0.18,
+	/** below this (and above `dark`): charcoal/gunmetal wheel */
+	mid: 0.45,
+} as const;
+
+export const WHEEL_COLORWAY_DARK: DerivedWheelColors = {
+	gradient: { from: "#1C1C1E", via: "#202022", to: "#252527" },
+	border: "#2C2C2E",
+	labelColor: "#FFFFFF",
+	centerBorder: "#3A3A3C",
+	centerGradient: { from: "#1C1C1E", via: "#202022", to: "#252527" },
+};
+
+export const WHEEL_COLORWAY_MID: DerivedWheelColors = {
+	gradient: { from: "#4A4A4E", via: "#424246", to: "#3A3A3E" },
+	border: "#555558",
+	labelColor: "#E0E0E0",
+	centerBorder: "#505054",
+	centerGradient: { from: "#4E4E52", via: "#46464A", to: "#3E3E42" },
+};
+
+/** iPod 6G Silver assembly — the light-case wheel colorway. */
+export const WHEEL_COLORWAY_LIGHT: DerivedWheelColors = {
+	gradient: { from: "#F5F5F7", via: "#E8E8EA", to: "#DCDCDC" },
+	border: "#D1D1D6",
+	labelColor: "#8E8E93",
+	centerBorder: "#D1D1D6",
+	centerGradient: { from: "#FFFFFF", via: "#F0F0F2", to: "#E5E5EA" },
+};
+
+/** Pick the authentic banded wheel colorway for a case's relative luminance. */
+export function wheelColorwayForLuminance(luminance: number): DerivedWheelColors {
+	if (luminance < WHEEL_LUMINANCE_BANDS.dark) return WHEEL_COLORWAY_DARK;
+	if (luminance < WHEEL_LUMINANCE_BANDS.mid) return WHEEL_COLORWAY_MID;
+	return WHEEL_COLORWAY_LIGHT;
 }
 
 /**
