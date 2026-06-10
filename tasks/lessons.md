@@ -126,3 +126,16 @@
   clearcoat + high clearcoatRoughness), and on a black body it's a distinct CHARCOAL, never
   pure black (floor over-dark derived colors or it vanishes into the face). Distinct material
   + distinct color = reads as its own part; dead-flat black does not.
+
+## 2026-06-10 — export debugging session
+- Timebox live-browser verification loops: each 60s export run costs ~3-5 min;
+  after the causal variable is isolated (stride ↔ blank), land the fix and let
+  e2e confirm async instead of re-running full exports repeatedly.
+- Land increments early: commit the proven bug fix before starting adjacent
+  scope (presets/lighting); the user prefers shippable slices + a spec for the
+  rest over one long uncommitted session.
+- html-to-image/foreignObject is load-sensitive: never trust a single
+  rasterization inside a GPU-saturating loop; probe + warm-retry.
+- Keep ALL streaming artifacts (Playwright traces, screenshots) out of the
+  Next-watched tree; in-repo writes during dev = Fast Refresh rebuild loop →
+  500s on the page under test.
