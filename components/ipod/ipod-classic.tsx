@@ -2,14 +2,12 @@
 
 import { useReducer, useRef, useCallback, useState, useEffect, useMemo } from "react";
 import {
-  Settings,
   Box,
   Share,
   Monitor,
   Smartphone,
   Check,
   Loader2,
-  Menu,
   Pipette,
   Film,
   Eye,
@@ -49,6 +47,7 @@ import { AsciiIpod } from "./ascii-ipod";
 import { ClickWheel } from "./click-wheel";
 import { GreyPalettePicker } from "./grey-palette-picker";
 import { HexColorInput } from "./hex-color-input";
+import { SceneInspectorShell } from "./scene-inspector-shell";
 import type { SongMetadata } from "@/types/ipod";
 import {
   DEFAULT_INTERACTION_MODEL,
@@ -61,11 +60,18 @@ import {
   type IpodInteractionModel,
   type IpodNowPlayingLayoutState,
   type IpodOsScreen,
+  type IpodUiState,
   type IpodViewMode,
   type SnapshotSelectionKind,
   type SongSnapshot,
   type IpodHardwarePresetId,
 } from "@/types/ipod-state";
+import {
+  buildSceneProjectionState,
+  selectActiveProjectionProfile,
+  selectSceneNode,
+  selectSelectedScenePath,
+} from "@/lib/scene-document";
 import {
   AUTHENTIC_CASE_COLORS,
   BACKGROUND_OKLCH_CONFIG,
@@ -79,6 +85,7 @@ import {
   getIpodClassicPreset,
 } from "@/lib/ipod-classic-presets";
 import { formatTimecode, parseTimecode } from "@/lib/time-utils";
+import type { SceneNodeId } from "@/types/scene-document";
 
 const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
 const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
@@ -96,6 +103,26 @@ const PREVIEW_FRAME_WIDTH = SHELL_WIDTH + SHELL_PADDING * 2;
 const PREVIEW_FRAME_HEIGHT = SHELL_HEIGHT + SHELL_PADDING * 2;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | "gif";
+
+const SCENE_NODE_LABELS: Record<SceneNodeId, string> = {
+  scene: "Scene",
+  stage: "Stage",
+  shell: "Device Shell",
+  screen: "Screen",
+  "status-bar": "Status Bar",
+  "now-playing": "Now Playing",
+  artwork: "Artwork",
+  title: "Title",
+  artist: "Artist",
+  album: "Album",
+  rating: "Rating",
+  "track-info": "Track Info",
+  progress: "Progress",
+  "elapsed-time": "Elapsed Time",
+  "remaining-time": "Remaining Time",
+  wheel: "Click Wheel",
+  toolbox: "Inspector",
+};
 
 function slugifyExportSegment(value: string): string {
   return (
@@ -308,7 +335,71 @@ export default function IPodClassic() {
   const isAsciiView = viewMode === "ascii";
   const canPngExport = isFlatView || isFocusView;
   const isAuthenticInteraction = interactionModel !== "direct";
-  const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
+  const compactViewport = viewportSize.width > 0 && viewportSize.width < 768;
+  const currentUiState = useMemo<IpodUiState>(
+    () => ({
+      skinColor,
+      bgColor,
+      viewMode,
+      hardwarePreset,
+      interactionModel,
+      selectionKind,
+      rangeStartTime,
+      rangeEndTime,
+      osScreen,
+      menuIndex: osMenuIndex,
+      osOriginalMenuSplit,
+      osNowPlayingLayout,
+    }),
+    [
+      bgColor,
+      hardwarePreset,
+      interactionModel,
+      osMenuIndex,
+      osNowPlayingLayout,
+      osOriginalMenuSplit,
+      osScreen,
+      rangeEndTime,
+      rangeStartTime,
+      selectionKind,
+      skinColor,
+      viewMode,
+    ],
+  );
+  const sceneProjectionState = useMemo(
+    () =>
+      buildSceneProjectionState(currentUiState, {
+        compactViewport,
+        selectedNodeId:
+          interactionModel !== "direct" && osScreen === "menu"
+            ? "screen"
+            : isAuthenticInteraction
+              ? "now-playing"
+              : "title",
+      }),
+    [compactViewport, currentUiState, interactionModel, isAuthenticInteraction, osScreen],
+  );
+  const activeProjectionProfile = useMemo(
+    () => selectActiveProjectionProfile(sceneProjectionState),
+    [sceneProjectionState],
+  );
+  const selectedScenePath = useMemo(
+    () => selectSelectedScenePath(sceneProjectionState),
+    [sceneProjectionState],
+  );
+  const selectedSceneNode = useMemo(
+    () => selectSceneNode(sceneProjectionState, sceneProjectionState.document.selectedNodeId),
+    [sceneProjectionState],
+  );
+  const breadcrumbItems = useMemo(
+    () =>
+      selectedScenePath.map((nodeId) => ({
+        id: nodeId,
+        label: SCENE_NODE_LABELS[nodeId] ?? nodeId,
+      })),
+    [selectedScenePath],
+  );
+  const isCompactToolbox = activeProjectionProfile.inspector.mode === "sheet";
   const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
   const activePreset = useMemo(
     () => getIpodClassicPreset(hardwarePreset),
@@ -1176,7 +1267,7 @@ export default function IPodClassic() {
       return 1;
     }
 
-    const horizontalReserve = viewportSize.width >= 768 ? 112 : 24;
+    const horizontalReserve = viewportSize.width >= 1280 ? 408 : viewportSize.width >= 768 ? 132 : 24;
     const verticalReserve = isCompactToolbox ? 128 : 32;
     const availableWidth = Math.max(viewportSize.width - horizontalReserve, 260);
     const availableHeight = Math.max(viewportSize.height - verticalReserve, 320);
@@ -1209,150 +1300,244 @@ export default function IPodClassic() {
   const shellShadow = isExportCapturing
     ? "0 0 0 1px rgba(82,88,97,0.12), 0 14px 20px -22px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.52), inset 0 -1px 0 rgba(0,0,0,0.08)"
     : "0 20px 28px -28px rgba(0,0,0,0.36), 0 12px 18px -18px rgba(0,0,0,0.18), 0 0 0 1px rgba(88,94,102,0.10), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.04)";
+  const shellSurfaceStyle = useMemo(
+    () => ({
+      backgroundColor: skinColor,
+      backgroundImage: [
+        "radial-gradient(circle at 22% 10%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0) 44%)",
+        "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 16%, rgba(255,255,255,0) 36%, rgba(0,0,0,0.03) 100%)",
+        "linear-gradient(104deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 24%, rgba(0,0,0,0.04) 78%, rgba(0,0,0,0.08) 100%)",
+        "repeating-linear-gradient(115deg, rgba(255,255,255,0.02) 0 2px, rgba(0,0,0,0.012) 2px 6px, rgba(255,255,255,0) 6px 12px)",
+      ].join(", "),
+    }),
+    [skinColor],
+  );
   const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
   const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
-  const toolboxDockClass = isCompactToolbox
-    ? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
-    : "fixed top-6 right-6";
-  const toolboxPanelClass = isCompactToolbox
-    ? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
-    : "flex flex-col gap-3";
+  const selectedNodeLabel = selectedSceneNode
+    ? SCENE_NODE_LABELS[selectedSceneNode.id] ?? selectedSceneNode.id
+    : "Scene";
+  const interactionLabel =
+    interactionModel === "direct"
+      ? "Direct Edit"
+      : interactionModel === "ipod-os-original"
+        ? "iPod OS Original"
+        : "iPod OS";
+  const sceneTreePanel = (
+    <div className="space-y-3">
+      <div className="text-[12px] leading-5 text-[var(--scene-inspector-ink-muted)]">
+        Stage 1 keeps the canonical scene path visible while the full expandable tree lands in
+        Stage 2.
+      </div>
+      <div className="space-y-2">
+        {selectedScenePath.map((nodeId, index) => {
+          const node = sceneProjectionState.document.nodes[nodeId];
+          return (
+            <div
+              key={nodeId}
+              className={`flex items-center justify-between rounded-2xl border px-3 py-2 ${
+                index === selectedScenePath.length - 1
+                  ? "border-[var(--scene-inspector-border-strong)] bg-[var(--scene-inspector-accent-soft)]"
+                  : "border-[var(--scene-inspector-border)] bg-white/60"
+              }`}
+            >
+              <div>
+                <div className="text-[12px] font-semibold text-[var(--scene-inspector-ink)]">
+                  {SCENE_NODE_LABELS[nodeId] ?? nodeId}
+                </div>
+                <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--scene-inspector-ink-muted)]">
+                  {node.kind}
+                </div>
+              </div>
+              <div className="text-right text-[10px] text-[var(--scene-inspector-ink-muted)]">
+                <div>{node.children.length} child</div>
+                <div>{node.children.length === 1 ? "node" : "nodes"}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+  const sceneNodePanel = selectedSceneNode ? (
+    <div className="space-y-3 text-[12px]">
+      <div className="rounded-2xl border border-[var(--scene-inspector-border)] bg-white/60 p-3">
+        <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--scene-inspector-ink-muted)]">
+          Active Node
+        </div>
+        <div className="mt-1 text-[14px] font-semibold text-[var(--scene-inspector-ink)]">
+          {selectedNodeLabel}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-[var(--scene-inspector-ink-muted)]">
+          <span className="scene-inspector-chip px-2 py-1">{selectedSceneNode.kind}</span>
+          <span className="scene-inspector-chip px-2 py-1">{selectedSceneNode.role}</span>
+        </div>
+      </div>
+      <div className="rounded-2xl border border-[var(--scene-inspector-border)] bg-white/60 p-3">
+        <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--scene-inspector-ink-muted)]">
+          Stage 1 Placeholder
+        </div>
+        <div className="mt-1 leading-5 text-[var(--scene-inspector-ink-muted)]">
+          Node-scoped controls will replace the mixed settings sheet in Stage 3. Current scene
+          controls stay available above so authoring does not regress during the shell cutover.
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="text-[12px] leading-5 text-[var(--scene-inspector-ink-muted)]">
+      No scene node is selected.
+    </div>
+  );
+  const sceneHistoryPanel = (
+    <div className="space-y-3 text-[12px]">
+      <div className="rounded-2xl border border-dashed border-[var(--scene-inspector-border-strong)] bg-white/50 p-3 leading-5 text-[var(--scene-inspector-ink-muted)]">
+        Local-first snapshot and export provenance lands in Stage 4. This shell already reserves
+        the persistent history rail so saved work becomes visible in the authoring surface instead
+        of hiding in storage.
+      </div>
+      <div className="flex gap-2">
+        <div className="scene-inspector-chip px-2.5 py-1 text-[10px] font-semibold">
+          Next export #{formatExportId(exportCounter)}
+        </div>
+        <div className="scene-inspector-chip px-2.5 py-1 text-[10px] font-semibold">
+          Snapshot context {selectionKind === "range" ? "Range" : "Moment"}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <FixedEditorProvider resetKey={editorResetKey}>
       <div
         ref={containerRef}
-        className="min-h-[100dvh] w-full flex flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-4 pb-24 transition-colors duration-500 sm:justify-center sm:p-6"
-        style={{ backgroundColor: bgColor }}
+        className="ipod-studio-stage min-h-[100dvh] w-full flex flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-4 pb-24 transition-colors duration-500 sm:justify-center sm:p-6 lg:items-start lg:justify-center lg:pr-[25rem] xl:pr-[27rem]"
+        style={{ "--ipod-stage-color": bgColor } as React.CSSProperties}
       >
-        {/* Floating Tools UI */}
         <div
-          ref={toolsRef}
-          className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+          className={`z-50 transition-opacity duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
         >
-          {isCompactToolbox && (
-            <IconButton
-              icon={<Menu className="w-5 h-5" />}
-              label={isToolboxVisible ? "Hide Toolbox" : "Toolbox"}
-              data-testid="toolbox-toggle-button"
-              onClick={handleToggleToolbox}
-              isActive={isToolboxVisible}
-              className="w-12 h-12 border border-[#D0D4DA] bg-[#F2F2F0]/95 text-black backdrop-blur-sm"
-            />
-          )}
-
-          <div data-testid="toolbox-panel" className={toolboxPanelClass}>
-            {/* Settings / Theme */}
-            <div className="relative group">
-              <IconButton
-                icon={<Settings className="w-5 h-5" />}
-                label="Theme"
-                data-testid="theme-button"
-                onClick={handleToggleSettings}
-                isActive={showSettings}
-              />
-
-              {showSettings && (
-                <div
-                  data-testid="theme-panel"
-                  className={`z-20 overflow-y-auto overscroll-contain rounded-[20px] border border-[#D6D8DC] bg-[#F0F0EC]/96 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.16)] backdrop-blur-md animate-in ${
-                    isCompactToolbox
-                      ? "slide-in-from-bottom-2 fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] max-h-[min(52dvh,24rem)] rounded-2xl"
-                      : "slide-in-from-right-2 absolute top-0 right-14 w-[292px] max-h-[min(74dvh,40rem)]"
-                  }`}
-                >
-                  <div className="mb-4">
-                    <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
-                      Revision Attempt
-                    </h3>
-                    <div className="grid grid-cols-1 gap-2">
-                      {IPOD_CLASSIC_PRESETS.map((presetOption) => (
-                        <button
-                          key={presetOption.id}
-                          type="button"
-                          data-testid={`hardware-preset-${presetOption.id}-button`}
-                          aria-pressed={hardwarePreset === presetOption.id}
-                          onClick={() => handleHardwarePresetChange(presetOption.id)}
-                          className={`rounded-xl border px-3 py-2 text-left transition-colors ${
-                            hardwarePreset === presetOption.id
-                              ? "border-[#111827] bg-white/90 shadow-[inset_0_0_0_1px_rgba(17,24,39,0.08)]"
-                              : "border-[#C8CDD3] bg-white/65 hover:bg-white/80"
-                          }`}
-                        >
-                          <div className="text-[11px] font-semibold text-[#111827]">
-                            {presetOption.label}
-                          </div>
-                          <div className="mt-0.5 text-[10px] text-[#6B7280]">
-                            {presetOption.notes}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+          <SceneInspectorShell
+            toolsRef={toolsRef}
+            compact={isCompactToolbox}
+            open={isToolboxVisible}
+            controlsOpen={showSettings}
+            onToggleShell={handleToggleToolbox}
+            onToggleControls={handleToggleSettings}
+            selectedNodeLabel={selectedNodeLabel}
+            profileLabel={isCompactToolbox ? "Phone" : "Desktop"}
+            viewModeLabel={
+              viewMode === "3d"
+                ? "3D"
+                : viewMode === "preview"
+                  ? "Preview"
+                  : viewMode === "focus"
+                    ? "Focus"
+                    : viewMode === "ascii"
+                      ? "Text"
+                      : "Flat"
+            }
+            interactionLabel={
+              interactionModel === "direct" ? "Tap to edit" : "Use click wheel"
+            }
+            exportPresetLabel={
+              selectionKind === "range" ? "Moving capture" : "Still capture"
+            }
+            breadcrumbs={breadcrumbItems}
+            controlsPanel={
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4F555D]">
+                    Revision Attempt
+                  </h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {IPOD_CLASSIC_PRESETS.map((presetOption) => (
+                      <button
+                        key={presetOption.id}
+                        type="button"
+                        data-testid={`hardware-preset-${presetOption.id}-button`}
+                        aria-pressed={hardwarePreset === presetOption.id}
+                        onClick={() => handleHardwarePresetChange(presetOption.id)}
+                        className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                          hardwarePreset === presetOption.id
+                            ? "border-[#111827] bg-white/90 shadow-[inset_0_0_0_1px_rgba(17,24,39,0.08)]"
+                            : "border-[#C8CDD3] bg-white/65 hover:bg-white/80"
+                        }`}
+                      >
+                        <div className="text-[11px] font-semibold text-[#111827]">
+                          {presetOption.label}
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-[#6B7280]">
+                          {presetOption.notes}
+                        </div>
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  <div className="mb-4">
-                    <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1">
-                      Interaction
-                    </h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        data-testid="interaction-mode-direct-button"
-                        aria-pressed={interactionModel === "direct"}
-                        onClick={() => handleInteractionModelChange("direct")}
-                        className={getLockedInteractionModeButtonClass(
-                          interactionModel === "direct",
-                        )}
-                      >
-                        Direct Edit
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="interaction-mode-ipod-os-button"
-                        aria-pressed={interactionModel === "ipod-os"}
-                        onClick={() => handleInteractionModelChange("ipod-os")}
-                        className={getLockedInteractionModeButtonClass(
-                          interactionModel === "ipod-os",
-                        )}
-                      >
-                        iPod OS
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="interaction-mode-ipod-os-original-button"
-                        aria-pressed={interactionModel === "ipod-os-original"}
-                        onClick={() => handleInteractionModelChange("ipod-os-original")}
-                        className={getLockedInteractionModeButtonClass(
-                          interactionModel === "ipod-os-original",
-                          "col-span-2",
-                        )}
-                      >
-                        iPod OS Original
-                      </button>
-                    </div>
-                    {interactionModel === "ipod-os-original" ? (
-                      <p className="mt-2 px-1 text-[10px] leading-[1.35] text-[#6B7280]">
-                        Mirrors the standard iPod OS layout.
-                      </p>
-                    ) : null}
+                <div>
+                  <h3 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4F555D]">
+                    Interaction
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-testid="interaction-mode-direct-button"
+                      aria-pressed={interactionModel === "direct"}
+                      onClick={() => handleInteractionModelChange("direct")}
+                      className={getLockedInteractionModeButtonClass(
+                        interactionModel === "direct",
+                      )}
+                    >
+                      Direct Edit
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="interaction-mode-ipod-os-button"
+                      aria-pressed={interactionModel === "ipod-os"}
+                      onClick={() => handleInteractionModelChange("ipod-os")}
+                      className={getLockedInteractionModeButtonClass(
+                        interactionModel === "ipod-os",
+                      )}
+                    >
+                      iPod OS
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="interaction-mode-ipod-os-original-button"
+                      aria-pressed={interactionModel === "ipod-os-original"}
+                      onClick={() => handleInteractionModelChange("ipod-os-original")}
+                      className={getLockedInteractionModeButtonClass(
+                        interactionModel === "ipod-os-original",
+                        "col-span-2",
+                      )}
+                    >
+                      iPod OS Original
+                    </button>
                   </div>
+                  {interactionModel === "ipod-os-original" ? (
+                    <p className="mt-2 px-1 text-[10px] leading-[1.35] text-[#6B7280]">
+                      Mirrors the standard iPod OS layout.
+                    </p>
+                  ) : null}
+                </div>
 
-                  <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                <div>
+                  <h3 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4F555D]">
                     Case Color
                   </h3>
                   <div className="mb-4">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                    <h4 className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
                       Authentic Apple Releases
                     </h4>
-                    <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+                    <div className="grid grid-cols-5 gap-2 sm:grid-cols-7">
                       {AUTHENTIC_CASE_COLORS.map((c) => (
                         <button
                           key={c.value}
                           onClick={() => setSkinColor(c.value)}
                           title={c.label}
-                          className={`w-8 h-8 rounded-full border transition-transform hover:scale-105 ${
+                          className={`h-8 w-8 rounded-full border transition-transform hover:scale-105 ${
                             skinColor === c.value
-                              ? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
+                              ? "scale-105 border-[#111827] ring-2 ring-[#CDD1D6]"
                               : "border-[#B5BBC3]"
                           }`}
                           style={{ backgroundColor: c.value }}
@@ -1368,36 +1553,32 @@ export default function IPodClassic() {
                     oklchToHex={oklchToHex}
                     oklchReady={oklchReady}
                   />
-                  {oklchReady && oklchCasePalette.length > 0 && (
+                  {oklchReady && oklchCasePalette.length > 0 ? (
                     <div className="mb-4">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      <h4 className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
                         OKLCH Spectrum
                       </h4>
-                      <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
+                      <div className="grid grid-cols-6 gap-2 sm:grid-cols-9">
                         {oklchCasePalette.map((swatch) => (
                           <button
                             key={swatch.hue}
                             onClick={() => {
-                              const hex = oklchToHex(
-                                OKLCH_CASE_L,
-                                OKLCH_CASE_C,
-                                swatch.hue,
-                              );
+                              const hex = oklchToHex(OKLCH_CASE_L, OKLCH_CASE_C, swatch.hue);
                               if (!hex) return;
                               setSkinColor(hex);
                               saveCustomColor("case", hex);
                             }}
                             title={swatch.label}
-                            className="w-8 h-8 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
+                            className="h-8 w-8 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
                             style={{ backgroundColor: swatch.value }}
                           />
                         ))}
                       </div>
                     </div>
-                  )}
-                  {savedCaseColors.length > 0 && (
+                  ) : null}
+                  {savedCaseColors.length > 0 ? (
                     <div className="mb-4">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      <h4 className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
                         Recent Custom
                       </h4>
                       <div className="flex flex-wrap gap-2">
@@ -1406,7 +1587,7 @@ export default function IPodClassic() {
                             key={color}
                             onClick={() => setSkinColor(color)}
                             title={`Custom ${color}`}
-                            className={`w-7 h-7 rounded-full border ${
+                            className={`h-7 w-7 rounded-full border ${
                               skinColor === color
                                 ? "border-[#111827] ring-2 ring-[#CDD1D6]"
                                 : "border-[#B5BBC3]"
@@ -1416,15 +1597,14 @@ export default function IPodClassic() {
                         ))}
                       </div>
                     </div>
-                  )}
-
-                  {!oklchReady && (
+                  ) : null}
+                  {!oklchReady ? (
                     <p className="mb-4 px-1 text-[10px] text-[#6B7280]">
                       OKLCH palettes need a modern browser. Use the custom picker for full
                       compatibility.
                     </p>
-                  )}
-                  <div className="flex items-end gap-1 mb-4">
+                  ) : null}
+                  <div className="mb-4 flex items-end gap-1">
                     <HexColorInput
                       value={skinColor}
                       onChange={(color) => {
@@ -1432,20 +1612,22 @@ export default function IPodClassic() {
                         saveCustomColor("case", color);
                       }}
                     />
-                    {hasEyeDropper && (
+                    {hasEyeDropper ? (
                       <button
                         type="button"
                         onClick={() => openEyeDropper("case")}
-                        className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+                        className="rounded p-1 text-[#6B7280] transition-colors hover:bg-black/5 hover:text-[#111827]"
                         title="Pick color from screen"
                         aria-label="Pick case color from screen"
                       >
-                        <Pipette className="w-3.5 h-3.5" />
+                        <Pipette className="h-3.5 w-3.5" />
                       </button>
-                    )}
+                    ) : null}
                   </div>
+                </div>
 
-                  <h3 className="text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-3 px-1">
+                <div>
+                  <h3 className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4F555D]">
                     Background
                   </h3>
                   <GreyPalettePicker
@@ -1456,12 +1638,12 @@ export default function IPodClassic() {
                     oklchToHex={oklchToHex}
                     oklchReady={oklchReady}
                   />
-                  {oklchReady && oklchBgPalette.length > 0 && (
+                  {oklchReady && oklchBgPalette.length > 0 ? (
                     <div className="mb-3">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      <h4 className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
                         OKLCH Ambient
                       </h4>
-                      <div className="grid grid-cols-7 sm:grid-cols-9 gap-2">
+                      <div className="grid grid-cols-7 gap-2 sm:grid-cols-9">
                         {oklchBgPalette.map((swatch) => (
                           <button
                             key={swatch.hue}
@@ -1472,16 +1654,16 @@ export default function IPodClassic() {
                               saveCustomColor("bg", hex);
                             }}
                             title={swatch.label}
-                            className="w-6 h-6 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
+                            className="h-6 w-6 rounded-full border border-[#B5BBC3] transition-transform hover:scale-105"
                             style={{ backgroundColor: swatch.value }}
                           />
                         ))}
                       </div>
                     </div>
-                  )}
-                  {savedBgColors.length > 0 && (
+                  ) : null}
+                  {savedBgColors.length > 0 ? (
                     <div className="mt-3">
-                      <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+                      <h4 className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
                         Recent Custom
                       </h4>
                       <div className="flex flex-wrap gap-2">
@@ -1490,7 +1672,7 @@ export default function IPodClassic() {
                             key={color}
                             onClick={() => setBgColor(color)}
                             title={`Custom ${color}`}
-                            className={`w-6 h-6 rounded-full border ${
+                            className={`h-6 w-6 rounded-full border ${
                               bgColor === color
                                 ? "border-[#111827] ring-2 ring-[#CDD1D6]"
                                 : "border-[#B5BBC3]"
@@ -1500,7 +1682,7 @@ export default function IPodClassic() {
                         ))}
                       </div>
                     </div>
-                  )}
+                  ) : null}
                   <div className="flex items-end gap-1">
                     <HexColorInput
                       value={bgColor}
@@ -1509,238 +1691,257 @@ export default function IPodClassic() {
                         saveCustomColor("bg", color);
                       }}
                     />
-                    {hasEyeDropper && (
+                    {hasEyeDropper ? (
                       <button
                         type="button"
                         onClick={() => openEyeDropper("bg")}
-                        className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+                        className="rounded p-1 text-[#6B7280] transition-colors hover:bg-black/5 hover:text-[#111827]"
                         title="Pick color from screen"
                         aria-label="Pick background color from screen"
                       >
-                        <Pipette className="w-3.5 h-3.5" />
+                        <Pipette className="h-3.5 w-3.5" />
                       </button>
-                    )}
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-[#D5D7DA]">
-                    <h4 className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
-                      Snapshot
-                    </h4>
-                    <div className="mb-3 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        data-testid="snapshot-selection-moment-button"
-                        aria-pressed={selectionKind === "moment"}
-                        onClick={() => handleSelectionKindChange("moment")}
-                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-                          selectionKind === "moment"
-                            ? "border-[#111827] bg-white/90 text-[#111827]"
-                            : "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
-                        }`}
-                      >
-                        Exact Moment
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="snapshot-selection-range-button"
-                        aria-pressed={selectionKind === "range"}
-                        onClick={() => handleSelectionKindChange("range")}
-                        className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
-                          selectionKind === "range"
-                            ? "border-[#111827] bg-white/90 text-[#111827]"
-                            : "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
-                        }`}
-                      >
-                        Range
-                      </button>
-                    </div>
-
-                    {selectionKind === "range" && (
-                      <div className="mb-3 grid grid-cols-2 gap-2">
-                        <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
-                          Start
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            data-testid="snapshot-range-start-input"
-                            value={rangeStartDraft}
-                            onChange={(event) => setRangeStartDraft(event.target.value)}
-                            onBlur={() => commitRangeInput("start", rangeStartDraft)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                commitRangeInput("start", rangeStartDraft);
-                              }
-                            }}
-                            className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
-                          End
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            data-testid="snapshot-range-end-input"
-                            value={rangeEndDraft}
-                            onChange={(event) => setRangeEndDraft(event.target.value)}
-                            onBlur={() => commitRangeInput("end", rangeEndDraft)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                commitRangeInput("end", rangeEndDraft);
-                              }
-                            }}
-                            className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
-                          />
-                        </label>
-                      </div>
-                    )}
-
-                    <div className="mb-3 rounded-lg border border-[#D5D7DA] bg-white/60 px-3 py-2 text-[10px] text-[#4F555D]">
-                      <div className="font-semibold text-[#111827]">
-                        {activePreset.label} ·{" "}
-                        {interactionModel === "direct"
-                          ? "Direct Edit"
-                          : interactionModel === "ipod-os-original"
-                            ? "iPod OS Original"
-                            : "iPod OS"}
-                      </div>
-                      <div className="mt-0.5">
-                        {selectionKind === "range"
-                          ? `Range ${formatTimecode(rangeStartTime)} to ${formatTimecode(rangeEndTime)}`
-                          : `Moment ${formatTimecode(state.currentTime)}`}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        data-testid="load-song-snapshot-button"
-                        onClick={handleLoadSnapshot}
-                        className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-                      >
-                        Load Snapshot
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="save-song-snapshot-button"
-                        onClick={handleSaveSnapshot}
-                        className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
-                      >
-                        Save Snapshot
-                      </button>
-                    </div>
+                    ) : null}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* View Modes */}
-            <div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
-              <IconButton
-                icon={<Smartphone className="w-5 h-5" />}
-                label="Flat"
-                data-testid="flat-view-button"
-                isActive={viewMode === "flat"}
-                onClick={() => handleViewModeChange("flat")}
-              />
-              <IconButton
-                icon={<Eye className="w-5 h-5" />}
-                label="Preview"
-                data-testid="preview-view-button"
-                isActive={viewMode === "preview"}
-                onClick={() => handleViewModeChange("preview")}
-              />
-              <IconButton
-                icon={<Box className="w-5 h-5" />}
-                label="3D Experience"
-                badge="WIP"
-                data-testid="three-d-view-button"
-                isActive={viewMode === "3d"}
-                onClick={() => handleViewModeChange("3d")}
-              />
-              <IconButton
-                icon={<Monitor className="w-5 h-5" />}
-                label="Focus Mode"
-                data-testid="focus-view-button"
-                isActive={viewMode === "focus"}
-                onClick={() => handleViewModeChange("focus")}
-              />
-              <IconButton
-                icon={<Terminal className="w-5 h-5" />}
-                label="ASCII Mode"
-                badge="WIP"
-                data-testid="ascii-view-button"
-                isActive={viewMode === "ascii"}
-                onClick={() => handleViewModeChange("ascii")}
-              />
-            </div>
+                <div className="border-t border-[#D5D7DA] pt-3">
+                  <h4 className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
+                    Snapshot
+                  </h4>
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-testid="snapshot-selection-moment-button"
+                      aria-pressed={selectionKind === "moment"}
+                      onClick={() => handleSelectionKindChange("moment")}
+                      className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                        selectionKind === "moment"
+                          ? "border-[#111827] bg-white/90 text-[#111827]"
+                          : "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
+                      }`}
+                    >
+                      Exact Moment
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="snapshot-selection-range-button"
+                      aria-pressed={selectionKind === "range"}
+                      onClick={() => handleSelectionKindChange("range")}
+                      className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                        selectionKind === "range"
+                          ? "border-[#111827] bg-white/90 text-[#111827]"
+                          : "border-[#BEC3CA] bg-white/75 text-[#6B7280] hover:bg-white"
+                      }`}
+                    >
+                      Range
+                    </button>
+                  </div>
 
-            {/* Export Action */}
-            <IconButton
-              icon={
-                activeExportKind === "png" && exportStatus === "success" ? (
-                  <Check className="w-5 h-5" />
-                ) : pngBusy ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Share className="w-5 h-5" />
-                )
-              }
-              label={
-                activeExportKind === "png" && exportStatus === "preparing"
-                  ? "Preparing..."
-                  : activeExportKind === "png" && exportStatus === "sharing"
-                    ? "Sharing..."
-                    : activeExportKind === "png" && exportStatus === "success"
-                      ? "Done!"
-                      : !canPngExport
-                        ? "Flat or Focus View"
-                        : "Export 2D Image"
-              }
-              onClick={handlePngExport}
-              data-testid="export-button"
-              contrast={true}
-              disabled={!canPngExport || exportStatus !== "idle"}
-              className={`transition-colors duration-300 ${
-                activeExportKind === "png" && exportStatus === "success"
-                  ? "bg-green-500 hover:bg-green-600 border-none"
-                  : pngBusy
-                    ? "bg-blue-500 hover:bg-blue-600 border-none"
-                    : ""
-              } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-            />
-            {(isPreviewView || gifBusy) && (
-              <IconButton
-                icon={
-                  activeExportKind === "gif" && exportStatus === "success" ? (
-                    <Check className="w-5 h-5" />
-                  ) : gifBusy ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Film className="w-5 h-5" />
-                  )
-                }
-                label={
-                  activeExportKind === "gif" && exportStatus === "preparing"
-                    ? "Preparing..."
-                    : activeExportKind === "gif" && exportStatus === "encoding"
-                      ? "Encoding GIF..."
-                      : activeExportKind === "gif" && exportStatus === "success"
-                        ? "Done!"
-                        : "Export Animated GIF"
-                }
-                onClick={handleGifExport}
-                data-testid="gif-export-button"
-                contrast={true}
-                disabled={!isPreviewView || exportStatus !== "idle"}
-                className={`transition-colors duration-300 ${
-                  activeExportKind === "gif" && exportStatus === "success"
-                    ? "bg-green-500 hover:bg-green-600 border-none"
-                    : gifBusy
-                      ? "bg-blue-500 hover:bg-blue-600 border-none"
-                      : ""
-                } disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100`}
-              />
-            )}
-          </div>
+                  {selectionKind === "range" ? (
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                      <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
+                        Start
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          data-testid="snapshot-range-start-input"
+                          value={rangeStartDraft}
+                          onChange={(event) => setRangeStartDraft(event.target.value)}
+                          onBlur={() => commitRangeInput("start", rangeStartDraft)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              commitRangeInput("start", rangeStartDraft);
+                            }
+                          }}
+                          className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-[10px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
+                        End
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          data-testid="snapshot-range-end-input"
+                          value={rangeEndDraft}
+                          onChange={(event) => setRangeEndDraft(event.target.value)}
+                          onBlur={() => commitRangeInput("end", rangeEndDraft)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              commitRangeInput("end", rangeEndDraft);
+                            }
+                          }}
+                          className="rounded-lg border border-[#BEC3CA] bg-white/90 px-2 py-1.5 text-[11px] font-semibold text-[#111827] outline-none focus:border-[#111827]"
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+
+                  <div className="mb-3 rounded-lg border border-[#D5D7DA] bg-white/60 px-3 py-2 text-[10px] text-[#4F555D]">
+                    <div className="font-semibold text-[#111827]">
+                      {activePreset.label} · {interactionLabel}
+                    </div>
+                    <div className="mt-0.5">
+                      {selectionKind === "range"
+                        ? `Range ${formatTimecode(rangeStartTime)} to ${formatTimecode(rangeEndTime)}`
+                        : `Moment ${formatTimecode(state.currentTime)}`}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      data-testid="load-song-snapshot-button"
+                      onClick={handleLoadSnapshot}
+                      className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                    >
+                      Load Snapshot
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="save-song-snapshot-button"
+                      onClick={handleSaveSnapshot}
+                      className="rounded-lg border border-[#BEC3CA] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#111827] transition-colors hover:bg-white"
+                    >
+                      Save Snapshot
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+            actionsPanel={
+              <div className="flex flex-col gap-4">
+                <div className="space-y-3">
+                  <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--scene-inspector-ink-muted)]">
+                    Pick A View
+                  </div>
+                  <p className="px-1 text-[11px] leading-[1.45] text-[var(--scene-inspector-ink-muted)]">
+                    Start with the simplest view that helps you frame the iPod.
+                  </p>
+                  <div className="scene-inspector-control-rail flex flex-wrap gap-2 p-2.5">
+                    <IconButton
+                      icon={<Smartphone className="w-5 h-5" />}
+                      label="Flat"
+                      data-testid="flat-view-button"
+                      isActive={viewMode === "flat"}
+                      onClick={() => handleViewModeChange("flat")}
+                    />
+                    <IconButton
+                      icon={<Eye className="w-5 h-5" />}
+                      label="Preview"
+                      data-testid="preview-view-button"
+                      isActive={viewMode === "preview"}
+                      onClick={() => handleViewModeChange("preview")}
+                    />
+                    <IconButton
+                      icon={<Box className="w-5 h-5" />}
+                      label="3D"
+                      badge="WIP"
+                      data-testid="three-d-view-button"
+                      isActive={viewMode === "3d"}
+                      onClick={() => handleViewModeChange("3d")}
+                    />
+                    <IconButton
+                      icon={<Monitor className="w-5 h-5" />}
+                      label="Focus"
+                      data-testid="focus-view-button"
+                      isActive={viewMode === "focus"}
+                      onClick={() => handleViewModeChange("focus")}
+                    />
+                    <IconButton
+                      icon={<Terminal className="w-5 h-5" />}
+                      label="Text"
+                      badge="WIP"
+                      data-testid="ascii-view-button"
+                      isActive={viewMode === "ascii"}
+                      onClick={() => handleViewModeChange("ascii")}
+                    />
+                  </div>
+                </div>
+
+                <div className="scene-inspector-divider" />
+
+                <div className="space-y-3">
+                  <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--scene-inspector-ink-muted)]">
+                    Save Or Share
+                  </div>
+                  <p className="px-1 text-[11px] leading-[1.45] text-[var(--scene-inspector-ink-muted)]">
+                    When it looks right, save one picture or a moving version.
+                  </p>
+                  <div className="scene-inspector-control-rail flex flex-wrap gap-3 p-2.5">
+                    <IconButton
+                      icon={
+                        activeExportKind === "png" && exportStatus === "success" ? (
+                          <Check className="w-5 h-5" />
+                        ) : pngBusy ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Share className="w-5 h-5" />
+                        )
+                      }
+                      label={
+                        activeExportKind === "png" && exportStatus === "preparing"
+                          ? "Preparing..."
+                          : activeExportKind === "png" && exportStatus === "sharing"
+                            ? "Sharing..."
+                            : activeExportKind === "png" && exportStatus === "success"
+                              ? "Done!"
+                              : !canPngExport
+                                ? "Use Flat or Focus"
+                                : "Save Picture"
+                      }
+                      onClick={handlePngExport}
+                      data-testid="export-button"
+                      contrast={true}
+                      disabled={!canPngExport || exportStatus !== "idle"}
+                      className={`transition-colors duration-300 ${
+                        activeExportKind === "png" && exportStatus === "success"
+                          ? "border-none bg-green-500 hover:bg-green-600"
+                          : pngBusy
+                            ? "border-none bg-blue-500 hover:bg-blue-600"
+                            : ""
+                      } disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100`}
+                    />
+                    {(isPreviewView || gifBusy) ? (
+                      <IconButton
+                        icon={
+                          activeExportKind === "gif" && exportStatus === "success" ? (
+                            <Check className="w-5 h-5" />
+                          ) : gifBusy ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Film className="w-5 h-5" />
+                          )
+                        }
+                        label={
+                          activeExportKind === "gif" && exportStatus === "preparing"
+                            ? "Preparing..."
+                            : activeExportKind === "gif" && exportStatus === "encoding"
+                              ? "Encoding GIF..."
+                            : activeExportKind === "gif" && exportStatus === "success"
+                                ? "Done!"
+                                : "Make GIF"
+                        }
+                        onClick={handleGifExport}
+                        data-testid="gif-export-button"
+                        contrast={true}
+                        disabled={!isPreviewView || exportStatus !== "idle"}
+                        className={`transition-colors duration-300 ${
+                          activeExportKind === "gif" && exportStatus === "success"
+                            ? "border-none bg-green-500 hover:bg-green-600"
+                            : gifBusy
+                              ? "border-none bg-blue-500 hover:bg-blue-600"
+                              : ""
+                        } disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100`}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            }
+            treePanel={sceneTreePanel}
+            nodePanel={sceneNodePanel}
+            historyPanel={sceneHistoryPanel}
+          />
         </div>
 
         {softNotice && exportStatus === "idle" && (
@@ -1791,7 +1992,7 @@ export default function IPodClassic() {
           className={`relative transition-all duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
         >
           <div
-            className="relative"
+            className="relative rounded-[2.75rem] border border-white/50 bg-white/20 shadow-[0_24px_60px_rgba(31,25,20,0.08),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[2px]"
             style={{
               width: `${scaledFrameWidth}px`,
               height: `${scaledFrameHeight}px`,
@@ -1816,7 +2017,7 @@ export default function IPodClassic() {
                 <div
                   className="relative flex h-[620px] w-[370px] flex-col items-center border border-white/45 transition-all duration-300"
                   style={{
-                    backgroundColor: skinColor,
+                    ...shellSurfaceStyle,
                     borderColor: isExportCapturing ? "rgba(96,102,110,0.24)" : undefined,
                     boxShadow: shellShadow,
                     borderRadius: activePreset.shell.radius,

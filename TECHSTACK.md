@@ -7,9 +7,9 @@
 | Framework | Next.js | 15.2.6 | App routing, SSR, bundling |
 | UI | React | 19 | Component rendering |
 | Language | TypeScript | 5.x | Type safety |
-| Styling | Tailwind CSS | 3.4 | Utility-first styles |
+| Styling | Tailwind CSS | 4.2 | Utility-first styles + design tokens |
 | 3D | Three.js + R3F | 0.182 / 9.5 | Interactive 3D iPod view |
-| Animations | tailwindcss-animate | 1.0 | CSS keyframe animations |
+| UI Primitives | Kumo | 1.19 | Inspector shell buttons, collapsibles, and future authoring primitives |
 | Toasts | Sonner | 1.7 | Notification system |
 | Analytics | Vercel Analytics | 1.3 | Usage tracking |
 

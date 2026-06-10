@@ -1,9 +1,12 @@
-export type ExportPresetId =
-  | "product"
-  | "square"
-  | "portrait"
-  | "story"
-  | "landscape";
+import {
+  BASE_EXPORT_SCENE_HEIGHT,
+  BASE_EXPORT_SCENE_WIDTH,
+  EXPORT_PRESET_ORDER,
+  getExportProjectionProfile,
+} from "@/lib/projection-profiles";
+import type { SceneExportPresetId } from "@/types/scene-document";
+
+export type ExportPresetId = SceneExportPresetId;
 
 export interface ExportPresetConfig {
   id: ExportPresetId;
@@ -14,66 +17,24 @@ export interface ExportPresetConfig {
   offsetY: number;
 }
 
-export const BASE_EXPORT_SCENE_WIDTH = 466;
-export const BASE_EXPORT_SCENE_HEIGHT = 716;
-const PRODUCT_WIDTH = 1080;
-const PRODUCT_HEIGHT = Math.round(
-  PRODUCT_WIDTH * (BASE_EXPORT_SCENE_HEIGHT / BASE_EXPORT_SCENE_WIDTH),
-);
-
-const EXPORT_PRESET_CONFIGS: Record<ExportPresetId, ExportPresetConfig> = {
-  product: {
-    id: "product",
-    label: "Product",
-    width: PRODUCT_WIDTH,
-    height: PRODUCT_HEIGHT,
-    padding: 42,
-    offsetY: -18,
-  },
-  square: {
-    id: "square",
-    label: "Square",
-    width: 1080,
-    height: 1080,
-    padding: 82,
-    offsetY: -36,
-  },
-  portrait: {
-    id: "portrait",
-    label: "Portrait",
-    width: 1080,
-    height: 1350,
-    padding: 74,
-    offsetY: -20,
-  },
-  story: {
-    id: "story",
-    label: "Story",
-    width: 1080,
-    height: 1920,
-    padding: 104,
-    offsetY: -54,
-  },
-  landscape: {
-    id: "landscape",
-    label: "Landscape",
-    width: 1920,
-    height: 1080,
-    padding: 88,
-    offsetY: -24,
-  },
-};
-
-export const EXPORT_PRESET_ORDER: ExportPresetId[] = [
-  "product",
-  "square",
-  "portrait",
-  "story",
-  "landscape",
-];
+export { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH, EXPORT_PRESET_ORDER };
 
 export function getExportPreset(presetId: ExportPresetId): ExportPresetConfig {
-  return EXPORT_PRESET_CONFIGS[presetId];
+  const profile = getExportProjectionProfile(presetId);
+  const exportFrame = profile.exportFrame;
+
+  if (!exportFrame) {
+    throw new Error(`Projection profile ${profile.id} is missing export frame geometry`);
+  }
+
+  return {
+    id: exportFrame.presetId,
+    label: exportFrame.presetId[0].toUpperCase() + exportFrame.presetId.slice(1),
+    width: exportFrame.width,
+    height: exportFrame.height,
+    padding: exportFrame.padding,
+    offsetY: exportFrame.offsetY,
+  };
 }
 
 export function getExportPresets(): ExportPresetConfig[] {
