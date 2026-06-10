@@ -21,6 +21,7 @@ import React, {
 import * as THREE from "three";
 
 import { deriveWheelColors } from "@/lib/color-manifest";
+import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@/lib/screen-bake-guard";
 import { ColorResolvePass } from "@/lib/three-color-resolve";
 import {
 	deriveIpod3DDimensions,
@@ -980,14 +981,44 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						img.decode().catch(() => undefined),
 					),
 				);
-				const dataUrl = await htmlToImage.toPng(node, {
-					pixelRatio: 3,
-					// First bake busts the cache to guarantee fresh fonts/art; per-frame
-					// re-bakes (animated screen) reuse the warm cache for speed.
-					cacheBust: opts.cacheBust ?? true,
-					width,
-					height,
-				});
+				// Rasterize, then verify the bake actually carries screen content. Chromium's
+				// foreignObject-SVG rasterizer (html-to-image's engine) intermittently paints
+				// an EMPTY content layer when the call follows a long stretch of main-thread/
+				// GPU-saturating work — exactly what the offline render loop does between
+				// re-bakes on long clips (≈15 rendered+encoded frames ≈ 300ms+). Measured on a
+				// 60s export: ~80–95% of re-bakes came back blank, while an immediate retry —
+				// issued while the rasterizer's caches are still warm — repaired 94/94 of
+				// them. So: probe the content region; on blank, retry warm; if it still looks
+				// blank after the budget, signal the caller to HOLD the last good texture
+				// rather than ever swapping a dead screen into the clip.
+				// See lib/screen-bake-guard.ts for the (unit-tested) probe + retry policy.
+				const dataUrl = opts.transparent
+					? await htmlToImage.toPng(node, {
+							pixelRatio: 3,
+							// First bake busts the cache to guarantee fresh fonts/art; per-frame
+							// re-bakes (animated screen) reuse the warm cache for speed.
+							cacheBust: opts.cacheBust ?? true,
+							width,
+							height,
+						})
+					: await rasterizeWithBlankRetry(
+							(bustCache) =>
+								htmlToImage.toPng(node, {
+									pixelRatio: 3,
+									cacheBust: bustCache,
+									width,
+									height,
+								}),
+							probeDataUrlBlank,
+							{ firstAttemptBustsCache: opts.cacheBust ?? true },
+						);
+				if (dataUrl == null) {
+					// Every attempt rasterized blank — keep whatever texture is already on the
+					// mesh (last good bake or the live material). A held frame is invisible in
+					// the clip; a blank "dead iPod OS" frame is the bug this guards against.
+					console.warn("[3d-export] screen bake blank after retries; holding last texture");
+					return;
+				}
 				const img = new Image();
 				img.src = dataUrl;
 				await img.decode();
