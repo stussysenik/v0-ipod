@@ -209,7 +209,7 @@ function waitForImageLoad(img: HTMLImageElement): Promise<void> {
  * Preload and embed all images in the element as inline data URLs
  * This ensures html-to-image can capture them correctly
  */
-async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
+export async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
 	const images = element.querySelectorAll("img");
 
 	const imagePromises = [...images].map(async (img) => {
@@ -237,7 +237,7 @@ async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
 	await Promise.all(imagePromises);
 }
 
-function createDetachedExportNode(
+export function createDetachedExportNode(
 	element: HTMLElement,
 	options?: {
 		constrainedFrame?: boolean;
@@ -277,25 +277,6 @@ function createDetachedExportNode(
       transition: none !important;
       caret-color: transparent !important;
     }
-    [data-export-layer] {
-      filter: none !important;
-    }
-    [data-export-layer="shell"] {
-      border-color: ${EXPORT_SHELL_BORDER_COLOR} !important;
-      box-shadow: ${EXPORT_SHELL_CONTOUR} !important;
-    }
-    [data-export-layer="screen"] {
-      box-shadow: none !important;
-    }
-    [data-export-layer="artwork"] {
-      box-shadow: none !important;
-    }
-    [data-export-layer="wheel"] {
-      box-shadow: none !important;
-    }
-    [data-export-layer="wheel-center"] {
-      box-shadow: none !important;
-    }
     [data-marquee-container] {
       mask-image: none !important;
       -webkit-mask-image: none !important;
@@ -313,47 +294,9 @@ function sanitizeDetachedCloneForCapture(
 		constrainedFrame?: boolean;
 	},
 ): void {
-	const constrainedFrame = options?.constrainedFrame ?? false;
-	const shell = clone.querySelector<HTMLElement>('[data-export-layer="shell"]');
-	if (shell) {
-		shell.style.borderColor = constrainedFrame
-			? EXPORT_SHELL_BORDER_COLOR
-			: "rgba(0,0,0,0.12)";
-		shell.style.boxShadow = EXPORT_SHELL_CONTOUR;
-	}
-
-	const screen = clone.querySelector<HTMLElement>('[data-export-layer="screen"]');
-	if (screen) {
-		screen.style.boxShadow = "none";
-	}
-
-	const artwork = clone.querySelector<HTMLElement>('[data-export-layer="artwork"]');
-	if (artwork) {
-		artwork.style.boxShadow = "none";
-	}
-
-	const wheel = clone.querySelector<HTMLElement>('[data-export-layer="wheel"]');
-	if (wheel) {
-		wheel.style.boxShadow = "none";
-	}
-
-	const wheelCenter = clone.querySelector<HTMLElement>('[data-export-layer="wheel-center"]');
-	if (wheelCenter) {
-		wheelCenter.style.boxShadow = "none";
-	}
-
-	const layeredNodes = clone.querySelectorAll<HTMLElement>("[data-export-layer]");
-	for (const node of layeredNodes) {
-		node.style.filter = "none";
-	}
-
-	const allNodes = clone.querySelectorAll<HTMLElement>("*");
-	for (const node of allNodes) {
-		if (node.style.backgroundImage.includes("noiseFilter")) {
-			node.style.backgroundImage = "none";
-		}
-	}
+	// Replaced by Vanilla Extract captureTheme
 }
+
 
 function resolveRuntimeBuildContext() {
 	if (typeof window === "undefined") {
@@ -367,7 +310,7 @@ function resolveRuntimeBuildContext() {
 	return { deployVersion, buildId };
 }
 
-function removeExportNode(node: HTMLElement | null): void {
+export function removeExportNode(node: HTMLElement | null): void {
 	if (node) {
 		node.remove();
 	}
@@ -388,7 +331,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 	return new Blob([bytes], { type: mime });
 }
 
-async function summarizeBlob(blob: Blob): Promise<{ blobSize: number; blobDigest: string }> {
+export async function summarizeBlob(blob: Blob): Promise<{ blobSize: number; blobDigest: string }> {
 	try {
 		const arrayBuffer = await blob.arrayBuffer();
 		const digestBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
@@ -459,7 +402,7 @@ function formatExportTime(seconds: number, isRemaining: boolean): string {
 	return `${isRemaining ? "-" : ""}${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function flushAnimatedCloneLayout(root: HTMLElement): void {
+export function flushAnimatedCloneLayout(root: HTMLElement): void {
 	void root.offsetWidth;
 	const animatedNodes = root.querySelectorAll<HTMLElement>(
 		'[data-marquee-track="true"], [data-testid="progress-fill"], [data-testid="elapsed-time"], [data-testid="remaining-time"]',
@@ -469,7 +412,7 @@ function flushAnimatedCloneLayout(root: HTMLElement): void {
 	}
 }
 
-function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): number {
+export function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): number {
 	// 1. Apply marquee translateX (existing logic)
 	const nodes = getMarqueeCaptureNodes(root);
 	let cycleDurationMs = 0;
@@ -566,7 +509,7 @@ function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number): numbe
 	return cycleDurationMs;
 }
 
-async function captureGifFrameCanvas(
+export async function captureGifFrameCanvas(
 	element: HTMLElement,
 	options: {
 		backgroundColor?: string;
@@ -1179,7 +1122,7 @@ function createExportProgress(progress: ExportProgress): ExportProgress {
 	};
 }
 
-function createEncoderWorkerClient(onProgress?: (progress: number, detail?: string) => void) {
+export function createEncoderWorkerClient(onProgress?: (progress: number, detail?: string) => void) {
 	const worker = new Worker(new URL("./export/export-encoder.worker.ts", import.meta.url), {
 		type: "module",
 	});
@@ -1396,7 +1339,7 @@ export function downloadImageBlob(blob: Blob, filename: string): boolean {
 	}).success;
 }
 
-function downloadImageBlobWithOptions(
+export function downloadImageBlobWithOptions(
 	blob: Blob,
 	filename: string,
 	options: {

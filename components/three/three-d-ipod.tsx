@@ -158,8 +158,10 @@ export interface CameraPreviewState {
 
 export interface ThreeDIpodHandle {
 	captureHighRes: (width?: number, height?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>;
+	captureFrame: (width: number, height: number) => Promise<ImageBitmap | null>;
 	/** The live WebGL canvas — used by the clip recorder's captureStream(). */
 	getCanvas: () => HTMLCanvasElement | null;
+
 	/**
 	 * Bake the live now-playing screen onto the in-scene LCD plane and snap the
 	 * body to rest. Returns a restore() to revert. Used by the clip recorder so a
@@ -1618,6 +1620,7 @@ function OrbitRig({
 
 function SceneCapture({
 	onCapture,
+	onFrameCapture,
 	onReady,
 	onRegisterCanvas,
 	onRegisterViewport,
@@ -1627,6 +1630,8 @@ function SceneCapture({
 	captureBackground,
 }: {
 	onCapture: (fn: (w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) => void;
+	onFrameCapture: (fn: (w: number, h: number) => Promise<ImageBitmap | null>) => void;
+
 	onReady?: () => void;
 	onRegisterCanvas?: (el: HTMLCanvasElement) => void;
 	onRegisterViewport?: (fn: (w: number, h: number) => () => void) => void;
@@ -2007,9 +2012,51 @@ function SceneCapture({
 		};
 		onRegisterClip?.(renderClipFrames);
 
+		const captureFrame = async (width: number, height: number): Promise<ImageBitmap | null> => {
+			// No angle override here — capture from current camera for live interaction recording
+			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
+				samples: 4,
+				type: THREE.UnsignedByteType,
+				format: THREE.RGBAFormat,
+			});
+
+			try {
+				gl.setRenderTarget(renderTarget);
+				gl.render(scene, camera);
+
+				const buffer = new Uint8Array(width * height * 4);
+				gl.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+				gl.setRenderTarget(null);
+
+				const canvas = document.createElement("canvas");
+				canvas.width = width;
+				canvas.height = height;
+				const ctx = canvas.getContext("2d");
+				if (!ctx) return null;
+
+				const imageData = ctx.createImageData(width, height);
+				for (let y = 0; y < height; y++) {
+					for (let x = 0; x < width; x++) {
+						const srcIdx = ((height - y - 1) * width + x) * 4;
+						const dstIdx = (y * width + x) * 4;
+						imageData.data[dstIdx] = buffer[srcIdx]!;
+						imageData.data[dstIdx + 1] = buffer[srcIdx + 1]!;
+						imageData.data[dstIdx + 2] = buffer[srcIdx + 2]!;
+						imageData.data[dstIdx + 3] = buffer[srcIdx + 3]!;
+					}
+				}
+				ctx.putImageData(imageData, 0, 0);
+				return await createImageBitmap(canvas);
+			} finally {
+				renderTarget.dispose();
+			}
+		};
+
 		onCapture(captureHighRes);
+		onFrameCapture(captureFrame);
 		onReady?.();
-	}, [gl, scene, camera, setFrameloop, onCapture, onReady, onRegisterCanvas, onRegisterViewport, onRegisterClip, captureHooksRef, capturingRef]);
+	}, [gl, scene, camera, setFrameloop, onCapture, onFrameCapture, onReady, onRegisterCanvas, onRegisterViewport, onRegisterClip, captureHooksRef, capturingRef]);
+
 
 	return null;
 }
@@ -2070,7 +2117,24 @@ function OriginMarker() {
 
 export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 	(props, ref) => {
-		const { onReady, preset, capacityLabel = "160GB", stageClassName = "bg-black", apiRef, captureBackground, showOrigin = false, focus: focusProp, onFocusChange, cameraLocked = false, preview = null, onPreviewTick, lighting, technicalFlat = false, ...modelProps } = props;
+		const { 
+			onReady, 
+			preset, 
+			capacityLabel = "160GB", 
+			stageClassName = "bg-black", 
+			apiRef, 
+			captureBackground, 
+			showOrigin = false, 
+			focus: focusProp, 
+			onFocusChange, 
+			cameraLocked = false, 
+			preview = null, 
+			onPreviewTick, 
+			lighting, 
+			technicalFlat = false, 
+			...modelProps 
+		} = props;
+
 		// In the flat technical view the device is rendered as unlit albedo (a material swap),
 		// so the rig is a neutral one that only keeps the LCD legible — see FlatFinish.
 		// The render OWNS the finish: reshape the curated rig to the chosen colours so any
@@ -2089,7 +2153,10 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 						}),
 			[baseLighting, technicalFlat, modelProps.skinColor, modelProps.backColor, captureBackground],
 		);
+
 		const captureRef = useRef<((w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) | null>(null);
+		const frameCaptureRef = useRef<((w: number, h: number) => Promise<ImageBitmap | null>) | null>(null);
+		const modelResetRef = useRef<(() => void) | null>(null);
 		const canvasRef = useRef<HTMLCanvasElement | null>(null);
 		const captureHooksRef = useRef<CaptureHooks | null>(null);
 		const viewportRef = useRef<((w: number, h: number) => () => void) | null>(null);
@@ -2115,6 +2182,10 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			(): ThreeDIpodHandle => ({
 				captureHighRes: async (width?: number, height?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => {
 					if (captureRef.current) return captureRef.current(width, height, framing, heroPose);
+					return null;
+				},
+				captureFrame: async (width: number, height: number) => {
+					if (frameCaptureRef.current) return frameCaptureRef.current(width, height);
 					return null;
 				},
 				getCanvas: () => canvasRef.current,
@@ -2150,10 +2221,16 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			[],
 		);
 
+		const handleFrameCapture = useCallback(
+			(fn: (w: number, h: number) => Promise<ImageBitmap | null>) => { frameCaptureRef.current = fn; },
+			[],
+		);
+
 		const handleRegisterCapture = useCallback(
 			(hooks: CaptureHooks) => { captureHooksRef.current = hooks; },
 			[],
 		);
+
 
 		const handleRegisterCanvas = useCallback(
 			(el: HTMLCanvasElement) => { canvasRef.current = el; },
@@ -2246,7 +2323,8 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 
 					{!isFocusControlled && <FocusControls focus={focus} onFocus={setFocus} />}
 
-					<SceneCapture capturingRef={capturingRef} captureBackground={captureBackground} captureHooksRef={captureHooksRef} onCapture={handleCapture} onRegisterCanvas={handleRegisterCanvas} onRegisterClip={handleRegisterClip} onRegisterViewport={handleRegisterViewport} onReady={onReady} />
+					<SceneCapture capturingRef={capturingRef} captureBackground={captureBackground} captureHooksRef={captureHooksRef} onCapture={handleCapture} onFrameCapture={handleFrameCapture} onRegisterCanvas={handleRegisterCanvas} onRegisterClip={handleRegisterClip} onRegisterViewport={handleRegisterViewport} onReady={onReady} />
+
 				</Canvas>
 			</div>
 		);

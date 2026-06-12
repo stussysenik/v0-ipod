@@ -6,10 +6,12 @@ import { useEffect, useRef } from "react";
 import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { playMechanicalClick } from "@/lib/ipod-state/effects";
+import { liveTheme, captureTheme, vars } from "@/lib/ipod-state/theme.css";
 
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
 const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+
 
 /**
  * Interactive click wheel assembly.
@@ -157,13 +159,16 @@ export function IpodClickWheel({
 		callback?.();
 	};
 
+	const activeTheme = exportSafe ? captureTheme : liveTheme;
+
 	return (
 		<div
 			ref={wheelRef}
-			className={`relative touch-none rounded-full ${disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${className}`}
+			className={`relative touch-none rounded-full ${disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${activeTheme} ${className}`}
 			style={{
 				width: wheelTokens.size,
 				height: wheelTokens.size,
+
 				transform: "scale(0.8)",
 				transformOrigin: "center",
 				...style,
@@ -218,8 +223,7 @@ export function IpodClickWheel({
 								width: wheelTokens.centerSize + 2,
 								height: wheelTokens.centerSize + 2,
 								background: "transparent",
-								boxShadow:
-									"inset 0 1px 2px -0.5px rgba(0,0,0,0.18), inset 1px 0 1px -0.5px rgba(0,0,0,0.1), inset -0.5px -0.5px 1.5px rgba(0,0,0,0.22), 1px 1px 1px -0.5px rgba(255,255,255,0.25)",
+								boxShadow: vars.material.middleButtonDepth,
 							}}
 							aria-hidden="true"
 						/>

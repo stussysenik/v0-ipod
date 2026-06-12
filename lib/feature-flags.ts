@@ -5,19 +5,19 @@
  */
 export const FEATURE_FLAGS = {
 	/** Show non-default hardware presets (2007, 6.5 Gen, Silver, Late 160GB). When false, only the default Classic 2008 Black renders. */
-	SHOW_EXTRA_HARDWARE_PRESETS: false,
+	SHOW_EXTRA_HARDWARE_PRESETS: true,
 	/** "iPod OS Original" interaction mode button */
-	SHOW_IPOD_OS_ORIGINAL: false,
+	SHOW_IPOD_OS_ORIGINAL: true,
 	/** OKLCH Spectrum case color palette grid */
-	SHOW_OKLCH_SPECTRUM: false,
+	SHOW_OKLCH_SPECTRUM: true,
 	/** OKLCH Ambient background color palette grid */
-	SHOW_OKLCH_AMBIENT: false,
+	SHOW_OKLCH_AMBIENT: true,
 	/** "3D Experience" view mode button */
-	SHOW_3D_VIEW_MODE: false,
+	SHOW_3D_VIEW_MODE: true,
 	/** "Focus Mode" view mode button */
-	SHOW_FOCUS_VIEW_MODE: false,
+	SHOW_FOCUS_VIEW_MODE: true,
 	/** "ASCII Mode" view mode button */
-	SHOW_ASCII_VIEW_MODE: false,
+	SHOW_ASCII_VIEW_MODE: true,
 	/** Materiality VFX — directional specular sheen, noise texture, rim light, cavity groove, and concave center button shading */
 	ENABLE_MATERIALITY: true,
 	/** Mechanical center button — deeper press animation with spring-back, enhanced shadow recess, and a distinct physical click sound via Web Audio API */

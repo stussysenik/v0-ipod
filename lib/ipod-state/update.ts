@@ -25,6 +25,8 @@ import {
 	type SongSnapshot,
 } from "./model";
 
+export { createInitialIpodWorkbenchModel, type SongSnapshot };
+
 export type IpodWorkbenchAction =
 	| { type: "UPDATE_TITLE"; payload: string }
 	| { type: "UPDATE_ARTIST"; payload: string }
@@ -110,7 +112,7 @@ function clampSongMetadata(metadata: SongMetadata): SongMetadata {
 	};
 }
 
-function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
+export function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 	const metadata = clampSongMetadata(model.metadata);
 	const duration = metadata.duration;
 	const currentTime = metadata.currentTime;

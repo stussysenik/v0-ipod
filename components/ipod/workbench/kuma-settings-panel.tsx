@@ -1,7 +1,27 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Button } from "@cloudflare/kumo";
+import { 
+  Button, 
+  Heading, 
+  Slider, 
+  SliderOutput, 
+  SliderTrack, 
+  SliderThumb,
+  Label,
+  ListBox,
+  ListBoxItem,
+  Popover,
+  DialogTrigger,
+  Dialog,
+  ColorPicker,
+  ColorArea,
+  ColorThumb,
+  ColorSlider,
+  ColorWheel,
+  ColorField as RACColorField,
+  Input
+} from "react-aria-components";
 import { HexColorInput } from "../editors/hex-color-input";
 import { NativeColorPicker } from "../editors/native-color-picker";
 import { IPOD_6G_COLORS } from "@/hooks/use-ipod-theme";
@@ -9,8 +29,10 @@ import { IPOD_CLASSIC_PRESETS } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { findKumuPaletteProximityMatches } from "@/lib/color-proximity";
 import type { BatteryMode, IpodHardwarePresetId, IpodInteractionModel } from "@/lib/ipod-state/model";
-import { Settings } from "lucide-react";
+import { Settings, Check, ChevronRight } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
 interface KumaSettingsPanelProps {
 	showSettings: boolean;
@@ -41,61 +63,36 @@ interface KumaSettingsPanelProps {
 	onSaveSnapshot: () => void;
 }
 
-// ─── Shared tokens ─────────────────────────────────────────────────────────────────
-
-const BORDER_ACTIVE = "1px solid #111827";
-const BORDER_INACTIVE = "1px solid #C8CDD3";
-const BORDER_SUBTLE = "1px solid #BEC3CA";
-const BG_ACTIVE = "rgba(255,255,255,0.9)";
-const BG_INACTIVE = "rgba(255,255,255,0.65)";
-const BG_HOVER = "rgba(255,255,255,0.8)";
 const TEXT_ACTIVE = "#111827";
 const TEXT_MUTED = "#6B7280";
-const TEXT_HEADING = "#4F555D";
 
-const sectionHeadingClass =
-	"text-[11px] font-semibold text-[#4F555D] uppercase tracking-[0.08em] mb-2 px-1";
+const sectionHeadingVariants = cva(
+	"text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1"
+);
 
-// ─── Sub-components ────────────────────────────────────────────────────────────────
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-	return <h3 className={sectionHeadingClass}>{children}</h3>;
+function SectionHeading({ children, className }: { children: React.ReactNode; className?: string }) {
+	return <Heading className={cn(sectionHeadingVariants(), className)}>{children}</Heading>;
 }
 
-function ToggleButton({
-	isActive,
-	onClick,
-	children,
-	colSpan,
-}: {
-	isActive: boolean;
-	onClick: () => void;
-	children: React.ReactNode;
-	colSpan?: boolean;
-}) {
-	return (
-		<Button
-			type="button"
-			onClick={onClick}
-			variant="ghost"
-			size="xs"
-			aria-pressed={isActive}
-			className={`${colSpan ? "w-full" : "flex-1"} ${!isActive ? "hover:bg-[rgba(255,255,255,0.8)]" : ""}`}
-			style={{
-				borderRadius: 12,
-				border: isActive ? BORDER_ACTIVE : BORDER_INACTIVE,
-				backgroundColor: isActive ? BG_ACTIVE : BG_INACTIVE,
-				color: isActive ? TEXT_ACTIVE : TEXT_MUTED,
-				fontSize: 11,
-				fontWeight: 600,
-				padding: "8px 12px",
-				height: "auto",
-			}}
-		>
-			{children}
-		</Button>
-	);
-}
+const racButtonVariants = cva(
+	"flex items-center justify-center text-[11px] font-semibold transition-all duration-200 h-auto py-2.5 px-3 rounded-xl border outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+	{
+		variants: {
+			isActive: {
+				true: "bg-white border-[#111827] text-[#111827] shadow-sm",
+				false: "bg-white/60 border-[#D0D4DA] text-[#6B7280] hover:bg-white/80",
+			},
+			fullWidth: {
+				true: "w-full",
+				false: "flex-1",
+			},
+		},
+		defaultVariants: {
+			isActive: false,
+			fullWidth: false,
+		},
+	}
+);
 
 function ColorSwatchButton({
 	color,
@@ -111,24 +108,25 @@ function ColorSwatchButton({
 	size?: number;
 }) {
 	return (
-		<button
-			type="button"
-			onClick={onClick}
-			title={label}
+		<Button
+			onPress={onClick}
 			aria-label={label}
-			className="rounded-full p-0 transition-transform hover:scale-110"
+			className={cn(
+        "rounded-full transition-transform hover:scale-110 border box-border outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+        isActive ? "border-[#111827] border-2 shadow-[0_0_0_2px_#CDD1D6]" : "border-[#B5BBC3] border-1"
+      )}
 			style={{
 				width: size,
 				height: size,
 				backgroundColor: color,
-				border: `${isActive ? 2 : 1}px solid ${isActive ? "#111827" : "#B5BBC3"}`,
-				boxShadow: isActive ? "0 0 0 2px #CDD1D6" : undefined,
 			}}
-		/>
+		>
+      {isActive && <Check size={12} className="text-white mix-blend-difference mx-auto" />}
+    </Button>
 	);
 }
 
-const SHADE_DISTANCE_THRESHOLD = 15; // CIEDE2000 units — only genuinely close colors
+const SHADE_DISTANCE_THRESHOLD = 15;
 
 function ColorField({
 	label,
@@ -148,15 +146,16 @@ function ColorField({
 	const [showShades, setShowShades] = useState(false);
 	const proximityShades = findKumuPaletteProximityMatches(color, 12)
 		.filter((m) => m.distance <= SHADE_DISTANCE_THRESHOLD);
+
 	return (
-		<div className="mb-4">
+		<div className="mb-6 last:mb-0">
 			{label ? <SectionHeading>{label}</SectionHeading> : null}
 			{savedColors.length > 0 && (
 				<div className="mb-3">
-					<div className="text-[10px] font-medium text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
+					<div className="text-[10px] font-bold text-[#6B7280] uppercase tracking-[0.08em] mb-2 px-1">
 						Recent Custom
 					</div>
-					<div className="flex flex-wrap gap-2 px-1">
+					<div className="flex flex-wrap gap-2.5 px-1">
 						{savedColors.map((savedColor) => (
 							<ColorSwatchButton
 								key={savedColor}
@@ -169,20 +168,16 @@ function ColorField({
 					</div>
 				</div>
 			)}
-			<div
-				className="flex items-end gap-1 mb-4 cursor-text"
-				onClick={(e) => {
-					const input = (e.currentTarget as HTMLElement).querySelector("input") as HTMLInputElement | null;
-					input?.focus();
-				}}
-			>
-				<HexColorInput
-					value={color}
-					onChange={(newColor: string) => {
-						onColorChange(newColor);
-						onSaveCustom(target, newColor);
-					}}
-				/>
+			<div className="flex items-center gap-2 mb-3">
+				<div className="flex-1">
+					<HexColorInput
+						value={color}
+						onChange={(newColor: string) => {
+							onColorChange(newColor);
+							onSaveCustom(target, newColor);
+						}}
+					/>
+				</div>
 				<NativeColorPicker
 					value={color}
 					onChange={(newColor: string) => {
@@ -193,55 +188,27 @@ function ColorField({
 				/>
 			</div>
 			<Button
-				type="button"
-				onClick={() => setShowShades((v) => !v)}
-				variant="ghost"
-				size="xs"
-				className="w-full"
-				style={{
-					fontSize: 10,
-					fontWeight: 600,
-					height: 28,
-					borderRadius: 8,
-					border: "1px solid #D5D7DA",
-					backgroundColor: "transparent",
-					color: TEXT_MUTED,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: 4,
-					padding: 0,
-				}}
+				onPress={() => setShowShades((v) => !v)}
+				className="w-full h-8 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-[#6B7280] bg-transparent border border-[#D5D7DA] rounded-lg hover:bg-black/5 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
 			>
 				<span
-					className="w-3 h-3 rounded-full border shrink-0"
-					style={{
-						backgroundColor: color,
-						borderColor: "#B5BBC3",
-					}}
+					className="w-3 h-3 rounded-full border border-[#B5BBC3] shrink-0"
+					style={{ backgroundColor: color }}
 				/>
-				{showShades ? "Hide Shades" : "Shades"}
+				{showShades ? "Hide Shades" : "View Shades"}
 			</Button>
 			{showShades && (
-				<div className="flex flex-wrap gap-1 mt-2 px-0.5">
-					{proximityShades.map(({ hex, distance, label }) => (
-						<button
+				<div className="flex flex-wrap gap-2 mt-3 p-2 bg-black/5 rounded-xl">
+					{proximityShades.map(({ hex, label }) => (
+						<ColorSwatchButton
 							key={hex}
-							type="button"
+							color={hex}
+							isActive={color === hex}
 							onClick={() => {
 								onColorChange(hex);
 								onSaveCustom(target, hex);
 							}}
-							title={`${hex} · ${label}`}
-							aria-label={`Select shade ${hex}, distance ${label}`}
-							className="rounded-full p-0 transition-transform hover:scale-[1.15]"
-							style={{
-								width: 28,
-								height: 28,
-								backgroundColor: hex,
-								border: color === hex ? "2px solid #111827" : "1px solid #B5BBC3",
-								boxShadow: color === hex ? "0 0 0 2px #CDD1D6" : undefined,
-							}}
+							label={`${hex} · ${label}`}
 						/>
 					))}
 				</div>
@@ -249,8 +216,6 @@ function ColorField({
 		</div>
 	);
 }
-
-// ─── Main Panel ────────────────────────────────────────────────────────────────────
 
 export function KumaSettingsPanel({
 	showSettings,
@@ -290,338 +255,240 @@ export function KumaSettingsPanel({
 		}
 	}, [onToggleSettings]);
 
-	const panelPosition: Record<string, string> = isCompactToolbox
+	const panelPosition: React.CSSProperties = isCompactToolbox
 		? {
 				position: "fixed",
-				right: "12px",
-				left: "12px",
-				bottom: "calc(env(safe-area-inset-bottom) + 4.5rem)",
-				maxHeight: "min(52dvh, 24rem)",
-				borderRadius: "16px",
+				right: "16px",
+				left: "16px",
+				bottom: "calc(env(safe-area-inset-bottom) + 5rem)",
+				maxHeight: "60dvh",
+				borderRadius: "24px",
 			}
 		: {
 				position: "absolute",
 				top: "0",
-				right: "56px",
-				width: "292px",
-				maxHeight: "min(74dvh, 40rem)",
+				right: "64px",
+				width: "320px",
+				maxHeight: "min(85dvh, 48rem)",
+        borderRadius: "24px",
 			};
 
 	return (
 		<div className="relative group">
 			<IconButton
-				icon={<Settings size={20} />}
-				label="Theme"
+				icon={<Settings size={22} />}
+				label="Theme & Controls"
 				data-testid="theme-button"
 				onClick={handleToggle}
 				isActive={showSettings}
+        className="w-12 h-12"
 			/>
 
 			{showSettings && (
 				<div
 					data-testid="theme-panel"
-					className="z-20 overflow-y-auto"
+					className="z-50 overflow-y-auto border border-[#D6D8DC] bg-[#F5F5F2]/95 backdrop-blur-xl shadow-[0_24px_50px_rgba(0,0,0,0.2)] p-5 animate-in fade-in zoom-in-95 duration-200"
 					style={{
-						viewTransitionName: "settings-panel" as unknown as string,
+						viewTransitionName: "settings-panel",
 						overscrollBehavior: "contain",
 						...panelPosition,
-						backgroundColor: "rgba(240,240,236,0.96)",
-						backdropFilter: "blur(12px)",
-						borderColor: "#D6D8DC",
-						borderWidth: 1,
-						borderStyle: "solid",
-						boxShadow: "0 18px 34px rgba(0,0,0,0.16)",
-						padding: 16,
-						zIndex: 20,
 					}}
 				>
-					{/* Revision Attempt */}
-					<div className="mb-4">
-						<SectionHeading>Revision Attempt</SectionHeading>
-						<div className="flex flex-col gap-2">
+					{/* Hardware Selection */}
+					<div className="mb-6">
+						<SectionHeading>Physical Revision</SectionHeading>
+						<ListBox
+							aria-label="Hardware Preset"
+							selectedKeys={[hardwarePreset]}
+							selectionMode="single"
+							onSelectionChange={(keys) => {
+                const key = Array.from(keys)[0] as IpodHardwarePresetId;
+                if (key) onHardwarePresetChange(key);
+              }}
+							className="flex flex-col gap-2"
+						>
 							{IPOD_CLASSIC_PRESETS.filter(
-								(p) =>
-									FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS ||
-									p.id === "classic-2008-black",
-							).map((presetOption) => (
-								<Button
-									key={presetOption.id}
-									type="button"
-									data-testid={`hardware-preset-${presetOption.id}-button`}
-									variant="ghost"
-									size="xs"
-									aria-pressed={hardwarePreset === presetOption.id}
-									onClick={() => onHardwarePresetChange(presetOption.id)}
-									className={`w-full text-left ${hardwarePreset !== presetOption.id ? "hover:bg-[rgba(255,255,255,0.8)]" : ""}`}
-									style={{
-										borderRadius: 12,
-										border: hardwarePreset === presetOption.id ? BORDER_ACTIVE : BORDER_INACTIVE,
-										backgroundColor: hardwarePreset === presetOption.id ? BG_ACTIVE : BG_INACTIVE,
-										boxShadow: hardwarePreset === presetOption.id
-											? "inset 0 0 0 1px rgba(17,24,39,0.08)"
-											: undefined,
-										padding: "8px 12px",
-										height: "auto",
-									}}
+								(p) => FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS || p.id === "classic-2008-black",
+							).map((preset) => (
+								<ListBoxItem
+									key={preset.id}
+									id={preset.id}
+									className={({ isSelected, isFocused }) => cn(
+                    "flex flex-col p-3 rounded-xl border transition-all cursor-pointer outline-none",
+                    isSelected ? "bg-white border-[#111827] shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60",
+                    isFocused && "ring-2 ring-blue-500 ring-inset"
+                  )}
 								>
-									<div className="flex flex-col text-left w-full">
-										<span className="text-[11px] font-semibold" style={{ color: TEXT_ACTIVE }}>
-											{presetOption.label}
-										</span>
-										<span className="text-[10px] mt-0.5" style={{ color: TEXT_MUTED }}>
-											{presetOption.notes}
-										</span>
-									</div>
-								</Button>
+                  {({ isSelected }) => (
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-bold text-[#111827]">{preset.label}</span>
+                        <span className="text-[10px] text-[#6B7280] mt-0.5">{preset.notes}</span>
+                      </div>
+                      {isSelected && <Check size={14} className="text-[#111827]" />}
+                    </div>
+                  )}
+								</ListBoxItem>
 							))}
-						</div>
+						</ListBox>
 					</div>
 
-					{/* Interaction */}
-					<div className="mb-4">
-						<SectionHeading>Interaction</SectionHeading>
-						<div className="flex gap-2">
-							<ToggleButton
-								isActive={interactionModel === "direct"}
-								onClick={() => onInteractionModelChange("direct")}
+					{/* Interaction Model */}
+					<div className="mb-6">
+						<SectionHeading>Control Interface</SectionHeading>
+						<div className="flex gap-2.5">
+							<Button
+								onPress={() => onInteractionModelChange("direct")}
+								className={racButtonVariants({ isActive: interactionModel === "direct" })}
 							>
 								Direct Edit
-							</ToggleButton>
-							<ToggleButton
-								isActive={interactionModel === "ipod-os"}
-								onClick={() => onInteractionModelChange("ipod-os")}
+							</Button>
+							<Button
+								onPress={() => onInteractionModelChange("ipod-os")}
+								className={racButtonVariants({ isActive: interactionModel === "ipod-os" })}
 							>
 								iPod OS
-							</ToggleButton>
+							</Button>
 						</div>
-						{FEATURE_FLAGS.SHOW_IPOD_OS_ORIGINAL && (
-							<div className="mt-2">
-								<ToggleButton
-									isActive={interactionModel === "ipod-os-original"}
-									onClick={() =>
-										onInteractionModelChange("ipod-os-original")
-									}
-									colSpan
-								>
-									iPod OS Original
-								</ToggleButton>
-							</div>
-						)}
-						{FEATURE_FLAGS.SHOW_IPOD_OS_ORIGINAL &&
-							interactionModel === "ipod-os-original" && (
-								<p className="mt-2 px-1 text-[10px] leading-[1.35]" style={{ color: TEXT_MUTED }}>
-									Mirrors the standard iPod OS layout.
-								</p>
-							)}
 					</div>
 
-					{/* Battery */}
-					<div className="mb-4">
-						<div className="flex items-center justify-between mb-2 px-1">
-							<h3 className={sectionHeadingClass + " mb-0 px-0"}>Battery</h3>
-							<span className="text-[10px] font-mono" style={{ color: TEXT_MUTED, fontFamily: "var(--font-geist-mono)" }}>
-								{Math.round(batteryLevel * 100)}%
-							</span>
-						</div>
-						<div className="px-1">
-							<input
-								type="range"
-								min="0.05"
-								max="1"
-								step="0.01"
-								value={batteryLevel}
-								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-									onBatteryLevelChange(parseFloat(e.target.value))
-								}
-								className="w-full h-1.5 rounded-lg cursor-pointer appearance-none"
-								style={{
-									backgroundColor: "#D6D8DC",
-									accentColor: "#111827",
-								}}
-							/>
-						</div>
-						<div className="flex gap-1.5 mt-2 px-1">
+					{/* Battery Level - Real RAC Slider */}
+					<div className="mb-8">
+            <Slider
+              value={batteryLevel}
+              onChange={(val) => onBatteryLevelChange(val as number)}
+              minValue={0.05}
+              maxValue={1}
+              step={0.01}
+              className="flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between px-1">
+                <SectionHeading className="mb-0 px-0">Power Cell</SectionHeading>
+                <SliderOutput className="text-[10px] font-mono font-bold text-[#111827]">
+                  {({state}) => `${Math.round(state.getThumbValue(0) * 100)}%`}
+                </SliderOutput>
+              </div>
+              <SliderTrack className="relative h-2 w-full rounded-full bg-black/10">
+                {({ state }) => (
+                  <>
+                    <div 
+                      className="absolute h-full rounded-full bg-[#111827]" 
+                      style={{ width: `${state.getThumbPercent(0) * 100}%` }} 
+                    />
+                    <SliderThumb className="h-5 w-5 rounded-full bg-white border-2 border-[#111827] shadow-md outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 transition-shadow top-1/2" />
+                  </>
+                )}
+              </SliderTrack>
+            </Slider>
+
+						<div className="flex gap-2 mt-4">
 							{(["manual", "solar"] as const).map((mode) => (
 								<Button
 									key={mode}
-									type="button"
-									onClick={() => onBatteryModeChange(mode)}
-									title={
-										mode === "manual"
-											? "18h real-life drain"
-											: "Depletes over one song"
-									}
-									variant="ghost"
-									size="xs"
-									className={`flex-1 ${batteryMode !== mode ? "hover:bg-[rgba(255,255,255,0.8)]" : ""}`}
-									style={{
-										borderRadius: 8,
-										border: batteryMode === mode ? BORDER_ACTIVE : BORDER_SUBTLE,
-										backgroundColor: batteryMode === mode ? BG_ACTIVE : BG_INACTIVE,
-										color: batteryMode === mode ? TEXT_ACTIVE : TEXT_MUTED,
-										fontSize: 10,
-										fontWeight: 600,
-										lineHeight: 1.25,
-										padding: "4px 6px",
-										height: "auto",
-									}}
+									onPress={() => onBatteryModeChange(mode)}
+									className={racButtonVariants({ 
+                    isActive: batteryMode === mode,
+                    fullWidth: true
+                  })}
 								>
-									{mode === "manual" ? "Manual" : "Solar"}
+									{mode === "manual" ? "Standard" : "Solar Drain"}
 								</Button>
 							))}
 						</div>
 					</div>
 
-					{/* Case Color */}
-					<div className="mb-4">
-						<h3 className={sectionHeadingClass + " mb-3"}>Case Color</h3>
-						<div className="grid grid-cols-2 gap-2 mb-3">
-							<Button
-								type="button"
-								onClick={() => {
-									onSkinColorChange(IPOD_6G_COLORS.case.black);
-									onRingColorChange(IPOD_6G_COLORS.wheel.dark.surface);
-									onCenterColorChange(IPOD_6G_COLORS.wheel.dark.center);
-									onBgColorChange(IPOD_6G_COLORS.background.white);
-								}}
-								variant="ghost"
-								size="xs"
-								className={skinColor !== IPOD_6G_COLORS.case.black ? "hover:bg-white" : ""}
-								style={{
-									borderRadius: 8,
-									border: skinColor === IPOD_6G_COLORS.case.black ? BORDER_ACTIVE : BORDER_SUBTLE,
-									backgroundColor: skinColor === IPOD_6G_COLORS.case.black ? BG_ACTIVE : "rgba(255,255,255,0.75)",
-									color: skinColor === IPOD_6G_COLORS.case.black ? TEXT_ACTIVE : TEXT_MUTED,
-									fontSize: 11,
-									fontWeight: 600,
-									padding: "6px 8px",
-									height: "auto",
-								}}
-							>
-								<span className="flex items-center gap-2">
-									<span
-										className="w-4 h-4 rounded-full border shrink-0"
-										style={{
-											backgroundColor: IPOD_6G_COLORS.case.black,
-											borderColor: "#B5BBC3",
-										}}
-									/>
-									Black
-								</span>
-							</Button>
-							<Button
-								type="button"
-								onClick={() => {
-									onSkinColorChange(IPOD_6G_COLORS.case.white);
-									onRingColorChange(IPOD_6G_COLORS.wheel.light.surface);
-									onCenterColorChange(IPOD_6G_COLORS.wheel.light.center);
-									onBgColorChange(IPOD_6G_COLORS.background.white);
-								}}
-								variant="ghost"
-								size="xs"
-								className={skinColor !== IPOD_6G_COLORS.case.white ? "hover:bg-white" : ""}
-								style={{
-									borderRadius: 8,
-									border: skinColor === IPOD_6G_COLORS.case.white ? BORDER_ACTIVE : BORDER_SUBTLE,
-									backgroundColor: skinColor === IPOD_6G_COLORS.case.white ? BG_ACTIVE : "rgba(255,255,255,0.75)",
-									color: skinColor === IPOD_6G_COLORS.case.white ? TEXT_ACTIVE : TEXT_MUTED,
-									fontSize: 11,
-									fontWeight: 600,
-									padding: "6px 8px",
-									height: "auto",
-								}}
-							>
-								<span className="flex items-center gap-2">
-									<span
-										className="w-4 h-4 rounded-full border shrink-0"
-										style={{
-											backgroundColor: IPOD_6G_COLORS.case.white,
-											borderColor: "#B5BBC3",
-										}}
-									/>
-									White
-								</span>
-							</Button>
+					{/* Colors */}
+					<div className="space-y-6 pt-6 border-t border-[#D5D7DA]">
+						<div>
+							<SectionHeading>Case Finish</SectionHeading>
+							<div className="grid grid-cols-2 gap-2.5 mb-4">
+								<Button
+									onPress={() => {
+										onSkinColorChange(IPOD_6G_COLORS.case.black);
+										onRingColorChange(IPOD_6G_COLORS.wheel.dark.surface);
+										onCenterColorChange(IPOD_6G_COLORS.wheel.dark.center);
+										onBgColorChange(IPOD_6G_COLORS.background.white);
+									}}
+									className={racButtonVariants({
+										isActive: skinColor === IPOD_6G_COLORS.case.black,
+										fullWidth: true
+									})}
+								>
+									<span className="flex items-center gap-2">
+										<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#1A1A1A]" />
+										Jet Black
+									</span>
+								</Button>
+								<Button
+									onPress={() => {
+										onSkinColorChange(IPOD_6G_COLORS.case.white);
+										onRingColorChange(IPOD_6G_COLORS.wheel.light.surface);
+										onCenterColorChange(IPOD_6G_COLORS.wheel.light.center);
+										onBgColorChange(IPOD_6G_COLORS.background.white);
+									}}
+									className={racButtonVariants({
+										isActive: skinColor === IPOD_6G_COLORS.case.white,
+										fullWidth: true
+									})}
+								>
+									<span className="flex items-center gap-2">
+										<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#F5F5F5]" />
+										Classic White
+									</span>
+								</Button>
+							</div>
+							<ColorField
+								label=""
+								color={skinColor}
+								onColorChange={onSkinColorChange}
+								onSaveCustom={onSaveCustomColor}
+								target="case"
+								savedColors={savedCaseColors}
+							/>
 						</div>
+
 						<ColorField
-							label=""
-							color={skinColor}
-							onColorChange={onSkinColorChange}
+							label="Outer Click Wheel"
+							color={ringColor}
+							onColorChange={onRingColorChange}
 							onSaveCustom={onSaveCustomColor}
-							target="case"
-							savedColors={savedCaseColors}
+							target="ring"
+							savedColors={savedRingColors}
+						/>
+
+						<ColorField
+							label="Center Button"
+							color={centerColor}
+							onColorChange={onCenterColorChange}
+							onSaveCustom={onSaveCustomColor}
+							target="center"
+							savedColors={savedCenterColors}
+						/>
+
+						<ColorField
+							label="Studio Background"
+							color={bgColor}
+							onColorChange={onBgColorChange}
+							onSaveCustom={onSaveCustomColor}
+							target="bg"
+							savedColors={savedBgColors}
 						/>
 					</div>
 
-					<ColorField
-						label="Outer Ring Color"
-						color={ringColor}
-						onColorChange={onRingColorChange}
-						onSaveCustom={onSaveCustomColor}
-						target="ring"
-						savedColors={savedRingColors}
-					/>
-
-					<ColorField
-						label="Inner Ring Color"
-						color={centerColor}
-						onColorChange={onCenterColorChange}
-						onSaveCustom={onSaveCustomColor}
-						target="center"
-						savedColors={savedCenterColors}
-					/>
-
-					<ColorField
-						label="Background"
-						color={bgColor}
-						onColorChange={onBgColorChange}
-						onSaveCustom={onSaveCustomColor}
-						target="bg"
-						savedColors={savedBgColors}
-					/>
-
-					{/* Load/Save Snapshot */}
-					<div className="mt-4 pt-3" style={{ borderTop: "1px solid #D5D7DA" }}>
-						<div className="grid grid-cols-2 gap-2">
+					{/* Persistence */}
+					<div className="mt-10 pt-6 border-t border-[#D5D7DA]">
+						<div className="grid grid-cols-2 gap-3">
 							<Button
-								type="button"
-								data-testid="load-song-snapshot-button"
-								onClick={onLoadSnapshot}
-								variant="ghost"
-								size="xs"
-								className="hover:bg-white"
-								style={{
-									borderRadius: 8,
-									border: BORDER_SUBTLE,
-									backgroundColor: "rgba(255,255,255,0.8)",
-									color: TEXT_ACTIVE,
-									fontSize: 11,
-									fontWeight: 600,
-									padding: "6px 8px",
-									height: "auto",
-								}}
+								onPress={onLoadSnapshot}
+								className={cn(racButtonVariants({ fullWidth: true }), "bg-black/5 border-transparent text-[#111827]")}
 							>
-								Load Snapshot
+								Restore
 							</Button>
 							<Button
-								type="button"
-								data-testid="save-song-snapshot-button"
-								onClick={onSaveSnapshot}
-								variant="ghost"
-								size="xs"
-								className="hover:bg-white"
-								style={{
-									borderRadius: 8,
-									border: BORDER_SUBTLE,
-									backgroundColor: "rgba(255,255,255,0.8)",
-									color: TEXT_ACTIVE,
-									fontSize: 11,
-									fontWeight: 600,
-									padding: "6px 8px",
-									height: "auto",
-								}}
+								onPress={onSaveSnapshot}
+								className={cn(racButtonVariants({ fullWidth: true }), "bg-[#111827] border-[#111827] text-white hover:bg-black")}
 							>
-								Save Snapshot
+								Snapshot
 							</Button>
 						</div>
 					</div>

@@ -13,7 +13,7 @@ export const GIF_QUALITY_CONFIG = {
 
 export const MP4_QUALITY_CONFIG = {
 	standard: { fps: 12, bitrate: 12_000_000, scale: 2.0 },
-	pro: { fps: 30, bitrate: 24_000_000, scale: 3.375 },
+	pro: { fps: 30, bitrate: 50_000_000, scale: 3.375 },
 } as const;
 
 export const DEFAULT_GIF_EXPORT_FPS = GIF_QUALITY_CONFIG.standard.fps;
