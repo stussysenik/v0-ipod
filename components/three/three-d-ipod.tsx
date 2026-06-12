@@ -461,47 +461,59 @@ function createBrushedMetalTexture(): THREE.CanvasTexture {
  * Renders the laser-etched markings of the polished steel back as a transparent
  * canvas decal: a carrot maker's-mark (in place of the Apple logo), the iPod
  * wordmark, capacity, and the personalized attribution. Etched glyphs are drawn
- * as soft dark marks with a 1px top highlight so they read as recessed once the
- * chrome reflects around them.
+ * with a high-contrast CNC-milled treatment — deep shadows and sharp, shining
+ * bevels — to ensure the identity "pops" on the mirror surface.
  */
 function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
-	const w = 768;
-	const h = 1280;
+	// High-resolution (1536x2560) — legible at 25–35 cm viewing distance
+	const w = 1536;
+	const h = 2560;
 	const canvas = document.createElement("canvas");
 	canvas.width = w;
 	canvas.height = h;
 	const ctx = canvas.getContext("2d")!;
 	ctx.clearRect(0, 0, w, h);
 
+	// CNC Tool Mark Pattern — subtle horizontal milling grain to mimic the CNC process
+	const pCanvas = document.createElement("canvas");
+	pCanvas.width = 4;
+	pCanvas.height = 2;
+	const pCtx = pCanvas.getContext("2d")!;
+	pCtx.fillStyle = "rgba(0,0,0,0.15)";
+	pCtx.fillRect(0, 0, 4, 1);
+	const cncPattern = ctx.createPattern(pCanvas, "repeat")!;
+
 	const etch = (draw: () => void) => {
-		// Recessed shadow
+		// 1. Deep Milled Shadow — pure black for maximum contrast
 		ctx.save();
-		ctx.fillStyle = "rgba(28,30,34,0.5)";
+		ctx.fillStyle = "rgba(0,0,0,0.92)";
 		draw();
 		ctx.restore();
-		// Bevel highlight, nudged up 1px
+
+		// 2. CNC Tooling Pass — subtle horizontal grain inside the milling pocket
 		ctx.save();
-		ctx.translate(0, -1.5);
-		ctx.fillStyle = "rgba(255,255,255,0.16)";
+		ctx.fillStyle = cncPattern;
+		draw();
+		ctx.restore();
+
+		// 3. Shining CNC Bevel — sharp, high-intensity white to catch the environment
+		ctx.save();
+		ctx.translate(0, -1.8);
+		ctx.fillStyle = "rgba(255,255,255,0.72)";
 		draw();
 		ctx.restore();
 	};
 
 	ctx.textAlign = "center";
 
-	// Carrot maker's-mark (drawn vector, no emoji/font dependency) — a tapered root
-	// on gentle S-curves to a clean point, crowned by five leafy fronds that fan from
-	// the shoulder with the centre blade tallest. Etched as one dark silhouette like
-	// every other mark; the fuller frond fan and smoother taper give it a more
-	// expressive, deliberately-drawn shape than the old three-blade sketch.
+	// Carrot maker's-mark (drawn vector) — scaled up for presence
 	const cx = w / 2;
-	const logoY = h * 0.31;
-	const s = 66;
+	const logoY = h * 0.27;
+	const s = 130;
 	const carrot = () => {
-		const topY = logoY; // shoulder line
-		const tipY = logoY + s * 1.12; // root tip
+		const topY = logoY;
+		const tipY = logoY + s * 1.12;
 		const halfW = s * 0.34;
-		// Root — broad rounded shoulders tapering on symmetric S-curves to a sharp tip.
 		ctx.beginPath();
 		ctx.moveTo(cx - halfW, topY);
 		ctx.bezierCurveTo(cx - halfW * 0.92, topY + s * 0.42, cx - halfW * 0.32, topY + s * 0.82, cx, tipY);
@@ -509,7 +521,6 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 		ctx.quadraticCurveTo(cx, topY - s * 0.2, cx - halfW, topY);
 		ctx.closePath();
 		ctx.fill();
-		// Fronds — leafy blades fanning from the shoulder, the centre one tallest.
 		const blade = (angleDeg: number, len: number, baseHalf: number) => {
 			const a = (angleDeg * Math.PI) / 180;
 			const tipX = cx + Math.sin(a) * len;
@@ -523,49 +534,53 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 			ctx.closePath();
 			ctx.fill();
 		};
-		blade(-36, s * 0.5, s * 0.085); // far left
-		blade(-18, s * 0.64, s * 0.092); // left
-		blade(0, s * 0.74, s * 0.098); // centre, tallest
-		blade(18, s * 0.64, s * 0.092); // right
-		blade(36, s * 0.5, s * 0.085); // far right
+		blade(-36, s * 0.5, s * 0.085);
+		blade(-18, s * 0.64, s * 0.092);
+		blade(0, s * 0.74, s * 0.098);
+		blade(18, s * 0.64, s * 0.092);
+		blade(36, s * 0.5, s * 0.085);
 	};
 	etch(carrot);
 
-	// iPod wordmark — the real engraving is the iPod logotype: a tight, medium-weight
-	// setting (lowercase i, cap P). SF Pro Display ≈ the shipped face; negative tracking
-	// pulls the glyphs into the close-set logo lockup instead of loose body text.
 	const sansDisplay = "-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 	const sansText = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+	// iPod wordmark — bold, legible at distance
 	etch(() => {
-		ctx.font = `590 98px ${sansDisplay}`;
-		ctx.letterSpacing = "-4px";
-		ctx.fillText("iPod", cx, h * 0.452);
+		ctx.font = `600 176px ${sansDisplay}`;
+		ctx.letterSpacing = "-5px";
+		ctx.fillText("iPod", cx, h * 0.435);
 		ctx.letterSpacing = "0px";
 	});
 
-	// Capacity — sits just under the wordmark, lighter and a touch tracked so it reads
-	// as a spec line, not part of the logo.
+	// Designer attribution — the personal mark, prominent like a fashion label
 	etch(() => {
-		ctx.font = `380 30px ${sansText}`;
-		ctx.letterSpacing = "0.5px";
-		ctx.fillText(capacity, cx, h * 0.5);
+		ctx.font = `600 52px ${sansText}`;
+		ctx.letterSpacing = "1.2px";
+		ctx.fillText("DESIGNED BY STÜSSY SENIK", cx, h * 0.505);
 		ctx.letterSpacing = "0px";
 	});
 
-	// Regulatory fine print near the base — the real back stacks a designed/assembled
-	// line, a model/regulatory line, and a rating/copyright line in tiny tracked type.
-	// Kept tight, evenly led, and centred to read as genuine laser etching.
+	// Capacity — spec line under the attribution
+	etch(() => {
+		ctx.font = `500 46px ${sansText}`;
+		ctx.letterSpacing = "0.8px";
+		ctx.fillText(capacity, cx, h * 0.555);
+		ctx.letterSpacing = "0px";
+	});
+
+	// Regulatory fine print — raised and enlarged for real legibility at arm's-length
 	const fineLines = [
-		"Designed by Stüssy Senik · Assembled in Czech Republic",
-		"Model No. A1238   EMC No. 2151   IC: 579C-A1238",
-		`⎓ Rated 5–30V · Capacity ${capacity} · © 2008 Stüssy Senik`,
+		"Manufactured in Czech Republic · Model No. A1238",
+		"EMC No. 2151 · IC: 579C-A1238",
+		`⎓ Rated 5–30V · Capacity ${capacity} · © 2026 Stüssy Senik`,
 	];
 	etch(() => {
-		ctx.font = `400 15px ${sansText}`;
-		ctx.letterSpacing = "0.4px";
-		const baseY = h * 0.85;
+		ctx.font = `600 36px ${sansText}`;
+		ctx.letterSpacing = "0.6px";
+		const baseY = h * 0.87;
 		fineLines.forEach((line, i) => {
-			ctx.fillText(line, cx, baseY + i * 23);
+			ctx.fillText(line, cx, baseY + i * 50);
 		});
 		ctx.letterSpacing = "0px";
 	});
@@ -794,7 +809,20 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 			{flat ? (
 				<FlatFinish map={engraving} transparent depthWrite={false} />
 			) : (
-				<meshStandardMaterial map={engraving} transparent depthWrite={false} metalness={0.2} roughness={0.5} />
+				// CNC Milled finish: a colored dielectric (etched pixels) on mirror metal.
+				// Clearcoat and high envMapIntensity make the etched bevels "shine" and
+				// "pop" as the device orbits, mimicking the reflective catch of real milling.
+				<meshPhysicalMaterial
+					map={engraving}
+					transparent
+					depthWrite={false}
+					metalness={0.8}
+					roughness={0.12}
+					clearcoat={1.0}
+					clearcoatRoughness={0.1}
+					envMapIntensity={2.5}
+					toneMapped={false}
+				/>
 			)}
 		</mesh>
 	);

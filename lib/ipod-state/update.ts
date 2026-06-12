@@ -1,6 +1,6 @@
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import {
-	APPLE_PRODUCT_RIG,
+	DESIGNER_DARK_RIG,
 	cloneLightingConfig,
 	type SoftboxSpec,
 	type SpotRole,
@@ -539,7 +539,8 @@ export function ipodWorkbenchReducer(
 				},
 			});
 		case "RESET_LIGHTING":
-			return patchStudio(state, { lighting: cloneLightingConfig(APPLE_PRODUCT_RIG) });
+			// Factory reset = the Noir default rig, the same one a fresh load boots.
+			return patchStudio(state, { lighting: cloneLightingConfig(DESIGNER_DARK_RIG) });
 
 		// ── Studio: presentation toggles ─────────────────────────────────────────────────
 		case "SET_TECHNICAL_FLAT":

@@ -21,26 +21,45 @@ export interface PortfolioProfile {
 	taglineJa: string;
 	shortBio: string;
 	longBio: string;
+	/** The one-paragraph hiring summary (mirrors the CV's JSON-LD summary). */
+	summary: string;
 	location: string;
 	email: string;
 	edition: string;
 	createdDate: string;
+	available: boolean;
 }
 
 export const profile: PortfolioProfile = {
 	name: 'MENGXUAN "SENIK" ZOU',
 	handle: "Stüssy Senik",
-	role: "DevEx & Experience Design Engineer",
+	role: "Design Engineer & Creative Producer",
 	taglineJa: "クリエイティブ・テクノロジスト",
 	shortBio:
-		"Building at the intersection of science, design, cinema, computation and code",
+		"Building at the intersection of engineering, creative production, and design — from code to camera",
 	longBio:
-		"Formally trained Software Engineer turned Artist & self-taught Designer with 8+ years crafting delight through impactful interfaces, experiences & artifacts. My practice applies computational techniques to augment the design & art-direction process.",
+		"Formally trained Software Engineer turned Artist & self-taught Designer with 8+ years crafting delight through impactful interfaces, experiences & artifacts. My practice applies computational techniques to augment the design & art-direction process. Building tools and experiences with 1 billion people in mind.",
+	summary:
+		"Polymath engineer at the convergence of software, film, music, and design. Formally trained at Cooper Union and FAMU Prague, with production experience spanning B2B product engineering, simultaneous translation across 4 languages, community radio, and EU-funded filmmaking.",
 	location: "NYC / PRAGUE",
 	email: "itsmxzou@gmail.com",
 	edition: "01",
 	createdDate: "January 2026",
+	available: true,
 };
+
+/** Spoken languages — a hiring signal in its own right (4-language translator). */
+export interface Language {
+	name: string;
+	level: string;
+}
+
+export const languages: Language[] = [
+	{ name: "EN", level: "Native / Fluent" },
+	{ name: "中文 ZH", level: "Native" },
+	{ name: "CZ", level: "Fluent" },
+	{ name: "DE", level: "Conversational" },
+];
 
 export interface PortfolioLink {
 	label: string;
@@ -86,10 +105,11 @@ export const projects: Project[] = [
 		year: 2026,
 		month: 1,
 		title: "iPod emulator",
-		description: "A faithful, physically-accurate iPod classic in the browser.",
+		description:
+			"A faithful, physically-accurate iPod classic in the browser — you are holding it right now.",
 		url: "https://ipod-music.vercel.app",
 		category: "tool",
-		tools: ["JavaScript", "WebGL", "ARKit"],
+		tools: ["TypeScript", "Three.js", "WebGL"],
 	},
 	{
 		year: 2026,
@@ -248,7 +268,7 @@ export const labs: LabExperiment[] = [
 // ─── CV ──────────────────────────────────────────────────────────────────────
 
 export interface CvEntry {
-	type: "work" | "education";
+	type: "work" | "education" | "award";
 	title: string;
 	organization: string;
 	location?: string;
@@ -259,6 +279,14 @@ export interface CvEntry {
 
 export const cv: CvEntry[] = [
 	{
+		type: "award",
+		title: "#1 Product of the Day",
+		organization: "Product Hunt",
+		startDate: "2025-09",
+		endDate: "2025-09",
+		description: "Attendu — recognized as the top product launch of the day.",
+	},
+	{
 		type: "work",
 		title: "AI/ML Growth Product Design Engineer",
 		organization: "Attendu",
@@ -266,7 +294,7 @@ export const cv: CvEntry[] = [
 		startDate: "2026-02",
 		endDate: "present",
 		description:
-			"Production-ready B2B features for high-trust coding scenarios; product reached #1 Product of the Day on Product Hunt (Sep 2025).",
+			"Shipping production-ready B2B features for high-trust, risk, safety and resilience coding scenarios. T-shaped development spanning QA assurance and product ownership; setting leadership in the Czech market for parallel agent development and DevOps.",
 	},
 	{
 		type: "work",
@@ -321,12 +349,13 @@ export const cv: CvEntry[] = [
 	},
 	{
 		type: "education",
-		title: "Computer Engineering + Interdisciplinary Arts",
+		title: "Engineering Technology",
 		organization: "The Cooper Union",
 		location: "New York, NY",
 		startDate: "2022-09",
 		endDate: "2025-05",
-		description: "Dropped out junior year to self-learn advanced CS topics.",
+		description:
+			"Dropped out junior year to self-learn advanced computer science — deep learning, computer vision, and systems engineering.",
 	},
 	{
 		type: "education",
@@ -423,6 +452,29 @@ export interface Writing {
 
 export const writings: Writing[] = [
 	{
+		slug: "20260410-webgpu-compute",
+		title: "WebGPU Compute Shaders for Generative Art",
+		date: "2026-04-10",
+		excerpt:
+			"A deep dive into using WebGPU compute shaders for real-time generative art.",
+		tags: ["webgpu", "graphics", "rust"],
+	},
+	{
+		slug: "20260325-clojure-svelte",
+		title: "Expressiveness in UI: Clojure and Svelte",
+		date: "2026-03-25",
+		excerpt:
+			"How we ported our portfolio logic to Clojure (Squint) while keeping Svelte 5 for rendering.",
+		tags: ["clojure", "svelte", "architecture"],
+	},
+	{
+		slug: "20260215-minimalism",
+		title: "Digital Minimalism in 2026",
+		date: "2026-02-15",
+		excerpt: "Why websites should be fast, accessible, and respect user autonomy.",
+		tags: ["design", "minimalism", "ux"],
+	},
+	{
 		slug: "20250105-webgpu-vs-webgl",
 		title: "WebGPU vs WebGL: A Practical Comparison",
 		date: "2025-01-05",
@@ -464,11 +516,130 @@ export const writings: Writing[] = [
 	},
 ];
 
+// ─── Taste (curated likes, ported from the canonical site's likes feed) ──────
+
+export interface TasteCollection {
+	title: string;
+	items: string[];
+}
+
+export const tasteCollections: TasteCollection[] = [
+	{
+		title: "Typography",
+		items: ["Klim Type Foundry", "Lineto", "Optimo", "Grilli Type", "Pangram Pangram", "Dinamo"],
+	},
+	{
+		title: "Design",
+		items: ["Are.na", "Mymind", "Hoverstat.es", "Godly", "Savee", "Siteinspire"],
+	},
+	{
+		title: "Engineering",
+		items: ["Vercel", "Convex", "Svelte", "Rust", "Clojure", "Zig"],
+	},
+	{
+		title: "Art & Film",
+		items: ["A24", "Criterion", "MUBI", "NOWNESS", "Kino Lorber"],
+	},
+	{
+		title: "Reading",
+		items: ["The Atlantic", "The New Yorker", "Wired", "New York Magazine", "MIT Technology Review"],
+	},
+];
+
+// ─── Hire (the distilled case — ported from the hiring-proof manifest) ───────
+//
+// Voice and content mirror `portfolio-forever`'s HIRE.md + hiring-target.ts:
+// proof over theater. The iPod serves the 30-second recruiter scan: what I do
+// (tracks), why to believe it (pillars), and how to reach me (contact).
+
+export const hiringMission =
+	"Direct proof for design engineering, AI-native product craft, and frontend systems work where clarity, trust, and taste matter.";
+
+/** The inverse-law line the whole portfolio is designed around. */
+export const hiringPhilosophy =
+	"The more you leave out, the more you magnify what remains.";
+
+export interface HiringTrack {
+	id: string;
+	label: string;
+	summary: string;
+}
+
+export const hiringTracks: HiringTrack[] = [
+	{
+		id: "design-engineer",
+		label: "Design Engineer",
+		summary:
+			"Concept to code with no fidelity gap between prototype, system, and shipped surface.",
+	},
+	{
+		id: "ai-product",
+		label: "AI Product Craft",
+		summary:
+			"Interfaces for probabilistic systems that feel trustworthy, legible, and actually useful.",
+	},
+	{
+		id: "frontend-systems",
+		label: "Frontend Systems",
+		summary:
+			"Typed, responsive, accessible interfaces for expert users, mobile contexts, and high-stakes workflows.",
+	},
+	{
+		id: "mobile-engineering",
+		label: "Mobile Engineering",
+		summary:
+			"iOS and Android interfaces that respect platform conventions while pushing creative boundaries.",
+	},
+	{
+		id: "ml-research",
+		label: "ML & Research",
+		summary:
+			"Post-training, evaluation, and systems thinking for large-scale AI products.",
+	},
+];
+
+export interface ProofPillar {
+	title: string;
+	detail: string;
+}
+
+export const proofPillars: ProofPillar[] = [
+	{
+		title: "Ship the interface",
+		detail:
+			"Web, mobile-minded, motion-aware implementation with a quality bar closer to product than portfolio theatre.",
+	},
+	{
+		title: "Reduce complexity cleanly",
+		detail:
+			"AI, finance, editorial, and internal-tool flows reduced to calm, high-signal surfaces without flattening the underlying power.",
+	},
+	{
+		title: "Work AI-native without losing taste",
+		detail:
+			"Use code, prompts, prototypes, and systems thinking together, then tighten until the final surface feels intentional.",
+	},
+	{
+		title: "Build systems, not pages",
+		detail:
+			"Real-time backends, admin-controlled content, and design systems that scale from 320px to 4K — this iPod included.",
+	},
+];
+
+/** Contact rows for the Hire Me → Contact screen. Each deep-links out. */
+export const contactLinks: PortfolioLink[] = [
+	{ label: "Email", url: `mailto:${profile.email}?subject=${encodeURIComponent("Hiring — Stüssy Senik")}` },
+	{ label: "LinkedIn", url: "https://www.linkedin.com/in/mxzou" },
+	{ label: "GitHub", url: "https://github.com/stussysenik" },
+	{ label: "X / Twitter", url: "https://x.com/mx_zou" },
+];
+
 // ─── Now ─────────────────────────────────────────────────────────────────────
 
 export const nowLines: string[] = [
 	"Shipping B2B features at Attendu (Prague).",
+	"Interviewing for design engineering roles — see Hire Me.",
 	"Growing @WAVELENGTH RADIO.",
-	"Building this iPod portfolio.",
+	"Building this iPod portfolio — REMIX, RE-THINK, RE:IMAGINE.",
 	"Studying WebGPU + computational design.",
 ];

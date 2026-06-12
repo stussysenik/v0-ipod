@@ -605,7 +605,12 @@ export function Ipod3DStage() {
 						touchControls={touchControls}
 						onToggleTouchControls={() => setTouchControls((v) => !v)}
 					/>
-					<Ipod3DColorCockpit index={2} presentation={presentation} dispatch={dispatch} />
+					<Ipod3DColorCockpit
+						index={2}
+						presentation={presentation}
+						dispatch={dispatch}
+						lightingName={studio.lighting.name}
+					/>
 					<Ipod3DNowPlayingCockpit index={3} metadata={model.metadata} dispatch={dispatch} />
 					{/* Battery lives with the screen state it drives (the status-bar cell),
 					    not stranded between Light and Export as it was before. */}

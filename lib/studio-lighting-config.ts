@@ -179,6 +179,51 @@ export const DESIGNER_DARK_RIG: StudioLightingConfig = {
 };
 
 /**
+ * "Edge Noir" — the boundary-pushing dark rig for black-on-black. Where Designer Dark
+ * still models the form with one warm key, Edge Noir goes further: the field stays
+ * near-black and the device is *drawn*, not lit — two opposed hard rims trace the
+ * silhouette from behind, twin horizon softboxes rake the chrome edges from both
+ * sides, and the front fill is dropped to a whisper so nothing floods the metal.
+ * This answers the "Apple lights-on washes a black device out" failure: with a dark
+ * stage the black case keeps its depth while every edge carries a drawn highlight.
+ */
+export const EDGE_NOIR_RIG: StudioLightingConfig = {
+	name: "Edge Noir",
+	ambient: { color: "#06080d", intensity: 0.1 },
+	// Restrained warm key — just enough modelling that the face isn't a void.
+	key: {
+		color: "#ffe9c4",
+		intensity: 150,
+		position: [10, 8, 9],
+		angle: 0.24,
+		penumbra: 0.85,
+		castShadow: true,
+	},
+	// The "fill" is repurposed as a SECOND rim from the opposite back quarter, so
+	// both long edges of the chassis carry a drawn line — dual-kicker product noir.
+	fill: { color: "#9fc4ff", intensity: 210, position: [8, 5, -9], angle: 0.34, penumbra: 0.9 },
+	// Primary hard cool rim, upper-back-left — the brightest stroke in the frame.
+	rim: { color: "#e3f0ff", intensity: 340, position: [-7, 7, -9], angle: 0.36, penumbra: 0.9 },
+	env: {
+		preset: "night",
+		intensity: 0.3,
+		blur: 0.45,
+		softboxes: [
+			// Whisper front fill — keeps the LCD glass alive without lifting the case.
+			{ color: "#0a0d13", intensity: 0.35, position: [0, 1.5, 9.5], scale: [30, 38, 1] },
+			// Twin horizon blades — thin bright lines the chrome edge mirrors on BOTH
+			// flanks, so the side band reads as a continuous drawn edge in any pose.
+			{ color: "#e8f1ff", intensity: 1.6, position: [-7, 5, 1], scale: [0.5, 18, 1] },
+			{ color: "#e8f1ff", intensity: 1.6, position: [7, 5, 1], scale: [0.5, 18, 1] },
+			// Crisp top horizon — the highlight that rakes the crown.
+			{ color: "#dbe8ff", intensity: 1.2, position: [0, 8.5, 1], scale: [16, 0.4, 1] },
+			// Deep contrast pit behind — solidifies the silhouette against the field.
+			{ color: "#000000", intensity: 1.0, position: [0, -2, -10], scale: [24, 24, 1] },
+		],
+	},
+};
+
+/**
  * A neutral, recessive rig for the "Lights Off / Technical" flat view. The device materials
  * are swapped to flat/unlit in the renderer, so this rig only needs to keep the LCD legible
  * and the field calm — no shaping, no reflections competing with the flat albedo.
@@ -207,6 +252,7 @@ export interface RigPreset {
 export const RIG_PRESETS: readonly RigPreset[] = [
 	{ id: "apple", label: "Apple", config: APPLE_PRODUCT_RIG, stage: "#FFFFFF" },
 	{ id: "dark", label: "Designer Dark", config: DESIGNER_DARK_RIG, stage: "#0B0D12" },
+	{ id: "edge-noir", label: "Edge Noir", config: EDGE_NOIR_RIG, stage: "#050608" },
 ] as const;
 
 /** Deep-clone a config so the cockpit edits a private copy, never the shared default. */
@@ -255,10 +301,11 @@ function sanitizeSpot(v: unknown, fallback: SpotSpec): SpotSpec {
 
 /**
  * Tolerant validator for a config loaded from localStorage. Any malformed field falls back to
- * the Apple Product default, so a corrupt or out-of-date blob can never crash or render black.
+ * the Designer Dark default — the same rig a fresh load boots — so a corrupt or out-of-date
+ * blob heals to the factory look instead of silently switching the studio's mood.
  */
 export function sanitizeLightingConfig(value: unknown): StudioLightingConfig {
-	const base = APPLE_PRODUCT_RIG;
+	const base = DESIGNER_DARK_RIG;
 	if (typeof value !== "object" || value === null) return cloneLightingConfig(base);
 	const c = value as Partial<StudioLightingConfig>;
 	const env = (c.env ?? {}) as Partial<StudioLightingConfig["env"]>;

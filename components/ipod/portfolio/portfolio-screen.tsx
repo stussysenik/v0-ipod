@@ -5,13 +5,18 @@ import { useEffect, useRef } from "react";
 import { IpodDisplay } from "@/components/ipod/display/ipod-display";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import {
-	cv,
+	hiringMission,
+	hiringPhilosophy,
+	hiringTracks,
 	labs,
+	languages,
 	nowLines,
 	processPhases,
 	profile,
 	projects,
+	proofPillars,
 	photographySeries,
+	tasteCollections,
 	writings,
 } from "@/lib/portfolio/data";
 import { photos, videos } from "@/lib/portfolio/media";
@@ -130,6 +135,14 @@ function ContentView({ frame, height }: { frame: Frame; height: number }) {
 			return <AboutView height={height} />;
 		case "now":
 			return <NowView height={height} />;
+		case "hire-mission":
+			return <HireMissionView height={height} />;
+		case "hire-track":
+			return <HireTrackDetail index={frame.param} height={height} />;
+		case "hire-pillar":
+			return <HirePillarDetail index={frame.param} height={height} />;
+		case "taste-list":
+			return <TasteListDetail index={frame.param} height={height} />;
 		case "photos":
 			return <EmptyMedia kind="photos" height={height} />;
 		case "videos":
@@ -254,9 +267,82 @@ function AboutView({ height }: { height: number }) {
 				{profile.role}
 			</div>
 			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{profile.longBio}</div>
+			<div className="text-[8px] leading-[1.3] text-[#5A5F67]">
+				{languages.map((l) => `${l.name} ${l.level}`).join(" · ")}
+			</div>
 			<div className="mt-auto text-[8px] text-[#8A8F98]">
 				{profile.location} · Ed. {profile.edition} · {profile.createdDate}
 			</div>
+		</Pane>
+	);
+}
+
+// ─── Hire Me views — the 30-second recruiter scan, on-device ─────────────────
+
+function HireMissionView({ height }: { height: number }) {
+	return (
+		<Pane height={height}>
+			<div className="text-[11px] font-bold leading-[1.2]">Mission</div>
+			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{hiringMission}</div>
+			<div className="text-[9px] font-semibold leading-[1.35] text-[#3189D3]">
+				“{hiringPhilosophy}”
+			</div>
+			<div className="mt-auto text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
+				{profile.available ? "Available · " : ""}
+				{profile.location}
+			</div>
+		</Pane>
+	);
+}
+
+function HireTrackDetail({ index, height }: { index: number; height: number }) {
+	const t = hiringTracks[index];
+	if (!t) return null;
+	return (
+		<Pane height={height}>
+			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
+				Track {index + 1} of {hiringTracks.length}
+			</div>
+			<div className="text-[11px] font-bold leading-[1.2]">{t.label}</div>
+			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{t.summary}</div>
+			<div className="mt-auto flex items-center gap-[4px] text-[9px] font-semibold text-[#3189D3]">
+				<span aria-hidden>▶</span>
+				<span className="truncate">Works has the proof</span>
+			</div>
+		</Pane>
+	);
+}
+
+function HirePillarDetail({ index, height }: { index: number; height: number }) {
+	const p = proofPillars[index];
+	if (!p) return null;
+	return (
+		<Pane height={height}>
+			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
+				Proof {index + 1} of {proofPillars.length}
+			</div>
+			<div className="text-[11px] font-bold leading-[1.2]">{p.title}</div>
+			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{p.detail}</div>
+		</Pane>
+	);
+}
+
+function TasteListDetail({ index, height }: { index: number; height: number }) {
+	const t = tasteCollections[index];
+	if (!t) return null;
+	return (
+		<Pane height={height}>
+			<div className="text-[11px] font-bold leading-[1.2]">{t.title}</div>
+			<ul className="flex flex-col gap-[4px]">
+				{t.items.map((item) => (
+					<li key={item} className="flex gap-[6px] text-[9px] leading-[1.35] text-[#3A3F47]">
+						<span aria-hidden className="text-[#3189D3]">
+							›
+						</span>
+						<span>{item}</span>
+					</li>
+				))}
+			</ul>
 		</Pane>
 	);
 }

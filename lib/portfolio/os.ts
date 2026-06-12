@@ -17,13 +17,17 @@
 import { useCallback, useMemo, useReducer } from "react";
 
 import {
+	contactLinks,
 	cv,
+	hiringTracks,
 	labs,
 	nowLines,
 	processPhases,
 	profile,
 	projects,
+	proofPillars,
 	socialLinks,
+	tasteCollections,
 	writings,
 } from "./data";
 import { photos, videos } from "./media";
@@ -33,6 +37,14 @@ import { photos, videos } from "./media";
 export type ScreenId =
 	// root
 	| "menu"
+	// Hire Me → the distilled recruiter case
+	| "hire"
+	| "hire-mission"
+	| "hire-tracks"
+	| "hire-track"
+	| "hire-proof"
+	| "hire-pillar"
+	| "hire-contact"
 	// Process → its phases
 	| "process"
 	| "process-step"
@@ -42,12 +54,14 @@ export type ScreenId =
 	// Inspiration → labs/experiments
 	| "inspiration"
 	| "lab"
-	// Likes → photos / videos
+	// Likes → photos / videos / taste
 	| "likes"
 	| "photos"
 	| "photo"
 	| "videos"
 	| "video"
+	| "taste"
+	| "taste-list"
 	// Writings → posts
 	| "writings"
 	| "writing"
@@ -86,10 +100,11 @@ export interface Frame {
 
 // ─── Screen content (rows) ───────────────────────────────────────────────────
 
-/** Root menu — the seven parent sections, in order. */
+/** Root menu — proof first (Works), then the ask (Hire Me), then the practice. */
 const MENU_ROWS: Row[] = [
-	{ id: "process", label: "Process", hint: "›", action: { type: "push", screen: "process" } },
 	{ id: "works", label: "Works", hint: "›", action: { type: "push", screen: "works" } },
+	{ id: "hire", label: "Hire Me", hint: "›", action: { type: "push", screen: "hire" } },
+	{ id: "process", label: "Process", hint: "›", action: { type: "push", screen: "process" } },
 	{ id: "inspiration", label: "Inspiration", hint: "›", action: { type: "push", screen: "inspiration" } },
 	{ id: "likes", label: "Likes", hint: "›", action: { type: "push", screen: "likes" } },
 	{ id: "writings", label: "Writings", hint: "›", action: { type: "push", screen: "writings" } },
@@ -97,10 +112,19 @@ const MENU_ROWS: Row[] = [
 	{ id: "about", label: "About Me", hint: "›", action: { type: "push", screen: "about" } },
 ];
 
-/** Likes sub-menu — media collections. */
+/** Hire Me sub-menu — the 30-second recruiter scan, in reading order. */
+const HIRE_ROWS: Row[] = [
+	{ id: "hire-mission", label: "Mission", hint: "›", action: { type: "push", screen: "hire-mission" } },
+	{ id: "hire-tracks", label: "Tracks", hint: String(hiringTracks.length), action: { type: "push", screen: "hire-tracks" } },
+	{ id: "hire-proof", label: "Proof", hint: String(proofPillars.length), action: { type: "push", screen: "hire-proof" } },
+	{ id: "hire-contact", label: "Contact", hint: "›", action: { type: "push", screen: "hire-contact" } },
+];
+
+/** Likes sub-menu — media collections + curated taste. */
 const LIKES_ROWS: Row[] = [
 	{ id: "photos", label: "Photos", hint: "›", action: { type: "push", screen: "photos" } },
 	{ id: "videos", label: "Videos", hint: "›", action: { type: "push", screen: "videos" } },
+	{ id: "taste", label: "Taste", hint: "›", action: { type: "push", screen: "taste" } },
 ];
 
 /** About Me sub-menu. */
@@ -115,6 +139,35 @@ export function getRows(screen: ScreenId): Row[] {
 	switch (screen) {
 		case "menu":
 			return MENU_ROWS;
+		case "hire":
+			return HIRE_ROWS;
+		case "hire-tracks":
+			return hiringTracks.map((t, i) => ({
+				id: t.id,
+				label: t.label,
+				action: { type: "push", screen: "hire-track", param: i },
+			}));
+		case "hire-proof":
+			return proofPillars.map((p, i) => ({
+				id: `pillar-${i}`,
+				label: p.title,
+				hint: String(i + 1),
+				action: { type: "push", screen: "hire-pillar", param: i },
+			}));
+		case "hire-contact":
+			return contactLinks.map((c) => ({
+				id: c.label,
+				label: c.label,
+				hint: "↗",
+				action: { type: "open", url: c.url },
+			}));
+		case "taste":
+			return tasteCollections.map((t, i) => ({
+				id: `taste-${i}`,
+				label: t.title,
+				hint: String(t.items.length),
+				action: { type: "push", screen: "taste-list", param: i },
+			}));
 		case "process":
 			return processPhases.map((p, i) => ({
 				id: `phase-${i}`,
@@ -183,6 +236,10 @@ export function getRows(screen: ScreenId): Row[] {
 		case "writing":
 		case "bio":
 		case "now":
+		case "hire-mission":
+		case "hire-track":
+		case "hire-pillar":
+		case "taste-list":
 			return [];
 	}
 }
@@ -192,6 +249,24 @@ export function getTitle(frame: Frame): string {
 	switch (frame.screen) {
 		case "menu":
 			return profile.handle;
+		case "hire":
+			return "Hire Me";
+		case "hire-mission":
+			return "Mission";
+		case "hire-tracks":
+			return "Tracks";
+		case "hire-track":
+			return hiringTracks[frame.param]?.label ?? "Track";
+		case "hire-proof":
+			return "Proof";
+		case "hire-pillar":
+			return proofPillars[frame.param]?.title ?? "Proof";
+		case "hire-contact":
+			return "Contact";
+		case "taste":
+			return "Taste";
+		case "taste-list":
+			return tasteCollections[frame.param]?.title ?? "Taste";
 		case "process":
 			return "Process";
 		case "process-step":
@@ -341,6 +416,9 @@ export function usePortfolioOs(onOpenUrl?: (url: string) => void): PortfolioOs {
 				photo: photos.length,
 				video: videos.length,
 				writing: writings.length,
+				"hire-track": hiringTracks.length,
+				"hire-pillar": proofPillars.length,
+				"taste-list": tasteCollections.length,
 			};
 			const total = siblings[frame.screen];
 			if (!total) return;

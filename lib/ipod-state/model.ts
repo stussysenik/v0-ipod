@@ -1,7 +1,7 @@
 import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR, deriveWheelColors } from "@/lib/color-manifest";
 import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import {
-	APPLE_PRODUCT_RIG,
+	DESIGNER_DARK_RIG,
 	cloneLightingConfig,
 	type StudioLightingConfig,
 } from "@/lib/studio-lighting-config";
@@ -110,7 +110,7 @@ export interface IpodPlaybackSnapshot {
  * direction, not the product itself. All of it is plain JSON so it persists across refresh.
  */
 export interface IpodStudioState {
-	/** The live, editable lighting rig (defaults to APPLE_PRODUCT_RIG). */
+	/** The live, editable lighting rig (defaults to DESIGNER_DARK_RIG — the Noir factory look). */
 	lighting: StudioLightingConfig;
 	/** "Lights Off / Technical": swap metal materials for flat/unlit albedo (CAD-flat view). */
 	technicalFlat: boolean;
@@ -128,10 +128,12 @@ export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
 	marquee: true,
 };
 
-/** A fresh studio slice with its own private clone of the default rig. */
+/** A fresh studio slice with its own private clone of the default rig.
+ *  Designer Dark is the factory rig: the black device on the blue stage is the
+ *  canonical first impression (spec: 3d-studio-presentation, Noir factory default). */
 export function createInitialStudioState(): IpodStudioState {
 	return {
-		lighting: cloneLightingConfig(APPLE_PRODUCT_RIG),
+		lighting: cloneLightingConfig(DESIGNER_DARK_RIG),
 		...DEFAULT_STUDIO_STATE,
 	};
 }
@@ -181,9 +183,9 @@ export interface LegacySongSnapshot {
 
 export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 	const defaultPreset = getIpodClassicPreset(DEFAULT_HARDWARE_PRESET_ID);
-	// Derive the default wheel from the default case so first-load matches what
-	// clicking the matching finish produces — no flat hardcoded ring that merges
-	// into a dark anodized case.
+	// Wheel colours: a preset's curated overrides win; otherwise derive from the
+	// case so first-load matches what clicking the matching finish produces — no
+	// flat hardcoded ring that merges into a dark anodized case.
 	const defaultWheel = deriveWheelColors(defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR);
 
 	return {
@@ -198,8 +200,8 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 		presentation: {
 			skinColor: defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR,
 			bgColor: defaultPreset.defaultBackdropColor ?? DEFAULT_BACKDROP_COLOR,
-			ringColor: defaultWheel.gradient.via,
-			centerColor: defaultWheel.centerGradient.via,
+			ringColor: defaultPreset.defaultRingColor ?? defaultWheel.gradient.via,
+			centerColor: defaultPreset.defaultCenterColor ?? defaultWheel.centerGradient.via,
 			backColor: DEFAULT_BACK_COLOR,
 			edgeColor: DEFAULT_BACK_COLOR,
 			bezelColor: DEFAULT_BEZEL_COLOR,

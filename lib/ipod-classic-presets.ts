@@ -70,6 +70,14 @@ export interface IpodClassicPresetDefinition {
 	capacityLabel: string;
 	defaultShellColor: string;
 	defaultBackdropColor: string;
+	/**
+	 * Optional curated wheel colours. When present they take precedence over
+	 * `deriveWheelColors(defaultShellColor)` — used where the mathematically
+	 * derived ring would sit too close to the case (e.g. the black 2008's ring
+	 * is hand-tuned a step lighter so the wheel still reads as its own part).
+	 */
+	defaultRingColor?: string;
+	defaultCenterColor?: string;
 	shell: ShellPresetTokens;
 	screen: ScreenPresetTokens;
 	wheel: WheelPresetTokens;
@@ -201,7 +209,13 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		capacityLabel: "120GB",
 		notes: "Black version of the 120GB revision.",
 		defaultShellColor: "#1b1818",
-		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
+		// The canonical "Noir" stage — the studio's signature blue field, ratified
+		// from the curated look (spec: 3d-studio-presentation, Noir factory default).
+		defaultBackdropColor: "#0048FF",
+		// Hand-tuned wheel: derivation lands on #242020, one step too close to the
+		// case — the curated ring is lifted to keep the wheel a distinct part.
+		defaultRingColor: "#313030",
+		defaultCenterColor: "#141212",
 		shell: {
 			width: 350,
 			height: 580,

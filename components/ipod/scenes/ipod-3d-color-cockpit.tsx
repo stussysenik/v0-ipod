@@ -15,6 +15,14 @@ import {
 	type IpodPresentationState,
 } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
+import {
+	BUILT_IN_THEMES,
+	loadSavedThemes,
+	nextThemeLabel,
+	persistSavedThemes,
+	rigForTheme,
+	type StudioTheme,
+} from "@/lib/studio-themes";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
 
@@ -45,6 +53,9 @@ interface FinishAsset {
 	backColor: string;
 	bezelColor: string;
 	bgColor: string;
+	/** Curated wheel override — wins over `deriveWheelColors(skinColor)`. */
+	ringColor?: string;
+	centerColor?: string;
 }
 
 const PRELOADED_FINISHES: readonly FinishAsset[] = [
@@ -55,7 +66,11 @@ const PRELOADED_FINISHES: readonly FinishAsset[] = [
 		skinColor: IPOD_6G_BLACK, // black anodized aluminum face
 		backColor: DEFAULT_BACK_COLOR, // mirror steel back
 		bezelColor: DEFAULT_BEZEL_COLOR,
-		bgColor: "#FFFFFF",
+		// The Noir factory stage + hand-tuned wheel: derivation gives #242020,
+		// one step too close to the case — the curated ring keeps the wheel a part.
+		bgColor: "#0048FF",
+		ringColor: "#313030",
+		centerColor: "#141212",
 	},
 	{
 		id: "silver",
@@ -293,13 +308,66 @@ interface Ipod3DColorCockpitProps {
 	index: number;
 	presentation: IpodPresentationState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
+	/** Name of the live lighting rig — captured into saved themes. */
+	lightingName?: string;
 }
 
-export function Ipod3DColorCockpit({ index, presentation, dispatch }: Ipod3DColorCockpitProps) {
+export function Ipod3DColorCockpit({
+	index,
+	presentation,
+	dispatch,
+	lightingName,
+}: Ipod3DColorCockpitProps) {
 	const derived = useMemo(
 		() => deriveWheelColors(presentation.skinColor),
 		[presentation.skinColor],
 	);
+
+	// Saved themes hydrate from localStorage after mount (SSR-safe), then every
+	// mutation writes through — the shelf is always the persisted truth.
+	const [savedThemes, setSavedThemes] = useState<StudioTheme[]>([]);
+	useEffect(() => {
+		setSavedThemes(loadSavedThemes());
+	}, []);
+
+	const applyTheme = (theme: StudioTheme) => {
+		const { colors } = theme;
+		dispatch({ type: "SET_SKIN_COLOR", payload: colors.skinColor });
+		dispatch({ type: "SET_RING_COLOR", payload: colors.ringColor });
+		dispatch({ type: "SET_CENTER_COLOR", payload: colors.centerColor });
+		dispatch({ type: "SET_BACK_COLOR", payload: colors.backColor });
+		dispatch({ type: "SET_EDGE_COLOR", payload: colors.edgeColor });
+		dispatch({ type: "SET_BEZEL_COLOR", payload: colors.bezelColor });
+		dispatch({ type: "SET_BG_COLOR", payload: colors.bgColor });
+		// The rig completes the theme — colours and light are one look.
+		dispatch({ type: "SET_LIGHTING", payload: rigForTheme(theme) });
+	};
+
+	const saveCurrentTheme = () => {
+		const theme: StudioTheme = {
+			id: `theme-${Date.now().toString(36)}`,
+			label: nextThemeLabel([...BUILT_IN_THEMES, ...savedThemes]),
+			colors: {
+				skinColor: presentation.skinColor,
+				ringColor: presentation.ringColor || derived.gradient.via,
+				centerColor: presentation.centerColor || derived.centerGradient.via,
+				backColor: presentation.backColor,
+				edgeColor: presentation.edgeColor || presentation.backColor,
+				bezelColor: presentation.bezelColor,
+				bgColor: presentation.bgColor,
+			},
+			rigName: lightingName ?? "Designer Dark",
+		};
+		const next = [...savedThemes, theme];
+		setSavedThemes(next);
+		persistSavedThemes(next);
+	};
+
+	const deleteTheme = (id: string) => {
+		const next = savedThemes.filter((t) => t.id !== id);
+		setSavedThemes(next);
+		persistSavedThemes(next);
+	};
 
 	// The full resolved palette feeds the deterministic shade strips below each row.
 	const palette = useMemo(() => paletteOf(presentation, derived), [presentation, derived]);
@@ -315,10 +383,11 @@ export function Ipod3DColorCockpit({ index, presentation, dispatch }: Ipod3DColo
 		dispatch({ type: "SET_EDGE_COLOR", payload: f.backColor });
 		dispatch({ type: "SET_BEZEL_COLOR", payload: f.bezelColor });
 		dispatch({ type: "SET_BG_COLOR", payload: f.bgColor });
-		// Re-derive the wheel from the new case so the look stays coherent.
+		// Curated wheel override wins; otherwise re-derive from the new case so
+		// the look stays coherent.
 		const d = deriveWheelColors(f.skinColor);
-		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
-		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
+		dispatch({ type: "SET_RING_COLOR", payload: f.ringColor ?? d.gradient.via });
+		dispatch({ type: "SET_CENTER_COLOR", payload: f.centerColor ?? d.centerGradient.via });
 	};
 
 	// Apply a complete coordinated look (curated or random): every surface + stage + a wheel
@@ -372,6 +441,64 @@ export function Ipod3DColorCockpit({ index, presentation, dispatch }: Ipod3DColo
 							{f.label}
 						</button>
 					))}
+				</div>
+			</div>
+
+			{/* Themes — complete saved looks (all seven surfaces + the rig). "Noir" is
+			    the factory black; Save snapshots whatever is on stage right now. One
+			    tap restores everything, so dialing in a look is never a one-way door. */}
+			<div className="border-b border-black/[0.06] px-3.5 py-2.5">
+				<div className="flex items-center justify-between">
+					<Label>Themes</Label>
+					<HelperButton onClick={saveCurrentTheme}>+ Save</HelperButton>
+				</div>
+				<div className="mt-2 flex flex-wrap gap-1.5">
+					{[...BUILT_IN_THEMES, ...savedThemes].map((theme) => {
+						const active =
+							normalizeHex(theme.colors.skinColor) === normalizeHex(palette.case) &&
+							normalizeHex(theme.colors.bgColor) === normalizeHex(palette.stage) &&
+							normalizeHex(theme.colors.ringColor) === normalizeHex(palette.ring);
+						return (
+							<span key={theme.id} className="group/theme relative">
+								<button
+									type="button"
+									onClick={() => applyTheme(theme)}
+									aria-pressed={active}
+									aria-label={`Apply ${theme.label} theme`}
+									className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
+										active
+											? "border-black/80 text-black"
+											: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+									}`}
+								>
+									<span className="flex">
+										{[
+											theme.colors.skinColor,
+											theme.colors.ringColor,
+											theme.colors.bgColor,
+										].map((c, i) => (
+											<span
+												key={`${theme.id}-dot-${i}`}
+												className="-ml-0.5 h-2.5 w-2.5 rounded-full border border-black/15 first:ml-0"
+												style={{ backgroundColor: c }}
+											/>
+										))}
+									</span>
+									{theme.label}
+								</button>
+								{!theme.builtIn && (
+									<button
+										type="button"
+										onClick={() => deleteTheme(theme.id)}
+										aria-label={`Delete ${theme.label} theme`}
+										className="absolute -right-1 -top-1 hidden h-3.5 w-3.5 items-center justify-center rounded-full border border-black/15 bg-white text-[8px] leading-none text-black/50 hover:text-black group-hover/theme:flex"
+									>
+										×
+									</button>
+								)}
+							</span>
+						);
+					})}
 				</div>
 			</div>
 
