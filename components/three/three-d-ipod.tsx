@@ -404,7 +404,19 @@ const MECHANICAL = {
 	 */
 	screenApertureClearance: 0.012,
 	wheelBoreClearance: 0.014,
+	/**
+	 * How far a chassis-edge port face floats off its wall — z-fighting clearance
+	 * ONLY (≈0.03mm), never a visible reveal. Ports are machined INTO the body;
+	 * anything that reads as added material on the silhouette is wrong (the first
+	 * jack attempt poked a torus above the outline — lessons 2026-06-07).
+	 */
+	portRecessLift: 0.002,
 } as const;
+
+/** Matte opening of a machined port recess — near-black, light-absorbing. */
+const PORT_RECESS_COLOR = "#0a0b0c";
+/** The hold switch's slider, the one bright part seated inside its slot. */
+const PORT_SLIDER_COLOR = "#c9cdd1";
 
 // ─── Z-Layer Stack (datum-referenced) ──────────────────────────────────────────────
 
@@ -795,6 +807,91 @@ function ClickWheel3D({
 			   they land exactly on the annulus. Hidden until a capture turns it on. */}
 			<mesh ref={glyphMeshRef} position={[0, 0, z.wheelHtml]} visible={false}>
 				<planeGeometry args={[dims.wheelOuterR * 2, dims.wheelOuterR * 2]} />
+			</mesh>
+		</group>
+	);
+}
+
+// ─── Chassis Edge Ports (machined recesses, never proud of the silhouette) ─────────
+
+/** A stadium (capsule) outline — the machined slot profile of the hold switch and dock. */
+function makeStadiumShape(length: number, width: number): THREE.Shape {
+	const s = new THREE.Shape();
+	drawRoundedRect(s, 0, 0, length, width, width / 2);
+	return s;
+}
+
+/**
+ * Headphone jack + hold switch on the top wall, 30-pin dock on the bottom wall —
+ * seated straight from the drawing's edge views (provenance: IPOD_CLASSIC_MM.top
+ * / .bottom). The shell is one extruded solid, so a true cut needs CSG; instead
+ * each opening is a flat matte face lying ON the wall, lifted by `portRecessLift`
+ * purely to clear z-fighting. Dark absorbing flats read as bores at render scale,
+ * and nothing ever extends past the wall plane — principled subtraction, the
+ * inverse of the torus-above-the-outline failure this replaces.
+ *
+ * The walls of the extruded shell sit `bodyFillet` outside the section outline
+ * (the extrude bevel expands laterally), so the wall plane is height/2 + fillet.
+ */
+function IpodPorts({ dims }: { dims: Ipod3DDimensions }) {
+	const flat = useTechnicalFlat();
+	const wallOffset = dims.height / 2 + MECHANICAL.bodyFillet;
+	const lift = MECHANICAL.portRecessLift;
+	const { jack, hold, dock } = dims.ports;
+
+	const holdGeo = useMemo(
+		() => new THREE.ShapeGeometry(makeStadiumShape(hold.length, hold.width), 24),
+		[hold.length, hold.width],
+	);
+	const dockGeo = useMemo(
+		() => new THREE.ShapeGeometry(makeStadiumShape(dock.length, dock.width), 24),
+		[dock.length, dock.width],
+	);
+	// The slider rides inside the slot at its inboard end (the drawing's rest
+	// position) — a shorter, slightly narrower inlay so a hairline of recess
+	// stays visible around it, exactly how the real part seats.
+	const sliderLength = hold.length * 0.42;
+	const sliderGeo = useMemo(
+		() => new THREE.ShapeGeometry(makeStadiumShape(sliderLength, hold.width * 0.72), 24),
+		[sliderLength, hold.width],
+	);
+	const sliderX = -(hold.length - sliderLength) / 2;
+
+	const recessMaterial = flat ? (
+		<FlatFinish color={PORT_RECESS_COLOR} />
+	) : (
+		<meshStandardMaterial color={PORT_RECESS_COLOR} metalness={0} roughness={0.9} />
+	);
+
+	return (
+		<group>
+			{/* 3.5mm jack bore — top-left. */}
+			<mesh position={[jack.centerX, wallOffset + lift, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+				<circleGeometry args={[jack.radius, 48]} />
+				{recessMaterial}
+			</mesh>
+
+			{/* Hold-switch slot — top, right of centre. */}
+			<group position={[hold.centerX, 0, 0]}>
+				<mesh geometry={holdGeo} position={[0, wallOffset + lift, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+					{recessMaterial}
+				</mesh>
+				<mesh
+					geometry={sliderGeo}
+					position={[sliderX, wallOffset + lift * 1.5, 0]}
+					rotation={[-Math.PI / 2, 0, 0]}
+				>
+					{flat ? (
+						<FlatFinish color={PORT_SLIDER_COLOR} />
+					) : (
+						<meshStandardMaterial color={PORT_SLIDER_COLOR} metalness={0.6} roughness={0.45} />
+					)}
+				</mesh>
+			</group>
+
+			{/* 30-pin dock opening — bottom, centred. */}
+			<mesh geometry={dockGeo} position={[0, -(wallOffset + lift), 0]} rotation={[Math.PI / 2, 0, 0]}>
+				{recessMaterial}
 			</mesh>
 		</group>
 	);
@@ -1236,6 +1333,9 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 
 					{/* ── BACK ENGRAVING ── */}
 					<IpodBack dims={dims} z={z} capacityLabel={capacityLabel} />
+
+					{/* ── CHASSIS EDGE PORTS (jack · hold switch · 30-pin dock) ── */}
+					<IpodPorts dims={dims} />
 
 					{/* ── FRONT FACE (Anodized aluminum, CNC-machined) ──
 						 A flat panel inset by the parting seam, with the screen

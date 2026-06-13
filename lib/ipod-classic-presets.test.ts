@@ -250,3 +250,75 @@ it("the 160GB launch chassis is the thick body; 80/120GB and Late-2009 are thin"
 	expect(byId.get("classic-2008-silver")).toBe(MM.body.depthThin);
 	expect(byId.get("classic-2009")).toBe(MM.body.depthThin);
 });
+
+/*
+ * ── Chassis edge ports QC ────────────────────────────────────────────────────
+ *
+ * Source: Fig 3-53's top/bottom edge views (verified at 600 DPI). The ports are
+ * recesses machined INTO the chassis — these tests pin their seats to the
+ * drawing and assert the flush invariant that killed the first attempt (a jack
+ * torus proud of the silhouette, lessons 2026-06-07).
+ *
+ * Mirrored render constants from `three-d-ipod.tsx` (update in the same commit):
+ * bodyFilletMax 0.05 / bodyFilletDepthRatio 0.1 (extrude bevel), portRecessLift
+ * 0.002 world units.
+ */
+describe.each(IPOD_CLASSIC_PRESETS.map((p) => [p.id, p] as const))(
+	"chassis edge ports QC — %s",
+	(_id, preset) => {
+		const dims = deriveIpod3DDimensions(preset);
+		const { jack, hold, dock } = dims.ports;
+		const mm = dims.mmToWorld;
+		const halfW = dims.width / 2;
+		// width is px-derived (0.1px rounding) while ports are pure-mm — small slack.
+		const SEAT_TOL = 0.25 * mm; // 0.25mm
+
+		it("seats the jack bore Ø3.5 with its centre 8.1mm from the left edge", () => {
+			expect(Math.abs(jack.centerX + halfW - MM.top.headphoneJack.centerFromLeft * mm)).toBeLessThan(SEAT_TOL);
+			expect(jack.radius).toBeCloseTo(((MM.top.headphoneJack.boreDiameter / 2) * mm), 5);
+		});
+
+		it("keeps the jack rim inside the silhouette (corner-arc dip is sub-hairline)", () => {
+			// Distance from the left edge to the bore's nearest rim, in mm.
+			const rimFromEdgeMm = MM.top.headphoneJack.centerFromLeft - MM.top.headphoneJack.boreDiameter / 2;
+			const r = MM.body.cornerRadius;
+			// How far the top outline has fallen away from flat at that distance.
+			const intoArc = Math.max(0, r - rimFromEdgeMm);
+			const dip = r - Math.sqrt(r * r - intoArc * intoArc);
+			expect(dip).toBeLessThan(0.01); // <0.01mm — flush to any machining tolerance
+		});
+
+		it("spans the hold-switch slot 9.5→20.2mm from the right edge at a 1.8mm slit", () => {
+			const near = MM.top.holdSwitch.slotNearFromRight;
+			const far = MM.top.holdSwitch.slotFarFromRight;
+			expect(hold.length).toBeCloseTo((far - near) * mm, 5);
+			expect(hold.width).toBeCloseTo(MM.top.holdSwitch.slotWidth * mm, 5);
+			const centerFromRight = halfW - hold.centerX;
+			expect(Math.abs(centerFromRight - ((near + far) / 2) * mm)).toBeLessThan(SEAT_TOL);
+			// Entirely on the straight band — clear of the 6.4 corner arc.
+			expect(near).toBeGreaterThan(MM.body.cornerRadius);
+			expect(MM.body.width - far).toBeGreaterThan(MM.body.cornerRadius);
+		});
+
+		it("centres the 21.8 × 2.8 dock opening on the width centreline, clear of the corners", () => {
+			expect(dock.length).toBeCloseTo(MM.bottom.dockConnector.width * mm, 5);
+			expect(dock.width).toBeCloseTo(MM.bottom.dockConnector.height * mm, 5);
+			const endFromEdgeMm = (MM.body.width - MM.bottom.dockConnector.width) / 2;
+			expect(endFromEdgeMm).toBeGreaterThan(MM.body.cornerRadius);
+		});
+
+		it("fits every port inside the wall's flat band on this chassis depth", () => {
+			// The extrude bevel consumes bevelT from each end of the depth.
+			const bevelT = Math.min(0.05, dims.depth * 0.1);
+			const flatBand = dims.depth - 2 * bevelT;
+			expect(jack.radius * 2).toBeLessThan(flatBand);
+			expect(hold.width).toBeLessThan(flatBand);
+			expect(dock.width).toBeLessThan(flatBand);
+		});
+
+		it("holds the flush invariant — recess lift is z-fight clearance, not a reveal", () => {
+			const PORT_RECESS_LIFT = 0.002; // world units, mirrored from MECHANICAL
+			expect(PORT_RECESS_LIFT / mm).toBeLessThan(0.05); // < 0.05mm proud of the wall
+		});
+	},
+);
