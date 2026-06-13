@@ -1,81 +1,57 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+/**
+ * 1:1 fidelity of the 2D now-playing screen — asserts the CURRENT machined
+ * design language (the status-bar / artwork / progress fidelity passes), not
+ * the early skeuomorph iteration it replaced (diamond scrubber, gradient
+ * screen wash, CSS-bordered artwork). Selectors ride stable testids, never
+ * DOM positions, so a layout refactor can't silently retarget an assertion.
+ */
 
 test.describe("iPod Classic 1:1 Fidelity", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/");
-
-		// Ensure we are in Classic mode
-		await page.click('[data-testid="theme-button"]');
-		const classicButton = page.locator('[data-testid="fidelity-classic-button"]');
-		if (await classicButton.isVisible()) {
-			await classicButton.click();
-		}
-		await page.click('[data-testid="theme-button"]'); // Close panel
-		await page.waitForTimeout(500);
+		await page.getByTestId("screen-progress").waitFor({ state: "visible" });
 	});
 
-	test("should render status bar with 1:1 fidelity structure", async ({ page }) => {
-		const statusBar = page.locator('[data-testid="ipod-screen"] > div > div').first();
-
-		// Check for 3-column layout (flex-1 classes)
-		const leftCol = statusBar.locator("div").first();
-		const centerCol = statusBar.locator("div").nth(1);
-		const rightCol = statusBar.locator("div").last();
-
-		await expect(leftCol).toContainText("Now Playing");
-		await expect(centerCol).toContainText(/of/); // Track X of Y
-		await expect(rightCol).toBeVisible(); // Battery
+	test("status bar carries the OS chrome — label left, battery right", async ({ page }) => {
+		await expect(page.getByTestId("screen-status-label")).toContainText("Now Playing");
+		await expect(page.getByTestId("screen-battery")).toBeVisible();
 	});
 
-	test("should render artwork with classic border and reflection", async ({ page }) => {
-		const artworkContainer = page.locator('[data-export-layer="artwork"]');
+	test("artwork seats with a hairline ring and a reflection beneath", async ({ page }) => {
+		const artwork = page.locator('[data-export-layer="artwork"]').first();
+		await expect(artwork).toBeVisible();
 
-		// Check for 1px border and shadow
-		const boxModel = await artworkContainer.evaluate((el) => {
-			const style = window.getComputedStyle(el);
-			return {
-				borderWidth: style.borderWidth,
-				borderColor: style.borderColor,
-				boxShadow: style.boxShadow,
-			};
-		});
+		// The classic treatment rides boxShadow (drop shadow + 1px hairline ring),
+		// deliberately NOT a CSS border — a border would inset the art itself.
+		const boxShadow = await artwork.evaluate((el) => getComputedStyle(el).boxShadow);
+		expect(boxShadow).not.toBe("none");
+		expect(boxShadow).toContain("1px");
 
-		expect(boxModel.borderWidth).toBe("1px");
-		// We used #A1A1A1 which is rgb(161, 161, 161)
-		expect(boxModel.borderColor).toBe("rgb(161, 161, 161)");
-		expect(boxModel.boxShadow).not.toBe("none");
-
-		// Check for reflection overlay
-		const reflection = artworkContainer.locator("div").last();
-		await expect(reflection).toBeVisible();
+		// The reflection is the vertically-flipped copy rendered behind/below.
+		const reflection = page
+			.getByTestId("os-layout-artwork")
+			.locator("img")
+			.first();
+		const transform = await reflection.evaluate((el) => getComputedStyle(el).transform);
+		expect(transform).toContain("matrix"); // scaleY(-1)
 	});
 
-	test("should render progress bar with diamond scrubber", async ({ page }) => {
-		const progressBar = page.locator('[data-testid="progress-track"]');
+	test("progress bar fills the classic track and counts the remainder down", async ({ page }) => {
+		await expect(page.getByTestId("progress-track")).toBeVisible();
 
-		// Check for diamond scrubber (it's a div with rotate-45)
-		const scrubber = progressBar.locator("div").last();
-		const transform = await scrubber.evaluate(
-			(el) => window.getComputedStyle(el).transform,
-		);
+		const fillWidth = await page
+			.getByTestId("progress-fill")
+			.evaluate((el) => el.getBoundingClientRect().width);
+		expect(fillWidth).toBeGreaterThan(0);
 
-		// matrix(...) for 45deg rotation
-		expect(transform).toContain("matrix");
-
-		// Check for negative sign on remaining time
-		const remainingTime = page.locator('[data-testid="remaining-time"]');
-		await expect(remainingTime).toContainText("-");
+		await expect(page.getByTestId("remaining-time")).toContainText("-");
 	});
 
-	test("should have a gradient background on the screen content", async ({ page }) => {
-		const content = page.locator('[data-testid="ipod-screen"] > div > div').nth(1);
-		const background = await content.evaluate(
-			(el) => window.getComputedStyle(el).background,
-		);
-
-		expect(background).toContain("linear-gradient");
-		// Check for our colors #F7F7F7 and #E2E2E2
-		expect(background).toContain("rgb(247, 247, 247)");
-		expect(background).toContain("rgb(226, 226, 226)");
+	test("renders the full now-playing composition", async ({ page }) => {
+		await expect(page.getByTestId("os-layout-artwork")).toBeVisible();
+		await expect(page.getByTestId("track-title-text")).toBeVisible();
+		await expect(page.getByTestId("screen-content")).toBeVisible();
 	});
 });

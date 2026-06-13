@@ -139,3 +139,25 @@
 - Keep ALL streaming artifacts (Playwright traces, screenshots) out of the
   Next-watched tree; in-repo writes during dev = Fast Refresh rebuild loop →
   500s on the page under test.
+
+## 2026-06-13 — exports/renderings verification + chassis ports
+
+- **Never edit app code while an e2e suite is running against the shared dev
+  server.** A lib edit mid-run triggers Fast Refresh; the page under test 500s/
+  aborts and the failure reads as a product bug (it cost one full probe cycle).
+  Sequence: edits → settle/compile → tests. Test files are outside the app
+  graph and safe to edit anytime.
+- **A QC gate that "relies on defaults" is a stale-test time bomb.** The
+  clip-verify black-crush gate was calibrated on silver/white/Apple-rig
+  defaults; the factory default later became Noir (black on cobalt, Designer
+  Dark) and the gate fired on the wrong colourway. Pin the exact state a gate
+  was calibrated against (init-script the storage, click the rig) instead of
+  inheriting whatever boots.
+- **e2e staleness comes in two flavors — removed testids fail loud-but-late
+  (120s click timeout on a locator that never resolves), changed visuals fail
+  fast with assertion diffs.** A locator timeout where the element "should"
+  exist usually means the testid was renamed (preview-view-button →
+  preview-button), not that the UI broke. Grep the testid in components first.
+- **/3d cold-compiles for >60s on dev; a canvas-visible wait inside that window
+  fails spuriously.** Warm the route (curl until 200) before timing-sensitive
+  3D specs.

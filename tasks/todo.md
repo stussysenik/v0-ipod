@@ -1,89 +1,99 @@
-# Wheel Label QC + Natural Light Template (2026-06-13)
+# Top/Bottom Ports + Working 3D Buttons (2026-06-13)
 
 ## Context
 
-The mm-derivation pass landed the machined face (Ø38.0 wheel, 30.4mm seat) but
-`ipod-click-wheel.tsx` still carries `transform: scale(0.8)` — a stale
-compensation from the old oversized 272px wheel token (battery commit cb6241c;
-0.8 × 272 ≈ the new mm-true 212.9). Today it double-shrinks the rendered wheel
-to a Ø30.4mm equivalent and drags MENU/⏮/⏭/⏯ toward the center hub — confirmed
-in SCR-20260613-deiq.png. On top of that, lopsided CSS paddings seat the four
-labels at three different radial distances (≈23 / 30 / 37px from the rim), an
-asymmetry any perspective exposes. Labels on the black device also sink into
-the dark rigs, and there is no natural-light rig template for clear product
-exports.
+The 3D model's machined face is drawing-true, but the chassis edges are blank:
+no headphone jack, no hold switch, no 30-pin dock. A previous attempt added a
+jack torus + hold switch that poked ABOVE the silhouette as artifacts and was
+subtracted (lessons.md 2026-06-07). The user has now explicitly asked for the
+ports back — done right — plus working buttons in the 3D view.
 
-User constraints: CNC realism — spacing accounted for, nothing floats;
-symmetry must survive perspective; headless verification only (math + tests);
-MENU must stay linked (verified: wired in workbench, 3D stage, portfolio);
-truth-preserving fixes only — new presentation ideas (stand/wall placement,
-material types) are separate additive changes, not this pass.
+Drawing ground truth (Apple Case Design Guidelines R11, Fig 3-53 iPod classic
+160GB, page 75 — verified at 600 DPI today):
+- Headphone jack: center 8.1mm from the left edge; bore Ø3.5 (plug standard;
+  the bore itself is unlabeled on the drawing). Near-centered across depth.
+- Hold switch: slot spans 9.5 → 20.2mm from the right edge (10.7 long), slot
+  width 13.5 − 7.5 − 4.2 = 1.8mm across the depth.
+- Dock connector: opening 21.8 × 2.8mm, centered at 30.9 (= 61.8/2), inset
+  5.4mm from the face across the depth (≈ centered).
+
+Hard constraint from lessons.md: ports are machined INTO the body — recessed
+dark openings flush with the wall (ε above it only to dodge z-fighting), never
+geometry proud of the silhouette. Matte, no specular drama.
 
 ```mermaid
 mindmap
-  root((Wheel QC + light evidence))
-    Geometry truth
-      Remove stale scale 0.8
-      Seat all four labels on annulus midline
-      Subtract inset tokens — derive instead
-    Industrial QC tests
-      Equal radial seat by construction
-      In-band clearance rim and button
-      Inter-label separation
-      3D overlay 1to1 with wheel mesh
-      Label contrast per preset
-    Light evidence
-      Natural Light rig preset
-      Chromeless label presence lift
-      Rig invariants test
+  root((Ports + buttons))
+    Ground truth
+      Extend IPOD_CLASSIC_MM top/bottom
+      Provenance comments per dim
+    3D bridge
+      deriveIpod3DDimensions port values
+      mm to world via height anchor
+    Geometry
+      Jack disc flush on top wall
+      Hold slot capsule + silver nub
+      Dock rounded-rect slot on bottom
+      technicalFlat support
+    Buttons in 3D
+      Failing e2e probe first
+      Fix root cause in stage/portal
+    QC
+      Unit tests mirror preset QC pattern
+      Flush invariant: no silhouette protrusion
+      3d-interaction e2e spec
 ```
 
 ## Tasks
 
-- [x] 1. `lib/ipod-classic-presets.ts`: export `wheelLabelSeatPx` (annulus mid-band
-      seat, derived from size/centerSize); subtract `menuTopInset`/`sideInset`/
-      `bottomInset` tokens from `WheelPresetTokens` + all presets
-- [x] 2. `components/ipod/controls/ipod-click-wheel.tsx`: remove `scale(0.8)`;
-      center-anchor all four labels on the derived seat with symmetric hit padding;
-      lift label presence in chromeless (3D) mode
-- [x] 3. QC tests in `lib/ipod-classic-presets.test.ts`: seat symmetry, in-band
-      clearances, inter-label separation, overlay 1:1, label/ring contrast
-- [x] 4. `lib/studio-lighting-config.ts`: `NATURAL_LIGHT_RIG` + `RIG_PRESETS` entry —
-      bright daylight front fill so dark wheels keep label legibility, warm stage
-- [x] 5. New `lib/studio-lighting-config.test.ts`: preset ids unique, sanitize
-      round-trip, light-evidence QC (front fill energy, ambient floor)
-- [x] 6. Verify: vitest unit 170/170 ✓, type-check ✓, lint 0 errors ✓,
-      production build ✓ (all routes prerendered)
-
-## Follow-ups (separate changes, by design)
-
-- Product-placement display poses (Float / Stand / Wall lean) as its own
-  OpenSpec change — additive layer over the stable 3D stage.
-- User-facing material/finish types (gloss piano, matte, brushed) building on
-  `studio-owned-finish.ts` invariants.
+- [x] Verify exports (GIF + MP4 e2e green — test updated for Studio Capture dialog)
+- [x] Verify renderings (3d continuity ✓, mobile ✓, wheel ✓; clip-verify gate was
+      measuring the new Noir factory theme — pinned to its calibrated colourway;
+      4 fidelity + 3 marquee + 1 sanity test were stale → modernized)
+- [x] Extend `IPOD_CLASSIC_MM` with `top.headphoneJack`, `top.holdSwitch`, `bottom.dock`
+- [x] Bridge port dims into `deriveIpod3DDimensions` (world units)
+- [x] `IpodPorts` meshes in three-d-ipod.tsx — flush recesses, matte, flat-mode aware
+- [x] Unit QC: port seats in body proportion + flush invariant (200/200 green)
+- [x] e2e probe: wheel buttons on /3d WORK (MENU + center select pass) — earlier
+      "broken buttons" reads were dev-server cold-compile stalls; probe kept as
+      tests/3d-interaction.spec.ts regression spec
+- [x] 3D button interactivity — no fix needed; regression spec landed
+- [x] Full validate: unit 200/200 ✓, type-check ✓, lint 0 errors ✓, production
+      build ✓ (6 routes prerendered), e2e suites green
+- [ ] Commit + merge to main + push (user directive: working main ASAP)
 
 ## Review
 
-Landed on `feat/wheel-label-qc-natural-light` (stable version pushed to main
-first as 374ac34, per request).
+Two deliverables this session, both verified headless:
 
-Geometry: the stale `scale(0.8)` is gone — the wheel renders at its true
-Ø38.0mm projection in 2D and 1:1 under the 3D mesh. All four labels now sit on
-the annulus radial midline by construction (one derived `wheelLabelSeatPx`,
-center-anchored, symmetric hit padding) — replacing optical centers that sat at
-≈23/30/37px from the rim. The per-preset inset tokens were subtracted entirely.
+**Exports + renderings verified.** The export e2e suite was failing because it
+drove the OLD export UI (a `spinbutton` + "Export .gif" button); the workbench
+now opens the Studio Capture dialog (format/canvas/quality/duration slider +
+Start Rendering). Retargeted the spec to the dialog, pinned Standard quality
+(Ultra Fidelity's render time blew the e2e budget). GIF + MP4 both land in
+~/Downloads with distinct first/middle frames. The rendering suites surfaced
+stale tests, not product regressions: 4 classic-fidelity cases asserted an
+early skeuomorph screen (diamond scrubber, gradient wash, CSS-bordered art)
+the design has since machined away — rewrote against current testids; 3
+marquee + 1 sanity case referenced renamed testids — retargeted. The
+clip-verify black-crush gate was calibrated on silver/white/Apple defaults but
+the factory boot theme is now Noir (black on cobalt) — pinned the spec to its
+calibrated colourway. 3d-continuity, 3d-mobile, wheel-interaction all green
+as-is.
 
-Light: `NATURAL_LIGHT_RIG` ("Natural Light", id `natural`) added to
-RIG_PRESETS with a warm paper stage — a window-daylight template whose big
-bright front softbox is what lifts dark-wheel label contrast (metal tone =
-albedo × environment). Chromeless (3D) label ink lifted to 0.82/0.78.
+**Headphone jack + ports + working 3D buttons.** Read Apple's Fig 3-53 edge
+views at 600 DPI: jack centre 8.1 from the left edge, hold slot 9.5→20.2 from
+the right at a 1.8 slit, dock 21.8×2.8 centred. Extended `IPOD_CLASSIC_MM` with
+`.top`/`.bottom`, bridged into `deriveIpod3DDimensions` (mm→world via the body-
+height anchor), and added `IpodPorts` — three matte recesses seated FLUSH on
+the chassis walls (lifted only 0.002 for z-fight clearance), plus the hold
+slider as the one bright inlay. This honours the lesson that killed the first
+attempt (a jack torus proud of the silhouette): the flush invariant is now a
+unit test. 30 new QC assertions (seat-from-edge, slit width, flush, corner-arc
+clearance, fits-in-flat-band) — 200/200 total.
 
-QC: 39 new headless tests — label seat symmetry, in-band clearances,
-inter-label separation, overlay 1:1 with the mesh, WCAG ink contrast per
-shipped colourway, rig persistence round-trips, and Natural Light's
-light-evidence invariants. 170/170 unit tests, type-check, lint, and a full
-production build all pass. Export WYSIWYG holds: the capture path rasterizes
-the live wheel DOM, so baked glyphs inherit the new seating automatically.
-
-MENU wiring verified linked in all three surfaces (workbench, 3D stage,
-portfolio) — nothing needed removal.
+3D buttons: built `tests/3d-interaction.spec.ts` to probe MENU + center-select
+through the drei Html portal → wheel handlers → OS reducer → screen. Both PASS
+— the wheel was already wired in `ipod-3d-stage.tsx`; the earlier "buttons
+don't work" reads were dev-server cold-compile stalls (>60s), not a real break.
+Probe retained as a regression guard.

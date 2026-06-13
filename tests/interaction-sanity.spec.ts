@@ -44,9 +44,11 @@ test.describe("Hardware Interaction Sanity", () => {
 	});
 
 	test("Screen editable elements are reachable", async ({ page }) => {
-		// In default "ipod-os" mode with "menu", elements might not be editable
-		// Switch to "direct" mode or "now-playing" editable state
-		await page.getByTestId("interaction-mode-direct-button").click();
+		// In default "ipod-os" mode with "menu", elements might not be editable.
+		// The Direct Edit toggle lives in the Theme & Controls panel now.
+		await page.getByTestId("theme-button").click();
+		await page.getByRole("button", { name: "Direct Edit" }).click();
+		await page.getByTestId("theme-button").click(); // close the panel
 
 		const trackTitle = page.getByTestId("track-title-text");
 		await expect(trackTitle).toBeVisible();

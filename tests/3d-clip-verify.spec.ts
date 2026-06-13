@@ -132,8 +132,21 @@ test("owned-finish keyframe invariants — Orbit + Turntable", async ({ page }) 
 	fs.rmSync(OUT_DIR, { force: true, recursive: true });
 	fs.mkdirSync(OUT_DIR, { recursive: true });
 
+	// Pin the colourway these gates were calibrated against: silver device on a
+	// white stage under the Apple rig. The factory boot theme is Noir (black
+	// device, cobalt stage, Designer Dark rig), whose carved dark side
+	// legitimately exceeds the crush gates — that's the owned look, not a
+	// regression. Colours ride the persisted UI state; the rig is one cockpit
+	// click after load (it also sets the white stage).
+	await page.addInitScript(() => {
+		localStorage.setItem(
+			"ipodSnapshotUiState",
+			JSON.stringify({ skinColor: "#E8E8E8", bgColor: "#FFFFFF" }),
+		);
+	});
 	await page.goto("/3d", { waitUntil: "domcontentloaded" });
 	await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 });
+	await page.getByRole("button", { name: "Apple", exact: true }).click();
 	await page.waitForTimeout(2500);
 
 	const orbitMp4 = await captureClip(page, "Orbit");
