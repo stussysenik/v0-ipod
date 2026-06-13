@@ -5,7 +5,6 @@ import { IpodDisplay } from "@/components/ipod/display/ipod-display";
 import { useIpodNowPlayingLayout } from "@/components/ipod/hooks/use-ipod-now-playing-layout";
 import { IpodMenuScene } from "@/components/ipod/scenes/ipod-menu-scene";
 import { IpodNowPlayingScene } from "@/components/ipod/scenes/ipod-now-playing-scene";
-import { isStandardOsInteractionModel } from "@/lib/ipod-state/selectors";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
@@ -30,6 +29,13 @@ interface IpodScreenProps {
 	osNowPlayingLayout?: IpodNowPlayingLayoutState;
 	onOsNowPlayingLayoutChange?: (nextLayout: IpodNowPlayingLayoutState) => void;
 	isEditable?: boolean;
+	/**
+	 * Dev-only layout tool: when true, Now Playing elements get dashed bounding boxes
+	 * + drag handles for repositioning. Default false → no boxes ever, and direct
+	 * inline editing stays on in every interaction model. Never derived from the
+	 * interaction model, so it can't leak into a preview or export.
+	 */
+	layoutMode?: boolean;
 	exportSafe?: boolean;
 	animateText?: boolean;
 	titlePreview?: boolean;
@@ -46,13 +52,13 @@ export function IpodScreen({
 	state,
 	dispatch: dispatchProp,
 	playClick,
-	interactionModel = "direct",
 	osScreen = "now-playing",
 	osMenuItems = EMPTY_OS_MENU_ITEMS,
 	osMenuIndex = 0,
 	osNowPlayingLayout = {},
 	onOsNowPlayingLayoutChange,
 	isEditable = true,
+	layoutMode = false,
 	exportSafe = false,
 	animateText = false,
 	titlePreview = false,
@@ -64,15 +70,24 @@ export function IpodScreen({
 	const remainingAnchorRef = useRef<number | null>(null);
 	const screenTokens = preset.screen;
 	const showOsMenu = osScreen === "menu";
+	// Layout-drag mode (dashed bounding boxes + drag handles) is a DEV-ONLY tool,
+	// gated solely on the `layoutMode` toggle — never on the interaction model. With
+	// it off (the default), the boxes can never appear in the live view, a preview,
+	// or an export, and direct inline editing stays on in EVERY interaction model.
 	const isNowPlayingLayoutMode =
-		isStandardOsInteractionModel(interactionModel) &&
-		!showOsMenu &&
-		isEditable &&
-		!exportSafe;
-	const shouldApplyNowPlayingLayout =
-		isStandardOsInteractionModel(interactionModel) && !showOsMenu;
-	const isInlineEditingEnabled = isEditable && !isNowPlayingLayoutMode;
-	const artworkShadow = "0 1px 2px rgba(0,0,0,0.14)";
+		layoutMode && !showOsMenu && isEditable && !exportSafe;
+	// Saved element positions still render in any Now Playing view (default layout is
+	// empty, so this is a no-op until a dev actually drags something in layout mode).
+	const shouldApplyNowPlayingLayout = !showOsMenu;
+	// Tap-to-edit text/artwork works in all models; only export and the dev layout
+	// tool suppress it.
+	const isInlineEditingEnabled =
+		isEditable && !exportSafe && !isNowPlayingLayoutMode;
+	// Layered "lift" so the cover reads as a physical tile sitting on the glossy
+	// screen — a tight contact shadow for the edge + a soft ambient cast for depth.
+	// This is most of the "pop": flat single shadows make album art look pasted on.
+	const artworkShadow =
+		"0 1px 2px rgba(0,0,0,0.18), 0 6px 16px rgba(0,0,0,0.20)";
 	const { frameRef, renderElement } = useIpodNowPlayingLayout({
 		isLayoutMode: isNowPlayingLayoutMode,
 		shouldApplyLayout: shouldApplyNowPlayingLayout,

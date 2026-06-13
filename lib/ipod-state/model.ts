@@ -119,6 +119,13 @@ export interface IpodStudioState {
 	/** Run the scrolling marquee on overflowing track text in the live 3D view. */
 	marquee: boolean;
 	/**
+	 * Dev-only "layout" tool: show dashed bounding boxes + drag handles so Now Playing
+	 * elements can be repositioned. Off by default and never tied to interaction model,
+	 * so the boxes can NEVER leak into the live view, a preview, or an export. With it
+	 * off, every interaction model uses plain direct inline editing (tap text to edit).
+	 */
+	layoutMode: boolean;
+	/**
 	 * Mount the Theatre.js studio timeline GUI (camera-keyframe authoring). Off by
 	 * default and dev-only: the studio injects a full-screen editor overlay that
 	 * otherwise sits on top of the live view, so it stays opt-in and is force-hidden
@@ -133,6 +140,7 @@ export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
 	technicalFlat: false,
 	interactionLocked: false,
 	marquee: true,
+	layoutMode: false,
 	theatreStudio: false,
 };
 

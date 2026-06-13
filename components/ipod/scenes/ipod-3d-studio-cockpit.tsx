@@ -101,6 +101,18 @@ export function Ipod3DStudioCockpit({
 				onToggle={onToggleTouchControls}
 			/>
 
+			{/* Layout tool — dashed bounding boxes + drag handles to reposition Now Playing
+			    elements (dev only). Off by default so the boxes never leak into the live
+			    view or an export; with it off, every mode uses plain tap-to-edit text. */}
+			{process.env.NODE_ENV !== "production" && (
+				<ToggleRow
+					label="Layout boxes"
+					hint="Drag to reposition · dev only"
+					on={studio.layoutMode}
+					onToggle={() => dispatch({ type: "TOGGLE_LAYOUT_MODE" })}
+				/>
+			)}
+
 			{/* Theatre.js timeline — camera-keyframe authoring overlay (dev only). Off by
 			    default so its full-screen editor never clutters the view or an export. */}
 			{process.env.NODE_ENV !== "production" && (

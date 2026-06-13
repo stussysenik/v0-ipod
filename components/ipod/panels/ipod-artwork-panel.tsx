@@ -91,8 +91,20 @@ export function IpodArtworkPanel({
 							style={{
 								width: screenTokens.artworkSize,
 								height: screenTokens.artworkSize,
-								boxShadow: `${artworkShadow}, 0 0 0 1px rgba(0,0,0,0.08)`,
+								// Hairline keyline first (crisp 0.5px edge), then the lifted
+								// drop shadow — order matters so the keyline reads as the tile's
+								// own bevel, not a blurry halo.
+								boxShadow: `inset 0 0 0 0.5px rgba(0,0,0,0.12), ${artworkShadow}`,
 								zIndex: 10,
+								// Promote the cover to its own GPU layer rasterized at device
+								// resolution, so sampling it through the screen's 3D transform
+								// stays as sharp as the source allows (no extra compositor blur).
+								transform: "translateZ(0)",
+								backfaceVisibility: "hidden",
+								WebkitBackfaceVisibility: "hidden",
+								// A whisper of saturation + contrast so the cover "pops" against
+								// the white screen without looking processed. This is the sauce.
+								filter: "saturate(1.06) contrast(1.03)",
 							}}
 							data-export-layer="artwork"
 						>

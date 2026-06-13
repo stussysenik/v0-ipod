@@ -488,6 +488,10 @@ function createBrushedMetalTexture(): THREE.CanvasTexture {
 	texture.wrapT = THREE.RepeatWrapping;
 	texture.repeat.set(1.5, 1.5);
 	texture.colorSpace = THREE.SRGBColorSpace;
+	// Max anisotropy kills the brushed-line shimmer at grazing angles — without it
+	// the metal aliases into crawling moiré as the device orbits (the "annoying"
+	// jaggies). This is the single biggest metal-fidelity win.
+	texture.anisotropy = 16;
 	return texture;
 }
 
@@ -623,7 +627,7 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 
 	const texture = new THREE.CanvasTexture(canvas);
 	texture.colorSpace = THREE.SRGBColorSpace;
-	texture.anisotropy = 8;
+	texture.anisotropy = 16;
 	return texture;
 }
 
@@ -1010,8 +1014,12 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			bevelEnabled: true,
 			bevelThickness: bevelT,
 			bevelSize: bevelS,
-			bevelSegments: 6,
-			curveSegments: 32,
+			// Smoother edge roll-over (6→10) and rounder in-plane corners (32→64) so
+			// the silhouette reads as a continuous radius, not a faceted polygon. This
+			// is the "round the sharp corners" — at the device's scale a 6/32 fillet
+			// shows visible flats on the corner highlight.
+			bevelSegments: 10,
+			curveSegments: 64,
 		});
 		geo.translate(0, 0, -(dims.depth / 2 - bevelT));
 		geo.computeVertexNormals();
@@ -1056,7 +1064,10 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			bevelThickness: MECHANICAL.faceChamfer.thickness,
 			bevelSize: MECHANICAL.faceChamfer.size,
 			bevelSegments: 2,
-			curveSegments: 28,
+			// Keep the chamfer a crisp hairline (segments: 2), but smooth the in-plane
+			// arcs of the face corners + screen aperture + wheel bore (28→48) so those
+			// curves don't read as faceted.
+			curveSegments: 48,
 		});
 		geo.computeVertexNormals();
 		return geo;
@@ -1178,7 +1189,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				tex.colorSpace = THREE.SRGBColorSpace;
 				tex.minFilter = THREE.LinearFilter;
 				tex.magFilter = THREE.LinearFilter;
-				tex.anisotropy = 8;
+				tex.anisotropy = 16;
 				tex.needsUpdate = true;
 				const mat = new THREE.MeshBasicMaterial({
 					map: tex,
@@ -2184,7 +2195,9 @@ function SceneCapture({
 		const captureFrame = async (width: number, height: number): Promise<ImageBitmap | null> => {
 			// No angle override here — capture from current camera for live interaction recording
 			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
-				samples: 4,
+				// Match the still/clip export's 8× MSAA so live-recorded frames get the
+				// same smooth edges instead of the jaggier 4× resolve.
+				samples: 8,
 				type: THREE.UnsignedByteType,
 				format: THREE.RGBAFormat,
 			});
@@ -2435,7 +2448,11 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			<div className={`w-full h-full min-h-screen absolute inset-0 z-0 ${stageClassName}`}>
 				<Canvas
 					shadows
-					dpr={[1, 1.5]}
+					// Render at up to 2× device pixels (was 1.5×). On a retina panel this is
+					// the difference between a soft preview and a crisp one — the metal edges,
+					// the screen bezel gloss, and the drei-Html screen all sharpen. R3F still
+					// caps at 2 so we don't pay 3× fill on high-DPR displays.
+					dpr={[1, 2]}
 					gl={{
 						antialias: true,
 						// No tonemapping operator: a filmic curve rolls off highlights and

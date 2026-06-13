@@ -20,6 +20,10 @@ import { type LoopStyle, type StudioPose } from "@/lib/studio-camera";
 import { findStudioClip, isTheatreClip, STUDIO_CLIPS } from "@/lib/studio-clip-presets";
 import { STEEL_ROUGHNESS_FLOOR } from "@/lib/studio-owned-finish";
 import { exportJobOf, exportMachine, exportProgressOf } from "@/lib/xstate/export-machine";
+import { exportFingerprint, proofFingerprint } from "@/lib/export/export-fingerprint";
+import { selectExportSnapshot } from "@/lib/export/proof-inputs";
+import { snapshotToModel } from "@/lib/export/proof-restore";
+import { useProofCache } from "@/lib/export/use-proof-cache";
 
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodScreen } from "../display/ipod-screen";
@@ -33,9 +37,11 @@ import {
 	Ipod3DExportDock,
 	type ClipExportOptions,
 	type ExportAspect,
+	type ExportQuality,
 	type Ipod3DExportState,
 	type StillExportOptions,
 } from "./ipod-3d-export-dock";
+import { Ipod3DExportProofPanel } from "./ipod-3d-export-proof-panel";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
 import { Ipod3DTouchControls } from "./ipod-3d-touch-controls";
@@ -127,6 +133,10 @@ export function Ipod3DStage() {
 	// here so the live preview and the export read the SAME values (WYSIWYG parity).
 	const [speed, setSpeed] = useState(1);
 	const [loopStyle, setLoopStyle] = useState<LoopStyle>("loop");
+	// Aspect + quality — lifted from the export dock so the proof fingerprint, the proof
+	// panel, and the export all read one source of truth (WYSIWYG parity).
+	const [aspect, setAspect] = useState<ExportAspect>("story");
+	const [quality, setQuality] = useState<ExportQuality>("standard");
 	// The rig flies the move only when the playhead is "engaged" — playing, or
 	// scrubbed off the hero seam. At t=0 paused we hand the camera back so the user
 	// can compose freely (phase 0 ≈ the composed hero anyway).
@@ -464,14 +474,34 @@ export function Ipod3DStage() {
 
 				downloadBlob(blob, filename);
 
+				// Provenance: stamp the export identity + retained snapshot so the entry is
+				// identifiable and re-openable, and its proof thumbnail resolves from the cache.
+				const snapshot = anchor
+					? selectExportSnapshot(model, anchor, {
+							aspect: options.aspect,
+							quality: options.quality,
+							move,
+							loop: options.loop,
+							speed: options.speed,
+							durationSec: options.durationSec,
+						})
+					: undefined;
+				const fingerprint = snapshot ? exportFingerprint(snapshot) : undefined;
+
 				// Persist to PocketBase history.
 				saveExportToHistory(blob, filename, {
 					title: model.metadata.title,
 					move: motionTag,
 					aspect: options.aspect,
 					duration: options.durationSec,
+					fingerprint,
+					snapshot,
 				}).then((record) => {
-					if (record) setExportHistory((prev) => [record, ...prev].slice(0, 10));
+					// Re-attach provenance locally in case PB drops unknown fields — re-open and
+					// thumbnails must work this session regardless of the backend schema.
+					if (record) {
+						setExportHistory((prev) => [{ ...record, fingerprint, snapshot }, ...prev].slice(0, 10));
+					}
 				});
 
 				sendExport({ type: "SAVED" });
@@ -496,7 +526,7 @@ export function Ipod3DStage() {
 				}
 			}
 		},
-		[exportActorRef, sendExport, showNotice, nextPaint, model.metadata.title, dispatch],
+		[exportActorRef, sendExport, showNotice, nextPaint, model, dispatch],
 	);
 
 	const controls = useIpodClickWheelControls({
@@ -511,6 +541,76 @@ export function Ipod3DStage() {
 	const activePreset = useMemo(
 		() => getIpodClassicPreset(presentation.hardwarePreset),
 		[presentation.hardwarePreset],
+	);
+
+	// ── Export proof cache ──
+	// Ambient, content-addressed proof: while the studio is idle the current composition's
+	// anchor frame is speculatively rendered through the SAME captureHighRes path an export
+	// uses, then read instantly by the panel. The cache only OBSERVES the pipeline — it never
+	// changes export output. Pre-compute yields to a real export bake and to live playback.
+	const exportOptions = useMemo(
+		() => ({ aspect, quality, move: previewMove, loop: loopStyle, speed, durationSec }),
+		[aspect, quality, previewMove, loopStyle, speed, durationSec],
+	);
+	const renderProof = useCallback(
+		async (snapshot: ReturnType<typeof selectExportSnapshot>): Promise<Blob | null> => {
+			const api = ipodApiRef.current;
+			if (!api) return null;
+			const [w, h] = ASPECT_DIMS[snapshot.aspect as ExportAspect].still;
+			// The proof IS the anchor frame (phase 0 = the composed hero), so we capture the
+			// hero framing at the snapshot's pose — byte-identical to an export's frame 0.
+			return api.captureHighRes(w, h, "hero", {
+				azimuth: snapshot.pose.azimuth,
+				elevation: snapshot.pose.elevation,
+				reach: snapshot.pose.reach,
+				target: [snapshot.pose.target[0], snapshot.pose.target[1], snapshot.pose.target[2]],
+			});
+		},
+		[],
+	);
+	const proof = useProofCache({
+		model,
+		options: exportOptions,
+		getPose: () => ipodApiRef.current?.getCameraPose() ?? null,
+		render: renderProof,
+		isExporting: exporting,
+		// Only pre-compute when the camera is still (not flying the move) and no export is
+		// running — capturing mid-move would render a transient pose, not the composed angle.
+		enabled: !previewEngaged && !exporting,
+	});
+
+	// History thumbnail lookup: the cache is keyed by the PROOF key (motion-excluded), so a
+	// record's thumbnail is found by re-deriving that key from its stored snapshot.
+	const peekProofBlob = useCallback(
+		(record: ExportRecord): Blob | undefined =>
+			record.snapshot ? proof.peek(proofFingerprint(record.snapshot))?.blob : undefined,
+		[proof],
+	);
+
+	// Re-open: restore the exact setup a past export was made with — model state via
+	// RESTORE_MODEL, playhead/options via their lifted setters, pose via the camera goal.
+	const handleReopen = useCallback(
+		(record: ExportRecord) => {
+			const snap = record.snapshot;
+			if (!snap) return;
+			dispatch({ type: "RESTORE_MODEL", payload: snapshotToModel(model, snap) });
+			setAspect(snap.aspect as ExportAspect);
+			setQuality(snap.quality as ExportQuality);
+			setLoopStyle(snap.loop as LoopStyle);
+			setSpeed(snap.speed);
+			setDurationSec(snap.durationSec);
+			setPreviewMove(snap.move);
+			setPreviewPlaying(false);
+			setPreviewT(0);
+			heroAnchorRef.current = null;
+			ipodApiRef.current?.setCameraGoal({
+				azimuth: snap.pose.azimuth,
+				elevation: snap.pose.elevation,
+				reach: snap.pose.reach,
+			});
+			showNotice("Restored export setup");
+		},
+		[model, showNotice],
 	);
 
 	const screenComponent = (
@@ -530,12 +630,17 @@ export function Ipod3DStage() {
 			// title/artist/album scrolls on the device exactly as it does on a real iPod — this
 			// is what "wasn't brought over" into /3d. Off → text stays static (and truncates).
 			animateText={studio.marquee}
-			// Clean by default: the 3D studio is a presentation surface, so the screen's
-			// editing affordances (layout-drag handles + the dashed selection outline,
-			// inline text editing) stay OFF — metadata is edited from the Now Playing
-			// cockpit, not by clicking the device. They only light up under the Theatre dev
-			// toggle, and the interaction lock can still force the clean state on top.
-			isEditable={studio.theatreStudio && !studio.interactionLocked}
+			// Inline text/artwork editing on the device screen is on by default in EVERY
+			// interaction model — tap an element to edit it. There is NO persistent edit
+			// chrome (no dashed outline, no drag handles): editing stays invisible until
+			// you click, and the capture path renders the clean marquee regardless. The
+			// interaction lock forces the clean state for screenshots/export.
+			isEditable={!studio.interactionLocked}
+			// Dev-only layout tool: the dashed bounding boxes + drag handles for
+			// repositioning elements. Off by default, so the boxes never leak into the
+			// live view, a preview, or an export. Decoupled from interaction model on
+			// purpose — touch/pinch (orbit-pad overlay) is unaffected either way.
+			layoutMode={studio.layoutMode}
 		/>
 	);
 
@@ -686,8 +791,30 @@ export function Ipod3DStage() {
 						backRoughness={backRoughness}
 						onBackRoughnessChange={setBackRoughness}
 					/>
-					<Ipod3DExportDock
+					<Ipod3DExportProofPanel
 						index={7}
+						fingerprint={proof.currentFingerprint}
+						peek={proof.peek}
+						version={proof.version}
+						aspect={aspect}
+						quality={quality}
+						fps={CLIP_QUALITY[quality].fps}
+						durationSec={durationSec}
+						hold={loopStyle === "hold"}
+						moveLabel={(findStudioClip(previewMove) ?? STUDIO_CLIPS[0]).label}
+						onExport={() =>
+							handleExportClip(previewMove, {
+								durationSec,
+								quality,
+								aspect,
+								speed,
+								loop: loopStyle,
+							})
+						}
+						exportBusy={exporting}
+					/>
+					<Ipod3DExportDock
+						index={8}
 						exportState={exportState}
 						durationSec={durationSec}
 						onDurationChange={setDurationSec}
@@ -698,6 +825,10 @@ export function Ipod3DStage() {
 						onSpeedChange={setSpeed}
 						loopStyle={loopStyle}
 						onLoopStyleChange={setLoopStyle}
+						aspect={aspect}
+						onAspectChange={setAspect}
+						quality={quality}
+						onQualityChange={setQuality}
 						onPreviewMoveChange={handlePreviewMoveChange}
 						onTogglePlay={handleTogglePlay}
 						onScrub={handleScrub}
@@ -706,6 +837,8 @@ export function Ipod3DStage() {
 						onExportClip={handleExportClip}
 						showTheatreClips={studio.theatreStudio}
 						history={exportHistory}
+						peekProofBlob={peekProofBlob}
+						onReopen={handleReopen}
 					/>
 				</div>
 			</div>
