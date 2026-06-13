@@ -224,6 +224,59 @@ export const EDGE_NOIR_RIG: StudioLightingConfig = {
 };
 
 /**
+ * "Natural Light" — the window-daylight product template. Where the studio rigs
+ * sculpt (Apple floods, the dark rigs carve), this one photographs: a big warm
+ * window wall from the front-left, a cool sky bounce opposite, soft paper stage.
+ *
+ * Physics of why the labels read on a dark device under this rig: the wheel is
+ * metal — its visible tone is `albedo × environment`, so a black wheel is only
+ * as dark as the wall it mirrors. The bright window-wall softbox in front IS
+ * that wall: it lifts the black ring's reflected tone several stops while the
+ * screen-printed labels (diffuse ink, near-constant reflectance) stay put —
+ * widening the print-to-ring contrast instead of washing it. Daylight is also
+ * spectrally flat (high CRI): the warm window (≈5000K) + cool sky bounce mix to
+ * neutral, so anodized hues read true rather than tinted by the rig.
+ */
+export const NATURAL_LIGHT_RIG: StudioLightingConfig = {
+	name: "Natural Light",
+	// Open-room ambience — daylight scattered off walls, not a black studio void.
+	ambient: { color: "#f2f3f5", intensity: 0.5 },
+	// The sun side of the window: warm, high, from the left — gentle modelling key.
+	key: {
+		color: "#fff3df",
+		intensity: 130,
+		position: [-9, 12, 10],
+		angle: 0.42,
+		penumbra: 1.0,
+		castShadow: true,
+	},
+	// Skylight fill from the right — the cool half of daylight's warm/cool mix.
+	fill: { color: "#e2ecf8", intensity: 70, position: [10, 6, 8], angle: 0.6, penumbra: 1.0 },
+	// Soft top-back separation so the crown doesn't merge into the bright room.
+	rim: { color: "#eef4fc", intensity: 80, position: [0, 9, -7], angle: 0.5, penumbra: 1.0 },
+	env: {
+		preset: "apartment",
+		intensity: 1.1,
+		blur: 0.55,
+		softboxes: [
+			// The window wall — the big bright panel the face and wheel mirror back.
+			// This is the single light source that keeps dark-wheel labels legible.
+			{ color: "#f7f4ed", intensity: 1.0, position: [-4, 3, 9], scale: [30, 38, 1] },
+			// Second window pane, warmer and tighter — the glossy highlight with shape.
+			{ color: "#fdf3e3", intensity: 0.85, position: [-8, 5, 4], scale: [9, 14, 1] },
+			// Cool sky bounce, right — fills the shadow side a stop down.
+			{ color: "#dfe9f4", intensity: 0.55, position: [8, 3, 4], scale: [8, 8, 1] },
+			// Ceiling horizon — the thin crisp line that rakes the chrome rim.
+			{ color: "#ffffff", intensity: 0.6, position: [0, 9, 1], scale: [14, 0.5, 1] },
+			// Soft dark room corner behind — edge definition without studio black.
+			{ color: "#3a3833", intensity: 0.6, position: [4, -1, -10], scale: [18, 18, 1] },
+			// Warm floor/table bounce — daylight off the paper sweep.
+			{ color: "#efe9de", intensity: 0.4, position: [0, -5, 2], scale: [12, 1.5, 1] },
+		],
+	},
+};
+
+/**
  * A neutral, recessive rig for the "Lights Off / Technical" flat view. The device materials
  * are swapped to flat/unlit in the renderer, so this rig only needs to keep the LCD legible
  * and the field calm — no shaping, no reflections competing with the flat albedo.
@@ -251,6 +304,7 @@ export interface RigPreset {
 
 export const RIG_PRESETS: readonly RigPreset[] = [
 	{ id: "apple", label: "Apple", config: APPLE_PRODUCT_RIG, stage: "#FFFFFF" },
+	{ id: "natural", label: "Natural Light", config: NATURAL_LIGHT_RIG, stage: "#EDEAE3" },
 	{ id: "dark", label: "Designer Dark", config: DESIGNER_DARK_RIG, stage: "#0B0D12" },
 	{ id: "edge-noir", label: "Edge Noir", config: EDGE_NOIR_RIG, stage: "#050608" },
 ] as const;

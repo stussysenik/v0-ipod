@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 // No lucide imports — all wheel icons are hand-crafted SVGs matching real iPod hardware
 import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
+import { wheelLabelSeatPx } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { playMechanicalClick } from "@/lib/ipod-state/effects";
 import { liveTheme, captureTheme, vars } from "@/lib/ipod-state/theme.css";
@@ -11,6 +12,26 @@ import { liveTheme, captureTheme, vars } from "@/lib/ipod-state/theme.css";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
 const WHEEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+
+/**
+ * Symmetric hit padding around every label. Each label is anchored by its CENTRE
+ * on the annulus midline (see `wheelLabelSeatPx`), so padding grows the touch
+ * target evenly in all directions and can never shift the print off its seat —
+ * the lopsided per-button paddings this replaces moved each optical centre to a
+ * different radius (≈23 / 30 / 37px from the rim), an asymmetry perspective exposes.
+ */
+const LABEL_HIT_PADDING = "0.65rem 1rem";
+
+/**
+ * Screen-print presence. On the flat 2D ring the authentic print reads quiet
+ * (~0.6 over an even plastic tone). Over the 3D-lit metal the same alpha sinks
+ * into the material's shading range and the labels go murky on dark finishes —
+ * chromeless mode lifts the ink toward solid: same print, more light.
+ */
+const LABEL_OPACITY = {
+	flat: { menu: 0.6, transport: 0.55 },
+	chromeless: { menu: 0.82, transport: 0.78 },
+} as const;
 
 
 /**
@@ -76,6 +97,9 @@ export function IpodClickWheel({
 
 	const wheelLabelColor = effectiveLabelColor;
 	const wheelTokens = preset.wheel;
+	// One derived radial seat for all four labels — symmetry by construction.
+	const labelSeat = wheelLabelSeatPx(wheelTokens);
+	const labelOpacity = chromeless ? LABEL_OPACITY.chromeless : LABEL_OPACITY.flat;
 
 	// Wheel surface: the ring color (transparent when the 3D geometry paints it)
 	const wheelSurfaceStyle = {
@@ -166,11 +190,12 @@ export function IpodClickWheel({
 			ref={wheelRef}
 			className={`relative touch-none rounded-full ${disabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${activeTheme} ${className}`}
 			style={{
+				// Rendered 1:1 with the machined token (Ø38.0 projected to px). An earlier
+				// scale(0.8) here compensated the old hand-tuned 272px token (0.8 × 272 ≈
+				// today's derived 212.9); left in place it double-shrank the wheel to a
+				// Ø30.4mm equivalent and crowded the labels into the hub.
 				width: wheelTokens.size,
 				height: wheelTokens.size,
-
-				transform: "scale(0.8)",
-				transformOrigin: "center",
 				...style,
 			}}
 		>
@@ -230,21 +255,21 @@ export function IpodClickWheel({
 					</>
 				)}
 
-				{/* Button Labels */}
+				{/* Button Labels — each anchored by its centre on the annulus midline. */}
 				<button
 					aria-label="Menu"
-			className="absolute left-1/2 z-10 -translate-x-1/2 bg-transparent uppercase font-sans leading-none transition-opacity"
+			className="absolute left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 bg-transparent uppercase font-sans leading-none transition-opacity"
 			data-testid="click-wheel-menu-button"
 			disabled={disabled}
 			style={{
-				top: wheelTokens.menuTopInset,
+				top: labelSeat,
 				color: wheelLabelColor,
 				fontSize: wheelTokens.labelFontSize,
 				fontWeight: 700,
 				letterSpacing: wheelTokens.labelTracking,
 				fontFamily: WHEEL_FONT_FAMILY,
-				opacity: 0.6,
-				padding: "0.7rem 1rem 0.5rem 1rem",
+				opacity: labelOpacity.menu,
+				padding: LABEL_HIT_PADDING,
 				textShadow: FEATURE_FLAGS.ENABLE_MATERIALITY
 							? "0 -1px 0 rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.3)"
 							: "0 1px 1px rgba(255,255,255,0.4), 0 -0.5px 1px rgba(0,0,0,0.35)",
@@ -262,12 +287,12 @@ export function IpodClickWheel({
 				<button
 					type="button"
 					data-testid="click-wheel-playpause-button"
-				className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center bg-transparent leading-none transition-opacity"
+				className="absolute left-1/2 z-10 flex -translate-x-1/2 translate-y-1/2 items-center bg-transparent leading-none transition-opacity"
 				style={{
-					bottom: wheelTokens.bottomInset,
+					bottom: labelSeat,
 					color: wheelLabelColor,
-					opacity: 0.55,
-padding: "0.7rem 1rem 1rem",
+					opacity: labelOpacity.transport,
+					padding: LABEL_HIT_PADDING,
 				}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {
@@ -307,12 +332,12 @@ padding: "0.7rem 1rem 1rem",
 				<button
 					type="button"
 					data-testid="click-wheel-prev-button"
-			className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent leading-none transition-opacity"
+			className="absolute top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 bg-transparent leading-none transition-opacity"
 			style={{
-				left: wheelTokens.sideInset,
+				left: labelSeat,
 				color: wheelLabelColor,
-				opacity: 0.55,
-				padding: "0.7rem 1rem 0.5rem 1rem",
+				opacity: labelOpacity.transport,
+				padding: LABEL_HIT_PADDING,
 			}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {
@@ -345,12 +370,12 @@ padding: "0.7rem 1rem 1rem",
 				<button
 					type="button"
 					data-testid="click-wheel-next-button"
-			className="absolute top-1/2 z-10 -translate-y-1/2 bg-transparent leading-none transition-opacity"
+			className="absolute top-1/2 z-10 translate-x-1/2 -translate-y-1/2 bg-transparent leading-none transition-opacity"
 			style={{
-				right: wheelTokens.sideInset,
+				right: labelSeat,
 				color: wheelLabelColor,
-				opacity: 0.55,
-				padding: "0.7rem 1rem 0.5rem 1rem",
+				opacity: labelOpacity.transport,
+				padding: LABEL_HIT_PADDING,
 			}}
 					onPointerDown={(event) => event.stopPropagation()}
 					onClick={(event) => {

@@ -91,6 +91,21 @@ function getExtractedFrameHashes(filePath: string): [string, string] {
 	}
 }
 
+/**
+ * The capture-duration control is a react-aria Slider (role="slider"), not a
+ * spinbutton — drive it with the keyboard: Home snaps to the 2s minimum, then
+ * ArrowRight steps 1s at a time.
+ */
+async function setCaptureDurationSeconds(page: Page, seconds: number) {
+	const thumb = page.getByRole("dialog").getByRole("slider");
+	await thumb.focus();
+	await page.keyboard.press("Home");
+	for (let step = 2; step < seconds; step += 1) {
+		await page.keyboard.press("ArrowRight");
+	}
+	await expect(thumb).toHaveValue(String(seconds));
+}
+
 async function prepareExportSurface(page: Page) {
 	await page.addInitScript(
 		({
@@ -157,11 +172,14 @@ test.describe("Export downloads", () => {
 		fs.rmSync(filePath, { force: true });
 
 		const downloadPromise = page.waitForEvent("download", {
-			timeout: 60_000,
+			timeout: 120_000,
 		});
 		await page.getByTestId("gif-export-button").click();
-		await page.getByRole("spinbutton").fill("3");
-		await page.getByRole("button", { name: "Export .gif" }).click();
+		// Pin Standard quality — the dialog defaults to Ultra Fidelity, whose
+		// render time blows past any sane e2e budget on a dev server.
+		await page.getByTestId("quality-standard-button").click();
+		await setCaptureDurationSeconds(page, 3);
+		await page.getByTestId("start-rendering-button").click();
 		const download = await downloadPromise;
 		expect(download.suggestedFilename()).toBe(
 			"ipod-0000-james-blake-doesn-t-just-happen.gif",
@@ -191,8 +209,9 @@ test.describe("Export downloads", () => {
 			timeout: 120_000,
 		});
 		await mp4Button.click();
-		await page.getByRole("spinbutton").fill("3");
-		await page.getByRole("button", { name: "Export .mp4" }).click();
+		await page.getByTestId("quality-standard-button").click();
+		await setCaptureDurationSeconds(page, 3);
+		await page.getByTestId("start-rendering-button").click();
 		const download = await downloadPromise;
 		expect(download.suggestedFilename()).toBe(
 			"ipod-0000-james-blake-doesn-t-just-happen.mp4",

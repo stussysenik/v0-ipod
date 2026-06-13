@@ -1,4 +1,4 @@
-import type { IpodClassicPresetDefinition } from "./ipod-classic-presets";
+import { IPOD_CLASSIC_MM, type IpodClassicPresetDefinition } from "./ipod-classic-presets";
 
 /**
  * Derives 3D scene geometry from the canonical 2D preset tokens.
@@ -58,6 +58,22 @@ export interface Ipod3DDimensions {
 	/** Pixel dimensions of the live HTML overlays (match the 2D components 1:1). */
 	screenHtmlPx: { width: number; height: number };
 	wheelHtmlPx: { width: number; height: number };
+	/** World units per millimetre — for chassis features dimensioned in mm on the drawing. */
+	mmToWorld: number;
+	/**
+	 * Chassis edge features (headphone jack, hold switch, dock connector), projected
+	 * from the drawing's mm callouts into world units. X is signed from the body
+	 * centreline (the drawing measures from the left/right edges); each feature is
+	 * a recess seated FLUSH on the top (+y) or bottom (−y) wall.
+	 */
+	ports: {
+		/** 3.5mm jack on the top wall — bore centre + radius. */
+		jack: { centerX: number; radius: number };
+		/** Hold-switch slot on the top wall — centre, length (along width), slit width (along depth). */
+		hold: { centerX: number; length: number; width: number };
+		/** 30-pin dock opening on the bottom wall — centred; length (along width) × width (along depth). */
+		dock: { length: number; width: number };
+	};
 }
 
 /**
@@ -92,8 +108,35 @@ export function deriveIpod3DDimensions(
 	const wheelTopPx = halfH - shell.paddingTop - screen.frameHeight - shell.controlMarginTop;
 	const wheelCenterPx = wheelTopPx - wheelDiameterPx / 2;
 
+	// ── Chassis edge features — straight mm→world projection ──
+	// The face tokens go mm→px→world (the presets are the pixel authority for the
+	// FACE); the edge ports never had a 2D life, so they project directly from the
+	// drawing. Same anchor (body height), so both paths agree to rounding.
+	const mmToWorld = SCENE_HEIGHT / PHYSICAL_HEIGHT_MM;
+	const halfWmm = IPOD_CLASSIC_MM.body.width / 2;
+	const { headphoneJack, holdSwitch } = IPOD_CLASSIC_MM.top;
+	const { dockConnector } = IPOD_CLASSIC_MM.bottom;
+	const holdCenterFromRightMm =
+		(holdSwitch.slotNearFromRight + holdSwitch.slotFarFromRight) / 2;
+
 	return {
 		unit,
+		mmToWorld,
+		ports: {
+			jack: {
+				centerX: (headphoneJack.centerFromLeft - halfWmm) * mmToWorld,
+				radius: (headphoneJack.boreDiameter / 2) * mmToWorld,
+			},
+			hold: {
+				centerX: (halfWmm - holdCenterFromRightMm) * mmToWorld,
+				length: (holdSwitch.slotFarFromRight - holdSwitch.slotNearFromRight) * mmToWorld,
+				width: holdSwitch.slotWidth * mmToWorld,
+			},
+			dock: {
+				length: dockConnector.width * mmToWorld,
+				width: dockConnector.height * mmToWorld,
+			},
+		},
 		width: shell.width * unit,
 		height: SCENE_HEIGHT,
 		// True chassis depth per hardware revision (the 2007 160GB is the thick body).

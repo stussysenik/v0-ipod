@@ -56,7 +56,7 @@ test("preview button brings the title marquee back on the now playing screen", a
 			return false;
 		}
 	}, { uiStorageKey: UI_STORAGE_KEY });
-	await page.getByTestId("preview-view-button").click();
+	await page.getByTestId("preview-button").click();
 	const title = page.getByTestId("track-title-text");
 	await expect(title).toContainText("Sufjan Stevens");
 	await page.waitForTimeout(3500);
@@ -126,7 +126,7 @@ test("preview button animates overflowing artist text too", async ({ page }) => 
 			return false;
 		}
 	}, { uiStorageKey: UI_STORAGE_KEY });
-	await page.getByTestId("preview-view-button").click();
+	await page.getByTestId("preview-button").click();
 	const artist = page.getByTestId("track-artist-text");
 	await expect(artist).toContainText("GENERATION");
 	await page.waitForTimeout(4500);
@@ -198,7 +198,7 @@ test("preview button keeps short titles static like the original iPod behavior",
 			return false;
 		}
 	}, { uiStorageKey: UI_STORAGE_KEY });
-	await page.getByTestId("preview-view-button").click();
+	await page.getByTestId("preview-button").click();
 	const title = page.getByTestId("track-title-text");
 	await expect(title).toContainText("Chamakay");
 	await page.waitForTimeout(1200);

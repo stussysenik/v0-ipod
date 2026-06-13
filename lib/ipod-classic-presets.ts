@@ -31,6 +31,27 @@ export const IPOD_CLASSIC_MM = {
 	body: { width: 61.8, height: 103.5, cornerRadius: 6.4, depthThin: 10.5, depthThick: 13.5, faceStep: 0.4 },
 	screen: { apertureWidth: 52.0, apertureHeight: 39.5, apertureCenterFromTop: 24.7, cornerRadius: 1.0 },
 	wheel: { diameter: 38.0, buttonDiameter: 13.7, centerFromBottom: 30.4 },
+	// ── Chassis edge features (Fig 3-53 top/bottom edge views, read at 600 DPI) ──
+	// All are machined INTO the steel — recessed openings, never proud of the
+	// silhouette (an earlier jack torus poked above the outline and was subtracted).
+	// Cross-depth seats are near-centred on both chassis depths; the drawing's own
+	// cross-depth callouts (5.9 jack / 7.5+4.2 hold / 5.4 dock, thick body) sit
+	// within 0.9mm of centre, so the 3D model centres them — invisible at render
+	// scale and valid for both the 10.5 and 13.5 bodies.
+	top: {
+		// 3.5mm TRS jack: drawing pins the bore centre 8.1 from the left edge; the
+		// bore itself is undimensioned (it IS the plug standard, Ø3.5).
+		headphoneJack: { centerFromLeft: 8.1, boreDiameter: 3.5 },
+		// Hold-switch slot: feature lines at 20.2 / 9.5 from the right edge bound a
+		// 10.7-long slot; cross-depth callouts 7.5 + 4.2 on the 13.5 body leave a
+		// 1.8 slit. The slider nub rides inside it (drawing shows it at the inboard
+		// end — the unlocked rest position).
+		holdSwitch: { slotNearFromRight: 9.5, slotFarFromRight: 20.2, slotWidth: 1.8 },
+	},
+	bottom: {
+		// 30-pin dock: opening 21.8 × 2.8, centred on the width centreline (30.9).
+		dockConnector: { width: 21.8, height: 2.8 },
+	},
 } as const;
 
 /** Round to 0.1px — keeps drawing precision without noisy long fractions in the tokens. */
@@ -129,13 +150,32 @@ interface ScreenPresetTokens {
 interface WheelPresetTokens {
 	size: number;
 	centerSize: number;
-	menuTopInset: string;
-	sideInset: string;
-	bottomInset: string;
 	labelFontSize: number;
 	labelTracking: string;
 	sideIconSize: number;
 	playPauseIconSize: number;
+}
+
+/**
+ * Where the printed labels sit in the touch annulus, as a fraction of the band
+ * from the outer rim (0 = on the rim, 1 = on the centre-button edge). The print
+ * is seated on the band's radial midline: equidistant from rim and button, so
+ * MENU / ⏮ / ⏭ / ⏯ form one concentric ring — a relationship that holds from
+ * any camera angle, which hand-tuned per-edge insets never did.
+ */
+export const WHEEL_LABEL_SEAT = 0.5;
+
+/**
+ * Distance (px) from the wheel's outer rim to a label's optical centre.
+ *
+ * Derived, not transcribed: the seat follows the same Ø38.0 / Ø13.7 machined
+ * circles the wheel itself is projected from, so label placement can no more
+ * drift from the drawing than the wheel can. All four labels share this one
+ * value — radial symmetry by construction.
+ */
+export function wheelLabelSeatPx(wheel: { size: number; centerSize: number }): number {
+	const bandPx = (wheel.size - wheel.centerSize) / 2;
+	return r1(bandPx * WHEEL_LABEL_SEAT);
 }
 
 export interface IpodClassicPresetDefinition {
@@ -211,9 +251,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.2,
 			labelTracking: "0.18em",
 			sideIconSize: 22,
@@ -256,9 +293,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.5,
 			labelTracking: "0.08em",
 			sideIconSize: 20,
@@ -307,9 +341,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.5,
 			labelTracking: "0.08em",
 			sideIconSize: 20,
@@ -352,9 +383,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.5,
 			labelTracking: "0.08em",
 			sideIconSize: 20,
@@ -397,9 +425,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_620.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 10.9,
 			labelTracking: "0.16em",
 			sideIconSize: 18,
