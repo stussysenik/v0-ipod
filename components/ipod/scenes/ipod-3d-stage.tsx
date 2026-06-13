@@ -16,7 +16,8 @@ import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recor
 import { downloadBlob } from "@/lib/three-export";
 import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
-import { CAMERA_MOVES, type CameraMove, type LoopStyle, type StudioPose } from "@/lib/studio-camera";
+import { type LoopStyle, type StudioPose } from "@/lib/studio-camera";
+import { findStudioClip, isTheatreClip, STUDIO_CLIPS } from "@/lib/studio-clip-presets";
 import { STEEL_ROUGHNESS_FLOOR } from "@/lib/studio-owned-finish";
 import { exportJobOf, exportMachine, exportProgressOf } from "@/lib/xstate/export-machine";
 
@@ -38,6 +39,7 @@ import {
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
 import { Ipod3DTouchControls } from "./ipod-3d-touch-controls";
+import { TheatreStudioDev } from "./theatre-studio-dev";
 
 /** localStorage key for the locked hero perspective (design D13). */
 const LOCKED_POSE_KEY = "ipod-3d-locked-pose";
@@ -53,13 +55,18 @@ const ASPECT_DIMS: Record<ExportAspect, { still: [number, number]; clip: [number
 	square: { still: [2160, 2160], clip: [1080, 1080] }, // 1:1
 };
 
-/** Clip encode settings per quality tier (mirrors the 2D MP4_QUALITY_CONFIG intent). */
+/**
+ * Clip encode settings per quality tier (mirrors the 2D MP4_QUALITY_CONFIG intent).
+ * `cinema` is the buttery 60fps tier with temporal motion blur — smoother and
+ * higher-fidelity, at the cost of rendering `motionBlurSamples`× the frames.
+ */
 const CLIP_QUALITY: Record<
 	ClipExportOptions["quality"],
-	{ fps: number; bitsPerSecond: number; supersample: number }
+	{ fps: number; bitsPerSecond: number; supersample: number; motionBlurSamples: number }
 > = {
-	standard: { fps: 24, bitsPerSecond: 12_000_000, supersample: 1 },
-	pro: { fps: 30, bitsPerSecond: 22_000_000, supersample: 1.5 },
+	standard: { fps: 24, bitsPerSecond: 12_000_000, supersample: 1, motionBlurSamples: 1 },
+	pro: { fps: 30, bitsPerSecond: 22_000_000, supersample: 1.5, motionBlurSamples: 1 },
+	cinema: { fps: 60, bitsPerSecond: 40_000_000, supersample: 1.5, motionBlurSamples: 3 },
 };
 
 const ThreeDIpod = dynamic(
@@ -113,7 +120,7 @@ export function Ipod3DStage() {
 	// the full clip (0–1); the rig reports it back while playing so the scrubber
 	// tracks. Clip length is lifted here so the preview cadence matches the export.
 	const [durationSec, setDurationSec] = useState(5);
-	const [previewMove, setPreviewMove] = useState<CameraMove>(CAMERA_MOVES[0].id);
+	const [previewMove, setPreviewMove] = useState<string>(STUDIO_CLIPS[0].id);
 	const [previewPlaying, setPreviewPlaying] = useState(false);
 	const [previewT, setPreviewT] = useState(0);
 	// Motion shaping — cadence multiplier + time map (loop / boomerang / hold). Lifted
@@ -238,6 +245,22 @@ export function Ipod3DStage() {
 		playbackRef.current.currentTime = model.metadata.currentTime;
 		playbackRef.current.duration = model.metadata.duration;
 	}, [model.metadata.currentTime, model.metadata.duration]);
+	// Mirror the Theatre-studio toggle into a ref so the export callback can force the
+	// overlay hidden during a bake and restore it afterward without re-subscribing.
+	const theatreStudioRef = useRef(model.studio.theatreStudio);
+	useEffect(() => {
+		theatreStudioRef.current = model.studio.theatreStudio;
+	}, [model.studio.theatreStudio]);
+	// When the Theatre dev toggle goes off, the `·` moment cards leave the picker — so
+	// snap any selected moment card back to the first procedural move. Otherwise the
+	// picker would show no active button while the preview still flew a hidden clip.
+	useEffect(() => {
+		if (model.studio.theatreStudio) return;
+		setPreviewMove((current) => {
+			const clip = findStudioClip(current);
+			return clip && isTheatreClip(clip) ? STUDIO_CLIPS[0].id : current;
+		});
+	}, [model.studio.theatreStudio]);
 	// Live playback clock: advance the now-playing time 1s per real second while the
 	// transport plays AND we're not exporting. During a clip export the clock is
 	// driven by CLIP-time instead (handleExportClip → onProgress), so the exported
@@ -304,7 +327,7 @@ export function Ipod3DStage() {
 	useEffect(() => {
 		if (!previewEngaged) heroAnchorRef.current = null;
 	}, [previewEngaged]);
-	const handlePreviewMoveChange = useCallback((move: CameraMove) => setPreviewMove(move), []);
+	const handlePreviewMoveChange = useCallback((move: string) => setPreviewMove(move), []);
 	// The rig reports the playing head position back so the scrubber tracks it.
 	const handlePreviewTick = useCallback((t: number) => setPreviewT(t), []);
 
@@ -364,7 +387,7 @@ export function Ipod3DStage() {
 	);
 
 	const handleExportClip = useCallback(
-		async (move: CameraMove, options: ClipExportOptions) => {
+		async (move: string, options: ClipExportOptions) => {
 			const api = ipodApiRef.current;
 			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
 			if (!isClipRecordingSupported()) {
@@ -372,6 +395,14 @@ export function Ipod3DStage() {
 				return;
 			}
 			setPreviewPlaying(false); // freeze the playhead; the offline render owns the camera
+			// Belt-and-suspenders: clips capture the R3F canvas, not the DOM, so the studio
+			// overlay can't appear in a frame — but force it hidden anyway so it never steals
+			// pointer/keyboard focus mid-bake. Restored in `finally` if it was on.
+			if (theatreStudioRef.current) {
+				void import("@/lib/theatre/theatre-runtime").then((m) =>
+					m.setTheatreStudioVisible(false),
+				);
+			}
 			sendExport({ type: "EXPORT", job: `clip:${move}`, progress: 0 });
 			await nextPaint(); // veil covers before snap-to-rest / screen bake / offline frames
 			// The playhead the user composed on — declared outside the try so `finally`
@@ -405,6 +436,7 @@ export function Ipod3DStage() {
 					speed: options.speed,
 					loop: options.loop,
 					anchor,
+					motionBlurSamples: q.motionBlurSamples,
 					onProgress: (encoded, total) => sendExport({ type: "PROGRESS", encoded, total }),
 					onClipProgress: (progress) => {
 						// Marquee: imperative + synchronous, so the very next bake captures it.
@@ -456,6 +488,12 @@ export function Ipod3DStage() {
 				setCaptureElapsedMs(null);
 				dispatch({ type: "UPDATE_CURRENT_TIME", payload: baseTime });
 				sendExport({ type: "RESET" });
+				// Restore the studio overlay if the designer had it open before exporting.
+				if (theatreStudioRef.current) {
+					void import("@/lib/theatre/theatre-runtime").then((m) =>
+						m.setTheatreStudioVisible(true),
+					);
+				}
 			}
 		},
 		[exportActorRef, sendExport, showNotice, nextPaint, model.metadata.title, dispatch],
@@ -492,8 +530,12 @@ export function Ipod3DStage() {
 			// title/artist/album scrolls on the device exactly as it does on a real iPod — this
 			// is what "wasn't brought over" into /3d. Off → text stays static (and truncates).
 			animateText={studio.marquee}
-			// Presentation lock: freeze inline editing into a clean, screenshot-ready state.
-			isEditable={!studio.interactionLocked}
+			// Clean by default: the 3D studio is a presentation surface, so the screen's
+			// editing affordances (layout-drag handles + the dashed selection outline,
+			// inline text editing) stay OFF — metadata is edited from the Now Playing
+			// cockpit, not by clicking the device. They only light up under the Theatre dev
+			// toggle, and the interaction lock can still force the clean state on top.
+			isEditable={studio.theatreStudio && !studio.interactionLocked}
 		/>
 	);
 
@@ -523,6 +565,10 @@ export function Ipod3DStage() {
 			className="relative h-dvh w-full overflow-hidden transition-colors duration-500"
 			style={{ backgroundColor: presentation.bgColor }}
 		>
+			{/* Theatre.js studio timeline GUI for camera authoring — dev only, renders nothing.
+			    Toggled from the cockpit; off by default so its overlay never clutters the view. */}
+			<TheatreStudioDev enabled={studio.theatreStudio} />
+
 			{/* Shell Header — a high-performance navigation bar that bounds the experience.
 			    It holds the product identity and the primary menu toggle, ensuring the flow
 			    is consistent across mobile and desktop. */}
@@ -658,6 +704,7 @@ export function Ipod3DStage() {
 						onResetPlayhead={handleResetPlayhead}
 						onExportPng={handleExportPng}
 						onExportClip={handleExportClip}
+						showTheatreClips={studio.theatreStudio}
 						history={exportHistory}
 					/>
 				</div>

@@ -88,7 +88,9 @@ export type IpodWorkbenchAction =
 	| { type: "SET_INTERACTION_LOCK"; payload: boolean }
 	| { type: "TOGGLE_INTERACTION_LOCK" }
 	| { type: "SET_MARQUEE"; payload: boolean }
-	| { type: "TOGGLE_MARQUEE" };
+	| { type: "TOGGLE_MARQUEE" }
+	| { type: "SET_THEATRE_STUDIO"; payload: boolean }
+	| { type: "TOGGLE_THEATRE_STUDIO" };
 
 export function clampSnapshotTime(value: number | null, duration: number): number | null {
 	if (value === null) {
@@ -557,6 +559,10 @@ export function ipodWorkbenchReducer(
 			return patchStudio(state, { marquee: action.payload });
 		case "TOGGLE_MARQUEE":
 			return patchStudio(state, { marquee: !state.studio.marquee });
+		case "SET_THEATRE_STUDIO":
+			return patchStudio(state, { theatreStudio: action.payload });
+		case "TOGGLE_THEATRE_STUDIO":
+			return patchStudio(state, { theatreStudio: !state.studio.theatreStudio });
 
 		default:
 			return state;

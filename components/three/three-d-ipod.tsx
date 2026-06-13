@@ -29,19 +29,23 @@ import {
 } from "@/lib/ipod-3d-dimensions";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import {
-	type CameraMove,
 	clampPose,
-	cyclesForDuration,
 	DEFAULT_TARGET,
 	ELEVATION_RANGE,
 	type LoopStyle,
 	phaseForProgress,
-	poseForMove,
 	poseToPosition,
 	positionToPose,
 	REACH_RANGE,
 	type StudioPose,
 } from "@/lib/studio-camera";
+import {
+	clipCyclesForDuration,
+	createClipPoseSampler,
+	findStudioClip,
+	type StudioClip,
+} from "@/lib/studio-clip-presets";
+import { FrameAccumulator, subFrameOffsets } from "@/lib/export/motion-blur";
 
 import { StudioBackdrop, StudioLighting } from "./studio-lighting";
 import {
@@ -135,6 +139,11 @@ function FlatFinish({
  */
 export type ExportFraming = "front" | "hero";
 
+/** Resolve a clip id to a `StudioClip`, falling back to the gentle orbit. */
+function resolveClip(id: string): StudioClip {
+	return findStudioClip(id) ?? findStudioClip("orbit")!;
+}
+
 /**
  * Live playhead state for the in-viewport move preview. When non-null the
  * OrbitRig drives the camera directly from `poseForMove` instead of easing
@@ -142,8 +151,8 @@ export type ExportFraming = "front" | "hero";
  * exports (same move, same cadence, same hero anchor). Null = free composition.
  */
 export interface CameraPreviewState {
-	/** Which move to fly. */
-	move: CameraMove;
+	/** Which clip to fly — a procedural move id or a Theatre moment-card id. */
+	move: string;
 	/** True = advance the clock each frame; false = hold the scrubbed `t`. */
 	playing: boolean;
 	/** Scrub position over the FULL clip, t ∈ [0,1). Used while paused. */
@@ -202,12 +211,19 @@ export interface ClipRenderOptions {
 	supersample?: number;
 	durationMs: number;
 	fps: number;
-	/** Which camera move to fly. Defaults to the gentle orbit. */
-	move?: CameraMove;
+	/** Which clip to fly (procedural move id or moment-card id). Defaults to orbit. */
+	move?: string;
 	/** Cadence multiplier (1 = natural). Must match the preview's speed. */
 	speed?: number;
 	/** loop / boomerang / hold. `hold` pins the hero pose for a motion-free clip. */
 	loop?: LoopStyle;
+	/**
+	 * Temporal-AA sub-frames averaged per output frame for buttery motion blur
+	 * (1 = off, the default — byte-identical to the legacy single-render path).
+	 */
+	motionBlurSamples?: number;
+	/** Shutter angle (degrees) controlling the motion-blur window width. */
+	shutterAngle?: number;
 	/** Hero framing the move is anchored on. Defaults to the still's hero angle. */
 	anchor?: StudioPose;
 	/**
@@ -1539,6 +1555,10 @@ function OrbitRig({
 	const previewAnchor = useRef<StudioPose | null>(null);
 	const previewVec = useRef(new THREE.Vector3());
 	const previewReport = useRef(0);
+	// Cached clip pose sampler — rebuilt only when the anchor is (re)captured or the
+	// chosen clip changes, so a Theatre moment card isn't re-baked 60×/second.
+	const previewClipSampler = useRef<((phase: number) => StudioPose) | null>(null);
+	const previewClipMove = useRef<string | null>(null);
 
 	// Responsive framing — the minimum reach that keeps the whole device on screen for
 	// the current viewport aspect. On portrait/narrow viewports the horizontal field of
@@ -1669,6 +1689,13 @@ function OrbitRig({
 					target: [target.current.x, target.current.y, target.current.z],
 				};
 				previewPhase.current = pv.t;
+				// (Re)bake the clip sampler against the freshly captured hero anchor.
+				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move), previewAnchor.current);
+				previewClipMove.current = pv.move;
+			} else if (previewClipMove.current !== pv.move || !previewClipSampler.current) {
+				// The user switched clips mid-preview — re-bake on the existing anchor.
+				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move), previewAnchor.current);
+				previewClipMove.current = pv.move;
 			}
 			if (pv.playing) {
 				const step = Math.min(delta, 0.05) / Math.max(0.1, pv.durationSec);
@@ -1690,9 +1717,10 @@ function OrbitRig({
 			if (pv.loop === "hold") {
 				pose = previewAnchor.current;
 			} else {
-				const cycles = cyclesForDuration(pv.move, pv.durationSec, pv.speed, pv.loop);
+				const clip = resolveClip(pv.move);
+				const cycles = clipCyclesForDuration(clip, pv.durationSec, pv.speed, pv.loop);
 				const phase = phaseForProgress(previewPhase.current, cycles, pv.loop);
-				pose = poseForMove(pv.move, phase, previewAnchor.current);
+				pose = (previewClipSampler.current ?? createClipPoseSampler(clip, previewAnchor.current))(phase);
 			}
 			const p = poseToPosition(pose, previewVec.current);
 			camera.position.copy(p);
@@ -1705,7 +1733,11 @@ function OrbitRig({
 			return;
 		}
 		// Preview just ended — drop the anchor so the next engage re-captures the hero.
-		if (previewAnchor.current) previewAnchor.current = null;
+		if (previewAnchor.current) {
+			previewAnchor.current = null;
+			previewClipSampler.current = null;
+			previewClipMove.current = null;
+		}
 
 		const s = cur.current;
 		const g = goal.current;
@@ -1962,6 +1994,12 @@ function SceneCapture({
 			const ssH = Math.round(height * supersample);
 			const total = Math.max(1, Math.round((durationMs / 1000) * fps));
 
+			// Motion-blur sub-frame schedule (in frame-duration units). One sample =
+			// the legacy single-render path, byte-for-byte. >1 averages sub-frames
+			// across the shutter window for buttery camera blur.
+			const blurOffsets = subFrameOffsets(opts.motionBlurSamples ?? 1, opts.shutterAngle ?? 180);
+			const motionBlur = blurOffsets.length > 1;
+
 			// ── Phase 1 screen-refresh budget (animated Now Playing screen) ──
 			// The live screen DOM keeps animating during the export (the marquee rAF and
 			// the progress interval run while the loop awaits the encoder), but the LCD
@@ -2043,10 +2081,14 @@ function SceneCapture({
 			// not one sluggish rotation) while still closing seamlessly on the hero pose.
 			// `speed`/`loop` enter here exactly as they do in the preview, so the encoded
 			// clip flies the same cadence + boomerang the user dialed in live.
-			const cycles = cyclesForDuration(move, durationMs / 1000, speed, loop);
+			const clip = resolveClip(move);
+			const cycles = clipCyclesForDuration(clip, durationMs / 1000, speed, loop);
+			const sampleClipPose = createClipPoseSampler(clip, hero);
 
 			const camPos = new THREE.Vector3();
 			const lookAt = new THREE.Vector3();
+			// Reused accumulator for motion-blur frame averaging (allocated once).
+			const blurAccum = motionBlur ? new FrameAccumulator(ssW * ssH * 4) : null;
 
 			try {
 				for (let i = 0; i < total; i++) {
@@ -2065,35 +2107,53 @@ function SceneCapture({
 						screenBakes++;
 					}
 
-					// Global clip progress → per-cycle phase, repeating `cycles` whole loops
-					// (fixed cadence at any length) yet still closing on the hero seam.
-					// `hold` is motion-free: every frame pins the composed hero pose, so the
-					// clip is a held angle (the studio-shot / locked perspective) as video.
-					const pose =
-						loop === "hold"
-							? hero
-							: poseForMove(move, phaseForProgress(i / total, cycles, loop), hero);
-					poseToPosition(pose, camPos);
-					camera.position.copy(camPos);
-					camera.lookAt(lookAt.set(pose.target[0], pose.target[1], pose.target[2]));
-					// Pin the portrait projection EVERY frame. R3F's resize observer /
-					// drei's makeDefault camera otherwise reset cam.aspect back to the
-					// landscape canvas on the first event-loop yield (encoder backpressure
-					// at frame ~7), which silently re-framed the device mid-clip.
-					if (cam.aspect !== width / height) {
-						cam.aspect = width / height;
-					}
-					cam.updateProjectionMatrix();
+					// Render one sub-frame at a clip progress into `buffer`. Global clip
+					// progress → per-cycle phase, repeating `cycles` whole loops (fixed
+					// cadence at any length) yet still closing on the hero seam. `hold` is
+					// motion-free: every frame pins the composed hero pose, so the clip is a
+					// held angle (the studio-shot / locked perspective) as video. The unified
+					// clip sampler dispatches procedural moves and Theatre moment cards alike.
+					const renderProgress = (progress: number) => {
+						const pose =
+							loop === "hold"
+								? hero
+								: sampleClipPose(phaseForProgress(progress, cycles, loop));
+						poseToPosition(pose, camPos);
+						camera.position.copy(camPos);
+						camera.lookAt(lookAt.set(pose.target[0], pose.target[1], pose.target[2]));
+						// Pin the portrait projection EVERY frame. R3F's resize observer /
+						// drei's makeDefault camera otherwise reset cam.aspect back to the
+						// landscape canvas on the first event-loop yield (encoder backpressure
+						// at frame ~7), which silently re-framed the device mid-clip.
+						if (cam.aspect !== width / height) {
+							cam.aspect = width / height;
+						}
+						cam.updateProjectionMatrix();
 
-					gl.setRenderTarget(renderTarget);
-					gl.render(scene, camera);
-					// Resolve linear scene → sRGB bytes that match the live composer
-					// (vignette + sRGB encode), instead of reading the RT's raw linear
-					// pixels (which made every export ~2.2 gamma darker than the preview).
-					// The resolve binds its own target first, which also forces three to
-					// resolve THIS frame's multisampled buffer — so we never read the
-					// previous frame's pixels (the old frozen-opening / loop-seam bug).
-					colorResolveRef.current!.resolve(gl, renderTarget, ssW, ssH, buffer);
+						gl.setRenderTarget(renderTarget);
+						gl.render(scene, camera);
+						// Resolve linear scene → sRGB bytes that match the live composer
+						// (vignette + sRGB encode), instead of reading the RT's raw linear
+						// pixels (which made every export ~2.2 gamma darker than the preview).
+						// The resolve binds its own target first, which also forces three to
+						// resolve THIS frame's multisampled buffer — so we never read the
+						// previous frame's pixels (the old frozen-opening / loop-seam bug).
+						colorResolveRef.current!.resolve(gl, renderTarget, ssW, ssH, buffer);
+					};
+
+					if (!motionBlur || blurAccum === null) {
+						renderProgress(i / total);
+					} else {
+						// Average several sub-frames sampled across the shutter window,
+						// centered on this frame's instant, for buttery camera motion blur.
+						blurAccum.reset();
+						for (const offset of blurOffsets) {
+							const progress = Math.min(0.999999, Math.max(0, (i + offset) / total));
+							renderProgress(progress);
+							blurAccum.add(buffer);
+						}
+						blurAccum.average(buffer);
+					}
 
 					if (octx && rctx && imageData) {
 						rctx.putImageData(imageData, 0, 0);

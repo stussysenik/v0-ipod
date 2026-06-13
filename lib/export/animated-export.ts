@@ -1,19 +1,27 @@
 export type AnimatedExportFormat = "gif" | "mp4";
-export type AnimatedExportQuality = "standard" | "pro";
+/**
+ * Quality tiers. `cinema` is the new high-water mark: 60fps with a fat bitrate for
+ * buttery, long-form exports. `standard`/`pro` are unchanged so existing flows and
+ * tests keep their exact behaviour.
+ */
+export type AnimatedExportQuality = "standard" | "pro" | "cinema";
 export type AnimatedExportLayout = "original" | "ig-story";
 
 export const MIN_ANIMATED_EXPORT_DURATION_SECONDS = 2;
-export const MAX_ANIMATED_EXPORT_DURATION_SECONDS = 60;
+/** Raised to allow long-form clips (the "long" in buttery long exports). */
+export const MAX_ANIMATED_EXPORT_DURATION_SECONDS = 180;
 export const DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS = 4;
 
 export const GIF_QUALITY_CONFIG = {
 	standard: { fps: 10, scale: 1.5 },
 	pro: { fps: 12, scale: 2.5 },
+	cinema: { fps: 16, scale: 3.0 },
 } as const;
 
 export const MP4_QUALITY_CONFIG = {
 	standard: { fps: 12, bitrate: 12_000_000, scale: 2.0 },
 	pro: { fps: 30, bitrate: 50_000_000, scale: 3.375 },
+	cinema: { fps: 60, bitrate: 90_000_000, scale: 3.0 },
 } as const;
 
 export const DEFAULT_GIF_EXPORT_FPS = GIF_QUALITY_CONFIG.standard.fps;
@@ -23,8 +31,12 @@ export const GIF_CAPTURE_SCALE_HIGH = GIF_QUALITY_CONFIG.pro.scale;
 export const GIF_CAPTURE_SCALE_BALANCED = GIF_QUALITY_CONFIG.standard.scale;
 export const MP4_CAPTURE_SCALES = [3.375, 2.5, 2.0, 1.5, 1.0] as const;
 
-export const MAX_GIF_FRAME_COUNT = 720;
-export const MAX_MP4_FRAME_COUNT = 1800;
+export const MAX_GIF_FRAME_COUNT = 900;
+/** Long-form headroom: 180s × 60fps cinema clips. */
+export const MAX_MP4_FRAME_COUNT = 10_800;
+
+/** Cinematic default shutter angle (180° = half the frame open). */
+export const DEFAULT_SHUTTER_ANGLE = 180;
 
 export interface AnimatedExportPlan {
 	targetWidth: number;
@@ -34,6 +46,10 @@ export interface AnimatedExportPlan {
 	captureDurationMs: number;
 	frameCount: number;
 	frameDelayMs: number;
+	/** Temporal-AA sub-frames averaged per output frame (1 = motion blur off). */
+	motionBlurSamples: number;
+	/** Shutter angle (degrees) controlling the motion-blur window width. */
+	shutterAngle: number;
 }
 
 export function clampAnimatedExportDurationSeconds(value: number): number {
@@ -61,6 +77,8 @@ export function buildAnimatedExportPlan(
 		maxFrameCount: number;
 		captureScale: number;
 		layout?: AnimatedExportLayout;
+		motionBlurSamples?: number;
+		shutterAngle?: number;
 	},
 ): AnimatedExportPlan {
 	const safeTargetWidth = Math.max(1, Math.ceil(targetWidth));
@@ -103,5 +121,7 @@ export function buildAnimatedExportPlan(
 		captureDurationMs,
 		frameCount,
 		frameDelayMs: captureDurationMs / frameCount,
+		motionBlurSamples: Math.max(1, Math.floor(options.motionBlurSamples ?? 1)),
+		shutterAngle: options.shutterAngle ?? DEFAULT_SHUTTER_ANGLE,
 	};
 }

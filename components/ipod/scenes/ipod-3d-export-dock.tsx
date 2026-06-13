@@ -3,7 +3,14 @@
 import { useState } from "react";
 
 import type { ExportFraming } from "@/components/three/three-d-ipod";
-import { CAMERA_MOVES, type CameraMove, cyclesForDuration, type LoopStyle } from "@/lib/studio-camera";
+import { type LoopStyle } from "@/lib/studio-camera";
+import {
+	clipCyclesForDuration,
+	findStudioClip,
+	isTheatreClip,
+	STUDIO_CLIPS,
+} from "@/lib/studio-clip-presets";
+import { MAX_ANIMATED_EXPORT_DURATION_SECONDS } from "@/lib/export/animated-export";
 import { getExportVideoUrl, type ExportRecord } from "@/lib/pocketbase";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
@@ -28,7 +35,7 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  */
 
 export type ExportAspect = "story" | "square" | "portrait";
-export type ExportQuality = "standard" | "pro";
+export type ExportQuality = "standard" | "pro" | "cinema";
 
 export interface ClipExportOptions {
 	durationSec: number;
@@ -52,7 +59,7 @@ export interface StillExportOptions {
 	aspect: ExportAspect;
 }
 
-export type Ipod3DExportState = "idle" | `png:${ExportFraming}` | `clip:${CameraMove}`;
+export type Ipod3DExportState = "idle" | `png:${ExportFraming}` | `clip:${string}`;
 
 const ASPECTS: ReadonlyArray<{ id: ExportAspect; label: string; hint: string }> = [
 	{ id: "story", label: "9:16", hint: "Story" },
@@ -61,7 +68,7 @@ const ASPECTS: ReadonlyArray<{ id: ExportAspect; label: string; hint: string }> 
 ];
 
 const MIN_DURATION = 2;
-const MAX_DURATION = 60;
+const MAX_DURATION = MAX_ANIMATED_EXPORT_DURATION_SECONDS;
 
 interface Ipod3DExportDockProps {
 	/** Position in the control surface, rendered as the header's number chip. */
@@ -70,8 +77,8 @@ interface Ipod3DExportDockProps {
 	/** Clip length in seconds — lifted to the stage so the playhead cadence matches. */
 	durationSec: number;
 	onDurationChange: (sec: number) => void;
-	/** Playhead — selected move + live transport (play/scrub), driven in the stage. */
-	previewMove: CameraMove;
+	/** Playhead — selected clip + live transport (play/scrub), driven in the stage. */
+	previewMove: string;
 	previewPlaying: boolean;
 	/** Live playhead position over the full clip, t ∈ [0,1). */
 	previewT: number;
@@ -81,12 +88,18 @@ interface Ipod3DExportDockProps {
 	/** loop / boomerang / hold — drives preview + export identically. */
 	loopStyle: LoopStyle;
 	onLoopStyleChange: (loop: LoopStyle) => void;
-	onPreviewMoveChange: (move: CameraMove) => void;
+	onPreviewMoveChange: (move: string) => void;
 	onTogglePlay: () => void;
 	onScrub: (t: number) => void;
 	onResetPlayhead: () => void;
 	onExportPng: (framing: ExportFraming, options: StillExportOptions) => void;
-	onExportClip: (move: CameraMove, options: ClipExportOptions) => void;
+	onExportClip: (move: string, options: ClipExportOptions) => void;
+	/**
+	 * Surface the Theatre.js moment cards (the keyframed `·`-prefixed clips) in the
+	 * move picker. Off by default so the picker stays clean — they're authoring-stage
+	 * experiments gated behind the same dev toggle that mounts the Theatre timeline.
+	 */
+	showTheatreClips?: boolean;
 	history?: ExportRecord[];
 }
 
@@ -108,18 +121,25 @@ export function Ipod3DExportDock({
 	onResetPlayhead,
 	onExportPng,
 	onExportClip,
+	showTheatreClips = false,
 	history = [],
 }: Ipod3DExportDockProps) {
 	const busy = exportState !== "idle";
 	const [aspect, setAspect] = useState<ExportAspect>("story");
 	const [quality, setQuality] = useState<ExportQuality>("standard");
 
+	// Default picker = procedural moves only (the clean, battle-tested set). The
+	// `·`-prefixed Theatre moment cards only join the grid when the dev toggle is on.
+	const pickerClips = showTheatreClips
+		? STUDIO_CLIPS
+		: STUDIO_CLIPS.filter((m) => !isTheatreClip(m));
+
 	const still: StillExportOptions = { aspect };
 	const clip: ClipExportOptions = { durationSec, quality, aspect, speed, loop: loopStyle };
 
 	const hold = loopStyle === "hold";
-	const moveSpec = CAMERA_MOVES.find((m) => m.id === previewMove) ?? CAMERA_MOVES[0];
-	const cycles = cyclesForDuration(previewMove, durationSec, speed, loopStyle);
+	const moveSpec = findStudioClip(previewMove) ?? STUDIO_CLIPS[0];
+	const cycles = clipCyclesForDuration(moveSpec, durationSec, speed, loopStyle);
 	const elapsed = previewT * durationSec;
 	// What the clip button promises: a held angle, or N× of the selected move.
 	const clipHint = hold ? "no motion" : `${cycles}× · ${moveSpec.label}`;
@@ -143,6 +163,7 @@ export function Ipod3DExportDock({
 						options={[
 							{ id: "standard", label: "Standard" },
 							{ id: "pro", label: "Pro" },
+							{ id: "cinema", label: "Cinema" },
 						]}
 						value={quality}
 						onChange={(v) => setQuality(v as ExportQuality)}
@@ -193,21 +214,23 @@ export function Ipod3DExportDock({
 					disabled={busy}
 				/>
 
-				{/* Move picker — irrelevant under Hold, so it dims out. */}
+				{/* Move picker — procedural moves + Theatre moment cards. Irrelevant under
+				    Hold, so it dims out. A · prefix flags a keyframed moment card. */}
 				<div className="grid grid-cols-2 gap-1 rounded-lg bg-black/[0.04] p-0.5">
-					{CAMERA_MOVES.map((m) => {
+					{pickerClips.map((m) => {
 						const active = m.id === previewMove;
 						return (
 							<button
 								key={m.id}
 								type="button"
 								disabled={busy || hold}
+								title={m.hint}
 								onClick={() => onPreviewMoveChange(m.id)}
 								className={`rounded-[7px] px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 									active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
 								}`}
 							>
-								{m.label}
+								{isTheatreClip(m) ? `· ${m.label}` : m.label}
 							</button>
 						);
 					})}

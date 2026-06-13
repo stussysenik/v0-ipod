@@ -534,6 +534,8 @@ export function loadStudioState(): IpodStudioState | null {
 			interactionLocked:
 				typeof c.interactionLocked === "boolean" ? c.interactionLocked : base.interactionLocked,
 			marquee: typeof c.marquee === "boolean" ? c.marquee : base.marquee,
+			theatreStudio:
+				typeof c.theatreStudio === "boolean" ? c.theatreStudio : base.theatreStudio,
 		};
 	} catch {
 		return null;

@@ -1,3 +1,103 @@
+# Theatre.js Keyframe Engine + Buttery Long High-Quality Exports (2026-06-13)
+
+## Context
+
+The /3d studio already exports deterministic MP4/GIF from hand-rolled procedural
+camera moves (`lib/studio-camera.ts`) sampled offline. The ask: integrate
+Theatre.js as a real keyframe animation engine, expand the animation vocabulary
+(designer-authored "moment cards"), and push exports to buttery (60fps + motion
+blur), long (raised duration cap), high-quality. Verify everything via unit
+tests — no browser automation.
+
+Architecture decision (validated by headless smoke tests today):
+- `@theatre/core` 0.7.2 samples HEADLESSLY in Node, but ONLY via a HOT prism
+  (`onChange` + `createRafDriver` + manual `tick()`); cold `obj.value`/`val()`
+  return the static default. `keyframes` is a flat **array** (the d.ts is truth;
+  PointableSet was wrong). definitionVersion is "0.4.0".
+- `@theatre/r3f` 0.7.2 peer-caps at R3F ^8 (we're on 9.6) — its in-canvas editor
+  is the only risk surface and is browser-only, so it loads dev-only behind a
+  guard and is NOT on the export path.
+- Therefore: a PURE-TS sampler (exact UnitBezier port) drives both live preview
+  and deterministic export. `@theatre/core` is the parity ORACLE in unit tests
+  (prove pure sampler === core across the timeline). Zero runtime risk on the
+  export path; everything testable headlessly.
+
+```mermaid
+mindmap
+  root((Theatre.js + buttery exports))
+    Pure sampler core
+      UnitBezier exact port
+      Track sampler hold/connectedRight/bounds
+      OnDiskState reader nested propPaths
+      Parity vs @theatre/core oracle
+    Animation vocabulary
+      Easing library named to bezier handles
+      build-state author concise to OnDiskState
+      Moment cards camera clips
+      Unified Clip procedural or theatre
+    Buttery long HQ exports
+      Cinema tier 60fps high bitrate
+      Raised duration + frame caps
+      Motion blur sub-frame offsets
+    Integration
+      resolveClipPose in OrbitRig + render loop
+      Theatre studio GUI dev-only guard
+      Moment card picker in cockpit
+    Verify
+      vitest all pure logic
+      type-check + production build
+```
+
+## Tasks
+
+- [x] lib/theatre/unit-bezier.ts — exact UnitBezier port (6 tests)
+- [x] lib/theatre/keyframe-sampler.ts — pure OnDiskState sampler (10 tests)
+- [x] lib/theatre/theatre-parity.test.ts — pure sampler === @theatre/core oracle (2)
+- [x] lib/theatre/easings.ts — 23 named easings → handle tuples (7 tests)
+- [x] lib/theatre/build-state.ts — author valid Theatre state from specs (5 tests)
+- [x] lib/theatre/studio-project.ts — camera prop schema + values↔StudioPose (5)
+- [x] lib/theatre/motion-presets.ts — 7 moment cards (29 seam/envelope tests)
+- [x] lib/studio-clip.ts + presets — unified procedural|theatre Clip resolver (13)
+- [x] lib/export/motion-blur.ts + animated-export cinema tier + longer caps (24)
+- [x] Runtime wiring: OrbitRig/renderClipFrames clips, dev-only studio, cockpit
+- [x] Full validate: vitest 293/293, type-check ✓, lint 0 err, production build ✓
+
+## Review
+
+Integrated Theatre.js as a real keyframe engine and pushed exports to buttery /
+long / high-quality — all pure logic TDD'd, the rest gated by type-check + build.
+
+**Architecture (validated by headless smoke tests).** `@theatre/core` 0.7.2
+samples in Node, but only via a HOT prism (`onChange` + `createRafDriver` +
+manual `tick`); cold reads return the static default, and `keyframes` is a flat
+ARRAY (the published schema doc was wrong — the `.d.ts` is truth). `@theatre/r3f`
+peer-caps at R3F 8 (we're on 9.6) and its editor is browser-only. So the export
+path takes ZERO Theatre runtime risk: a pure-TS `UnitBezier` + sampler reads
+Theatre's `OnDiskState` and interpolates synchronously, and a parity test pins it
+to `@theatre/core` (41 positions, asymmetric ease + hold) so studio-authored and
+exported motion are identical.
+
+**What shipped.** (1) Pure keyframe engine: UnitBezier, OnDiskState sampler,
+23-easing library, concise state author. (2) 7 hero-anchored "moment cards"
+(Float & Bob, Parallax Push-In, Pendulum, Crane Reveal, Grand Turntable, Boom
+Drift, Dolly-Out) — parametric JSON clips that close on the hero seam. (3) A
+unified `StudioClip` so OrbitRig + the offline render loop drive procedural moves
+and Theatre cards through one `resolveClipPose` — procedural behaviour is
+byte-identical (delegates to the old generators). (4) Buttery exports: a 60fps
+Cinema tier with temporal motion blur (sub-frame averaging via a tested
+`FrameAccumulator`), the duration cap raised 60s→180s, MP4 frame budget
+10,800. (5) A dev-only Theatre studio timeline GUI for camera authoring,
+R3F-decoupled and tree-shaken from production.
+
+**Verification.** vitest 293/293 (added 93), type-check clean, oxlint 0 errors
+(1 pre-existing warning untouched), production build green (7 routes). No browser
+automation used, per the brief — visual confirmation of the live preview / motion
+blur / studio GUI is left to the designer.
+
+---
+
+---
+
 # Top/Bottom Ports + Working 3D Buttons (2026-06-13)
 
 ## Context

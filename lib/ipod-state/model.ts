@@ -118,6 +118,13 @@ export interface IpodStudioState {
 	interactionLocked: boolean;
 	/** Run the scrolling marquee on overflowing track text in the live 3D view. */
 	marquee: boolean;
+	/**
+	 * Mount the Theatre.js studio timeline GUI (camera-keyframe authoring). Off by
+	 * default and dev-only: the studio injects a full-screen editor overlay that
+	 * otherwise sits on top of the live view, so it stays opt-in and is force-hidden
+	 * during every export bake — it can never leak into a rendered clip.
+	 */
+	theatreStudio: boolean;
 }
 // Camera framing already survives reload through the camera-lock persistence
 // (LOCKED_POSE_KEY in the stage), so it deliberately does NOT live in this slice.
@@ -126,6 +133,7 @@ export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
 	technicalFlat: false,
 	interactionLocked: false,
 	marquee: true,
+	theatreStudio: false,
 };
 
 /** A fresh studio slice with its own private clone of the default rig.

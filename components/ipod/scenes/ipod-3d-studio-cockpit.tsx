@@ -100,6 +100,17 @@ export function Ipod3DStudioCockpit({
 				on={touchControls}
 				onToggle={onToggleTouchControls}
 			/>
+
+			{/* Theatre.js timeline — camera-keyframe authoring overlay (dev only). Off by
+			    default so its full-screen editor never clutters the view or an export. */}
+			{process.env.NODE_ENV !== "production" && (
+				<ToggleRow
+					label="Theatre timeline"
+					hint="Camera keyframe editor · dev only"
+					on={studio.theatreStudio}
+					onToggle={() => dispatch({ type: "TOGGLE_THEATRE_STUDIO" })}
+				/>
+			)}
 		</div>
 	);
 }

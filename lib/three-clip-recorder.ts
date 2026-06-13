@@ -1,7 +1,7 @@
 import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
-import type { CameraMove, LoopStyle, StudioPose } from "@/lib/studio-camera";
+import type { LoopStyle, StudioPose } from "@/lib/studio-camera";
 
 /**
  * Encode a high-fidelity MP4 of the 3D iPod.
@@ -29,14 +29,18 @@ export interface ClipRecorderOptions {
 	height?: number;
 	/** Oversample factor for the offline render before downscale (default 1; MSAA carries AA). */
 	supersample?: number;
-	/** Which camera move to fly. Defaults to the gentle orbit. */
-	move?: CameraMove;
+	/** Which clip to fly (procedural move id or Theatre moment-card id). Defaults to orbit. */
+	move?: string;
 	/** Cadence multiplier (1 = natural); matches the live preview. */
 	speed?: number;
 	/** loop / boomerang / hold — `hold` renders a motion-free held angle. */
 	loop?: LoopStyle;
 	/** Hero framing the move is anchored on (the composed pose). */
 	anchor?: StudioPose;
+	/** Temporal-AA sub-frames averaged per output frame for motion blur (1 = off). */
+	motionBlurSamples?: number;
+	/** Shutter angle (degrees) controlling the motion-blur window width. */
+	shutterAngle?: number;
 	/** Progress callback: frames encoded so far, total frames. Drives the veil %. */
 	onProgress?: (encoded: number, total: number) => void;
 	/**
@@ -105,6 +109,8 @@ export async function recordIpodClip(
 		speed = 1,
 		loop = "loop",
 		anchor,
+		motionBlurSamples,
+		shutterAngle,
 		onProgress,
 		onClipProgress,
 	} = options;
@@ -140,7 +146,7 @@ export async function recordIpodClip(
 
 	try {
 		await handle.renderClipFrames(
-			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor, onClipProgress },
+			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor, motionBlurSamples, shutterAngle, onClipProgress },
 			async (frameCanvas, index, total) => {
 				if (encodeError) throw encodeError;
 
