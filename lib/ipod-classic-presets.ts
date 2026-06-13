@@ -129,13 +129,32 @@ interface ScreenPresetTokens {
 interface WheelPresetTokens {
 	size: number;
 	centerSize: number;
-	menuTopInset: string;
-	sideInset: string;
-	bottomInset: string;
 	labelFontSize: number;
 	labelTracking: string;
 	sideIconSize: number;
 	playPauseIconSize: number;
+}
+
+/**
+ * Where the printed labels sit in the touch annulus, as a fraction of the band
+ * from the outer rim (0 = on the rim, 1 = on the centre-button edge). The print
+ * is seated on the band's radial midline: equidistant from rim and button, so
+ * MENU / ⏮ / ⏭ / ⏯ form one concentric ring — a relationship that holds from
+ * any camera angle, which hand-tuned per-edge insets never did.
+ */
+export const WHEEL_LABEL_SEAT = 0.5;
+
+/**
+ * Distance (px) from the wheel's outer rim to a label's optical centre.
+ *
+ * Derived, not transcribed: the seat follows the same Ø38.0 / Ø13.7 machined
+ * circles the wheel itself is projected from, so label placement can no more
+ * drift from the drawing than the wheel can. All four labels share this one
+ * value — radial symmetry by construction.
+ */
+export function wheelLabelSeatPx(wheel: { size: number; centerSize: number }): number {
+	const bandPx = (wheel.size - wheel.centerSize) / 2;
+	return r1(bandPx * WHEEL_LABEL_SEAT);
 }
 
 export interface IpodClassicPresetDefinition {
@@ -211,9 +230,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.2,
 			labelTracking: "0.18em",
 			sideIconSize: 22,
@@ -256,9 +272,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.5,
 			labelTracking: "0.08em",
 			sideIconSize: 20,
@@ -307,9 +320,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.5,
 			labelTracking: "0.08em",
 			sideIconSize: 20,
@@ -352,9 +362,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_580.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 11.5,
 			labelTracking: "0.08em",
 			sideIconSize: 20,
@@ -397,9 +404,6 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		},
 		wheel: {
 			...GEOMETRY_620.wheel,
-			menuTopInset: "2.9%",
-			sideInset: "3.5%",
-			bottomInset: "2.9%",
 			labelFontSize: 10.9,
 			labelTracking: "0.16em",
 			sideIconSize: 18,
