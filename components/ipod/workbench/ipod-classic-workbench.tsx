@@ -82,6 +82,7 @@ import {
 	type IpodNowPlayingLayoutState,
 	type IpodViewMode,
 	type IpodOsScreen,
+	type IpodInteractionModel,
 } from "@/lib/ipod-state/model";
 import {
 	isAsciiViewMode,
@@ -722,6 +723,7 @@ export default function IpodClassicWorkbench() {
 			preset={activePreset}
 			skinColor={skinColor}
 			state={state}
+			dispatch={send}
 			playClick={playClick}
 			interactionModel={interactionModel}
 			osScreen={osScreen}

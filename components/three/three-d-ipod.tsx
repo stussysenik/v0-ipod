@@ -395,8 +395,14 @@ const MECHANICAL = {
 	facePlateDepth: 0.05,
 	/** Edge break on the matte bezel mask. */
 	bezelEdgeBreak: 0.004,
-	/** Clearance fit: how much larger the cut aperture is than the part that seats in it. */
-	screenApertureClearance: 0.05,
+	/**
+	 * Clearance fit: how much larger the cut aperture is than the part that seats in it.
+	 * On the real device the visible opening IS the 52.0×39.5 aperture (the preset frame),
+	 * so the fit is a true hairline — ≈0.2mm in world units (1mm ≈ 0.0604), not a visible
+	 * gap. The earlier 0.05 (≈0.8mm) read as a moat around the LCD and slackened the
+	 * face's machined-tolerance feel.
+	 */
+	screenApertureClearance: 0.012,
 	wheelBoreClearance: 0.014,
 } as const;
 
@@ -908,7 +914,10 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		const shape = new THREE.Shape();
 		drawRoundedRect(shape, 0, 0, faceW, faceH, faceR);
 
-		// Cut the screen pocket with a clearance fit (aperture opened slightly larger than the LCD).
+		// Cut the screen pocket with a clearance fit (aperture opened a hairline larger
+		// than the LCD). The corner radius follows the aperture's true ≈1mm machining
+		// radius (dims.screenRadius), grown by half the clearance so the fillet stays
+		// concentric with the opening — no fudge constant.
 		const screenHole = new THREE.Path();
 		drawRoundedRect(
 			screenHole,
@@ -916,7 +925,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			dims.screenCenterY,
 			dims.screenW + MECHANICAL.screenApertureClearance,
 			dims.screenH + MECHANICAL.screenApertureClearance,
-			dims.screenRadius + 0.01,
+			dims.screenRadius + MECHANICAL.screenApertureClearance / 2,
 		);
 		shape.holes.push(screenHole);
 

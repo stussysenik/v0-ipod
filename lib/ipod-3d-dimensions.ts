@@ -17,23 +17,19 @@ import type { IpodClassicPresetDefinition } from "./ipod-classic-presets";
 // camera framing stays stable across presets — everything else scales from it.
 const SCENE_HEIGHT = 6.25;
 
-// Real iPod classic (6th gen, 80/120GB thin chassis): 103.5mm tall, 10.5mm deep.
-// We carry the true depth-to-height ratio so the model reads with correct
-// thickness instead of the wafer-thin slab the earlier hard-coded dims implied.
+// Real iPod classic body height — the mm→world anchor. The preset pixel tokens
+// are themselves derived from Apple's dimensional drawing (see IPOD_CLASSIC_MM in
+// `ipod-classic-presets.ts`), so projecting them here lands the 3D model on the
+// true machined geometry. Depth is the one dimension a flat preset cannot encode;
+// each preset carries its revision's real `depthMm` (10.5 thin / 13.5 thick 160GB).
 const PHYSICAL_HEIGHT_MM = 103.5;
-const PHYSICAL_DEPTH_MM = 10.5;
-const DEPTH_RATIO = PHYSICAL_DEPTH_MM / PHYSICAL_HEIGHT_MM;
 
 // ── Click-wheel form — projected directly from the 2D preset tokens ──
-// The 2D presets are the dimensional authority for the whole device (see file
-// header). An earlier pass overrode the wheel with a hand-tuned 0.55×body-width
-// ratio that drew it far too SMALL — it left a wide dead band on the lower face
-// ("not used fully") and stopped matching the 2D form. We now derive the wheel's
-// diameter, select-button size, and vertical seat straight from `preset.wheel`
-// and `shell.controlMarginTop`, exactly like the screen — so the 3D wheel is a
-// faithful projection of the design, not an approximation. For the default 2008
-// that is 272/350 ≈ 0.78 of body width with the center at ~0.74 of body height,
-// which matches a real 6th-gen face (wheel center measured at 0.734H).
+// The presets now derive the wheel from the drawing: Ø38.0 of the 61.8 body
+// (0.615 of width), select button Ø13.7, centre 30.4mm above the bottom edge.
+// Earlier hand-tuned passes swung from 0.55×width (too small, dead lower face)
+// to 0.78×width (a 27% oversize that crowded the side margins and broke the
+// face's proportional trust). Projection from the mm spec ends that drift.
 //
 // The touch annulus's inner edge is seated just inside the select button so the
 // button laps slightly over it — one clean disc in the ring, no deep recessed
@@ -100,7 +96,8 @@ export function deriveIpod3DDimensions(
 		unit,
 		width: shell.width * unit,
 		height: SCENE_HEIGHT,
-		depth: SCENE_HEIGHT * DEPTH_RATIO,
+		// True chassis depth per hardware revision (the 2007 160GB is the thick body).
+		depth: SCENE_HEIGHT * (preset.depthMm / PHYSICAL_HEIGHT_MM),
 		radius: shell.radius * unit,
 		// Hairline parting line where the aluminum face meets the steel edge.
 		// Kept thin so the front reads as one clean aluminum plane rather than a

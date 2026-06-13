@@ -22,7 +22,7 @@ const iconButtonVariants = cva(
 );
 
 interface IconButtonProps 
-	extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+	extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "icon">,
 		VariantProps<typeof iconButtonVariants> {
 	icon: React.ReactNode;
 	label?: string;

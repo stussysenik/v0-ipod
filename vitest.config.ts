@@ -20,6 +20,9 @@ export default defineConfig({
 	test: {
 		projects: [
 			{
+				// Inherit the root resolve.alias so unit tests can import modules
+				// that use the `@/` path alias (e.g. the preset → color-manifest chain).
+				extends: true,
 				test: {
 					name: "unit",
 					environment: "node",

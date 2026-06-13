@@ -6,6 +6,88 @@ import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR } from "./color-manifest";
 
 import type { IpodHardwarePresetId } from "@/types/ipod-state";
 
+// ─── Mechanical Ground Truth (millimetres) ──────────────────────────────────────────
+//
+// Every geometric token below is DERIVED from Apple's own engineering drawing of the
+// device — "iPod classic 160GB / 80GB Dimensional Drawing", Case Design Guidelines for
+// Apple Devices, Release R11, Figures 3-53/3-54 (Apple Computer, Inc. title block,
+// dimensions in millimetres). The two figures carry identical face geometry; only body
+// depth differs between the thick 160GB (13.5mm) and thin 80/120GB (10.5mm) chassis.
+//
+// Printed dimensions read straight off the drawing:
+//   body        61.8 × 103.5, face plate step 0.4 proud of the steel rim
+//   screen      aperture 52.0 × 39.5, aperture CENTRE 24.7 below the top edge
+//   click wheel Ø38.0, centre 30.4 above the bottom edge, on the width centreline (30.9)
+//   button      Ø13.7, concentric with the wheel
+//
+// Values Apple leaves undimensioned were measured off the drawing's own outline
+// (the sheet is drawn to scale; 8.18 px/mm at our render): body corner radius 6.4
+// (circle-fit residual < 0.1mm), screen aperture corner radius ≈ 1.0 — nearly crisp.
+//
+// The relationship that makes the face read "Apple": the screen aperture reveal is
+// EQUAL on top and sides — (61.8 − 52.0)/2 = 4.9 ≈ 24.7 − 39.5/2 = 4.95. Any drift in
+// one token breaks that symmetry, which is exactly what reads as "not quite real".
+export const IPOD_CLASSIC_MM = {
+	body: { width: 61.8, height: 103.5, cornerRadius: 6.4, depthThin: 10.5, depthThick: 13.5, faceStep: 0.4 },
+	screen: { apertureWidth: 52.0, apertureHeight: 39.5, apertureCenterFromTop: 24.7, cornerRadius: 1.0 },
+	wheel: { diameter: 38.0, buttonDiameter: 13.7, centerFromBottom: 30.4 },
+} as const;
+
+/** Round to 0.1px — keeps drawing precision without noisy long fractions in the tokens. */
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+/**
+ * Project the millimetre ground truth into preset pixel tokens at a given shell height.
+ *
+ * This is the single mm→px bridge for the FACE GEOMETRY (shell outline, screen
+ * aperture, wheel circles, and the box-model seats between them). UI-content tokens
+ * (fonts, status bar, artwork columns) stay hand-tuned per preset — they describe the
+ * software, not the machine. Derivation, not transcription: a preset cannot drift from
+ * the drawing because its geometry is computed from it.
+ */
+function machinedGeometry(shellHeightPx: number) {
+	const mm = IPOD_CLASSIC_MM;
+	const px = (v: number) => (v * shellHeightPx) / mm.body.height;
+
+	// The aperture's even reveal: 4.95 top, 4.9 sides (see ground-truth note above).
+	const apertureTopMm = mm.screen.apertureCenterFromTop - mm.screen.apertureHeight / 2;
+	const sideRevealMm = (mm.body.width - mm.screen.apertureWidth) / 2;
+	// Wheel seat: Ø38 disc, centre 30.4 up from the bottom edge.
+	const wheelTopFromTopMm = mm.body.height - mm.wheel.centerFromBottom - mm.wheel.diameter / 2;
+	const apertureBottomMm = apertureTopMm + mm.screen.apertureHeight;
+
+	const radius = r1(px(mm.body.cornerRadius));
+	const outerRadius = r1(px(mm.screen.cornerRadius));
+	return {
+		shell: {
+			width: r1(px(mm.body.width)),
+			height: shellHeightPx,
+			radius,
+			innerRadius: r1(radius - 1),
+			paddingX: r1(px(sideRevealMm)),
+			paddingTop: r1(px(apertureTopMm)),
+			paddingBottom: r1(px(mm.wheel.centerFromBottom - mm.wheel.diameter / 2)),
+			controlMarginTop: r1(px(wheelTopFromTopMm - apertureBottomMm)),
+		},
+		screen: {
+			frameWidth: r1(px(mm.screen.apertureWidth)),
+			frameHeight: r1(px(mm.screen.apertureHeight)),
+			outerRadius,
+			// The LCD sits behind the machined opening, so the content clips at the
+			// aperture's own near-crisp corner — not a softer designer radius.
+			innerRadius: r1(Math.max(outerRadius - 1.5, 3)),
+		},
+		wheel: {
+			size: r1(px(mm.wheel.diameter)),
+			centerSize: r1(px(mm.wheel.buttonDiameter)),
+		},
+	};
+}
+
+// The canonical 6G face at the two shell scales the presets use.
+const GEOMETRY_580 = machinedGeometry(580);
+const GEOMETRY_620 = machinedGeometry(620);
+
 interface ShellPresetTokens {
 	width: number;
 	height: number;
@@ -68,6 +150,12 @@ export interface IpodClassicPresetDefinition {
 	 * etching on the steel back read this one value, so they can never drift apart.
 	 */
 	capacityLabel: string;
+	/**
+	 * True chassis depth in millimetres — the one dimension a flat 2D preset cannot
+	 * encode. Drives the 3D body thickness per revision: the 2007 160GB is the thick
+	 * 13.5mm chassis; the 80/120GB and Late-2009 bodies are the thin 10.5mm one.
+	 */
+	depthMm: number;
 	defaultShellColor: string;
 	defaultBackdropColor: string;
 	/**
@@ -94,23 +182,12 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		yearLabel: "2007",
 		capacityLabel: "160GB",
 		notes: "Original all-metal iPod classic launch proportions.",
+		depthMm: IPOD_CLASSIC_MM.body.depthThick,
 		defaultShellColor: DEFAULT_SHELL_COLOR,
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
-		shell: {
-			width: 350,
-			height: 580,
-			radius: 36,
-			innerRadius: 35,
-			paddingX: 18,
-			paddingTop: 18,
-			paddingBottom: 28,
-			controlMarginTop: 46,
-		},
+		shell: GEOMETRY_580.shell,
 		screen: {
-			frameWidth: 314,
-			frameHeight: 240,
-			outerRadius: 12,
-			innerRadius: 10,
+			...GEOMETRY_580.screen,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -133,8 +210,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 			metaMarginBottom: 6,
 		},
 		wheel: {
-			size: 248,
-			centerSize: 92,
+			...GEOMETRY_580.wheel,
 			menuTopInset: "2.9%",
 			sideInset: "3.5%",
 			bottomInset: "2.9%",
@@ -151,23 +227,12 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		yearLabel: "2008",
 		capacityLabel: "120GB",
 		notes: "The refined 120GB revision with improved display density.",
+		depthMm: IPOD_CLASSIC_MM.body.depthThin,
 		defaultShellColor: "#E8E8E8",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
-		shell: {
-			width: 350,
-			height: 580,
-			radius: 38, // Reverted and refined from extreme 52
-			innerRadius: 37,
-			paddingX: 18,
-			paddingTop: 18,
-			paddingBottom: 26,
-			controlMarginTop: 42,
-		},
+		shell: GEOMETRY_580.shell,
 		screen: {
-			frameWidth: 308, // More balanced width
-			frameHeight: 231,
-			outerRadius: 13,
-			innerRadius: 11,
+			...GEOMETRY_580.screen,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -190,8 +255,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 			metaMarginBottom: 6,
 		},
 		wheel: {
-			size: 272,
-			centerSize: 88,
+			...GEOMETRY_580.wheel,
 			menuTopInset: "2.9%",
 			sideInset: "3.5%",
 			bottomInset: "2.9%",
@@ -208,6 +272,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		yearLabel: "2008",
 		capacityLabel: "120GB",
 		notes: "Black version of the 120GB revision.",
+		depthMm: IPOD_CLASSIC_MM.body.depthThin,
 		defaultShellColor: "#1b1818",
 		// The canonical "Noir" stage — the studio's signature blue field, ratified
 		// from the curated look (spec: 3d-studio-presentation, Noir factory default).
@@ -216,21 +281,9 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		// case — the curated ring is lifted to keep the wheel a distinct part.
 		defaultRingColor: "#313030",
 		defaultCenterColor: "#141212",
-		shell: {
-			width: 350,
-			height: 580,
-			radius: 38,
-			innerRadius: 37,
-			paddingX: 18,
-			paddingTop: 18,
-			paddingBottom: 26,
-			controlMarginTop: 42,
-		},
+		shell: GEOMETRY_580.shell,
 		screen: {
-			frameWidth: 308,
-			frameHeight: 231,
-			outerRadius: 13,
-			innerRadius: 11,
+			...GEOMETRY_580.screen,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -253,8 +306,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 			metaMarginBottom: 6,
 		},
 		wheel: {
-			size: 272,
-			centerSize: 88,
+			...GEOMETRY_580.wheel,
 			menuTopInset: "2.9%",
 			sideInset: "3.5%",
 			bottomInset: "2.9%",
@@ -271,23 +323,12 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		yearLabel: "2008",
 		capacityLabel: "120GB",
 		notes: "Silver version of the 120GB revision.",
+		depthMm: IPOD_CLASSIC_MM.body.depthThin,
 		defaultShellColor: "#E8E8E8",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
-		shell: {
-			width: 350,
-			height: 580,
-			radius: 38,
-			innerRadius: 37,
-			paddingX: 18,
-			paddingTop: 18,
-			paddingBottom: 26,
-			controlMarginTop: 42,
-		},
+		shell: GEOMETRY_580.shell,
 		screen: {
-			frameWidth: 308,
-			frameHeight: 231,
-			outerRadius: 13,
-			innerRadius: 11,
+			...GEOMETRY_580.screen,
 			statusBarHeight: 18,
 			statusBarPaddingX: 8,
 			contentHeight: 138,
@@ -310,8 +351,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 			metaMarginBottom: 6,
 		},
 		wheel: {
-			size: 272,
-			centerSize: 88,
+			...GEOMETRY_580.wheel,
 			menuTopInset: "2.9%",
 			sideInset: "3.5%",
 			bottomInset: "2.9%",
@@ -328,23 +368,12 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		yearLabel: "2009",
 		capacityLabel: "160GB",
 		notes: "Late thin revision with tighter wheel and calmer screen chrome.",
+		depthMm: IPOD_CLASSIC_MM.body.depthThin,
 		defaultShellColor: "#F7F7F7",
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
-		shell: {
-			width: 370,
-			height: 620,
-			radius: 34,
-			innerRadius: 33,
-			paddingX: 40,
-			paddingTop: 40,
-			paddingBottom: 60,
-			controlMarginTop: 44,
-		},
+		shell: GEOMETRY_620.shell,
 		screen: {
-			frameWidth: 320,
-			frameHeight: 240,
-			outerRadius: 11,
-			innerRadius: 9,
+			...GEOMETRY_620.screen,
 			statusBarHeight: 17,
 			statusBarPaddingX: 8,
 			contentHeight: 134,
@@ -367,8 +396,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 			metaMarginBottom: 5,
 		},
 		wheel: {
-			size: 240,
-			centerSize: 72,
+			...GEOMETRY_620.wheel,
 			menuTopInset: "2.9%",
 			sideInset: "3.5%",
 			bottomInset: "2.9%",

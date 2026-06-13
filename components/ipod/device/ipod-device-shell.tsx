@@ -75,7 +75,7 @@ export function IPodDeviceShell({
 			/>
 			<div className="relative p-12">
 				<div
-					className="relative flex flex-col items-center justify-between overflow-hidden transition-all duration-300"
+					className="relative flex flex-col items-center overflow-hidden transition-all duration-300"
 					style={{
 						...shellSurfaceStyle,
 						width: preset.shell.width,
@@ -148,7 +148,13 @@ export function IPodDeviceShell({
 						{screen}
 					</div>
 
-					<div className="relative z-10 -mt-2 flex flex-1 items-center justify-center">
+					{/* Wheel seated by the drawing's box model — screen bottom + control gap
+					   lands the wheel centre 30.4mm above the bottom edge, exactly like the
+					   3D projection — not flex-centred in whatever space is left over. */}
+					<div
+						className="relative z-10 flex items-center justify-center"
+						style={{ marginTop: preset.shell.controlMarginTop }}
+					>
 						{wheel}
 					</div>
 				</div>

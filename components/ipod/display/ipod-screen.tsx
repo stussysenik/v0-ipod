@@ -15,8 +15,6 @@ import type {
 	IpodOsScreen,
 } from "@/lib/ipod-state/model";
 
-import { IpodStoreContext } from "@/lib/xstate/store";
-
 interface IpodScreenProps {
 	preset: IpodClassicPresetDefinition;
 	skinColor?: string;
@@ -62,8 +60,7 @@ export function IpodScreen({
 	onTitleOverflowChange,
 	batteryLevel = 1.0,
 }: IpodScreenProps) {
-	const actor = IpodStoreContext.useActorRef();
-	const send = actor?.send || dispatchProp;
+	const send = dispatchProp;
 	const remainingAnchorRef = useRef<number | null>(null);
 	const screenTokens = preset.screen;
 	const showOsMenu = osScreen === "menu";
@@ -94,13 +91,17 @@ export function IpodScreen({
 	const setCurrentTime = useCallback(
 		(currentTime: number, preserveRemaining = false) => {
 			const safeCurrent = Math.max(0, Math.floor(currentTime));
-			send({ type: "UPDATE_CURRENT_TIME", payload: safeCurrent });
+			if (send) {
+				send({ type: "UPDATE_CURRENT_TIME", payload: safeCurrent });
+			}
 
 			if (preserveRemaining && remainingAnchorRef.current !== null) {
-				send({
-					type: "UPDATE_DURATION",
-					payload: safeCurrent + remainingAnchorRef.current,
-				});
+				if (send) {
+					send({
+						type: "UPDATE_DURATION",
+						payload: safeCurrent + remainingAnchorRef.current,
+					});
+				}
 			}
 		},
 		[send],
@@ -110,10 +111,12 @@ export function IpodScreen({
 		(remainingSeconds: number) => {
 			const safeRemaining = Math.max(0, Math.floor(remainingSeconds));
 			remainingAnchorRef.current = safeRemaining;
-			send({
-				type: "UPDATE_DURATION",
-				payload: state.currentTime + safeRemaining,
-			});
+			if (send) {
+				send({
+					type: "UPDATE_DURATION",
+					payload: state.currentTime + safeRemaining,
+				});
+			}
 		},
 		[send, state.currentTime],
 	);

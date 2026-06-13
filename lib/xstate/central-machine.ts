@@ -9,7 +9,7 @@ import type {
 	IpodNowPlayingLayoutState,
 	IpodInteractionModel,
 	IpodHardwarePresetId
-} from "@/types/ipod";
+} from "@/lib/ipod-state/model";
 import { 
 	normalizeModel, 
 	createInitialIpodWorkbenchModel,
