@@ -10,9 +10,14 @@ import {
 	useState,
 } from "react";
 
+import { useDebouncedCallback } from "./use-debounced-callback";
+
 import type React from "react";
 
 type EditorInputMode = React.HTMLAttributes<HTMLInputElement>["inputMode"];
+
+/** Matches EditableText's inline debounce so the two paths feel identical. */
+const LIVE_PREVIEW_DEBOUNCE_MS = 200;
 
 interface FixedEditorRequest {
 	title: string;
@@ -20,6 +25,12 @@ interface FixedEditorRequest {
 	placeholder?: string;
 	inputMode?: EditorInputMode;
 	pattern?: string;
+	/**
+	 * Optional live preview as the user types in the sheet — debounced, so the device
+	 * behind the sheet updates without committing on every keystroke. Because previews
+	 * mutate the model in place, Cancel/dismiss restores the original `value`.
+	 */
+	onPreview?: (value: string) => void;
 	onCommit: (value: string) => void;
 }
 
@@ -52,6 +63,19 @@ export function FixedEditorProvider({
 	const [draftValue, setDraftValue] = useState("");
 	const [isTouchEditingPreferred, setIsTouchEditingPreferred] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
+	// Mirror the live request + a "did we push a preview?" flag into refs so the
+	// debounced preview and the revert-on-cancel logic read current values without
+	// re-creating callbacks each render.
+	const requestRef = useRef<FixedEditorRequest | null>(null);
+	const previewedRef = useRef(false);
+
+	useEffect(() => {
+		requestRef.current = request;
+	}, [request]);
+
+	const livePreview = useDebouncedCallback((next: string) => {
+		requestRef.current?.onPreview?.(next);
+	}, LIVE_PREVIEW_DEBOUNCE_MS);
 
 	useEffect(() => {
 		const syncTouchPreference = () => {
@@ -82,20 +106,45 @@ export function FixedEditorProvider({
 	}, [request]);
 
 	useEffect(() => {
+		livePreview.cancel();
+		previewedRef.current = false;
 		setRequest(null);
-	}, [resetKey]);
+	}, [resetKey, livePreview]);
 
+	// Cancel/dismiss: drop the pending preview and, if live previews already mutated
+	// the model, put the original value back so a cancelled edit leaves no trace.
 	const closeEditor = useCallback(() => {
+		const req = requestRef.current;
+		livePreview.cancel();
+		if (req && previewedRef.current) {
+			(req.onPreview ?? req.onCommit)(req.value);
+		}
+		previewedRef.current = false;
 		setRequest(null);
-	}, []);
+	}, [livePreview]);
 
 	const commitEditor = useCallback(() => {
-		if (!request) return;
-		request.onCommit(draftValue);
+		const req = requestRef.current;
+		if (!req) return;
+		livePreview.cancel();
+		previewedRef.current = false;
+		req.onCommit(draftValue);
 		setRequest(null);
-	}, [draftValue, request]);
+	}, [draftValue, livePreview]);
+
+	const handleDraftChange = useCallback(
+		(next: string) => {
+			setDraftValue(next);
+			if (requestRef.current?.onPreview) {
+				previewedRef.current = true;
+				livePreview.call(next);
+			}
+		},
+		[livePreview],
+	);
 
 	const openEditor = useCallback((nextRequest: FixedEditorRequest) => {
+		previewedRef.current = false;
 		setRequest(nextRequest);
 	}, []);
 
@@ -129,18 +178,23 @@ export function FixedEditorProvider({
 							</div>
 							<input
 								ref={inputRef}
+								// text-[16px] is load-bearing on iOS: anything smaller makes
+								// Safari zoom the viewport on focus. Keep it ≥16px.
 								className="h-11 w-full rounded-lg border border-[#BFC5CC] bg-white px-3 text-[16px] font-medium text-[#111827] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#93C5FD]"
 								data-testid="fixed-editor-input"
 								id="fixed-editor-input"
+								aria-label={request.title}
 								inputMode={request.inputMode}
 								name="fixed-editor-input"
 								pattern={request.pattern}
 								placeholder={request.placeholder}
+								autoComplete="off"
+								autoCorrect="off"
+								spellCheck={false}
+								enterKeyHint="done"
 								value={draftValue}
 								onChange={(event) =>
-									setDraftValue(
-										event.target.value,
-									)
+									handleDraftChange(event.target.value)
 								}
 								onKeyDown={(event) => {
 									if (event.key === "Enter") {

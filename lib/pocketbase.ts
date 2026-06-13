@@ -1,5 +1,7 @@
 import PocketBase from "pocketbase";
 
+import type { ExportSnapshot } from "@/lib/export/export-fingerprint";
+
 /**
  * PocketBase client for persisting export history.
  * Defaults to a local instance; override with NEXT_PUBLIC_POCKETBASE_URL.
@@ -18,6 +20,13 @@ export interface ExportRecord {
 	duration: number;
 	video: string; // Filename in PB storage
 	thumbnail?: string;
+	/**
+	 * Provenance (additive — legacy records omit these and degrade to no thumbnail / no
+	 * re-open). `fingerprint` is the `exportFingerprint` identity; `snapshot` is the retained
+	 * input set that re-opens the exact setup and keys the proof thumbnail in the shared cache.
+	 */
+	fingerprint?: string;
+	snapshot?: ExportSnapshot;
 }
 
 /**
@@ -31,6 +40,9 @@ export async function saveExportToHistory(
 		move: string;
 		aspect: string;
 		duration: number;
+		/** Provenance stamp — the export identity + retained snapshot (optional/additive). */
+		fingerprint?: string;
+		snapshot?: ExportSnapshot;
 	}
 ): Promise<ExportRecord | null> {
 	try {
@@ -40,6 +52,10 @@ export async function saveExportToHistory(
 		formData.append("move", metadata.move);
 		formData.append("aspect", metadata.aspect);
 		formData.append("duration", metadata.duration.toString());
+		// Provenance: stored as fields if the collection has them; unknown fields are ignored
+		// by PB, and we re-attach them locally regardless so re-open works this session.
+		if (metadata.fingerprint) formData.append("fingerprint", metadata.fingerprint);
+		if (metadata.snapshot) formData.append("snapshot", JSON.stringify(metadata.snapshot));
 
 		// collection 'exports' must exist in PB
 		const record = await pb.collection("exports").create(formData);

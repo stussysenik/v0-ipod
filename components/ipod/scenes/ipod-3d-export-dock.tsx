@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ExportFraming } from "@/components/three/three-d-ipod";
 import { type LoopStyle } from "@/lib/studio-camera";
@@ -95,12 +95,28 @@ interface Ipod3DExportDockProps {
 	onExportPng: (framing: ExportFraming, options: StillExportOptions) => void;
 	onExportClip: (move: string, options: ClipExportOptions) => void;
 	/**
+	 * Aspect + quality — lifted to the stage (like duration/speed/loop) so the proof
+	 * fingerprint and the proof panel read the SAME values the export bakes with.
+	 */
+	aspect: ExportAspect;
+	onAspectChange: (aspect: ExportAspect) => void;
+	quality: ExportQuality;
+	onQualityChange: (quality: ExportQuality) => void;
+	/**
 	 * Surface the Theatre.js moment cards (the keyframed `·`-prefixed clips) in the
 	 * move picker. Off by default so the picker stays clean — they're authoring-stage
 	 * experiments gated behind the same dev toggle that mounts the Theatre timeline.
 	 */
 	showTheatreClips?: boolean;
 	history?: ExportRecord[];
+	/**
+	 * Proof thumbnail source — the shared cache, looked up by the record's *proof* key
+	 * (derived from its snapshot, since the cache is keyed by the motion-excluded anchor key,
+	 * not the full export identity). The stage owns the derivation; the dock just renders.
+	 */
+	peekProofBlob?: (record: ExportRecord) => Blob | undefined;
+	/** Re-open a past export's exact setup (only offered when the record has a snapshot). */
+	onReopen?: (record: ExportRecord) => void;
 }
 
 export function Ipod3DExportDock({
@@ -121,12 +137,16 @@ export function Ipod3DExportDock({
 	onResetPlayhead,
 	onExportPng,
 	onExportClip,
+	aspect,
+	onAspectChange,
+	quality,
+	onQualityChange,
 	showTheatreClips = false,
 	history = [],
+	peekProofBlob,
+	onReopen,
 }: Ipod3DExportDockProps) {
 	const busy = exportState !== "idle";
-	const [aspect, setAspect] = useState<ExportAspect>("story");
-	const [quality, setQuality] = useState<ExportQuality>("standard");
 
 	// Default picker = procedural moves only (the clean, battle-tested set). The
 	// `·`-prefixed Theatre moment cards only join the grid when the dev toggle is on.
@@ -154,7 +174,7 @@ export function Ipod3DExportDock({
 					<Segmented
 						options={ASPECTS.map((a) => ({ id: a.id, label: a.label }))}
 						value={aspect}
-						onChange={(v) => setAspect(v as ExportAspect)}
+						onChange={(v) => onAspectChange(v as ExportAspect)}
 						disabled={busy}
 					/>
 				</Row>
@@ -166,7 +186,7 @@ export function Ipod3DExportDock({
 							{ id: "cinema", label: "Cinema" },
 						]}
 						value={quality}
-						onChange={(v) => setQuality(v as ExportQuality)}
+						onChange={(v) => onQualityChange(v as ExportQuality)}
 						disabled={busy}
 					/>
 				</Row>
@@ -337,29 +357,47 @@ export function Ipod3DExportDock({
 						<span className="text-[10px] font-medium text-black/35">1080p</span>
 					</summary>
 					<div className="mt-2 flex flex-col gap-1.5">
-						{history.map((record) => (
-							<div
-								key={record.id}
-								className="group flex items-center justify-between rounded-lg bg-black/[0.03] px-3 py-2 transition-colors hover:bg-black/[0.06]"
-							>
-								<div className="flex min-w-0 flex-col">
-									<span className="truncate text-[11px] font-semibold text-black/75">
-										{record.title}
-									</span>
-									<span className="font-mono text-[9px] uppercase tracking-tight text-black/40">
-										{record.move} · {record.aspect} · {record.duration}s
-									</span>
-								</div>
-								<a
-									href={getExportVideoUrl(record)}
-									target="_blank"
-									rel="noreferrer"
-									className="flex h-7 items-center rounded-md border border-black/10 bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-black/60 shadow-sm transition-all hover:border-black/30 hover:text-black active:scale-[0.97]"
+						{history.map((record) => {
+							// Provenance: the proof thumbnail is the SAME cached frame the panel showed
+							// pre-export (one store, two tenses); re-open restores the exact setup.
+							const proofBlob = peekProofBlob?.(record);
+							const canReopen = Boolean(record.snapshot) && Boolean(onReopen);
+							return (
+								<div
+									key={record.id}
+									className="group flex items-center gap-2.5 rounded-lg bg-black/[0.03] px-3 py-2 transition-colors hover:bg-black/[0.06]"
 								>
-									View
-								</a>
-							</div>
-						))}
+									<ProofThumb blob={proofBlob} />
+									<div className="flex min-w-0 flex-1 flex-col">
+										<span className="truncate text-[11px] font-semibold text-black/75">
+											{record.title}
+										</span>
+										<span className="font-mono text-[9px] uppercase tracking-tight text-black/40">
+											{record.move} · {record.aspect} · {record.duration}s
+										</span>
+									</div>
+									<div className="flex items-center gap-1">
+										{canReopen && (
+											<button
+												type="button"
+												onClick={() => onReopen?.(record)}
+												className="flex h-7 items-center rounded-md border border-black/10 bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-black/60 shadow-sm transition-all hover:border-black/30 hover:text-black active:scale-[0.97]"
+											>
+												Re-open
+											</button>
+										)}
+										<a
+											href={getExportVideoUrl(record)}
+											target="_blank"
+											rel="noreferrer"
+											className="flex h-7 items-center rounded-md border border-black/10 bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-black/60 shadow-sm transition-all hover:border-black/30 hover:text-black active:scale-[0.97]"
+										>
+											View
+										</a>
+									</div>
+								</div>
+							);
+						})}
 					</div>
 				</details>
 			)}
@@ -445,6 +483,34 @@ function DockButton({
 				{hint}
 			</span>
 		</button>
+	);
+}
+
+/**
+ * A small proof thumbnail for a history row. Mints an object URL for the cached blob and
+ * revokes it on change/unmount; renders a neutral placeholder for legacy records (no proof).
+ */
+function ProofThumb({ blob }: { blob?: Blob }) {
+	const [url, setUrl] = useState<string | null>(null);
+	useEffect(() => {
+		if (!blob) {
+			setUrl(null);
+			return;
+		}
+		const next = URL.createObjectURL(blob);
+		setUrl(next);
+		return () => URL.revokeObjectURL(next);
+	}, [blob]);
+
+	return (
+		<div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-black/[0.08] bg-[#fafafa]">
+			{url ? (
+				// eslint-disable-next-line @next/next/no-img-element
+				<img src={url} alt="" className="h-full w-full object-contain" />
+			) : (
+				<span className="font-mono text-[7px] uppercase tracking-tight text-black/20">mp4</span>
+			)}
+		</div>
 	);
 }
 
