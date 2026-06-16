@@ -93,6 +93,14 @@ export function Ipod3DStudioCockpit({
 				onToggle={() => dispatch({ type: "TOGGLE_MARQUEE" })}
 			/>
 
+			{/* Ports — headphone jack, hold switch & 30-pin dock (evaluating the look) */}
+			<ToggleRow
+				label="Edge ports"
+				hint="Jack, hold switch & 30-pin dock"
+				on={studio.showPorts}
+				onToggle={() => dispatch({ type: "TOGGLE_SHOW_PORTS" })}
+			/>
+
 			{/* Touch controls — the mobile on-canvas gizmo + orbit-pad + pinch */}
 			<ToggleRow
 				label="Touch controls"

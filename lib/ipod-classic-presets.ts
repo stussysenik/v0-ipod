@@ -29,7 +29,7 @@ import type { IpodHardwarePresetId } from "@/types/ipod-state";
 // one token breaks that symmetry, which is exactly what reads as "not quite real".
 export const IPOD_CLASSIC_MM = {
 	body: { width: 61.8, height: 103.5, cornerRadius: 6.4, depthThin: 10.5, depthThick: 13.5, faceStep: 0.4 },
-	screen: { apertureWidth: 52.0, apertureHeight: 39.5, apertureCenterFromTop: 24.7, cornerRadius: 1.0 },
+	screen: { apertureWidth: 52.0, apertureHeight: 39.5, apertureCenterFromTop: 24.7, cornerRadius: 3.0 },
 	wheel: { diameter: 38.0, buttonDiameter: 13.7, centerFromBottom: 30.4 },
 	// ── Chassis edge features (Fig 3-53 top/bottom edge views, read at 600 DPI) ──
 	// All are machined INTO the steel — recessed openings, never proud of the
@@ -94,9 +94,13 @@ function machinedGeometry(shellHeightPx: number) {
 			frameWidth: r1(px(mm.screen.apertureWidth)),
 			frameHeight: r1(px(mm.screen.apertureHeight)),
 			outerRadius,
-			// The LCD sits behind the machined opening, so the content clips at the
-			// aperture's own near-crisp corner — not a softer designer radius.
-			innerRadius: r1(Math.max(outerRadius - 1.5, 3)),
+			// Softly-rounded screen corners (designer call — the machined 1mm radius
+			// read as a hard, sharp corner). The white content frame MUST share the
+			// aperture's radius exactly: a smaller (sharper) content radius made the
+			// white corner poke out past the rounded bezel; a larger one would let a
+			// dark bezel arc peek through. Equal = the content tucks flush, no sharp
+			// corner, no dark seam.
+			innerRadius: outerRadius,
 		},
 		wheel: {
 			size: r1(px(mm.wheel.diameter)),

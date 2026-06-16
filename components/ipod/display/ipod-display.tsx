@@ -52,10 +52,13 @@ export function IpodDisplay({
 					backgroundColor: getSurfaceToken("screen.content.bg"),
 					borderRadius: screenTokens.innerRadius,
 					fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-					boxShadow:
-						"inset 0 0 0 0.5px rgba(255,255,255,0.7)",
+					// Recessed-under-glass edge, not a bright halo: the old white inset
+					// highlight + light border glowed against the black bezel and read as
+					// glare / a hard aliased edge. A single thin DARK hairline restores the
+					// crisp "the LCD is set into the frame" detail without any glow.
+					boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.22)",
 					outline: "none",
-					border: "1px solid #e5e7eb",
+					border: "none",
 				}}
 			>
 				<IpodStatusBar

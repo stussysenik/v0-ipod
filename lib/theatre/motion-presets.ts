@@ -174,6 +174,25 @@ export const MOTION_PRESETS: readonly MotionPreset[] = [
 		],
 	},
 	{
+		id: "halo-sweep",
+		label: "Halo Sweep",
+		hint: "cresting arc that lifts and eases in",
+		// Slow + luxurious: the camera sways a wide shallow arc across the front
+		// while cresting up and pushing gently in at the apex, then unwinds — three
+		// axes moving in concert for a beauty-shot feel. Quarter keyframes + the
+		// default easeInOutSine (same recipe as the proven pendulum) keep it
+		// buttery and seamless; every offset returns to zero at the seam.
+		naturalCycleSeconds: 9,
+		loopable: true,
+		keyframes: [
+			{ at: 0 },
+			{ at: 0.25, dAzimuth: 20, dElevation: 6, dReach: -0.6 },
+			{ at: 0.5, dElevation: 10, dReach: -1.2 },
+			{ at: 0.75, dAzimuth: -20, dElevation: 6, dReach: -0.6 },
+			{ at: 1 },
+		],
+	},
+	{
 		id: "dolly-out-reveal",
 		label: "Dolly-Out Reveal",
 		hint: "one-shot pull back to a wide",

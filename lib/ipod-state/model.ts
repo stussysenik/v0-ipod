@@ -119,6 +119,13 @@ export interface IpodStudioState {
 	/** Run the scrolling marquee on overflowing track text in the live 3D view. */
 	marquee: boolean;
 	/**
+	 * Show the chassis-edge ports (headphone jack, hold switch, 30-pin dock).
+	 * Off by default while the detailing is still being evaluated — flip it on in
+	 * the studio cockpit to bring them back. Purely cosmetic; never affects export
+	 * framing or color.
+	 */
+	showPorts: boolean;
+	/**
 	 * Dev-only "layout" tool: show dashed bounding boxes + drag handles so Now Playing
 	 * elements can be repositioned. Off by default and never tied to interaction model,
 	 * so the boxes can NEVER leak into the live view, a preview, or an export. With it
@@ -140,6 +147,7 @@ export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
 	technicalFlat: false,
 	interactionLocked: false,
 	marquee: true,
+	showPorts: false,
 	layoutMode: false,
 	theatreStudio: false,
 };

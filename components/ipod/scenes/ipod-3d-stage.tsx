@@ -733,6 +733,7 @@ export function Ipod3DStage() {
 				backRoughness={backRoughness}
 				lighting={studio.lighting}
 				technicalFlat={studio.technicalFlat}
+				showPorts={studio.showPorts}
 				screen={screenComponent}
 				wheel={wheelComponent}
 				stageClassName="bg-transparent"

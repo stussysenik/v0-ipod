@@ -534,6 +534,7 @@ export function loadStudioState(): IpodStudioState | null {
 			interactionLocked:
 				typeof c.interactionLocked === "boolean" ? c.interactionLocked : base.interactionLocked,
 			marquee: typeof c.marquee === "boolean" ? c.marquee : base.marquee,
+			showPorts: typeof c.showPorts === "boolean" ? c.showPorts : base.showPorts,
 			layoutMode: typeof c.layoutMode === "boolean" ? c.layoutMode : base.layoutMode,
 			theatreStudio:
 				typeof c.theatreStudio === "boolean" ? c.theatreStudio : base.theatreStudio,

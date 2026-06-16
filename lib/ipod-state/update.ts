@@ -89,6 +89,8 @@ export type IpodWorkbenchAction =
 	| { type: "TOGGLE_INTERACTION_LOCK" }
 	| { type: "SET_MARQUEE"; payload: boolean }
 	| { type: "TOGGLE_MARQUEE" }
+	| { type: "SET_SHOW_PORTS"; payload: boolean }
+	| { type: "TOGGLE_SHOW_PORTS" }
 	| { type: "SET_LAYOUT_MODE"; payload: boolean }
 	| { type: "TOGGLE_LAYOUT_MODE" }
 	| { type: "SET_THEATRE_STUDIO"; payload: boolean }
@@ -561,6 +563,10 @@ export function ipodWorkbenchReducer(
 			return patchStudio(state, { marquee: action.payload });
 		case "TOGGLE_MARQUEE":
 			return patchStudio(state, { marquee: !state.studio.marquee });
+		case "SET_SHOW_PORTS":
+			return patchStudio(state, { showPorts: action.payload });
+		case "TOGGLE_SHOW_PORTS":
+			return patchStudio(state, { showPorts: !state.studio.showPorts });
 		case "SET_LAYOUT_MODE":
 			return patchStudio(state, { layoutMode: action.payload });
 		case "TOGGLE_LAYOUT_MODE":

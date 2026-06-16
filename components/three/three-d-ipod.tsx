@@ -272,6 +272,8 @@ export interface ThreeDIpodProps {
 	lighting?: StudioLightingConfig;
 	/** "Lights Off / Technical": flat, unlit, deterministic CAD view of the device. */
 	technicalFlat?: boolean;
+	/** Show the chassis-edge ports (headphone jack, hold switch, 30-pin dock). Default true. */
+	showPorts?: boolean;
 	/**
 	 * Controlled camera focus (orientation). When provided, the in-canvas
 	 * Product/Front/Back pill is suppressed so the host can render its own bottom
@@ -328,6 +330,8 @@ interface IpodModelProps {
 	backRoughness?: number;
 	/** "Lights Off / Technical": render every metal surface as flat unlit albedo. */
 	technicalFlat?: boolean;
+	/** Show the chassis-edge ports (jack, hold switch, dock). Default true. */
+	showPorts?: boolean;
 	onRegisterCapture?: (hooks: CaptureHooks) => void;
 }
 
@@ -359,6 +363,27 @@ function drawRoundedRect(
 	p.quadraticCurveTo(x, y + h, x, y + h - rr);
 	p.lineTo(x, y + rr);
 	p.quadraticCurveTo(x, y, x + rr, y);
+}
+
+/**
+ * A flat plane whose corners are rounded to `r` — the screen's LCD and glass
+ * layers, so they share the exact corner radius of the aperture/content instead
+ * of being square planes that poke their corners past the rounded screen (the
+ * tell-tale "amateur" mismatch). ShapeGeometry assigns UVs in shape-space, so we
+ * remap them to 0..1 across the bounding box — that keeps the LCD shader's `vUv`
+ * and the baked Now-Playing texture mapping across the full plane.
+ */
+function roundedPlaneGeometry(w: number, h: number, r: number, curveSegments = 48) {
+	const shape = new THREE.Shape();
+	drawRoundedRect(shape, 0, 0, w, h, r);
+	const geo = new THREE.ShapeGeometry(shape, curveSegments);
+	const pos = geo.attributes.position;
+	const uv = geo.attributes.uv;
+	for (let i = 0; i < pos.count; i++) {
+		uv.setXY(i, (pos.getX(i) + w / 2) / w, (pos.getY(i) + h / 2) / h);
+	}
+	uv.needsUpdate = true;
+	return geo;
 }
 
 // ─── Mechanical Datum & Tolerance Reference ────────────────────────────────────────
@@ -670,9 +695,14 @@ function useLcdShader() {
 function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; color?: string }) {
 	const flat = useTechnicalFlat();
 	const bezelGeo = useMemo(() => {
-		const w = dims.screenW + 0.07;
-		const h = dims.screenH + 0.07;
-		const r = 0.03;
+		// Concentric with the screen: the mask extends a fixed reveal beyond the
+		// aperture, and its corner radius steps out by that same reveal — so the
+		// dark frame's curve is parallel to the content's curve, never a guessed
+		// radius that crosses it.
+		const reveal = 0.035;
+		const w = dims.screenW + reveal * 2;
+		const h = dims.screenH + reveal * 2;
+		const r = dims.screenRadius + reveal;
 		const shape = new THREE.Shape();
 		shape.moveTo(-w / 2 + r, -h / 2);
 		shape.lineTo(w / 2 - r, -h / 2);
@@ -684,7 +714,7 @@ function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z
 		shape.lineTo(-w / 2, -h / 2 + r);
 		shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
 		return new THREE.ExtrudeGeometry(shape, { depth: 0.015, bevelEnabled: true, bevelThickness: MECHANICAL.bezelEdgeBreak, bevelSize: MECHANICAL.bezelEdgeBreak, bevelSegments: 2 });
-	}, [dims.screenW, dims.screenH]);
+	}, [dims.screenW, dims.screenH, dims.screenRadius]);
 
 	return (
 		<group position={[0, dims.screenCenterY, z.screenBezel]}>
@@ -853,7 +883,7 @@ function makeStadiumShape(length: number, width: number): THREE.Shape {
  * The walls of the extruded shell sit `bodyFillet` outside the section outline
  * (the extrude bevel expands laterally), so the wall plane is height/2 + fillet.
  */
-function IpodPorts({ dims }: { dims: Ipod3DDimensions }) {
+function IpodPorts({ dims, visible = true }: { dims: Ipod3DDimensions; visible?: boolean }) {
 	const flat = useTechnicalFlat();
 	const wallOffset = dims.height / 2 + MECHANICAL.bodyFillet;
 	const lift = MECHANICAL.portRecessLift;
@@ -884,7 +914,7 @@ function IpodPorts({ dims }: { dims: Ipod3DDimensions }) {
 	);
 
 	return (
-		<group>
+		<group visible={visible}>
 			{/* 3.5mm jack bore — top-left. */}
 			<mesh position={[jack.centerX, wallOffset + lift, 0]} rotation={[-Math.PI / 2, 0, 0]}>
 				<circleGeometry args={[jack.radius, 48]} />
@@ -955,7 +985,7 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, onRegisterCapture }: IpodModelProps) {
 	// Edge defaults to the back colour so an un-edited device is pixel-identical
 	// to the single-material chassis (edge == back until the user sets it).
 	const resolvedEdgeColor = edgeColor ?? backColor;
@@ -1028,6 +1058,15 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 
 	// ── Aluminum front face: a flat machined panel inset by the parting seam,
 	//    with the screen aperture and wheel bore cut clean through it. ──
+	// One rounded plane shared by the LCD and the glass, cornered to the exact
+	// aperture radius so neither layer pokes a square corner past the rounded
+	// screen — the LCD, glass, bezel, pocket and DOM content are now one
+	// concentric assembly on a single radius (DATUM: the screen aperture).
+	const screenPlaneGeo = useMemo(
+		() => roundedPlaneGeometry(dims.screenW, dims.screenH, dims.screenRadius),
+		[dims.screenW, dims.screenH, dims.screenRadius],
+	);
+
 	const faceGeo = useMemo(() => {
 		const faceW = dims.width - dims.seam * 2;
 		const faceH = dims.height - dims.seam * 2;
@@ -1362,7 +1401,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					<IpodBack dims={dims} z={z} capacityLabel={capacityLabel} />
 
 					{/* ── CHASSIS EDGE PORTS (jack · hold switch · 30-pin dock) ── */}
-					<IpodPorts dims={dims} />
+					<IpodPorts dims={dims} visible={showPorts} />
 
 					{/* ── FRONT FACE (Anodized aluminum, CNC-machined) ──
 						 A flat panel inset by the parting seam, with the screen
@@ -1407,9 +1446,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						 the glass, so the lit screen reads inside the bezel frame in the
 						 WebGL render — not occluded by the bezel. In the live view the
 						 DOM `Html` portal floats over the canvas and covers this plane. */}
-					<mesh ref={attachLcdMesh} position={[0, dims.screenCenterY, z.screenGlass - 0.006]}>
-						<planeGeometry args={[dims.screenW, dims.screenH]} />
-					</mesh>
+					<mesh ref={attachLcdMesh} geometry={screenPlaneGeo} position={[0, dims.screenCenterY, z.screenGlass - 0.006]} />
 
 					{/* ── SCREEN HTML OVERLAY (1:1 with the 2D screen) ── */}
 					<Html
@@ -1439,8 +1476,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						 sheen over the LCD. No transmission buffer (that pass re-renders
 						 the whole scene every frame and tanks the framerate), and a
 						 single flat plane instead of a rounded solid. */}
-			<mesh position={[0, dims.screenCenterY, z.screenGlass]} visible={!technicalFlat}>
-				<planeGeometry args={[dims.screenW, dims.screenH]} />
+			<mesh geometry={screenPlaneGeo} position={[0, dims.screenCenterY, z.screenGlass]} visible={!technicalFlat}>
 				<meshPhysicalMaterial
 					clearcoat={0.38}
 					clearcoatRoughness={0.18}
