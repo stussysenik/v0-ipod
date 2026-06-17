@@ -1,19 +1,37 @@
 "use client";
 
 import { Command } from "cmdk";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { IpodStoreContext } from "@/lib/xstate/store";
-import { buildCommands } from "./command-registry";
+import { buildCommands, type PaletteCommand } from "./command-registry";
+
+function groupBy(commands: PaletteCommand[]): [string, PaletteCommand[]][] {
+	const byGroup = new Map<string, PaletteCommand[]>();
+	for (const cmd of commands) {
+		const list = byGroup.get(cmd.group) ?? [];
+		list.push(cmd);
+		byGroup.set(cmd.group, list);
+	}
+	return Array.from(byGroup.entries());
+}
 
 /**
  * Global ⌘K / Ctrl+K command palette (spec: command-palette). Mounted once inside the
  * store provider. Opens from any view mode, closes on Escape (Radix restores focus to the
  * prior surface), and is fully keyboard-operable with fuzzy search via `cmdk`. The command
  * list is rebuilt from live machine state on every render.
+ *
+ * Two-tier triage: only `primary` commands show immediately. `secondary` commands stay behind
+ * a "more" toggle so the default list reads as "what matters" — but typing a query reveals
+ * every tier so nothing is ever unreachable.
  */
 export function CommandPalette() {
 	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState("");
+	const [showSecondary, setShowSecondary] = useState(false);
+	const router = useRouter();
 	const { send } = IpodStoreContext.useActorRef();
 	const viewMode = IpodStoreContext.useSelector((s) => s.context.presentation.viewMode);
 	const layout = IpodStoreContext.useSelector((s) => s.context.panelLayout);
@@ -29,26 +47,45 @@ export function CommandPalette() {
 		return () => document.removeEventListener("keydown", onKey);
 	}, []);
 
-	const commands = buildCommands({ viewMode, layout, send, close: () => setOpen(false) });
-	const groups = useMemo(() => {
-		const byGroup = new Map<string, typeof commands>();
-		for (const cmd of commands) {
-			const list = byGroup.get(cmd.group) ?? [];
-			list.push(cmd);
-			byGroup.set(cmd.group, list);
+	// Reset triage state on every open so each ⌘K starts from the curated primary list.
+	const onOpenChange = (next: boolean) => {
+		setOpen(next);
+		if (!next) {
+			setSearch("");
+			setShowSecondary(false);
 		}
-		return Array.from(byGroup.entries());
-	}, [commands]);
+	};
+
+	const commands = buildCommands({
+		viewMode,
+		layout,
+		send,
+		navigate: (href) => router.push(href),
+		close: () => onOpenChange(false),
+	});
+
+	// A query reveals every tier (searching should never hide a match); an empty query honors
+	// the "more" toggle. The toggle row only earns its place when there is something to reveal.
+	const searching = search.trim().length > 0;
+	const secondaryCount = useMemo(
+		() => commands.filter((c) => c.tier === "secondary").length,
+		[commands],
+	);
+	const revealSecondary = searching || showSecondary;
+	const visible = revealSecondary ? commands : commands.filter((c) => c.tier === "primary");
+	const groups = useMemo(() => groupBy(visible), [visible]);
 
 	return (
 		<Command.Dialog
 			open={open}
-			onOpenChange={setOpen}
+			onOpenChange={onOpenChange}
 			label="Command palette"
 			overlayClassName="fixed inset-0 z-[190] bg-black/30 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in"
 			contentClassName="fixed left-1/2 top-[18%] z-[200] w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-2xl border border-[#D0D4DA] bg-[#F4F4F2]/95 shadow-[0_28px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl"
 		>
 			<Command.Input
+				value={search}
+				onValueChange={setSearch}
 				placeholder="Type a command or search…"
 				className="w-full border-b border-black/10 bg-transparent px-4 py-3.5 text-[15px] text-black/85 outline-none placeholder:text-black/35"
 			/>
@@ -75,6 +112,18 @@ export function CommandPalette() {
 						))}
 					</Command.Group>
 				))}
+				{!searching && secondaryCount > 0 && (
+					<Command.Item
+						value="__toggle_secondary__"
+						keywords={["more", "less", "secondary", "advanced", "all", "commands"]}
+						onSelect={() => setShowSecondary((prev) => !prev)}
+						className="mt-1 cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium text-black/45 data-[selected=true]:bg-black/[0.06] data-[selected=true]:text-black/70"
+					>
+						{showSecondary
+							? "Show fewer commands"
+							: `Show ${secondaryCount} more command${secondaryCount === 1 ? "" : "s"}…`}
+					</Command.Item>
+				)}
 			</Command.List>
 		</Command.Dialog>
 	);

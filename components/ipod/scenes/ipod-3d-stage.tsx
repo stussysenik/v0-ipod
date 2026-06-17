@@ -704,16 +704,7 @@ export function Ipod3DStage() {
 			{/* Shell Header — a high-performance navigation bar that bounds the experience.
 			    It holds the product identity and the primary menu toggle, ensuring the flow
 			    is consistent across mobile and desktop. */}
-			<header className="absolute inset-x-0 top-0 z-[60] flex h-16 items-center justify-between px-6 pointer-events-none">
-				<div className="flex flex-col">
-					<div className="text-[10px] font-bold uppercase tracking-[0.25em] text-black/40 leading-none">
-						iPod · Now Playing
-					</div>
-					<div className="mt-1 text-[11px] font-medium text-black/55 tabular-nums">
-						{activePreset.label} · {activePreset.capacityLabel}
-					</div>
-				</div>
-
+			<header className="absolute inset-x-0 top-0 z-[60] flex h-16 items-center justify-end px-6 pointer-events-none">
 				<nav className="shell-nav flex items-center gap-4 pointer-events-auto">
 					{/* Shell Nav Button — a high-performance anchor for the creation flow. */}
 					<span>
