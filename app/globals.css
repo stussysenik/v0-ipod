@@ -237,6 +237,19 @@
 		animation-duration: 0s !important;
 		animation-delay: 0s !important;
 	}
+
+	/* Beyond view-transitions: neutralize the scrolling marquee and every Tailwind
+	   `animate-*` utility (entrance, pulse, spin, shutter) so a reduced-motion user
+	   gets a still interface. Export already freezes motion via [data-exporting]. */
+	.ipod-marquee {
+		animation: none !important;
+		transform: none !important;
+	}
+	[class*="animate-"] {
+		animation-duration: 0.001ms !important;
+		animation-delay: 0s !important;
+		animation-iteration-count: 1 !important;
+	}
 }
 
 /* Settings panel enter/exit */

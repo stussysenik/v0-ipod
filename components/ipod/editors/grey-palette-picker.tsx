@@ -205,7 +205,7 @@ export function GreyPalettePicker({
 						<button
 							key={id}
 							aria-selected={isActive}
-							className={`flex items-center gap-1 px-1.5 py-1 rounded-full text-[9px] font-semibold leading-none transition-colors duration-200 ${
+							className={`flex min-h-11 items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold leading-none transition-colors duration-200 ${
 								isActive
 									? "bg-[#111827] text-white"
 									: "bg-white/80 text-[#6B7280] hover:bg-white hover:text-[#374151]"

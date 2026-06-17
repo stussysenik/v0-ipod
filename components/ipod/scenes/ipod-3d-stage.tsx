@@ -25,6 +25,8 @@ import { selectExportSnapshot } from "@/lib/export/proof-inputs";
 import { snapshotToModel } from "@/lib/export/proof-restore";
 import { useProofCache } from "@/lib/export/use-proof-cache";
 
+import { PanelSystem } from "../panels/panel-system";
+import { useSafeInsets, useViewportSize } from "../panels/use-panel-layout";
 import { IpodClickWheel } from "../controls/ipod-click-wheel";
 import { IpodScreen } from "../display/ipod-screen";
 import { useIpodClickWheelControls } from "../hooks/use-ipod-click-wheel-controls";
@@ -145,6 +147,18 @@ export function Ipod3DStage() {
 		previewEngaged && !exporting
 			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec, speed, loop: loopStyle }
 			: null;
+	// Canvas symbiosis (spec: floating-panel-system): inset the spatial canvas away from
+	// open floating panels so the model is never permanently occluded. Suspended during
+	// export so capture framing is untouched. Insets read the same store the panel host does.
+	const symbiosisViewport = useViewportSize();
+	const safeInsets = useSafeInsets(symbiosisViewport);
+	const stageStyle = useMemo<React.CSSProperties | undefined>(() => {
+		if (exporting) return undefined;
+		const { top, right, bottom, left } = safeInsets;
+		if (!top && !right && !bottom && !left) return undefined;
+		return { top, right, bottom, left, minHeight: 0 };
+	}, [exporting, safeInsets]);
+
 	// Mobile control drawer. Desktop ignores this (the panels float at the corners);
 	// on narrow viewports the controls collapse into a bottom sheet so they never
 	// overlap the device.
@@ -156,6 +170,19 @@ export function Ipod3DStage() {
 	useEffect(() => {
 		if (typeof window === "undefined" || !window.matchMedia) return;
 		setTouchControls(window.matchMedia("(pointer: coarse)").matches);
+	}, []);
+
+	// Short-landscape phones: the floating chrome must reflow to the screen edges so
+	// the centered model stays visible. Below `lg` the cockpit sheet is hidden anyway;
+	// this only re-docks the always-on touch controls + studio-shots bar.
+	const [landscape, setLandscape] = useState(false);
+	useEffect(() => {
+		if (typeof window === "undefined" || !window.matchMedia) return;
+		const mq = window.matchMedia("(max-height: 540px) and (orientation: landscape)");
+		const update = () => setLandscape(mq.matches);
+		update();
+		mq.addEventListener("change", update);
+		return () => mq.removeEventListener("change", update);
 	}, []);
 	// Camera orientation (Product / Front / Back) — owned here so the bottom bar can
 	// place the snaps alongside the saved studio shots.
@@ -737,6 +764,7 @@ export function Ipod3DStage() {
 				screen={screenComponent}
 				wheel={wheelComponent}
 				stageClassName="bg-transparent"
+				stageStyle={stageStyle}
 			/>
 
 			{/* Responsive control surface — one DOM tree, two layouts. */}
@@ -852,12 +880,13 @@ export function Ipod3DStage() {
 				presentation={presentation}
 				dispatch={dispatch}
 				onNotice={showNotice}
+				landscape={landscape}
 			/>
 
 			{/* Mobile on-canvas camera controls — floats above the bottom bar, within
 			    one-thumb reach. Unmounted (listeners detached) when toggled off; the
 			    component is `lg:hidden` so desktop never shows it even if enabled. */}
-			{touchControls && <Ipod3DTouchControls apiRef={ipodApiRef} />}
+			{touchControls && <Ipod3DTouchControls apiRef={ipodApiRef} landscape={landscape} />}
 
 			{/* Export veil — a cinematic shutter that covers the canvas for the render.
 			    It uses 'shutter' optics: a high-speed blade snap followed by a white
@@ -917,6 +946,10 @@ export function Ipod3DStage() {
 					{notice}
 				</div>
 			)}
+
+			{/* Floating tool panels + ⌘K palette (spec: floating-panel-system,
+			    command-palette). Panels reflow this canvas via the symbiosis insets above. */}
+			<PanelSystem />
 		</div>
 	);
 }

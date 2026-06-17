@@ -52,9 +52,12 @@ function angleDelta(a: number, b: number): number {
 
 interface Ipod3DTouchControlsProps {
 	apiRef: React.MutableRefObject<ThreeDIpodHandle | null>;
+	/** Short-landscape phones: dock the cluster to the bottom-right as a row so the
+	 *  centered model and the bottom-left studio-shots bar stay clear. */
+	landscape?: boolean;
 }
 
-export function Ipod3DTouchControls({ apiRef }: Ipod3DTouchControlsProps) {
+export function Ipod3DTouchControls({ apiRef, landscape = false }: Ipod3DTouchControlsProps) {
 	const padRef = useRef<HTMLDivElement>(null);
 	const [livePose, setLivePose] = useState<StudioPose | null>(null);
 
@@ -154,7 +157,11 @@ export function Ipod3DTouchControls({ apiRef }: Ipod3DTouchControlsProps) {
 
 	return (
 		<div
-			className="pointer-events-none fixed inset-x-0 bottom-[84px] z-20 flex flex-col items-center gap-2 px-4 lg:hidden"
+			className={`pointer-events-none fixed z-20 flex max-w-full gap-2 lg:hidden ${
+				landscape
+					? "bottom-3 right-3 flex-row items-end"
+					: "inset-x-0 bottom-[84px] flex-col items-center px-4"
+			}`}
 			style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
 		>
 			{/* Orientation gizmo — tap a face to snap to that canonical view. */}

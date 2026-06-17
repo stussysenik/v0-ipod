@@ -115,6 +115,8 @@ export function EditableTime({
 				className={`w-12 bg-white/50 border-b border-black focus:outline-none focus:border-blue-500 text-center rounded ${className}`}
 				placeholder="0:00"
 				type="text"
+				inputMode="numeric"
+				pattern="[-0-9:]*"
 				value={localValue}
 				onBlur={handleBlur}
 				onChange={handleChange}

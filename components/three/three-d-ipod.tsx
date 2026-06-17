@@ -300,6 +300,13 @@ export interface ThreeDIpodProps {
 	 * Defaults to a black studio sweep; pass e.g. "bg-white" for a light stage.
 	 */
 	stageClassName?: string;
+	/**
+	 * Inline style merged onto the stage root — used for floating-panel canvas symbiosis
+	 * to inset the canvas (top/right/bottom/left + minHeight:0) so panels never occlude the
+	 * model (spec: floating-panel-system). Inline style overrides the root's `inset-0` /
+	 * `min-h-screen`. Defaults undefined → the canvas fills the stage exactly as before.
+	 */
+	stageStyle?: React.CSSProperties;
 	/** Solid background baked into exports (the live canvas stays transparent). */
 	captureBackground?: string;
 	/** Show a small origin gizmo (centre crosshair) to help compose against centre. */
@@ -2339,8 +2346,9 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			onReady, 
 			preset, 
 			capacityLabel = "160GB", 
-			stageClassName = "bg-black", 
-			apiRef, 
+			stageClassName = "bg-black",
+			stageStyle,
+			apiRef,
 			captureBackground, 
 			showOrigin = false, 
 			focus: focusProp, 
@@ -2481,7 +2489,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 		// controls always take focus over the iPod — a panel overlapping the device covers
 		// it and receives the clicks, never the reverse.
 		return (
-			<div className={`w-full h-full min-h-screen absolute inset-0 z-0 ${stageClassName}`}>
+			<div className={`w-full h-full min-h-screen absolute inset-0 z-0 ${stageClassName}`} style={stageStyle}>
 				<Canvas
 					shadows
 					// Render at up to 2× device pixels (was 1.5×). On a retina panel this is

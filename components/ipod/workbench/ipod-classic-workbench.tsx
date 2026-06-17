@@ -103,6 +103,7 @@ import {
 import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
 import { formatTimecode } from "@/lib/time-utils";
 import { IpodStoreContext } from "@/lib/xstate/store";
+import { PanelSystem } from "../panels/panel-system";
 
 const MAX_CUSTOM_COLORS = 6;
 const SHELL_PADDING = 48;
@@ -184,6 +185,12 @@ export default function IpodClassicWorkbench() {
 	const canPngExport = isPngExportViewMode(viewMode);
 	const isAuthenticInteraction = isAuthenticInteractionModel(interactionModel);
 	const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
+	// Portrait = a phone held upright. There the width-fit device already clears the
+	// height with margin, so we lock scale to width (see previewScale) and let the
+	// container scroll — immune to the constant innerHeight oscillation (URL bar,
+	// soft keyboard) that otherwise violently rescaled the device.
+	const isPortrait = viewportSize.height >= viewportSize.width;
+	const isCompactPortrait = isCompactToolbox && isPortrait;
 	const isToolboxVisible = !isCompactToolbox || isToolboxOpen;
 	const activePreset = useMemo(() => getIpodClassicPreset(hardwarePreset), [hardwarePreset]);
 
@@ -695,13 +702,20 @@ export default function IpodClassicWorkbench() {
 		const verticalReserve = isCompactToolbox ? 144 : 48;
 		const availableWidth = Math.max(viewportSize.width - horizontalReserve, 240);
 		const availableHeight = Math.max(viewportSize.height - verticalReserve, 280);
+		const widthScale = Math.min(availableWidth / frameWidth, 1);
+		// Portrait phone: lock to width so a changing innerHeight (URL bar / keyboard)
+		// can't rescale the device. The container scrolls if it runs past the viewport.
+		// Focus keeps fit-to-both below since it intentionally zooms.
+		if (isCompactPortrait && viewMode !== "focus") {
+			return widthScale;
+		}
 		const fitScale = Math.min(availableWidth / frameWidth, availableHeight / frameHeight, 1);
 		if (viewMode === "focus") {
 			const maxScale = Math.min(availableWidth / frameWidth, availableHeight / frameHeight, 1.28);
 			return Math.min(maxScale, fitScale * 1.3);
 		}
 		return fitScale;
-	}, [isCompactToolbox, isExportCapturing, viewportSize, viewMode, frameWidth, frameHeight]);
+	}, [isCompactPortrait, isCompactToolbox, isExportCapturing, viewportSize, viewMode, frameWidth, frameHeight]);
 
 	const scaledFrameWidth = Math.round(frameWidth * previewScale);
 	const scaledFrameHeight = Math.round(frameHeight * previewScale);
@@ -713,7 +727,7 @@ export default function IpodClassicWorkbench() {
 		? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
 		: "fixed top-6 right-6";
 	const toolboxPanelClass = isCompactToolbox
-		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
+		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem-var(--safe-inset-top)-var(--safe-inset-bottom))] overflow-y-auto overscroll-contain flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
 		: "flex flex-col gap-3";
 
 	const screenComponent = isAsciiView ? (
@@ -846,7 +860,11 @@ export default function IpodClassicWorkbench() {
 		<FixedEditorProvider resetKey={editorResetKey}>
 			<div
 				ref={containerRef}
-				className="relative min-h-dvh w-full flex flex-col items-center justify-center overflow-hidden transition-colors duration-500"
+				className={`relative min-h-dvh w-full flex flex-col items-center transition-colors duration-500 ${
+					isCompactPortrait
+						? "justify-start overflow-y-auto overscroll-contain"
+						: "justify-center overflow-hidden"
+				}`}
 				style={{
 					backgroundColor: bgColor,
 					paddingTop: `max(0.75rem, var(--safe-inset-top))`,
@@ -1036,12 +1054,16 @@ export default function IpodClassicWorkbench() {
 				/>
 
 				<div
-					className={`relative overflow-hidden transition-opacity duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
+					className={`relative my-auto overflow-hidden transition-opacity duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
 					style={{
 						width: `${scaledFrameWidth}px`,
 						height: `${scaledFrameHeight}px`,
 						maxWidth: `calc(100vw - var(--safe-inset-left) - var(--safe-inset-right) - 1.5rem)`,
-						maxHeight: `calc(100dvh - var(--safe-inset-top) - var(--safe-inset-bottom) - 1.5rem)`,
+						// Portrait phones are width-locked and scroll vertically, so the
+						// device must render at full height (no clamp) or its ends clip.
+						maxHeight: isCompactPortrait
+							? undefined
+							: `calc(100dvh - var(--safe-inset-top) - var(--safe-inset-bottom) - 1.5rem)`,
 					}}
 				>
 					<div
@@ -1095,6 +1117,10 @@ export default function IpodClassicWorkbench() {
 						wheel={wheelComponent}
 					/>
 				)}
+
+				{/* Floating tool panels + ⌘K palette (spec: floating-panel-system,
+				    command-palette). Panels default hidden, summoned from the palette. */}
+				<PanelSystem />
 			</div>
 		</FixedEditorProvider>
 	);

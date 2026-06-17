@@ -42,8 +42,11 @@ export const viewport: Viewport = {
 	themeColor: "#000000",
 	width: "device-width",
 	initialScale: 1,
-	maximumScale: 1,
-	userScalable: false,
+	// Pinch-zoom stays enabled (WCAG 1.4.4). The click wheel and 3D canvas set
+	// `touch-action: none` on their own surfaces, so re-enabling page zoom does
+	// not hijack drag gestures there.
+	maximumScale: 5,
+	userScalable: true,
 };
 
 export const metadata: Metadata = {

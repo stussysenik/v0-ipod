@@ -59,7 +59,9 @@ export function HexColorInput({ value, onChange }: HexColorInputProps) {
 				ref={inputRef}
 				autoComplete="off"
 				autoCorrect="off"
-				className="w-[4.5rem] text-[11px] font-mono bg-white/80 border border-[#CDD1D6] rounded px-1.5 py-0.5 text-[#111827] outline-none focus:border-[#9CA3AF] uppercase tracking-wider"
+				// text-[16px] is load-bearing: with page zoom re-enabled, anything
+				// smaller makes iOS Safari zoom the viewport on focus.
+				className="w-[5.5rem] text-[16px] font-mono bg-white/80 border border-[#CDD1D6] rounded px-1.5 py-1 text-[#111827] outline-none focus:border-[#9CA3AF] uppercase tracking-wider"
 				maxLength={6}
 				spellCheck={false}
 				type="text"

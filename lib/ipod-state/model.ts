@@ -42,6 +42,36 @@ export type IpodNowPlayingLayoutState = Partial<
 	Record<IpodNowPlayingLayoutElementId, IpodNowPlayingLayoutPosition>
 >;
 
+/**
+ * Floating tool-panel layout (spec: floating-panel-system). A panel id is whatever
+ * the panel registry declares; the persisted frame is sparse — any field the user
+ * has not touched falls back to the registry default when the host resolves it.
+ */
+export type PanelId = string;
+
+export interface PanelFrame {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	/** Snapped to the panel's declared ideal-minimal form (title bar / nub only). */
+	collapsed: boolean;
+	/** Mounted in the host. Panels default hidden and are summoned from the palette. */
+	visible: boolean;
+	/** Focus-to-front z-order within the mode; higher renders on top. */
+	z: number;
+}
+
+/**
+ * Layout is keyed `[viewMode][panelId]` so every mode keeps its own arrangement.
+ * A `Partial` frame is allowed in storage: absent fields resolve to registry defaults.
+ */
+export type PanelLayoutState = Partial<
+	Record<IpodViewMode, Partial<Record<PanelId, Partial<PanelFrame>>>>
+>;
+
+export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {};
+
 export const SONG_SNAPSHOT_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = "direct";
 export const DEFAULT_SELECTION_KIND: SnapshotSelectionKind = "moment";
@@ -168,6 +198,8 @@ export interface IpodWorkbenchModel {
 	presentation: IpodPresentationState;
 	interaction: IpodInteractionState;
 	studio: IpodStudioState;
+	/** Per-mode floating tool-panel layout (spec: floating-panel-system). */
+	panelLayout: PanelLayoutState;
 }
 
 export interface IpodUiState {
@@ -244,5 +276,6 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			batteryMode: "manual",
 		},
 		studio: createInitialStudioState(),
+		panelLayout: { ...DEFAULT_PANEL_LAYOUT },
 	};
 }

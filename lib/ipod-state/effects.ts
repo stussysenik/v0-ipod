@@ -3,6 +3,7 @@ import {
 	loadExportCounter,
 	loadLastExportedBatteryLevel,
 	loadMetadata,
+	loadPanelLayout,
 	loadSongSnapshot,
 	loadStudioState,
 	loadUiState,
@@ -85,6 +86,10 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 			batteryMode: savedUi?.batteryMode ?? fallback.interaction.batteryMode,
 		},
 		studio: loadStudioState() ?? fallback.studio,
+		// Panel layout rides its own storage key (editor-local chrome). Load it here so the
+		// whole-model RESTORE_MODEL on mount carries the persisted arrangement instead of the
+		// empty fallback — otherwise it clobbers the separately-hydrated layout on reload.
+		panelLayout: loadPanelLayout(),
 	};
 }
 

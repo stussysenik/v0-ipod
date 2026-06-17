@@ -14,6 +14,7 @@ import {
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
+	DEFAULT_PANEL_LAYOUT,
 	DEFAULT_SELECTION_KIND,
 	SONG_SNAPSHOT_SCHEMA_VERSION,
 	type BatteryMode,
@@ -171,6 +172,9 @@ export function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 		// Studio is plain data; pass it straight through. The `??` guards a legacy model
 		// restored from storage before this slice existed.
 		studio: model.studio ?? createInitialStudioState(),
+		// Panel layout is sparse plain data; default an absent/old snapshot to empty so the
+		// host resolves every panel to its registry default (spec: floating-panel-system).
+		panelLayout: model.panelLayout ?? DEFAULT_PANEL_LAYOUT,
 	};
 }
 
@@ -248,6 +252,8 @@ export function applySongSnapshotToModel(
 		// A song snapshot describes the track + finish, not the studio rig — keep the live
 		// studio direction the user has set rather than resetting their lights.
 		studio: current.studio ?? createInitialStudioState(),
+		// Panel layout is editor chrome, not part of a song — keep the live arrangement.
+		panelLayout: current.panelLayout ?? DEFAULT_PANEL_LAYOUT,
 	});
 }
 

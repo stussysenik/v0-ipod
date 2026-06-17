@@ -1,9 +1,11 @@
 import type { SongMetadata } from "@/types/ipod";
 import {
 	createInitialStudioState,
+	DEFAULT_PANEL_LAYOUT,
 	type BatteryMode,
 	type IpodStudioState,
 	type IpodWorkbenchModel,
+	type PanelLayoutState,
 } from "@/lib/ipod-state/model";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
@@ -38,6 +40,9 @@ const LAST_EXPORTED_BATTERY_KEY = "ipodSnapshotLastBattery";
 // The /3d studio slice (lighting rig, flat/lock/marquee toggles, camera pose) rides its own
 // key rather than the whitelisted SongSnapshot.ui, since it carries a nested lighting record.
 const STUDIO_STORAGE_KEY = "ipodSnapshotStudio";
+// Floating tool-panel layout (spec: floating-panel-system) is editor-local, per-mode
+// chrome — not song/finish — so it rides its own key rather than the shared SongSnapshot.
+const PANEL_LAYOUT_STORAGE_KEY = "ipodSnapshotPanelLayout";
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 export function loadMetadata(): Partial<SongMetadata> | null {
@@ -509,6 +514,8 @@ export function loadWorkbenchModel(): IpodWorkbenchModel | null {
 		},
 		// Studio rides its own key; default to a fresh slice if absent or corrupt.
 		studio: loadStudioState() ?? createInitialStudioState(),
+		// Panel layout rides its own key too (editor-local, per-mode chrome).
+		panelLayout: loadPanelLayout(),
 	};
 }
 
@@ -541,6 +548,30 @@ export function loadStudioState(): IpodStudioState | null {
 		};
 	} catch {
 		return null;
+	}
+}
+
+export function savePanelLayout(layout: PanelLayoutState): void {
+	try {
+		localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+	} catch {
+		// Ignore quota errors
+	}
+}
+
+export function loadPanelLayout(): PanelLayoutState {
+	try {
+		const raw = localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
+		if (!raw) return { ...DEFAULT_PANEL_LAYOUT };
+		const parsed: unknown = JSON.parse(raw);
+		// Plain sparse data; the host resolves every frame against the registry default,
+		// so a shallow object check is enough to reject corrupt blobs without over-validating.
+		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+			return { ...DEFAULT_PANEL_LAYOUT };
+		}
+		return parsed as PanelLayoutState;
+	} catch {
+		return { ...DEFAULT_PANEL_LAYOUT };
 	}
 }
 

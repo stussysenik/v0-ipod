@@ -142,6 +142,8 @@ export function EditableTrackNumber({
 					data-testid="track-number-input"
 					style={{ fontSize: "inherit", fontFamily: "inherit" }}
 					type="text"
+					inputMode="numeric"
+					pattern="[0-9]*"
 					value={trackValue}
 					onBlur={handleTrackBlur}
 					onChange={(e) => setTrackValue(e.target.value)}
@@ -179,6 +181,8 @@ export function EditableTrackNumber({
 					data-testid="total-tracks-input"
 					style={{ fontSize: "inherit", fontFamily: "inherit" }}
 					type="text"
+					inputMode="numeric"
+					pattern="[0-9]*"
 					value={totalValue}
 					onBlur={handleTotalBlur}
 					onChange={(e) => setTotalValue(e.target.value)}

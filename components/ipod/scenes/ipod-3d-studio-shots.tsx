@@ -55,6 +55,9 @@ interface Ipod3DStudioShotsProps {
 	presentation: IpodPresentationState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 	onNotice?: (message: string) => void;
+	/** Short-landscape phones: dock bottom-left (the touch controls take bottom-right)
+	 *  so neither strip overlaps the centered model. */
+	landscape?: boolean;
 }
 
 export function Ipod3DStudioShots({
@@ -64,6 +67,7 @@ export function Ipod3DStudioShots({
 	presentation,
 	dispatch,
 	onNotice,
+	landscape = false,
 }: Ipod3DStudioShotsProps) {
 	const [shots, setShots] = useState<StudioShot[]>([]);
 	const counter = useRef(1);
@@ -134,7 +138,13 @@ export function Ipod3DStudioShots({
 	);
 
 	return (
-		<div className="pointer-events-auto fixed bottom-6 left-1/2 z-30 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-black/10 bg-white/90 p-1 shadow-sm backdrop-blur-md">
+		<div
+			className={`pointer-events-auto fixed z-30 flex items-center gap-1 rounded-full border border-black/10 bg-white/90 p-1 shadow-sm backdrop-blur-md ${
+				landscape
+					? "bottom-3 left-3 max-w-[58vw]"
+					: "bottom-6 left-1/2 max-w-[calc(100vw-1.5rem)] -translate-x-1/2"
+			}`}
+		>
 			{/* Orientation — the Product / Front / Back snaps */}
 			{FOCI.map((f) => (
 				<button
