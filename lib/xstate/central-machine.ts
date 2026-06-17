@@ -8,14 +8,26 @@ import type {
 	BatteryMode,
 	IpodNowPlayingLayoutState,
 	IpodInteractionModel,
-	IpodHardwarePresetId
+	IpodHardwarePresetId,
+	ColorTarget,
+	PanelFrame,
+	PanelId,
+	PanelLayoutState
 } from "@/lib/ipod-state/model";
-import { 
-	normalizeModel, 
+import {
+	normalizeModel,
 	createInitialIpodWorkbenchModel,
 	applySongSnapshotToModel,
+	pushSavedColor,
 	type SongSnapshot
 } from "@/lib/ipod-state/update";
+import {
+	focusPanel,
+	mergePanelFrame,
+	resetModeLayout,
+	resetPanel,
+	summonPanel,
+} from "@/lib/ipod-state/panel-layout";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 
 export type ExportWorkflowStatus = "idle" | "preparing" | "capturing" | "encoding" | "finalizing" | "success" | "error";
@@ -35,6 +47,7 @@ export type IpodMachineEvent =
 	| { type: "SET_BG_COLOR"; payload: string }
 	| { type: "SET_RING_COLOR"; payload: string }
 	| { type: "SET_CENTER_COLOR"; payload: string }
+	| { type: "SAVE_CUSTOM_COLOR"; payload: { target: ColorTarget; hex: string } }
 	| { type: "SET_HARDWARE_PRESET"; payload: IpodHardwarePresetId }
 	| { type: "SET_INTERACTION_MODEL"; payload: IpodInteractionModel }
 	| { type: "SET_SELECTION_KIND"; payload: SnapshotSelectionKind }
@@ -59,6 +72,15 @@ export type IpodMachineEvent =
 	| { type: "EXPORT_COMPLETE" }
 	| { type: "EXPORT_ERROR"; payload: string }
 	| { type: "RESET_EXPORT" }
+	// ── Floating tool panels (spec: floating-panel-system) — keyed by current viewMode ──
+	| { type: "SET_PANEL_FRAME"; payload: { id: PanelId; frame: Partial<PanelFrame> } }
+	| { type: "SET_PANEL_COLLAPSED"; payload: { id: PanelId; collapsed: boolean } }
+	| { type: "SET_PANEL_VISIBLE"; payload: { id: PanelId; visible: boolean } }
+	| { type: "SUMMON_PANEL"; payload: { id: PanelId } }
+	| { type: "FOCUS_PANEL"; payload: { id: PanelId } }
+	| { type: "RESET_PANEL"; payload: { id: PanelId } }
+	| { type: "RESET_PANEL_LAYOUT" }
+	| { type: "HYDRATE_PANEL_LAYOUT"; payload: PanelLayoutState }
 	| { type: "TICK" }
 	| { type: "PLAY_PAUSE" };
 
@@ -165,6 +187,12 @@ export const ipodCentralMachine = createMachine(
 				actions: assign(({ context, event }) => normalizeModel({
 					...context,
 					presentation: { ...context.presentation, centerColor: event.payload },
+				})),
+			},
+			SAVE_CUSTOM_COLOR: {
+				actions: assign(({ context, event }) => normalizeModel({
+					...context,
+					savedColors: pushSavedColor(context.savedColors, event.payload.target, event.payload.hex),
 				})),
 			},
 			SET_HARDWARE_PRESET: {
@@ -329,6 +357,75 @@ export const ipodCentralMachine = createMachine(
 					exportProgress: 0,
 					exportError: (null as string | null),
 				}),
+			},
+			// ── Floating tool panels ─────────────────────────────────────────────────────
+			// Panel layout has no song/playback invariants, so these skip `normalizeModel`
+			// and assign just the `panelLayout` field. Every op is keyed by the live
+			// `presentation.viewMode`, so each mode keeps its own arrangement.
+			SET_PANEL_FRAME: {
+				actions: assign(({ context, event }) => ({
+					panelLayout: mergePanelFrame(
+						context.panelLayout,
+						context.presentation.viewMode,
+						event.payload.id,
+						event.payload.frame,
+					),
+				})),
+			},
+			SET_PANEL_COLLAPSED: {
+				actions: assign(({ context, event }) => ({
+					panelLayout: mergePanelFrame(
+						context.panelLayout,
+						context.presentation.viewMode,
+						event.payload.id,
+						{ collapsed: event.payload.collapsed },
+					),
+				})),
+			},
+			SET_PANEL_VISIBLE: {
+				actions: assign(({ context, event }) => ({
+					panelLayout: mergePanelFrame(
+						context.panelLayout,
+						context.presentation.viewMode,
+						event.payload.id,
+						{ visible: event.payload.visible },
+					),
+				})),
+			},
+			SUMMON_PANEL: {
+				actions: assign(({ context, event }) => ({
+					panelLayout: summonPanel(
+						context.panelLayout,
+						context.presentation.viewMode,
+						event.payload.id,
+					),
+				})),
+			},
+			FOCUS_PANEL: {
+				actions: assign(({ context, event }) => ({
+					panelLayout: focusPanel(
+						context.panelLayout,
+						context.presentation.viewMode,
+						event.payload.id,
+					),
+				})),
+			},
+			RESET_PANEL: {
+				actions: assign(({ context, event }) => ({
+					panelLayout: resetPanel(
+						context.panelLayout,
+						context.presentation.viewMode,
+						event.payload.id,
+					),
+				})),
+			},
+			RESET_PANEL_LAYOUT: {
+				actions: assign(({ context }) => ({
+					panelLayout: resetModeLayout(context.panelLayout, context.presentation.viewMode),
+				})),
+			},
+			HYDRATE_PANEL_LAYOUT: {
+				actions: assign(({ event }) => ({ panelLayout: event.payload })),
 			},
 			PLAY_PAUSE: {
 				actions: ["togglePlaying", "logPlay"],

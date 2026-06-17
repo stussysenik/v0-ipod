@@ -220,7 +220,7 @@ export function GifPreviewModal({
 						</div>
 						<button
 							aria-label="Close preview"
-							className="rounded-full border border-black/10 p-2 text-[#111827] transition-colors hover:bg-black/5"
+							className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 text-[#111827] transition-colors hover:bg-black/5"
 							type="button"
 							onClick={onClose}
 						>

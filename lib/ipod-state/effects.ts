@@ -3,12 +3,15 @@ import {
 	loadExportCounter,
 	loadLastExportedBatteryLevel,
 	loadMetadata,
+	loadPanelLayout,
+	loadSavedColors,
 	loadSongSnapshot,
 	loadStudioState,
 	loadUiState,
 	saveExportCounter,
 	saveLastExportedBatteryLevel,
 	saveMetadata,
+	saveSavedColors,
 	saveSongSnapshot,
 	saveStudioState,
 	saveUiState,
@@ -20,11 +23,6 @@ import {
 } from "@/lib/export/animated-export";
 import type { IpodWorkbenchModel, SongSnapshot } from "./model";
 import { buildPersistedUiState, buildSongSnapshot } from "./update";
-
-export const CASE_CUSTOM_COLORS_KEY = "ipodSnapshotCaseCustomColors";
-export const BG_CUSTOM_COLORS_KEY = "ipodSnapshotBgCustomColors";
-export const RING_CUSTOM_COLORS_KEY = "ipodSnapshotRingCustomColors";
-export const CENTER_CUSTOM_COLORS_KEY = "ipodSnapshotCenterCustomColors";
 
 function waitForFrameBoundary(): Promise<void> {
 	return new Promise((resolve) =>
@@ -85,6 +83,13 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 			batteryMode: savedUi?.batteryMode ?? fallback.interaction.batteryMode,
 		},
 		studio: loadStudioState() ?? fallback.studio,
+		// Panel layout rides its own storage key (editor-local chrome). Load it here so the
+		// whole-model RESTORE_MODEL on mount carries the persisted arrangement instead of the
+		// empty fallback — otherwise it clobbers the separately-hydrated layout on reload.
+		panelLayout: loadPanelLayout(),
+		// Color history rides its own per-target keys; load it so RESTORE_MODEL carries the
+		// user's swatches rather than the empty fallback (mirrors panelLayout above).
+		savedColors: loadSavedColors(),
 	};
 }
 
@@ -92,6 +97,7 @@ export function persistWorkbenchModel(model: IpodWorkbenchModel): void {
 	saveMetadata(model.metadata);
 	saveUiState(buildPersistedUiState(model));
 	saveStudioState(model.studio);
+	saveSavedColors(model.savedColors);
 }
 
 export function loadPersistedExportCounter(): number {
@@ -156,32 +162,6 @@ export function playMechanicalClick(): void {
 		noise.start(now);
 		noise.stop(now + duration);
 	} catch { /* suppress autoplay-policy errors */ }
-}
-
-export function loadCustomColors(storageKey: string): string[] {
-	try {
-		const raw = localStorage.getItem(storageKey);
-		if (!raw) {
-			return [];
-		}
-
-		const parsed: unknown = JSON.parse(raw);
-		if (!Array.isArray(parsed)) {
-			return [];
-		}
-
-		return parsed.filter((value): value is string => typeof value === "string");
-	} catch {
-		return [];
-	}
-}
-
-export function persistCustomColors(storageKey: string, colors: string[]): void {
-	try {
-		localStorage.setItem(storageKey, JSON.stringify(colors));
-	} catch {
-		// Ignore storage failures.
-	}
 }
 
 export async function exportWorkbenchPng(

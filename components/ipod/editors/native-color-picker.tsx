@@ -58,7 +58,7 @@ export function NativeColorPicker({ value, onChange, target }: NativeColorPicker
 				<button
 					type="button"
 					onClick={openEyeDropper}
-					className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+					className="inline-flex h-11 w-11 items-center justify-center rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
 					title="Pick color from screen"
 					aria-label={`Pick ${target} color from screen`}
 				>
@@ -70,7 +70,7 @@ export function NativeColorPicker({ value, onChange, target }: NativeColorPicker
 					<button
 						type="button"
 						onClick={openNativeColorPicker}
-						className="p-1 rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
+						className="inline-flex h-11 w-11 items-center justify-center rounded hover:bg-black/5 text-[#6B7280] hover:text-[#111827] transition-colors"
 						title="Open system color picker"
 						aria-label={`Open system color picker for ${target}`}
 					>
