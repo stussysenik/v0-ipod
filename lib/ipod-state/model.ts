@@ -72,6 +72,24 @@ export type PanelLayoutState = Partial<
 
 export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {};
 
+/**
+ * Color editor targets. `case` writes `presentation.skinColor`; the rest map to the
+ * matching presentation field. Kept as a closed union so the reducer + persistence
+ * can key the saved-color history without stringly-typed lookups.
+ */
+export type ColorTarget = "case" | "bg" | "ring" | "center";
+
+/** Per-target "Recent Custom" swatch history (most-recent first, capped). Lifted out of
+ *  workbench-local state into the model so a global Colors panel can read/write it too. */
+export type SavedColorHistory = Record<ColorTarget, string[]>;
+
+export const COLOR_TARGETS: readonly ColorTarget[] = ["case", "bg", "ring", "center"];
+
+/** Cap on remembered custom colors per target (shared by dock + panel). */
+export const MAX_SAVED_COLORS = 6;
+
+export const DEFAULT_SAVED_COLORS: SavedColorHistory = { case: [], bg: [], ring: [], center: [] };
+
 export const SONG_SNAPSHOT_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = "direct";
 export const DEFAULT_SELECTION_KIND: SnapshotSelectionKind = "moment";
@@ -200,6 +218,8 @@ export interface IpodWorkbenchModel {
 	studio: IpodStudioState;
 	/** Per-mode floating tool-panel layout (spec: floating-panel-system). */
 	panelLayout: PanelLayoutState;
+	/** "Recent Custom" color history per target, shared by the color dock + Colors panel. */
+	savedColors: SavedColorHistory;
 }
 
 export interface IpodUiState {
@@ -277,5 +297,6 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 		},
 		studio: createInitialStudioState(),
 		panelLayout: { ...DEFAULT_PANEL_LAYOUT },
+		savedColors: { case: [], bg: [], ring: [], center: [] },
 	};
 }

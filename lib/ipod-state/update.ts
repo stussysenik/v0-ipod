@@ -15,9 +15,13 @@ import {
 	DEFAULT_BEZEL_COLOR,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
 	DEFAULT_PANEL_LAYOUT,
+	DEFAULT_SAVED_COLORS,
 	DEFAULT_SELECTION_KIND,
+	MAX_SAVED_COLORS,
 	SONG_SNAPSHOT_SCHEMA_VERSION,
 	type BatteryMode,
+	type ColorTarget,
+	type SavedColorHistory,
 	type IpodNowPlayingLayoutState,
 	type IpodStudioState,
 	type IpodWorkbenchModel,
@@ -46,6 +50,7 @@ export type IpodWorkbenchAction =
 	| { type: "SET_BACK_COLOR"; payload: string }
 	| { type: "SET_EDGE_COLOR"; payload: string }
 	| { type: "SET_BEZEL_COLOR"; payload: string }
+	| { type: "SAVE_CUSTOM_COLOR"; payload: { target: ColorTarget; hex: string } }
 	| {
 			type: "SET_HARDWARE_PRESET";
 			payload: IpodWorkbenchModel["presentation"]["hardwarePreset"];
@@ -119,6 +124,18 @@ function clampSongMetadata(metadata: SongMetadata): SongMetadata {
 	};
 }
 
+/** Prepend `hex` to a target's history, de-duplicating and capping at MAX_SAVED_COLORS.
+ *  Shared by the local reducer and the central machine so both surfaces agree. */
+export function pushSavedColor(
+	history: SavedColorHistory,
+	target: ColorTarget,
+	hex: string,
+): SavedColorHistory {
+	const current = history[target] ?? [];
+	const next = [hex, ...current.filter((c) => c !== hex)].slice(0, MAX_SAVED_COLORS);
+	return { ...history, [target]: next };
+}
+
 export function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 	const metadata = clampSongMetadata(model.metadata);
 	const duration = metadata.duration;
@@ -175,6 +192,8 @@ export function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 		// Panel layout is sparse plain data; default an absent/old snapshot to empty so the
 		// host resolves every panel to its registry default (spec: floating-panel-system).
 		panelLayout: model.panelLayout ?? DEFAULT_PANEL_LAYOUT,
+		// Saved-color history rides its own storage key; default an old/absent model to empty.
+		savedColors: model.savedColors ?? DEFAULT_SAVED_COLORS,
 	};
 }
 
@@ -254,6 +273,8 @@ export function applySongSnapshotToModel(
 		studio: current.studio ?? createInitialStudioState(),
 		// Panel layout is editor chrome, not part of a song — keep the live arrangement.
 		panelLayout: current.panelLayout ?? DEFAULT_PANEL_LAYOUT,
+		// Color history is editor chrome too — keep what the user has accumulated.
+		savedColors: current.savedColors ?? DEFAULT_SAVED_COLORS,
 	});
 }
 
@@ -348,6 +369,15 @@ export function ipodWorkbenchReducer(
 			return normalizeModel({
 				...state,
 				presentation: { ...state.presentation, bezelColor: action.payload },
+			});
+		case "SAVE_CUSTOM_COLOR":
+			return normalizeModel({
+				...state,
+				savedColors: pushSavedColor(
+					state.savedColors ?? DEFAULT_SAVED_COLORS,
+					action.payload.target,
+					action.payload.hex,
+				),
 			});
 		case "SET_HARDWARE_PRESET": {
 			const preset = getIpodClassicPreset(action.payload);

@@ -56,19 +56,13 @@ import {
 import { IpodDevice } from "../device/ipod-device";
 import { ExportProgressOverlay, type ExportStage } from "@/components/ipod/export/export-progress-overlay";
 import {
-	BG_CUSTOM_COLORS_KEY,
-	CASE_CUSTOM_COLORS_KEY,
-	RING_CUSTOM_COLORS_KEY,
-	CENTER_CUSTOM_COLORS_KEY,
 	exportWorkbenchGif,
 	exportWorkbenchMp4,
 	exportWorkbenchPng,
-	loadCustomColors,
 	loadPersistedExportCounter,
 	loadPersistedSongSnapshot,
 	loadPersistedLastBattery,
 	loadPersistedWorkbenchModel,
-	persistCustomColors,
 	persistWorkbenchModel,
 	playClickAudio,
 	savePersistedExportCounter,
@@ -83,6 +77,7 @@ import {
 	type IpodViewMode,
 	type IpodOsScreen,
 	type IpodInteractionModel,
+	type ColorTarget,
 } from "@/lib/ipod-state/model";
 import {
 	isAsciiViewMode,
@@ -104,8 +99,6 @@ import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
 import { formatTimecode } from "@/lib/time-utils";
 import { IpodStoreContext } from "@/lib/xstate/store";
 import { PanelSystem } from "../panels/panel-system";
-
-const MAX_CUSTOM_COLORS = 6;
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | AnimatedExportFormat;
@@ -146,10 +139,12 @@ export default function IpodClassicWorkbench() {
 
 	// Customization State
 	const [showSettings, setShowSettings] = useState(false);
-	const [savedCaseColors, setSavedCaseColors] = useState<string[]>([]);
-	const [savedBgColors, setSavedBgColors] = useState<string[]>([]);
-	const [savedRingColors, setSavedRingColors] = useState<string[]>([]);
-	const [savedCenterColors, setSavedCenterColors] = useState<string[]>([]);
+	// Saved-color history now lives in the central store (shared with the Colors panel);
+	// the dock reads the same `model.savedColors` and writes via SAVE_CUSTOM_COLOR.
+	const savedCaseColors = model.savedColors.case;
+	const savedBgColors = model.savedColors.bg;
+	const savedRingColors = model.savedColors.ring;
+	const savedCenterColors = model.savedColors.center;
 	const [isExportCapturing, setIsExportCapturing] = useState(false);
 	const [titleCanMarquee, setTitleCanMarquee] = useState(false);
 	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -257,30 +252,10 @@ export default function IpodClassicWorkbench() {
 		return () => { cancelled = true; };
 	}, [hardwarePreset, viewportSize.width, viewportSize.height]);
 
-	useEffect(() => {
-		setSavedCaseColors(loadCustomColors(CASE_CUSTOM_COLORS_KEY));
-		setSavedBgColors(loadCustomColors(BG_CUSTOM_COLORS_KEY));
-		setSavedRingColors(loadCustomColors(RING_CUSTOM_COLORS_KEY));
-		setSavedCenterColors(loadCustomColors(CENTER_CUSTOM_COLORS_KEY));
-	}, []);
-
-	const saveCustomColor = useCallback((target: "case" | "bg" | "ring" | "center", hex: string) => {
-		const key =
-			target === "case"
-				? CASE_CUSTOM_COLORS_KEY
-				: target === "bg"
-					? BG_CUSTOM_COLORS_KEY
-					: target === "ring"
-						? RING_CUSTOM_COLORS_KEY
-						: CENTER_CUSTOM_COLORS_KEY;
-		const current = loadCustomColors(key);
-		const next = [hex, ...current.filter((c) => c !== hex)].slice(0, MAX_CUSTOM_COLORS);
-		persistCustomColors(key, next);
-		if (target === "case") setSavedCaseColors(next);
-		else if (target === "bg") setSavedBgColors(next);
-		else if (target === "ring") setSavedRingColors(next);
-		else setSavedCenterColors(next);
-	}, []);
+	const saveCustomColor = useCallback(
+		(target: ColorTarget, hex: string) => send({ type: "SAVE_CUSTOM_COLOR", payload: { target, hex } }),
+		[send],
+	);
 
 	useEffect(() => {
 		const readViewport = () => {

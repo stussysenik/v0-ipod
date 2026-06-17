@@ -9,6 +9,7 @@ import type {
 	IpodNowPlayingLayoutState,
 	IpodInteractionModel,
 	IpodHardwarePresetId,
+	ColorTarget,
 	PanelFrame,
 	PanelId,
 	PanelLayoutState
@@ -17,6 +18,7 @@ import {
 	normalizeModel,
 	createInitialIpodWorkbenchModel,
 	applySongSnapshotToModel,
+	pushSavedColor,
 	type SongSnapshot
 } from "@/lib/ipod-state/update";
 import {
@@ -45,6 +47,7 @@ export type IpodMachineEvent =
 	| { type: "SET_BG_COLOR"; payload: string }
 	| { type: "SET_RING_COLOR"; payload: string }
 	| { type: "SET_CENTER_COLOR"; payload: string }
+	| { type: "SAVE_CUSTOM_COLOR"; payload: { target: ColorTarget; hex: string } }
 	| { type: "SET_HARDWARE_PRESET"; payload: IpodHardwarePresetId }
 	| { type: "SET_INTERACTION_MODEL"; payload: IpodInteractionModel }
 	| { type: "SET_SELECTION_KIND"; payload: SnapshotSelectionKind }
@@ -184,6 +187,12 @@ export const ipodCentralMachine = createMachine(
 				actions: assign(({ context, event }) => normalizeModel({
 					...context,
 					presentation: { ...context.presentation, centerColor: event.payload },
+				})),
+			},
+			SAVE_CUSTOM_COLOR: {
+				actions: assign(({ context, event }) => normalizeModel({
+					...context,
+					savedColors: pushSavedColor(context.savedColors, event.payload.target, event.payload.hex),
 				})),
 			},
 			SET_HARDWARE_PRESET: {

@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import type { PanelFrame, PanelId } from "@/lib/ipod-state/model";
+import { ColorsPanelBody } from "./colors-panel-body";
 import { SettingsPanelBody } from "./settings-panel-body";
 import { ViewModePanelBody } from "./view-mode-panel-body";
 
@@ -45,6 +46,14 @@ export const PANEL_REGISTRY: Record<PanelId, PanelSpec> = {
 		minSize: { w: 240, h: 220 },
 		defaultFrame: { x: 24, y: 340, w: 300, h: 420, collapsed: false, visible: false, z: 1 },
 		content: <SettingsPanelBody />,
+	},
+	colors: {
+		id: "colors",
+		title: "Colors",
+		idealMinSize: { w: 260, h: 36 },
+		minSize: { w: 260, h: 260 },
+		defaultFrame: { x: 24, y: 88, w: 320, h: 520, collapsed: false, visible: false, z: 1 },
+		content: <ColorsPanelBody />,
 	},
 };
 

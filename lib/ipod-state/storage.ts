@@ -1,11 +1,16 @@
 import type { SongMetadata } from "@/types/ipod";
 import {
+	COLOR_TARGETS,
 	createInitialStudioState,
 	DEFAULT_PANEL_LAYOUT,
+	DEFAULT_SAVED_COLORS,
+	MAX_SAVED_COLORS,
 	type BatteryMode,
+	type ColorTarget,
 	type IpodStudioState,
 	type IpodWorkbenchModel,
 	type PanelLayoutState,
+	type SavedColorHistory,
 } from "@/lib/ipod-state/model";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
@@ -43,6 +48,15 @@ const STUDIO_STORAGE_KEY = "ipodSnapshotStudio";
 // Floating tool-panel layout (spec: floating-panel-system) is editor-local, per-mode
 // chrome — not song/finish — so it rides its own key rather than the shared SongSnapshot.
 const PANEL_LAYOUT_STORAGE_KEY = "ipodSnapshotPanelLayout";
+// "Recent Custom" color history, one localStorage key per target. These pre-date the
+// model-lift and are kept verbatim so a user's existing swatches survive the migration
+// into `model.savedColors` (spec: floating-panel-system §6 — colors panel).
+const SAVED_COLORS_KEYS: Record<ColorTarget, string> = {
+	case: "ipodSnapshotCaseCustomColors",
+	bg: "ipodSnapshotBgCustomColors",
+	ring: "ipodSnapshotRingCustomColors",
+	center: "ipodSnapshotCenterCustomColors",
+};
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 export function loadMetadata(): Partial<SongMetadata> | null {
@@ -481,6 +495,7 @@ export function saveWorkbenchModel(model: IpodWorkbenchModel): void {
 	};
 	saveSongSnapshot(snapshot);
 	saveStudioState(model.studio);
+	saveSavedColors(model.savedColors);
 }
 
 export function loadWorkbenchModel(): IpodWorkbenchModel | null {
@@ -516,6 +531,8 @@ export function loadWorkbenchModel(): IpodWorkbenchModel | null {
 		studio: loadStudioState() ?? createInitialStudioState(),
 		// Panel layout rides its own key too (editor-local, per-mode chrome).
 		panelLayout: loadPanelLayout(),
+		// Color history rides its own per-target keys (editor-local chrome).
+		savedColors: loadSavedColors(),
 	};
 }
 
@@ -572,6 +589,35 @@ export function loadPanelLayout(): PanelLayoutState {
 		return parsed as PanelLayoutState;
 	} catch {
 		return { ...DEFAULT_PANEL_LAYOUT };
+	}
+}
+
+export function loadSavedColors(): SavedColorHistory {
+	const result: SavedColorHistory = { case: [], bg: [], ring: [], center: [] };
+	for (const target of COLOR_TARGETS) {
+		try {
+			const raw = localStorage.getItem(SAVED_COLORS_KEYS[target]);
+			if (!raw) continue;
+			const parsed: unknown = JSON.parse(raw);
+			if (!Array.isArray(parsed)) continue;
+			result[target] = parsed
+				.filter((v): v is string => typeof v === "string" && HEX_COLOR_PATTERN.test(v))
+				.slice(0, MAX_SAVED_COLORS);
+		} catch {
+			// Ignore corrupt blobs — target stays empty.
+		}
+	}
+	return result;
+}
+
+export function saveSavedColors(history: SavedColorHistory): void {
+	const safe = history ?? DEFAULT_SAVED_COLORS;
+	for (const target of COLOR_TARGETS) {
+		try {
+			localStorage.setItem(SAVED_COLORS_KEYS[target], JSON.stringify(safe[target] ?? []));
+		} catch {
+			// Ignore quota errors
+		}
 	}
 }
 

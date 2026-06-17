@@ -29,13 +29,30 @@
 
 ## 6. Incremental migration of remaining tool docks  — IN PROGRESS
 Panels migrate in one at a time; both surfaces read the same store until the dock retires.
-- [~] 6.1 Migrated so far: `view` (seed) and `settings` (Physical Revision / Control Interface /
-  Power Cell — fully store-backed, `settings-panel-body.tsx`). REMAINING: color editors (need the
-  saved-color history + snapshot I/O lifted into the store/context first), studio controls, shots.
+- [~] 6.1 Migrated so far: `view` (seed), `settings` (Physical Revision / Control Interface /
+  Power Cell — `settings-panel-body.tsx`), and `colors` (Case / Outer Click Wheel / Center Button /
+  Studio Background + snapshot Restore/Save — `colors-panel-body.tsx`). The colors migration
+  required the state-lift it was blocked on: the per-target "Recent Custom" history now lives in
+  `model.savedColors` (+ `SAVE_CUSTOM_COLOR` event in both the central machine and the local
+  reducer, `pushSavedColor` helper, `loadSavedColors`/`saveSavedColors` persistence reusing the
+  legacy per-target keys). The dock's `KumaSettingsPanel` now reads the same store slice and the
+  shared `ColorField`/`ColorSwatchButton` (extracted to `components/ipod/editors/color-field.tsx`),
+  so both surfaces stay in lockstep. REMAINING: studio controls + shots — these live in the `/3d`
+  stage's *local* `useReducer` (not the central store the panels read), so they need a 3D-local
+  context bridge (reducer + camera `apiRef`) rather than a store read; deferred until the dev
+  harness hydrates (see 6.3) so the 3D refactor can be runtime-verified.
 - [x] 6.2 Add palette commands for each migrated panel — automatic via the live registry (summon/
   toggle/collapse Settings appear with no extra wiring)
-- [x] 6.3 Verify after each migration: `view` + `settings` — type-check 0, floating-panels.spec 8/8,
-  lint 0 errors; Settings panel summons, renders all three sections, and toggling drives the store
+- [~] 6.3 Verify after each migration: `view` + `settings` + `colors` — type-check 0, full unit
+  suite 353/353 (incl. panel-layout 8/8 + model/normalize/snapshot round-trips exercising
+  `savedColors`), lint 0 errors (61 warnings, −1 vs the 62 baseline). LIVE e2e BLOCKED: in the
+  current dev environment the client tree does not hydrate — `npm run dev` / `dev:raw` both serve
+  HTML (200) and React's runtime executes, but interactive React (button clicks, the ⌘K document
+  listener) never responds and the HMR socket returns `ERR_INVALID_HTTP_RESPONSE`. Confirmed
+  identical on a clean `git stash` of all this work (baseline `floating-panels.spec:39` fails the
+  same way), so it is a pre-existing harness/tooling issue, NOT a regression from §6. Colors panel
+  is a structural twin of the verified Settings panel; re-run floating-panels.spec once the harness
+  hydrates again to close this out.
 
 ## 7. Validation
 - [x] 7.1 `pnpm type-check` (exit 0) and `pnpm lint` (0 errors; 62 pre-existing warnings, no new)
