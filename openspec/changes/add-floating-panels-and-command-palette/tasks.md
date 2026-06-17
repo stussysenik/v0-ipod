@@ -27,11 +27,15 @@
 - [x] 5.1 Below the compact breakpoint (`< 768`), `panel-host` renders nothing — tool surfaces fall back to the existing docked / bottom-sheet layout with no drag/resize affordances
 - [x] 5.2 Verify: `tests/mobile-usability.spec.ts` still passes (4/4) — no regression to `add-mobile-responsive-stability`
 
-## 6. Incremental migration of remaining tool docks  — REMAINING (intentional)
-The registry is deliberately seeded with one panel; the rest migrate in panel-by-panel.
-- [ ] 6.1 Migrate remaining workbench dock controls (color editors, settings, studio controls, shots) into registered panels one at a time, keeping each working until migrated
-- [ ] 6.2 Add palette commands for each migrated panel (covered by the live registry — automatic once registered)
-- [ ] 6.3 Verify after each migration: type-check, panel interaction, and palette command for that panel
+## 6. Incremental migration of remaining tool docks  — IN PROGRESS
+Panels migrate in one at a time; both surfaces read the same store until the dock retires.
+- [~] 6.1 Migrated so far: `view` (seed) and `settings` (Physical Revision / Control Interface /
+  Power Cell — fully store-backed, `settings-panel-body.tsx`). REMAINING: color editors (need the
+  saved-color history + snapshot I/O lifted into the store/context first), studio controls, shots.
+- [x] 6.2 Add palette commands for each migrated panel — automatic via the live registry (summon/
+  toggle/collapse Settings appear with no extra wiring)
+- [x] 6.3 Verify after each migration: `view` + `settings` — type-check 0, floating-panels.spec 8/8,
+  lint 0 errors; Settings panel summons, renders all three sections, and toggling drives the store
 
 ## 7. Validation
 - [x] 7.1 `pnpm type-check` (exit 0) and `pnpm lint` (0 errors; 62 pre-existing warnings, no new)
