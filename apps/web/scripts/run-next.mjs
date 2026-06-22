@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const command = process.argv[2];
@@ -200,7 +201,10 @@ if (port !== basePort) {
 	console.log(`[run-next] port ${basePort} in use — using ${port} instead`);
 }
 
-const nextBin = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
+// Resolve Next from wherever the package manager placed it (node-linker=hoisted
+// puts it in the repo-root node_modules, not apps/web/node_modules).
+const require = createRequire(import.meta.url);
+const nextBin = join(dirname(require.resolve("next/package.json")), "dist/bin/next");
 
 const args = [nextBin, command, "-p", String(port)];
 if (command === "dev") {

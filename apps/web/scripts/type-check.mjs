@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const requiredTypeArtifacts = [
 	resolve(repoRoot, ".next/types/app/page.ts"),
@@ -26,11 +28,10 @@ function runNodeScript(scriptPath, args) {
 if (requiredTypeArtifacts.some((artifactPath) => !existsSync(artifactPath))) {
 	console.log("[type-check] generating Next.js type artifacts");
 
-	const nextBin = fileURLToPath(
-		new URL("../node_modules/next/dist/bin/next", import.meta.url),
-	);
+	const nextBin = join(dirname(require.resolve("next/package.json")), "dist/bin/next");
 	const preflightExitCode = runNodeScript(nextBin, [
 		"build",
+		"--webpack",
 		"--experimental-build-mode",
 		"compile",
 	]);
@@ -40,6 +41,6 @@ if (requiredTypeArtifacts.some((artifactPath) => !existsSync(artifactPath))) {
 	}
 }
 
-const tscBin = fileURLToPath(new URL("../node_modules/typescript/bin/tsc", import.meta.url));
+const tscBin = join(dirname(require.resolve("typescript/package.json")), "bin/tsc");
 
 process.exit(runNodeScript(tscBin, ["--noEmit"]));

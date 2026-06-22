@@ -1,12 +1,16 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 
-# next.js
-/.next/
-/.next-dev/
+# next.js (app lives in apps/web)
+.next/
+.next-dev/
 /out/
+apps/web/out/
+
+# turbo
+.turbo/
 
 # production
 /build
@@ -34,15 +38,13 @@ screenshot1.png
 screenshot2.png
 
 # PWA generated files
-/public/sw.js
-/public/sw.js.map
-/public/workbox-*.js
-/public/workbox-*.js.map
-!/public/sw.js
+**/public/sw.js
+**/public/sw.js.map
+**/public/workbox-*.js
+**/public/workbox-*.js.map
 
 # local test assets
 IMG_5875.PNG
 
 *storybook.log
 storybook-static
-.tmp-screens/
