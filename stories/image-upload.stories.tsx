@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { ImageUpload } from "@/components/ipod/image-upload";
+import { ImageUpload } from "@ipod/components/ipod/image-upload";
 
 import { compatParameters } from "../.storybook/shared";
 

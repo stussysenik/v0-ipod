@@ -1,0 +1,10 @@
+{
+	"name": "@ipod/components",
+	"version": "0.1.0",
+	"private": true,
+	"dependencies": {
+		"@ipod/hooks": "workspace:*",
+		"@ipod/lib": "workspace:*",
+		"@ipod/types": "workspace:*"
+	}
+}

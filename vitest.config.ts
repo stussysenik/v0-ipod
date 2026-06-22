@@ -10,12 +10,21 @@ import { playwright } from "@vitest/browser-playwright";
 const dirname =
 	typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
+// Mirror the workspace path aliases from tsconfig.base.json so Vitest resolves
+// cross-package imports the same way Next/tsc do.
+const alias = {
+	"@ipod/types": path.join(dirname, "packages/types"),
+	"@ipod/tokens": path.join(dirname, "packages/tokens"),
+	"@ipod/hooks": path.join(dirname, "packages/hooks"),
+	"@ipod/lib": path.join(dirname, "packages/lib"),
+	"@ipod/components": path.join(dirname, "packages/components"),
+	"@scripts": path.join(dirname, "tools/scripts"),
+};
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
 	resolve: {
-		alias: {
-			"@": dirname,
-		},
+		alias,
 	},
 	test: {
 		projects: [
@@ -23,8 +32,9 @@ export default defineConfig({
 				test: {
 					name: "unit",
 					environment: "node",
-					include: ["lib/**/*.test.ts"],
+					include: ["packages/lib/**/*.test.ts"],
 				},
+				resolve: { alias },
 			},
 			{
 				extends: true,

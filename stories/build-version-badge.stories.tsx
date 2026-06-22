@@ -1,4 +1,4 @@
-import { BuildVersionBadge } from "@/components/build-version-badge";
+import { BuildVersionBadge } from "@ipod/components/build-version-badge";
 
 import { compatParameters } from "../.storybook/shared";
 

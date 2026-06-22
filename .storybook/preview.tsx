@@ -1,5 +1,5 @@
 import type { Preview } from "@storybook/nextjs-vite";
-import { ThemeProvider } from "@/components/ui/theme-provider";
+import { ThemeProvider } from "@ipod/components/ui/theme-provider";
 import "../app/globals.css";
 
 const preview: Preview = {

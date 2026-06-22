@@ -1,6 +1,6 @@
 import { Camera, Download, Share } from "lucide-react";
 
-import { IconButton } from "@/components/ui/icon-button";
+import { IconButton } from "@ipod/components/ui/icon-button";
 
 import { compatParameters } from "../.storybook/shared";
 

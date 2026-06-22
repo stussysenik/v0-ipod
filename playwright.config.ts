@@ -5,7 +5,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 const useProductionServer = process.env.PLAYWRIGHT_USE_PROD_SERVER === "1";
 
 export default defineConfig({
-	testDir: "./tests",
+	testDir: "./apps/web/tests",
 	timeout: 120_000,
 	expect: {
 		timeout: 10_000,
@@ -23,8 +23,8 @@ export default defineConfig({
 	},
 	webServer: {
 		command: useProductionServer
-			? `PORT=${port} PORT_STRICT=1 npm run start`
-			: `PORT=${port} PORT_STRICT=1 npm run dev`,
+			? `PORT=${port} PORT_STRICT=1 pnpm --filter @ipod/web run start`
+			: `PORT=${port} PORT_STRICT=1 pnpm --filter @ipod/web run dev`,
 		reuseExistingServer: useProductionServer ? false : !process.env.CI,
 		timeout: 120_000,
 		url: baseURL,

@@ -1,4 +1,4 @@
-import IPodClassic from "@/components/ipod/ipod-classic";
+import IPodClassic from "@ipod/components/ipod/ipod-classic";
 
 import { compatParameters } from "../.storybook/shared";
 

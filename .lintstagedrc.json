@@ -3,6 +3,6 @@
 		"oxlint --fix --nextjs-plugin --react-plugin --jsx-a11y-plugin",
 		"eslint --fix"
 	],
-	"tailwind.config.ts": ["pnpm exec tokens:extract", "git add design-tokens/tokens.json"],
-	"app/globals.css": ["pnpm exec tokens:extract", "git add design-tokens/tokens.json"]
+	"apps/web/tailwind.config.ts": ["pnpm exec tokens:extract", "git add design-tokens/tokens.json"],
+	"apps/web/app/globals.css": ["pnpm exec tokens:extract", "git add design-tokens/tokens.json"]
 }

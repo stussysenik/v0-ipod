@@ -1,4 +1,4 @@
-import { ScreenBattery } from "@/components/ipod/screen-battery";
+import { ScreenBattery } from "@ipod/components/ipod/screen-battery";
 
 import { compatParameters } from "../.storybook/shared";
 

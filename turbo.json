@@ -1,0 +1,33 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"ui": "stream",
+	"globalEnv": [
+		"NODE_ENV",
+		"PORT",
+		"PORT_STRICT",
+		"NEXT_DIST_DIR",
+		"CLOUDFLARE_TUNNEL",
+		"CLOUDFLARED_BIN",
+		"PLAYWRIGHT_USE_PROD_SERVER",
+		"PLAYWRIGHT_BASE_URL",
+		"VERCEL"
+	],
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": [".next/**", "!.next/cache/**"]
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true
+		},
+		"start": {
+			"cache": false,
+			"persistent": true
+		},
+		"type-check": {
+			"dependsOn": ["^build"]
+		},
+		"lint": {}
+	}
+}

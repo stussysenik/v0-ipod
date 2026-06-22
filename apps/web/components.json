@@ -1,0 +1,21 @@
+{
+	"$schema": "https://ui.shadcn.com/schema.json",
+	"style": "new-york",
+	"rsc": true,
+	"tsx": true,
+	"tailwind": {
+		"config": "",
+		"css": "app/globals.css",
+		"baseColor": "neutral",
+		"cssVariables": true,
+		"prefix": ""
+	},
+	"aliases": {
+		"components": "@ipod/components",
+		"utils": "@ipod/lib/support/utils",
+		"ui": "@ipod/components/ui",
+		"lib": "@ipod/lib",
+		"hooks": "@ipod/hooks"
+	},
+	"iconLibrary": "lucide"
+}

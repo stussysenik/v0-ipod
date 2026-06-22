@@ -1,0 +1,16 @@
+{
+	"//": "Repo-root base config: inherits the shared style preset from @ipod/config and layers in the monorepo path aliases (anchored at repo root). Every app/package extends this file.",
+	"extends": "./packages/config/tsconfig.base.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@ipod/types/*": ["packages/types/*"],
+			"@ipod/tokens/*": ["packages/tokens/*"],
+			"@ipod/hooks": ["packages/hooks/index.ts"],
+			"@ipod/hooks/*": ["packages/hooks/*"],
+			"@ipod/lib/*": ["packages/lib/*"],
+			"@ipod/components/*": ["packages/components/*"],
+			"@scripts/*": ["tools/scripts/*"]
+		}
+	}
+}

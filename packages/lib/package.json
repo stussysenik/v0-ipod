@@ -1,0 +1,9 @@
+{
+	"name": "@ipod/lib",
+	"version": "0.1.0",
+	"private": true,
+	"dependencies": {
+		"@ipod/types": "workspace:*",
+		"@ipod/tokens": "workspace:*"
+	}
+}

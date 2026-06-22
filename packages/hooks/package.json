@@ -1,0 +1,9 @@
+{
+	"name": "@ipod/hooks",
+	"version": "0.1.0",
+	"private": true,
+	"main": "index.ts",
+	"dependencies": {
+		"@ipod/types": "workspace:*"
+	}
+}

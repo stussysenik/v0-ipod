@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeToggle } from "@ipod/components/ui/theme-toggle";
 
 import { compatParameters } from "../.storybook/shared";
 

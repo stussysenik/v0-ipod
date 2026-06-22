@@ -1,4 +1,4 @@
-import { CarbonCheckbox } from "@/components/ui/carbon-checkbox";
+import { CarbonCheckbox } from "@ipod/components/ui/carbon-checkbox";
 
 import { compatParameters } from "../.storybook/shared";
 

@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { ProgressBar } from "@/components/ipod/progress-bar";
+import { ProgressBar } from "@ipod/components/ipod/progress-bar";
 
 import { compatParameters } from "../.storybook/shared";
 

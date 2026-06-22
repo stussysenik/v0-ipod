@@ -1,0 +1,21 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"plugins": [{ "name": "next" }]
+	},
+	"include": [
+		"next-env.d.ts",
+		"**/*.ts",
+		"**/*.tsx",
+		"../../packages/**/*.ts",
+		"../../packages/**/*.tsx",
+		".next/types/**/*.ts",
+		".next-dev/types/**/*.ts",
+		".next-dev/dev/types/**/*.ts",
+		".next/dev/types/**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"../../packages/components/ipod-form.tsx"
+	]
+}
