@@ -48,3 +48,6 @@ IMG_5875.PNG
 
 *storybook.log
 storybook-static
+
+# dev logs
+dev-output.log
