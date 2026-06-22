@@ -1,4 +1,4 @@
-import { RevisionSpecCard } from "@/components/ipod/revision-spec-card";
+import { RevisionSpecCard } from "@ipod/components/ipod/revision-spec-card";
 
 import { compatParameters } from "../.storybook/shared";
 

@@ -1,0 +1,191 @@
+"use client";
+
+import { IpodStarRating } from "@ipod/components/ipod/controls/ipod-star-rating";
+import { EditableText } from "@ipod/components/ipod/editors/editable-text";
+import { EditableTrackNumber } from "@ipod/components/ipod/editors/editable-track-number";
+import { getTextTokenCss } from "@ipod/lib/color-manifest";
+import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
+import type { SongMetadata } from "@ipod/types/ipod";
+import type { RenderNowPlayingElement } from "@ipod/components/ipod/scenes/ipod-scene-types";
+
+interface IpodTrackMetaPanelProps {
+	screenTokens: IpodClassicPresetDefinition["screen"];
+	state: SongMetadata;
+	renderElement: RenderNowPlayingElement;
+	isInlineEditingEnabled: boolean;
+	titlePreview: boolean;
+	animateText: boolean;
+	titleCaptureReady: boolean;
+	onTitleOverflowChange?: (overflow: boolean) => void;
+	onTitleChange: (value: string) => void;
+	onArtistChange: (value: string) => void;
+	onAlbumChange: (value: string) => void;
+	onRatingChange: (rating: number) => void;
+	onTrackNumberChange: (value: number) => void;
+	onTotalTracksChange: (value: number) => void;
+	playClick: () => void;
+}
+
+export function IpodTrackMetaPanel({
+	screenTokens,
+	state,
+	renderElement,
+	isInlineEditingEnabled,
+	titlePreview,
+	animateText,
+	titleCaptureReady,
+	onTitleOverflowChange,
+	onTitleChange,
+	onArtistChange,
+	onAlbumChange,
+	onRatingChange,
+	onTrackNumberChange,
+	onTotalTracksChange,
+	playClick,
+}: IpodTrackMetaPanelProps) {
+	const titleColor = getTextTokenCss("screen.title");
+	const artistColor = getTextTokenCss("screen.artist");
+	const albumColor = getTextTokenCss("screen.album");
+	const trackInfoColor = getTextTokenCss("screen.trackInfo");
+
+	return (
+		<div
+			className="z-20 flex h-full w-full min-w-0 flex-col justify-start pt-[44px] pr-[2px] text-left"
+			data-testid="track-meta"
+		>
+			{renderElement(
+				"title",
+				<div
+					className="min-w-0 font-bold leading-[1.05] tracking-[-0.03em]"
+					style={{
+						color: titleColor,
+						fontSize: screenTokens.titleFontSize,
+					}}
+				>
+					<EditableText
+						value={state.title}
+						onChange={onTitleChange}
+						disabled={!isInlineEditingEnabled}
+						className="max-w-full min-w-0"
+						editLabel="Edit title"
+						dataTestId="track-title-text"
+						animate={titlePreview || animateText}
+						preview={titlePreview || animateText}
+						captureReady={titleCaptureReady}
+						onOverflowChange={onTitleOverflowChange}
+						singleLine={!titlePreview && !animateText}
+						staggerIndex={0}
+					/>
+				</div>,
+				{
+					className: "relative z-20 w-full min-w-0",
+					style: { marginBottom: screenTokens.titleMarginBottom },
+					testId: "track-title",
+				},
+			)}
+
+			{renderElement(
+				"artist",
+				<div
+					className="min-w-0 font-normal leading-[1.25] tracking-[-0.01em]"
+					style={{
+						color: artistColor,
+						fontSize: screenTokens.artistFontSize,
+					}}
+				>
+					<EditableText
+						value={state.artist}
+						onChange={onArtistChange}
+						disabled={!isInlineEditingEnabled}
+						className="max-w-full min-w-0"
+						editLabel="Edit artist"
+						dataTestId="track-artist-text"
+						animate={titlePreview || animateText}
+						preview={titlePreview || animateText}
+						captureReady={titleCaptureReady}
+						singleLine={!titlePreview && !animateText}
+						staggerIndex={1}
+					/>
+				</div>,
+				{
+					className: "relative z-20 w-full min-w-0",
+					style: { marginBottom: screenTokens.artistMarginBottom },
+					testId: "track-artist",
+				},
+			)}
+
+			{renderElement(
+				"album",
+				<div
+					className="min-w-0 font-normal leading-[1.25] tracking-[-0.01em]"
+					style={{
+						color: albumColor,
+						fontSize: screenTokens.albumFontSize,
+					}}
+				>
+					<EditableText
+						value={state.album}
+						onChange={onAlbumChange}
+						disabled={!isInlineEditingEnabled}
+						className="max-w-full min-w-0"
+						editLabel="Edit album"
+						dataTestId="track-album-text"
+						animate={titlePreview || animateText}
+						preview={titlePreview || animateText}
+						captureReady={titleCaptureReady}
+						singleLine={!titlePreview && !animateText}
+						staggerIndex={2}
+					/>
+				</div>,
+				{
+					className: "relative z-20 w-full min-w-0",
+					style: { marginBottom: screenTokens.albumMarginBottom },
+					testId: "track-album",
+				},
+			)}
+
+			{renderElement(
+				"rating",
+				<IpodStarRating
+					rating={state.rating}
+					onChange={(rating) => {
+						if (!isInlineEditingEnabled) {
+							return;
+						}
+
+						onRatingChange(rating);
+						playClick();
+					}}
+					disabled={!isInlineEditingEnabled}
+					fontSize={Math.max(10, screenTokens.metaFontSize + 2)}
+				/>,
+				{
+					className: "relative z-20",
+					style: { marginBottom: screenTokens.metaMarginBottom },
+					testId: "os-layout-rating",
+				},
+			)}
+
+			{renderElement(
+				"track-info",
+				<div
+					className="mt-[6.5px] font-normal leading-tight tracking-[0.01em] pb-0"
+					style={{
+						color: trackInfoColor,
+						fontSize: screenTokens.metaFontSize,
+						fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+					}}
+				>
+					<EditableTrackNumber
+						trackNumber={state.trackNumber}
+						totalTracks={state.totalTracks}
+						onTrackNumberChange={onTrackNumberChange}
+						onTotalTracksChange={onTotalTracksChange}
+						disabled={!isInlineEditingEnabled}
+					/>
+				</div>,
+				{ testId: "os-layout-track-info" },
+			)}
+		</div>
+	);
+}

@@ -1,9 +1,9 @@
 import { fn } from "@storybook/test";
 
-import { ClickWheel } from "@/components/ipod/click-wheel";
-import { IPodDeviceShell } from "@/components/ipod/ipod-device-shell";
-import { IpodScreen } from "@/components/ipod/ipod-screen";
-import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { ClickWheel } from "@ipod/components/ipod/click-wheel";
+import { IPodDeviceShell } from "@ipod/components/ipod/ipod-device-shell";
+import { IpodScreen } from "@ipod/components/ipod/ipod-screen";
+import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
 
 import { compatParameters } from "../.storybook/shared";
 

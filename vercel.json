@@ -1,6 +1,7 @@
 {
 	"$schema": "https://openapi.vercel.sh/vercel.json",
-	"buildCommand": "rm -rf .next && next build --webpack",
+	"buildCommand": "turbo run build --filter=@ipod/web",
+	"outputDirectory": "apps/web/.next",
 	"cleanUrls": true,
 	"headers": [
 		{

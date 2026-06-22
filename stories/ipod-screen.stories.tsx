@@ -1,7 +1,7 @@
 import { fn } from "@storybook/test";
 
-import { IpodScreen } from "@/components/ipod/ipod-screen";
-import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { IpodScreen } from "@ipod/components/ipod/ipod-screen";
+import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
 
 import { compatParameters } from "../.storybook/shared";
 

@@ -1,4 +1,4 @@
-import { IPodDeviceShell } from "@/components/ipod/ipod-device-shell";
+import { IPodDeviceShell } from "@ipod/components/ipod/ipod-device-shell";
 
 import { compatParameters } from "../.storybook/shared";
 

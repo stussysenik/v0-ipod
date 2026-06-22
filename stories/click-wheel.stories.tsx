@@ -1,7 +1,7 @@
 import { fn } from "@storybook/test";
 
-import { ClickWheel } from "@/components/ipod/click-wheel";
-import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { ClickWheel } from "@ipod/components/ipod/click-wheel";
+import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
 
 import { compatParameters } from "../.storybook/shared";
 

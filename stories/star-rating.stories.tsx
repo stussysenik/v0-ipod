@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { StarRating } from "@/components/ipod/star-rating";
+import { StarRating } from "@ipod/components/ipod/star-rating";
 
 import { compatParameters } from "../.storybook/shared";
 

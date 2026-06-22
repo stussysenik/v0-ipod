@@ -1,0 +1,151 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { IpodClickWheel } from "@ipod/components/ipod/controls/ipod-click-wheel";
+import { PortfolioScreen } from "@ipod/components/ipod/portfolio/portfolio-screen";
+import {
+	DEFAULT_HARDWARE_PRESET_ID,
+	getIpodClassicPreset,
+} from "@ipod/lib/ipod-classic-presets";
+import { playClickAudio } from "@ipod/lib/ipod-state/effects";
+import { createInitialIpodWorkbenchModel } from "@ipod/lib/ipod-state/model";
+import { profile } from "@ipod/lib/portfolio/data";
+import { usePortfolioOs } from "@ipod/lib/portfolio/os";
+
+const ThreeDIpod = dynamic(
+	() => import("@ipod/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
+	{
+		ssr: false,
+		loading: () => (
+			<div className="absolute inset-0 grid place-items-center text-xs font-medium uppercase tracking-[0.2em] text-white/60">
+				Assembling…
+			</div>
+		),
+	},
+);
+
+/**
+ * Portfolio stage — the recruiter-facing `/portfolio` experience.
+ *
+ * It serves the canonical Noir device (black 2008 Classic, hand-tuned wheel,
+ * Designer Dark rig, the #0048FF stage — the same factory default `/3d` boots)
+ * and swaps the music OS for the portfolio OS: the click wheel drives
+ * `usePortfolioOs`, and the live display renders `PortfolioScreen`.
+ *
+ * Mobile-first: on coarse-pointer devices the camera boots LOCKED so a thumb
+ * circling the wheel can never knock the composed hero angle — orbit is an
+ * explicit opt-in via the small toggle. `touch-action: none` on the stage stops
+ * the browser from translating wheel gestures into scroll/zoom, which is what
+ * makes the touch click-wheel usable "immediately" on an iPhone.
+ */
+export function IpodPortfolioStage() {
+	const audioRef = useRef<HTMLAudioElement | null>(null);
+
+	const playClick = useCallback(() => {
+		playClickAudio(audioRef);
+	}, []);
+
+	const openUrl = useCallback((url: string) => {
+		window.open(url, "_blank", "noopener,noreferrer");
+	}, []);
+
+	const os = usePortfolioOs(openUrl);
+
+	// The factory model IS the noir look — one source of truth with /3d.
+	const initialModel = useMemo(() => createInitialIpodWorkbenchModel(), []);
+	const presentation = initialModel.presentation;
+	const lighting = initialModel.studio.lighting;
+	const preset = useMemo(
+		() => getIpodClassicPreset(presentation.hardwarePreset ?? DEFAULT_HARDWARE_PRESET_ID),
+		[presentation.hardwarePreset],
+	);
+
+	// Camera lock: SSR renders locked (deterministic), then fine pointers (mouse)
+	// unlock on mount — desktop drag-to-orbit stays a feature, touch stays safe.
+	const [orbitEnabled, setOrbitEnabled] = useState(false);
+	useEffect(() => {
+		if (window.matchMedia("(pointer: fine)").matches) setOrbitEnabled(true);
+	}, []);
+
+	const screenComponent = (
+		<PortfolioScreen preset={preset} frame={os.frame} rows={os.rows} />
+	);
+
+	const wheelComponent = (
+		<IpodClickWheel
+			chromeless
+			preset={preset}
+			skinColor={presentation.skinColor}
+			ringColor={presentation.ringColor || undefined}
+			centerColor={presentation.centerColor || undefined}
+			playClick={playClick}
+			onSeek={(direction) => {
+				os.seek(direction);
+			}}
+			onCenterClick={os.select}
+			onMenuPress={os.back}
+			onPreviousPress={() => os.step(-1)}
+			onNextPress={() => os.step(1)}
+			onPlayPausePress={os.select}
+		/>
+	);
+
+	return (
+		<div
+			className="relative h-dvh w-full touch-none select-none overflow-hidden overscroll-none"
+			style={{ backgroundColor: presentation.bgColor }}
+		>
+			{/* Identity Signature Background — large, clean watermark behind the device */}
+			<div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+				<div className="text-[18vw] font-black uppercase tracking-[-0.05em] text-white/[0.04] leading-none select-none">
+					{profile.handle}
+				</div>
+			</div>
+
+			<div className="relative z-10 h-full w-full">
+				<ThreeDIpod
+					preset={preset}
+					capacityLabel={preset.capacityLabel}
+					skinColor={presentation.skinColor}
+					ringColor={presentation.ringColor || undefined}
+					centerColor={presentation.centerColor || undefined}
+					backColor={presentation.backColor}
+					edgeColor={presentation.edgeColor}
+					bezelColor={presentation.bezelColor}
+					captureBackground={presentation.bgColor}
+					lighting={lighting}
+					cameraLocked={!orbitEnabled}
+					screen={screenComponent}
+					wheel={wheelComponent}
+					stageClassName="bg-transparent"
+				/>
+			</div>
+
+			{/* Identity — top-left, inked for the blue stage */}
+			<div className="pointer-events-none absolute left-6 top-6 z-20 pt-[env(safe-area-inset-top)]">
+				<div className="text-[12px] font-bold uppercase tracking-[0.3em] text-white">
+					{profile.handle}
+				</div>
+				<div className="text-[13px] font-medium text-white/75">{profile.role}</div>
+			</div>
+
+			{/* Orbit lock — the HOLD switch of the stage. Locked = the wheel owns
+			    every gesture; unlocked = drag the stage to orbit the device. */}
+			<button
+				type="button"
+				onClick={() => setOrbitEnabled((v) => !v)}
+				aria-pressed={orbitEnabled}
+				className="absolute right-6 top-6 z-20 mt-[env(safe-area-inset-top)] rounded-full border border-white/25 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 transition-all hover:border-white/50 hover:bg-white/5 hover:text-white active:scale-95"
+			>
+				{orbitEnabled ? "Orbit · On" : "Hold · Locked"}
+			</button>
+
+			{/* Hint — bottom-left */}
+			<div className="pointer-events-none absolute bottom-6 left-6 z-20 pb-[env(safe-area-inset-bottom)] text-[11px] font-semibold tracking-wide text-white/50 uppercase">
+				Wheel to scroll · Center to select · Menu to go back
+			</div>
+		</div>
+	);
+}

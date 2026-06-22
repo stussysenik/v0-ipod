@@ -3,7 +3,7 @@ import {
 	BACKGROUND_CURATED_FAVORITES,
 	CASE_CURATED_FAVORITES,
 	getAuthenticFinishes,
-} from "@/lib/color-manifest";
+} from "@ipod/lib/color-manifest";
 
 function Swatch({ label, hex, note }: { label: string; hex: string; note?: string }) {
 	return (

@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { GreyPalettePicker } from "@/components/ipod/grey-palette-picker";
+import { GreyPalettePicker } from "@ipod/components/ipod/grey-palette-picker";
 
 import { compatParameters } from "../.storybook/shared";
 
