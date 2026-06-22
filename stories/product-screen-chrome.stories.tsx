@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { screenChromeTokens } from "@/lib/design-system";
+import { screenChromeTokens } from "@ipod/lib/design-system";
 
 function TokenLine({ label, value }: { label: string; value: string | number }) {
 	return (

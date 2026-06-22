@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { HexColorInput } from "@/components/ipod/hex-color-input";
+import { HexColorInput } from "@ipod/components/ipod/hex-color-input";
 
 import { compatParameters } from "../.storybook/shared";
 

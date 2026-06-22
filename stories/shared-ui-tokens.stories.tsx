@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { sharedUiTokens } from "@/lib/shared-ui-tokens";
+import { sharedUiTokens } from "@ipod/lib/shared-ui-tokens";
 
 function formatTokenValue(value: unknown): string {
 	if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {

@@ -1,4 +1,4 @@
-import { MarqueeText } from "@/components/ui/marquee-text";
+import { MarqueeText } from "@ipod/components/ui/marquee-text";
 
 import { compatParameters } from "../.storybook/shared";
 

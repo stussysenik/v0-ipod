@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { EditableTrackNumber } from "@/components/ipod/editable-track-number";
+import { EditableTrackNumber } from "@ipod/components/ipod/editable-track-number";
 
 import { compatParameters } from "../.storybook/shared";
 

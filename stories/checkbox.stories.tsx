@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@ipod/components/ui/checkbox";
 
 import { compatParameters } from "../.storybook/shared";
 

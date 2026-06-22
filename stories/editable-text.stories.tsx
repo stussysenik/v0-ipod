@@ -1,6 +1,6 @@
 import { fn } from "@storybook/test";
 
-import { EditableText } from "@/components/ipod/editable-text";
+import { EditableText } from "@ipod/components/ipod/editable-text";
 
 import { compatParameters } from "../.storybook/shared";
 
