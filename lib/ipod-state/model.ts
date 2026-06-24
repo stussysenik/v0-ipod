@@ -99,15 +99,15 @@ export const DEFAULT_OS_ORIGINAL_MENU_SPLIT = 0.54;
 export const DEFAULT_OS_NOW_PLAYING_LAYOUT: IpodNowPlayingLayoutState = {};
 
 export const INITIAL_SONG_METADATA: SongMetadata = {
-	title: "Chamakay",
-	artist: "Blood Orange",
-	album: "Cupid Deluxe",
-	artwork: "/default-artwork.png",
-	duration: 252,
-	currentTime: 47,
+	title: "In My Room",
+	artist: "Frank Ocean",
+	album: "In My Room",
+	artwork: "/artwork-in-my-room.jpg",
+	duration: 133,
+	currentTime: 41,
 	rating: 4,
-	trackNumber: 2,
-	totalTracks: 12,
+	trackNumber: 1,
+	totalTracks: 1,
 };
 
 export interface IpodPresentationState {

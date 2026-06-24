@@ -743,6 +743,7 @@ export default function IpodClassicWorkbench() {
 			skinColor={skinColor}
 			ringColor={ringColor || undefined}
 			centerColor={centerColor || undefined}
+			stageColor={bgColor}
 			playClick={playClick}
 			onSeek={(delta: number) => {
 				if (osScreen === "menu") {

@@ -46,6 +46,12 @@ interface IpodClickWheelProps {
 	skinColor?: string;
 	ringColor?: string;
 	centerColor?: string;
+	/**
+	 * Stage (backdrop) colour. When no explicit `ringColor` is picked the wheel
+	 * TRACKS THE STAGE — it derives from this so the device reads as one finish
+	 * with its backdrop. Falls back to the case colour when no stage is known.
+	 */
+	stageColor?: string;
 	playClick: () => void;
 	onSeek: (direction: number) => void;
 	onCenterClick?: () => void;
@@ -74,6 +80,7 @@ export function IpodClickWheel({
 	skinColor,
 	ringColor,
 	centerColor,
+	stageColor,
 	playClick,
 	onSeek,
 	onCenterClick,
@@ -88,7 +95,11 @@ export function IpodClickWheel({
 	chromeless = false,
 }: IpodClickWheelProps) {
 	const wheelRef = useRef<HTMLDivElement>(null);
-	const derived = skinColor ? deriveWheelColors(skinColor) : null;
+	// Ring tracks the stage: with no explicit ring pick the wheel derives from the
+	// Stage colour so the device coordinates with its backdrop; the case colour is
+	// the fallback when no stage is set.
+	const wheelBase = stageColor || skinColor;
+	const derived = wheelBase ? deriveWheelColors(wheelBase) : null;
 
 	const effectiveRingColor = ringColor || derived?.gradient?.via || "#CACACC";
 	const effectiveLabelColor = ringColor
@@ -432,13 +443,24 @@ export function IpodClickWheel({
 							}
 						: FEATURE_FLAGS.ENABLE_MATERIALITY
 						? {
+								// Concave seat, lit from above. The button is sunk INTO the wheel,
+								// so the floor of the dish faces the overhead key light and reads
+								// brightest at the BOTTOM, while the upper lip occludes — darkest at
+								// the TOP. The body gradient carries this on any flat `centerColor`
+								// (a black button can't be darkened below black by an inset shadow,
+								// so the lift comes from a bottom light-pool instead).
 								background: centerColor
-									? centerColor
-									: "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F5F5F7 50%, #E8E8EB 100%)",
+									? `radial-gradient(circle at 50% 118%, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0) 44%), radial-gradient(circle at 50% -8%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 46%), ${centerColor}`
+									: "radial-gradient(circle at 50% 116%, #FFFFFF 0%, #F0F0F2 55%, #E4E4E7 100%)",
 								border: "none",
 								outline: "none",
+								// Edge lighting inverted from a dome to a groove: top-inner occlusion
+								// (near rim shadow), a tamed hairline catch on the lit bottom floor,
+								// and a top-biased contact shadow in place of the old white under-halo
+								// — that halo was light spilling UNDER a raised lip, which is exactly
+								// what made the eye read the button as sitting proud instead of sunk.
 								boxShadow:
-									"inset 0 8px 12px -4px rgba(0,0,0,0.18), inset 0 2px 3px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.9), 0 1px 2px rgba(255,255,255,0.7), 0 0 0 0.5px rgba(0,0,0,0.06)",
+									"inset 0 6px 9px -3px rgba(0,0,0,0.24), inset 0 1.5px 2px rgba(0,0,0,0.10), inset 0 -1px 1px rgba(255,255,255,0.42), 0 -0.5px 1.5px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.10)",
 							}
 						: {
 								background: centerColor || "#ffffff",

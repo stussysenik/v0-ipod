@@ -329,6 +329,8 @@ interface IpodModelProps {
 	skinColor: string;
 	ringColor?: string;
 	centerColor?: string;
+	/** Stage (backdrop) colour — the wheel tracks this when no explicit ring is picked. */
+	stageColor?: string;
 	backColor?: string;
 	edgeColor?: string;
 	bezelColor?: string;
@@ -748,6 +750,7 @@ function ClickWheel3D({
 	skinColor,
 	ringColor,
 	centerColor,
+	stageColor,
 	wheelHtml,
 	bodyRef,
 	domRef,
@@ -758,15 +761,19 @@ function ClickWheel3D({
 	skinColor: string;
 	ringColor?: string;
 	centerColor?: string;
+	stageColor?: string;
 	wheelHtml: React.ReactNode;
 	bodyRef: React.RefObject<THREE.Mesh>;
 	domRef: React.RefObject<HTMLDivElement | null>;
 	glyphMeshRef: React.RefObject<THREE.Mesh | null>;
 }) {
 	const flat = useTechnicalFlat();
+	// Ring tracks the stage: an explicit ring pick wins, else the wheel derives
+	// from the Stage colour so it coordinates with the backdrop, falling back to
+	// the case colour when no stage is known.
 	const wheelColors = useMemo(
-		() => deriveWheelColors(ringColor || skinColor),
-		[skinColor, ringColor],
+		() => deriveWheelColors(ringColor || stageColor || skinColor),
+		[skinColor, ringColor, stageColor],
 	);
 
 	// Faithful wheel colours — the picked hex is used EXACTLY (no luminance floor lifting
@@ -992,7 +999,7 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, stageColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, onRegisterCapture }: IpodModelProps) {
 	// Edge defaults to the back colour so an un-edited device is pixel-identical
 	// to the single-material chassis (edge == back until the user sets it).
 	const resolvedEdgeColor = edgeColor ?? backColor;
@@ -1497,7 +1504,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					</mesh>
 
 					{/* ── CLICK WHEEL ── */}
-					<ClickWheel3D dims={dims} z={z} skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} wheelHtml={wheel} bodyRef={bodyRef} domRef={wheelDomRef} glyphMeshRef={wheelGlyphMeshRef} />
+					<ClickWheel3D dims={dims} z={z} skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} stageColor={stageColor} wheelHtml={wheel} bodyRef={bodyRef} domRef={wheelDomRef} glyphMeshRef={wheelGlyphMeshRef} />
 				</group>
 		</group>
 		</TechnicalFlatContext.Provider>
@@ -2532,6 +2539,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 						preset={preset}
 						capacityLabel={capacityLabel}
 						technicalFlat={technicalFlat}
+						stageColor={captureBackground}
 						{...modelProps}
 						onRegisterCapture={handleRegisterCapture}
 					/>
