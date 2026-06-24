@@ -46,6 +46,10 @@ const UI_STORAGE_KEY = "ipodSnapshotUiState";
 const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
 const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
 const LAST_EXPORTED_BATTERY_KEY = "ipodSnapshotLastBattery";
+// The moment the live (self-discharging) battery cycle was "born". Stamped once on
+// first visit; every later load derives the current charge from `now - birth`, so the
+// cycle is continuous across reloads/closures with no stored level to flicker.
+const BATTERY_BIRTH_KEY = "ipodBatteryBirth";
 // The /3d studio slice (lighting rig, flat/lock/marquee toggles, camera pose) rides its own
 // key rather than the whitelisted SongSnapshot.ui, since it carries a nested lighting record.
 const STUDIO_STORAGE_KEY = "ipodSnapshotStudio";
@@ -466,6 +470,25 @@ export function loadLastExportedBatteryLevel(): number {
 		return Math.min(Math.max(parsed, 0.08), 1.0);
 	} catch {
 		return 1.0;
+	}
+}
+
+/**
+ * The birth moment for the live battery cycle (epoch ms). Stamped to `now` on the
+ * first call that finds no stored value, so a genuine first visit starts at a full
+ * charge; every later load returns the same origin and the cycle stays continuous.
+ */
+export function loadBatteryBirth(now: number): number {
+	try {
+		const raw = localStorage.getItem(BATTERY_BIRTH_KEY);
+		if (raw) {
+			const parsed = parseInt(raw, 10);
+			if (Number.isFinite(parsed)) return parsed;
+		}
+		localStorage.setItem(BATTERY_BIRTH_KEY, String(now));
+		return now;
+	} catch {
+		return now;
 	}
 }
 

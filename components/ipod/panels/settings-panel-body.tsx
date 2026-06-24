@@ -142,7 +142,7 @@ export function SettingsPanelBody() {
 							onPress={() => send({ type: "SET_BATTERY_MODE", payload: mode as BatteryMode })}
 							className={racButton({ isActive: batteryMode === mode, fullWidth: true })}
 						>
-							{mode === "manual" ? "Standard" : "Solar Drain"}
+							{mode === "manual" ? "Standard" : "Live"}
 						</Button>
 					))}
 				</div>
