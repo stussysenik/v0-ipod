@@ -1,5 +1,6 @@
 import type { MutableRefObject } from "react";
 import {
+	loadBatteryBirth,
 	loadExportCounter,
 	loadLastExportedBatteryLevel,
 	loadMetadata,
@@ -118,6 +119,10 @@ export function savePersistedSongSnapshot(snapshot: SongSnapshot): void {
 
 export function loadPersistedLastBattery(): number {
 	return loadLastExportedBatteryLevel();
+}
+
+export function loadPersistedBatteryBirth(now: number): number {
+	return loadBatteryBirth(now);
 }
 
 export function saveWorkbenchSnapshot(model: IpodWorkbenchModel): SongSnapshot {

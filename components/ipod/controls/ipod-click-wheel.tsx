@@ -7,7 +7,7 @@ import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
 import { wheelLabelSeatPx } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { playMechanicalClick } from "@/lib/ipod-state/effects";
-import { liveTheme, captureTheme, vars } from "@/lib/ipod-state/theme.css";
+import { liveTheme, captureTheme } from "@/lib/ipod-state/theme.css";
 
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
@@ -33,6 +33,30 @@ const LABEL_OPACITY = {
 	chromeless: { menu: 0.82, transport: 0.78 },
 } as const;
 
+/**
+ * The wheel is ONE face. The outer rim, the wheel surface, and the center
+ * button are a single continuous plane — depth is not separate dished objects
+ * floating in it, but two thin grooves cut into the one face: the outer edge
+ * and the button seam. The button's body therefore stays FLAT (same plane as
+ * the face); the only thing that says "button" is a fine recessed groove around
+ * it — a top-lip occlusion, a whisper of a lower catch, and the physical gap.
+ * A body gradient is what made it read as a dish set into the face instead of
+ * a button cut from it.
+ */
+const CENTER = {
+	/** The physical gap between button and wheel (hairline). */
+	seam: 0.3,
+	/** Occlusion just inside the upper lip — the only sign it is recessed. */
+	lip: 0.18,
+	/** Faint catch on the lower groove wall. */
+	floor: 0.05,
+	/** Default button tone when no centerColor is picked (silver device). */
+	base: "#F2F2F4",
+} as const;
+
+/** The center button's entire depth: a thin recessed groove, no body shading. */
+const CENTER_SEAM = `inset 0 1px 1.5px rgba(0,0,0,${CENTER.lip}), inset 0 -1px 1px rgba(255,255,255,${CENTER.floor}), 0 0 0 0.5px rgba(0,0,0,${CENTER.seam})`;
+
 
 /**
  * Interactive click wheel assembly.
@@ -46,6 +70,12 @@ interface IpodClickWheelProps {
 	skinColor?: string;
 	ringColor?: string;
 	centerColor?: string;
+	/**
+	 * Stage (backdrop) colour. When no explicit `ringColor` is picked the wheel
+	 * TRACKS THE STAGE — it derives from this so the device reads as one finish
+	 * with its backdrop. Falls back to the case colour when no stage is known.
+	 */
+	stageColor?: string;
 	playClick: () => void;
 	onSeek: (direction: number) => void;
 	onCenterClick?: () => void;
@@ -74,6 +104,7 @@ export function IpodClickWheel({
 	skinColor,
 	ringColor,
 	centerColor,
+	stageColor,
 	playClick,
 	onSeek,
 	onCenterClick,
@@ -88,7 +119,11 @@ export function IpodClickWheel({
 	chromeless = false,
 }: IpodClickWheelProps) {
 	const wheelRef = useRef<HTMLDivElement>(null);
-	const derived = skinColor ? deriveWheelColors(skinColor) : null;
+	// Ring tracks the stage: with no explicit ring pick the wheel derives from the
+	// Stage colour so the device coordinates with its backdrop; the case colour is
+	// the fallback when no stage is set.
+	const wheelBase = stageColor || skinColor;
+	const derived = wheelBase ? deriveWheelColors(wheelBase) : null;
 
 	const effectiveRingColor = ringColor || derived?.gradient?.via || "#CACACC";
 	const effectiveLabelColor = ringColor
@@ -210,12 +245,15 @@ export function IpodClickWheel({
 			>
 				{!chromeless && FEATURE_FLAGS.ENABLE_MATERIALITY && (
 					<>
-						{/* VFX 1: Directional rim light — top-left catches key light, bottom-right fades to shadow */}
+						{/* VFX 1: Outer edge of the one face — a quiet rounded-over bevel, not a
+						    chrome ring. Neutral front elevation: a faint, even top catch and a
+						    faint lower shadow describe the rolled edge without lifting the disc
+						    off the face. The old 0.55 top highlight read as a separate domed puck. */}
 						<div
 							className="pointer-events-none absolute inset-0 rounded-full"
 							style={{
 								boxShadow:
-									"inset 0 1px 0.5px rgba(255,255,255,0.55), inset 1px 0 1px -0.5px rgba(255,255,255,0.2), inset -0.5px -0.5px 1px rgba(0,0,0,0.06)",
+									"inset 0 1px 1px rgba(255,255,255,0.16), inset 0 -1px 1px rgba(0,0,0,0.10)",
 							}}
 							aria-hidden="true"
 						/>
@@ -229,26 +267,17 @@ export function IpodClickWheel({
 							aria-hidden="true"
 						/>
 
-						{/* VFX 3: Directional specular sheen — catches key light from top-left */}
+						{/* VFX 3: Matte face sheen. The wheel face is a FLAT soft-touch plane,
+						    not a dome — so this is a faint top-left diffuse catch with NO rim
+						    vignette. The old full-radius gradient (peak 0.2 + a 0.1 dark vignette
+						    at 100%) shaded the disc like a sphere, which is what made the whole
+						    control read bloated. Depth belongs in the seams, not the face. */}
 						<div
 							className="pointer-events-none absolute inset-[1px] rounded-full"
 							style={{
 								background: exportSafe
-									? "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 45%)"
-									: "radial-gradient(ellipse at 33% 28%, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 35%, rgba(255,255,255,0) 60%, rgba(0,0,0,0.04) 85%, rgba(0,0,0,0.1) 100%)",
-							}}
-							aria-hidden="true"
-						/>
-
-						{/* VFX 4: Center Button Cavity — directional recess, not a black disc.
-						    Top-left catches light, bottom-right pools shadow. */}
-						<div
-							className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-							style={{
-								width: wheelTokens.centerSize + 2,
-								height: wheelTokens.centerSize + 2,
-								background: "transparent",
-								boxShadow: vars.material.middleButtonDepth,
+									? "linear-gradient(150deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 42%)"
+									: "radial-gradient(ellipse 130% 105% at 38% 20%, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.02) 32%, rgba(255,255,255,0) 58%)",
 							}}
 							aria-hidden="true"
 						/>
@@ -432,13 +461,13 @@ export function IpodClickWheel({
 							}
 						: FEATURE_FLAGS.ENABLE_MATERIALITY
 						? {
-								background: centerColor
-									? centerColor
-									: "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #F5F5F7 50%, #E8E8EB 100%)",
+								// Flat body — same plane as the face. Depth lives only in the
+								// recessed groove (CENTER_SEAM), so the button reads as cut FROM
+								// the one face, not as a separate dish floating in it.
+								background: centerColor || CENTER.base,
 								border: "none",
 								outline: "none",
-								boxShadow:
-									"inset 0 8px 12px -4px rgba(0,0,0,0.18), inset 0 2px 3px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(255,255,255,0.9), 0 1px 2px rgba(255,255,255,0.7), 0 0 0 0.5px rgba(0,0,0,0.06)",
+								boxShadow: CENTER_SEAM,
 							}
 						: {
 								background: centerColor || "#ffffff",

@@ -69,7 +69,7 @@ export function IpodDisplay({
 					showPlayIndicator={showPlayIndicator}
 				/>
 				{children}
-				<IpodGlassOverlay exportSafe={exportSafe} />
+				<IpodGlassOverlay exportSafe={exportSafe} radius={screenTokens.innerRadius} />
 			</div>
 		</div>
 	);

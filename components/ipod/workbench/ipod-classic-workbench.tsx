@@ -62,6 +62,7 @@ import {
 	loadPersistedExportCounter,
 	loadPersistedSongSnapshot,
 	loadPersistedLastBattery,
+	loadPersistedBatteryBirth,
 	loadPersistedWorkbenchModel,
 	persistWorkbenchModel,
 	playClickAudio,
@@ -69,6 +70,7 @@ import {
 	savePersistedSongSnapshot,
 	saveWorkbenchSnapshot,
 } from "@/lib/ipod-state/effects";
+import { batteryLevelForElapsed } from "@/lib/ipod-state/battery-cycle";
 import {
 	createInitialIpodWorkbenchModel,
 	type BatteryMode,
@@ -355,19 +357,37 @@ export default function IpodClassicWorkbench() {
 		send({ type: "SET_BATTERY_LEVEL", payload: lastExportedBatteryRef.current });
 	}, [batteryMode, send]);
 
+	// Live battery: self-discharges on wall-clock time, draining then recharging in a
+	// continuous cycle. The level is derived from `now - birth` (see battery-cycle.ts),
+	// so it is computed — never restored from a stored number — and there is nothing to
+	// flicker on load. `sync()` runs immediately on mount and on tab refocus so the cell
+	// always reflects real elapsed time, including time spent away. The cycle is frozen
+	// while an export is capturing so the battery is deterministic in the bake.
+	const batteryBirthRef = useRef<number | null>(null);
+
 	useEffect(() => {
-		if (batteryMode !== "solar") return;
-		const startLevel = lastExportedBatteryRef.current;
-		const interval = setInterval(() => {
-			const dur = model.metadata.duration;
-			if (dur <= 0) return;
-			const progress = Math.min(model.metadata.currentTime / dur, 1.0);
-			const SENSITIVITY = 0.05;
-			const level = startLevel - (startLevel - 0.08) * progress * SENSITIVITY;
-			send({ type: "SET_BATTERY_LEVEL", payload: Math.max(level, 0.08) });
-		}, 10000);
-		return () => clearInterval(interval);
-	}, [batteryMode, model.metadata.currentTime, model.metadata.duration, send]);
+		if (batteryMode !== "solar" || isExportCapturing) return;
+		if (batteryBirthRef.current === null) {
+			batteryBirthRef.current = loadPersistedBatteryBirth(Date.now());
+		}
+		const birth = batteryBirthRef.current;
+		const sync = () => {
+			send({
+				type: "SET_BATTERY_LEVEL",
+				payload: batteryLevelForElapsed(Date.now() - birth),
+			});
+		};
+		sync();
+		const interval = window.setInterval(sync, 15000);
+		const onVisibility = () => {
+			if (!document.hidden) sync();
+		};
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => {
+			window.clearInterval(interval);
+			document.removeEventListener("visibilitychange", onVisibility);
+		};
+	}, [batteryMode, isExportCapturing, send]);
 
 	const showSoftNotice = useCallback((message: string) => {
 		if (softNoticeTimerRef.current !== null) {
@@ -743,6 +763,7 @@ export default function IpodClassicWorkbench() {
 			skinColor={skinColor}
 			ringColor={ringColor || undefined}
 			centerColor={centerColor || undefined}
+			stageColor={bgColor}
 			playClick={playClick}
 			onSeek={(delta: number) => {
 				if (osScreen === "menu") {

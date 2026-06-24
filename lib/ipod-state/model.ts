@@ -17,6 +17,10 @@ export type IpodHardwarePresetId =
 	| "classic-2008-silver";
 export type SnapshotSelectionKind = "moment" | "range";
 export type IpodOsScreen = "menu" | "now-playing";
+// "manual": charge is held at an exact level (the Settings slider) — used for
+// deterministic exports. "solar": the live, self-discharging cycle that drains and
+// recharges on wall-clock time (see lib/ipod-state/battery-cycle.ts). The value name
+// is retained so existing persisted snapshots keep working.
 export type BatteryMode = "manual" | "solar";
 
 export const NOW_PLAYING_LAYOUT_ELEMENT_IDS = [
@@ -93,21 +97,27 @@ export const DEFAULT_SAVED_COLORS: SavedColorHistory = { case: [], bg: [], ring:
 export const SONG_SNAPSHOT_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = "direct";
 export const DEFAULT_SELECTION_KIND: SnapshotSelectionKind = "moment";
-export const DEFAULT_OS_SCREEN: IpodOsScreen = "now-playing";
-export const DEFAULT_MENU_INDEX = 0;
+// Fresh boot lands on the iPod-OS main menu with "Shuffle Songs" highlighted — the
+// canonical power-on frame (black classic shell, RE:MIX header). Returning sessions
+// restore their own persisted screen; this only seeds an empty localStorage.
+export const DEFAULT_OS_SCREEN: IpodOsScreen = "menu";
+// Index of "Shuffle Songs" in CLASSIC_OS_MENU_ITEMS (music, videos, photos, podcasts,
+// extras, settings, shuffle-songs=6). Kept as a literal because the menu list lives in
+// the components layer and must not be imported into lib.
+export const DEFAULT_MENU_INDEX = 6;
 export const DEFAULT_OS_ORIGINAL_MENU_SPLIT = 0.54;
 export const DEFAULT_OS_NOW_PLAYING_LAYOUT: IpodNowPlayingLayoutState = {};
 
 export const INITIAL_SONG_METADATA: SongMetadata = {
-	title: "Chamakay",
-	artist: "Blood Orange",
-	album: "Cupid Deluxe",
-	artwork: "/default-artwork.png",
-	duration: 252,
-	currentTime: 47,
+	title: "In My Room",
+	artist: "Frank Ocean",
+	album: "In My Room",
+	artwork: "/artwork-in-my-room.jpg",
+	duration: 133,
+	currentTime: 41,
 	rating: 4,
-	trackNumber: 2,
-	totalTracks: 12,
+	trackNumber: 1,
+	totalTracks: 1,
 };
 
 export interface IpodPresentationState {
@@ -293,7 +303,7 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			isNowPlayingEditable: false,
 			isPlaying: false,
 			batteryLevel: 1.0,
-			batteryMode: "manual",
+			batteryMode: "solar",
 		},
 		studio: createInitialStudioState(),
 		panelLayout: { ...DEFAULT_PANEL_LAYOUT },
