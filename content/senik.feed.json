@@ -1,0 +1,304 @@
+{
+  "version": 1,
+  "meta": {
+    "id": "senik",
+    "title": "Stüssy Senik",
+    "description": "Building at the intersection of engineering, creative production, and design — from code to camera.",
+    "author": "MENGXUAN \"SENIK\" ZOU",
+    "url": "https://ipod-music.vercel.app"
+  },
+  "theme": {
+    "accent": "#0048FF",
+    "background": "#000000",
+    "surface": "#0b0b0d",
+    "foreground": "#f5f5f7",
+    "muted": "#8a8a8e",
+    "fontSans": "'Inter', system-ui, sans-serif",
+    "fontMono": "'Berkeley Mono', ui-monospace, monospace",
+    "radius": "12px"
+  },
+  "menu": [
+    {
+      "id": "works",
+      "label": "Works",
+      "children": [
+        { "id": "m-ipod-emulator", "label": "iPod emulator", "slug": "ipod-emulator" },
+        { "id": "m-mymind-clone", "label": "mymind.com clone", "slug": "mymind-clone" },
+        { "id": "m-spinning-wheel", "label": "Spinning Wheel AR Filter", "slug": "spinning-wheel-ar-filter" },
+        { "id": "m-fyoa", "label": "FYOA: Find Your Own Answer", "slug": "fyoa-find-your-own-answer" },
+        { "id": "m-clean-writer", "label": "Typewriter (no backspace)", "slug": "clean-writer-typewriter" },
+        { "id": "m-bboy-filter", "label": "AR B-Boy Filter", "slug": "ar-bboy-filter" },
+        { "id": "m-uyr-problem", "label": "uyr-problem", "slug": "uyr-problem" },
+        { "id": "m-infinite-checklist", "label": "Infinite Checklist", "slug": "infinite-checklist" },
+        { "id": "m-creative-block", "label": "Creative Block?", "slug": "creative-block" },
+        { "id": "m-dvd-animation", "label": "DVD Corner Animation", "slug": "dvd-corner-animation" },
+        { "id": "m-ph213", "label": "PH-213 E&M Viz", "slug": "ph-213-em-viz" },
+        { "id": "m-wavelength", "label": "@WAVELENGTH RADIO", "slug": "wavelength-radio" }
+      ]
+    },
+    {
+      "id": "writing",
+      "label": "Writing",
+      "children": [
+        { "id": "m-w-webgpu-compute", "label": "WebGPU Compute Shaders", "slug": "20260410-webgpu-compute" },
+        { "id": "m-w-clojure-svelte", "label": "Clojure and Svelte", "slug": "20260325-clojure-svelte" },
+        { "id": "m-w-minimalism", "label": "Digital Minimalism in 2026", "slug": "20260215-minimalism" },
+        { "id": "m-w-webgpu-vs-webgl", "label": "WebGPU vs WebGL", "slug": "20250105-webgpu-vs-webgl" },
+        { "id": "m-w-raymarching", "label": "Raymarching in WGSL", "slug": "20241220-raymarching-basics" },
+        { "id": "m-w-compute-shaders", "label": "Intro to Compute Shaders", "slug": "20241115-compute-shaders" },
+        { "id": "m-w-svelte-vs-react", "label": "React → SvelteKit", "slug": "20241030-svelte-vs-react-2024" },
+        { "id": "m-w-ascii", "label": "ASCII Aesthetics", "slug": "20240915-ascii-aesthetics" }
+      ]
+    },
+    {
+      "id": "labs",
+      "label": "Labs",
+      "children": [
+        { "id": "m-l-raymarch", "label": "WGSL Raymarcher", "slug": "lab-raymarch-wgsl" },
+        { "id": "m-l-particles", "label": "GPU Particle System", "slug": "lab-particle-physics" },
+        { "id": "m-l-fluid", "label": "WASM Fluid Simulation", "slug": "lab-wasm-fluid" },
+        { "id": "m-l-audio", "label": "Audio Worklet Visualizer", "slug": "lab-audio-visualizer" },
+        { "id": "m-l-fractal", "label": "Mandelbrot Zoom", "slug": "lab-fractal-zoom" },
+        { "id": "m-l-ascii", "label": "ASCII 3D Renderer", "slug": "lab-ascii-render" }
+      ]
+    },
+    { "id": "about", "label": "About", "slug": "about" },
+    {
+      "id": "contact",
+      "label": "Contact",
+      "children": [
+        { "id": "c-email", "label": "Email", "href": "mailto:itsmxzou@gmail.com?subject=Hiring%20%E2%80%94%20St%C3%BCssy%20Senik" },
+        { "id": "c-linkedin", "label": "LinkedIn", "href": "https://www.linkedin.com/in/mxzou" },
+        { "id": "c-github", "label": "GitHub", "href": "https://github.com/stussysenik" },
+        { "id": "c-x", "label": "X / Twitter", "href": "https://x.com/mx_zou" },
+        {
+          "id": "social",
+          "label": "Social",
+          "children": [
+            { "id": "s-github", "label": "GitHub", "href": "https://github.com/stussysenik" },
+            { "id": "s-linkedin", "label": "LinkedIn", "href": "https://www.linkedin.com/in/mxzou" },
+            { "id": "s-instagram", "label": "Instagram", "href": "https://instagram.com/mx.zou" },
+            { "id": "s-x", "label": "X / Twitter", "href": "https://x.com/mx_zou" },
+            { "id": "s-soundcloud", "label": "SoundCloud", "href": "https://on.soundcloud.com/b7PpyyqCuScmugtNZc" },
+            { "id": "s-imdb", "label": "IMDb", "href": "https://www.imdb.com/name/nm14502866/" }
+          ]
+        }
+      ]
+    }
+  ],
+  "works": [
+    {
+      "slug": "ipod-emulator",
+      "title": "iPod emulator",
+      "summary": "A faithful, physically-accurate iPod classic in the browser — you are holding it right now.",
+      "year": "2026",
+      "tags": ["tool", "TypeScript", "Three.js", "WebGL"],
+      "links": [{ "label": "Live", "href": "https://ipod-music.vercel.app" }]
+    },
+    {
+      "slug": "mymind-clone",
+      "title": "mymind.com clone",
+      "summary": "Curate your own network — a personal mind/bookmarking tool.",
+      "year": "2026",
+      "tags": ["personal software"],
+      "links": [{ "label": "Live", "href": "https://curate-your-own-network.stussysenik.com" }]
+    },
+    {
+      "slug": "spinning-wheel-ar-filter",
+      "title": "spinning wheel AR face filter lottery",
+      "year": "2026",
+      "tags": ["AR/XR"],
+      "links": [{ "label": "Live", "href": "https://spinning-wheel-filter.vercel.app" }]
+    },
+    {
+      "slug": "fyoa-find-your-own-answer",
+      "title": "FYOA: Find your own answer",
+      "summary": "An answer-engine experiment.",
+      "year": "2026",
+      "tags": ["music"],
+      "links": [{ "label": "Live", "href": "https://perplexica.stussysenik.com" }]
+    },
+    {
+      "slug": "clean-writer-typewriter",
+      "title": "typewriter that doesn't delete, or can't go back",
+      "summary": "A writing tool that refuses the backspace.",
+      "year": "2025",
+      "tags": ["tool"],
+      "links": [{ "label": "Live", "href": "https://clean-writer.vercel.app" }]
+    },
+    {
+      "slug": "ar-bboy-filter",
+      "title": "AR b-boy filter",
+      "year": "2025",
+      "tags": ["AR/XR"],
+      "links": [{ "label": "Live", "href": "https://bboy-filter.vercel.app" }]
+    },
+    {
+      "slug": "uyr-problem",
+      "title": "uyr-problem",
+      "summary": "A cooking tool.",
+      "year": "2025",
+      "tags": ["tool"],
+      "links": [{ "label": "Live", "href": "https://uyr-problem.vercel.app" }]
+    },
+    {
+      "slug": "infinite-checklist",
+      "title": "infinite checklist",
+      "year": "2025",
+      "tags": ["tool"],
+      "links": [{ "label": "Live", "href": "https://infinite-checklist.vercel.app" }]
+    },
+    {
+      "slug": "creative-block",
+      "title": "ARE YOU HAVING A CREATIVE BLOCK?",
+      "year": "2025",
+      "tags": ["art"],
+      "links": [{ "label": "Live", "href": "https://creative-block.vercel.app" }]
+    },
+    {
+      "slug": "dvd-corner-animation",
+      "title": "DVD corner video animation",
+      "summary": "The bouncing DVD logo, done in Three.js.",
+      "year": "2025",
+      "tags": ["technology", "Three.js", "WebGL"],
+      "links": [{ "label": "Live", "href": "https://dvd-video-animation.vercel.app" }]
+    },
+    {
+      "slug": "ph-213-em-viz",
+      "title": "PH-213 — Electricity, Current & Magnetism viz",
+      "summary": "Concept visualizations for an E&M physics course.",
+      "year": "2024",
+      "tags": ["science"],
+      "links": [{ "label": "Live", "href": "https://ph213.vercel.app" }]
+    },
+    {
+      "slug": "wavelength-radio",
+      "title": "@WAVELENGTH RADIO",
+      "summary": "Founded and grew a global radio community inspired by Virgil Abloh's legacy.",
+      "year": "2024",
+      "tags": ["music DJ"],
+      "links": [{ "label": "Live", "href": "https://wavelength-radio.vercel.app" }]
+    },
+    {
+      "slug": "lab-raymarch-wgsl",
+      "title": "WGSL Raymarcher",
+      "summary": "Real-time raymarched 3D scene in WebGPU compute shaders — SDF primitives, soft shadows, ambient occlusion.",
+      "year": "2025",
+      "tags": ["raymarching", "webgpu", "sdf", "stable"]
+    },
+    {
+      "slug": "lab-particle-physics",
+      "title": "GPU Particle System",
+      "summary": "100,000+ particles with physics running entirely on GPU compute.",
+      "year": "2024",
+      "tags": ["webgpu", "particles", "stable"]
+    },
+    {
+      "slug": "lab-wasm-fluid",
+      "title": "WASM Fluid Simulation",
+      "summary": "Navier-Stokes solver compiled from Rust to WebAssembly.",
+      "year": "2024",
+      "tags": ["wasm", "webgl2", "fluid", "beta"]
+    },
+    {
+      "slug": "lab-audio-visualizer",
+      "title": "Audio Worklet Visualizer",
+      "summary": "Real-time FFT analysis with GPU-accelerated visualization.",
+      "year": "2024",
+      "tags": ["audio-worklet", "webgl2", "stable"]
+    },
+    {
+      "slug": "lab-fractal-zoom",
+      "title": "Mandelbrot Zoom",
+      "summary": "Infinite zoom into the Mandelbrot set with arbitrary precision.",
+      "year": "2024",
+      "tags": ["webgpu", "fractal", "experimental"]
+    },
+    {
+      "slug": "lab-ascii-render",
+      "title": "ASCII 3D Renderer",
+      "summary": "Classic 3D objects rendered as ASCII art.",
+      "year": "2024",
+      "tags": ["webgl2", "ascii", "archived"]
+    },
+    {
+      "slug": "20260410-webgpu-compute",
+      "title": "WebGPU Compute Shaders for Generative Art",
+      "summary": "A deep dive into using WebGPU compute shaders for real-time generative art.",
+      "year": "2026",
+      "tags": ["webgpu", "graphics", "rust"],
+      "body": "A deep dive into using WebGPU compute shaders for real-time generative art."
+    },
+    {
+      "slug": "20260325-clojure-svelte",
+      "title": "Expressiveness in UI: Clojure and Svelte",
+      "summary": "How we ported our portfolio logic to Clojure (Squint) while keeping Svelte 5 for rendering.",
+      "year": "2026",
+      "tags": ["clojure", "svelte", "architecture"],
+      "body": "How we ported our portfolio logic to Clojure (Squint) while keeping Svelte 5 for rendering."
+    },
+    {
+      "slug": "20260215-minimalism",
+      "title": "Digital Minimalism in 2026",
+      "summary": "Why websites should be fast, accessible, and respect user autonomy.",
+      "year": "2026",
+      "tags": ["design", "minimalism", "ux"],
+      "body": "Why websites should be fast, accessible, and respect user autonomy."
+    },
+    {
+      "slug": "20250105-webgpu-vs-webgl",
+      "title": "WebGPU vs WebGL: A Practical Comparison",
+      "summary": "After six months of WebGPU in production, here are my honest thoughts on when to use each API.",
+      "year": "2025",
+      "tags": ["webgpu", "webgl", "performance"],
+      "body": "After six months of WebGPU in production, here are my honest thoughts on when to use each API."
+    },
+    {
+      "slug": "20241220-raymarching-basics",
+      "title": "Raymarching from Scratch in WGSL",
+      "summary": "Building a raymarcher entirely in WebGPU compute shaders. No Three.js, no abstractions.",
+      "year": "2024",
+      "tags": ["raymarching", "wgsl", "shaders"],
+      "body": "Building a raymarcher entirely in WebGPU compute shaders. No Three.js, no abstractions."
+    },
+    {
+      "slug": "20241115-compute-shaders",
+      "title": "Introduction to Compute Shaders",
+      "summary": "GPGPU on the web, demystified — how to think in workgroups and parallel dispatch.",
+      "year": "2024",
+      "tags": ["webgpu", "compute", "gpgpu"],
+      "body": "GPGPU on the web, demystified — how to think in workgroups and parallel dispatch."
+    },
+    {
+      "slug": "20241030-svelte-vs-react-2024",
+      "title": "Why I Switched from React to SvelteKit in 2024",
+      "summary": "Less ceremony, more output. A pragmatic account of moving a portfolio off React.",
+      "year": "2024",
+      "tags": ["svelte", "react", "framework"],
+      "body": "Less ceremony, more output. A pragmatic account of moving a portfolio off React."
+    },
+    {
+      "slug": "20240915-ascii-aesthetics",
+      "title": "The Return of ASCII Aesthetics in Web Design",
+      "summary": "Why monospace brutalism keeps coming back, and how to use it without cosplay.",
+      "year": "2024",
+      "tags": ["design", "brutalism", "ascii"],
+      "body": "Why monospace brutalism keeps coming back, and how to use it without cosplay."
+    },
+    {
+      "slug": "about",
+      "title": "About",
+      "summary": "Design Engineer & Creative Producer. NYC / PRAGUE.",
+      "year": "2026",
+      "role": "Design Engineer & Creative Producer",
+      "tags": ["about"],
+      "links": [
+        { "label": "Email", "href": "mailto:itsmxzou@gmail.com" },
+        { "label": "GitHub", "href": "https://github.com/stussysenik" },
+        { "label": "LinkedIn", "href": "https://www.linkedin.com/in/mxzou" }
+      ],
+      "body": "Formally trained Software Engineer turned Artist & self-taught Designer with 8+ years crafting delight through impactful interfaces, experiences & artifacts. My practice applies computational techniques to augment the design & art-direction process. Building tools and experiences with 1 billion people in mind.\n\nPolymath engineer at the convergence of software, film, music, and design. Formally trained at Cooper Union and FAMU Prague, with production experience spanning B2B product engineering, simultaneous translation across 4 languages, community radio, and EU-funded filmmaking."
+    }
+  ],
+  "assets": []
+}
