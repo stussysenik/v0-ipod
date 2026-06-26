@@ -1,0 +1,19 @@
+{
+	"name": "@ipod/ipod-wc",
+	"version": "0.1.0",
+	"description": "Framework-native <ipod-classic> custom element — an embeddable, white-label iPod feed browser.",
+	"type": "module",
+	"private": true,
+	"main": "./src/index.ts",
+	"module": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./element": "./src/ipod-classic.ts"
+	},
+	"scripts": {
+		"build": "esbuild src/index.ts --bundle --format=esm --minify --outfile=dist/ipod-classic.js"
+	},
+	"peerDependencies": {
+		"lit": "^3"
+	}
+}
