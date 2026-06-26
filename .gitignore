@@ -46,3 +46,6 @@ IMG_5875.PNG
 *storybook.log
 storybook-static
 .tmp-screens/
+
+# Lit element build output
+packages/ipod-wc/dist/

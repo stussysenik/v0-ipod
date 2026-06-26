@@ -30,6 +30,16 @@ export default defineConfig({
 				},
 			},
 			{
+				// The Lit custom element needs a DOM; jsdom provides customElements,
+				// shadow DOM, and adoptedStyleSheets without a real browser.
+				extends: true,
+				test: {
+					name: "wc",
+					environment: "jsdom",
+					include: ["packages/ipod-wc/**/*.test.ts"],
+				},
+			},
+			{
 				extends: true,
 				plugins: [
 					// The plugin will run tests for the stories defined in your Storybook config
