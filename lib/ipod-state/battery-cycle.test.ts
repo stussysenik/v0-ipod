@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	BATTERY_BOOT_OFFSET_MS,
 	BATTERY_CYCLE_MS,
 	BATTERY_FLOOR,
 	batteryLevelForElapsed,
@@ -9,6 +10,14 @@ import {
 describe("batteryLevelForElapsed", () => {
 	it("starts at a full charge", () => {
 		expect(batteryLevelForElapsed(0)).toBe(1);
+	});
+
+	it("boots below full at the birth offset — never a clinical 100%, but healthy", () => {
+		// First-visit birth is stamped this far in the past, so the opening read sits a
+		// little into the drain (~85%) rather than at full (spec: never start at 100%).
+		const level = batteryLevelForElapsed(BATTERY_BOOT_OFFSET_MS);
+		expect(level).toBeLessThan(1);
+		expect(level).toBeGreaterThan(0.8);
 	});
 
 	it("returns to full at the end of a cycle", () => {

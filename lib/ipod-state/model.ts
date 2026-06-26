@@ -302,7 +302,10 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
 			isNowPlayingEditable: false,
 			isPlaying: false,
-			batteryLevel: 1.0,
+			// Boot below full — a real device is rarely topped to a clinical 100%. The
+			// live ("Automatic") cycle drives this on the workbench; surfaces without the
+			// live driver (e.g. /3d) show this static healthy level instead of 100%.
+			batteryLevel: 0.82,
 			batteryMode: "solar",
 		},
 		studio: createInitialStudioState(),

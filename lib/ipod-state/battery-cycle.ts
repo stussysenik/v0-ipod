@@ -20,6 +20,15 @@
 /** Lowest the cell ever reads — matches the historical solar-drain floor. */
 export const BATTERY_FLOOR = 0.08;
 
+/**
+ * A fresh battery boots a little way into the drain — never a clinical 100%, because
+ * real devices are seldom topped to the brim. Stamping the birth this far in the past
+ * on first visit lands the opening read at ~85%. The cycle still peaks at 100% later
+ * during recharge; only the *initial* read is held off full. Env-independent (a fixed
+ * offset, not a clock read) so localhost and production boot to the identical level.
+ */
+export const BATTERY_BOOT_OFFSET_MS = 250_000;
+
 /** Slow discharge: full -> floor. */
 const DRAIN_MS = 25 * 60 * 1000;
 /** Faster recharge: floor -> full. */

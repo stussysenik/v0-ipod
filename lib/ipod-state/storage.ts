@@ -12,6 +12,7 @@ import {
 	type PanelLayoutState,
 	type SavedColorHistory,
 } from "@/lib/ipod-state/model";
+import { BATTERY_BOOT_OFFSET_MS } from "@/lib/ipod-state/battery-cycle";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
 	DEFAULT_BACK_COLOR,
@@ -485,10 +486,13 @@ export function loadBatteryBirth(now: number): number {
 			const parsed = parseInt(raw, 10);
 			if (Number.isFinite(parsed)) return parsed;
 		}
-		localStorage.setItem(BATTERY_BIRTH_KEY, String(now));
-		return now;
+		// First visit: stamp the birth a little in the past so the opening read boots
+		// below full (~85%) instead of a clinical 100% (spec: never start at 100%).
+		const birth = now - BATTERY_BOOT_OFFSET_MS;
+		localStorage.setItem(BATTERY_BIRTH_KEY, String(birth));
+		return birth;
 	} catch {
-		return now;
+		return now - BATTERY_BOOT_OFFSET_MS;
 	}
 }
 
