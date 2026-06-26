@@ -25,7 +25,7 @@ interface Ipod3DBatteryCockpitProps {
 
 const MODES: readonly { id: BatteryMode; label: string }[] = [
 	{ id: "manual", label: "Manual" },
-	{ id: "solar", label: "Solar" },
+	{ id: "solar", label: "Automatic" },
 ] as const;
 
 export function Ipod3DBatteryCockpit({

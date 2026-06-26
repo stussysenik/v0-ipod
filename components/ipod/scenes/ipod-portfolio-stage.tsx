@@ -4,15 +4,15 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { IpodClickWheel } from "@/components/ipod/controls/ipod-click-wheel";
-import { PortfolioScreen } from "@/components/ipod/portfolio/portfolio-screen";
+import { PortfolioFeedScreen } from "@/components/ipod/portfolio/portfolio-feed-screen";
+import { usePortfolioFeed } from "@/components/ipod/portfolio/use-portfolio-feed";
+import type { IpodFeed } from "@/lib/feed/schema";
 import {
 	DEFAULT_HARDWARE_PRESET_ID,
 	getIpodClassicPreset,
 } from "@/lib/ipod-classic-presets";
 import { playClickAudio } from "@/lib/ipod-state/effects";
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
-import { profile } from "@/lib/portfolio/data";
-import { usePortfolioOs } from "@/lib/portfolio/os";
 
 const ThreeDIpod = dynamic(
 	() => import("@/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
@@ -27,33 +27,24 @@ const ThreeDIpod = dynamic(
 );
 
 /**
- * Portfolio stage — the recruiter-facing `/portfolio` experience.
+ * `/3d-portfolio` — the 3D real assembly.
  *
- * It serves the canonical Noir device (black 2008 Classic, hand-tuned wheel,
- * Designer Dark rig, the #0048FF stage — the same factory default `/3d` boots)
- * and swaps the music OS for the portfolio OS: the click wheel drives
- * `usePortfolioOs`, and the live display renders `PortfolioScreen`.
+ * The canonical Noir device (black 2008 Classic, Designer Dark rig, the #0048FF stage
+ * `/3d` boots) hosting the SAME feed-driven screen + wheel nodes as `/portfolio`. Only
+ * the device shell differs: here the real screen + click wheel are layered onto the
+ * rendered `ThreeDIpod` geometry. Data is the canonical feed via `usePortfolioFeed`
+ * (one source of truth with `/portfolio` and `/whitelabel`) — not a bespoke OS.
  *
- * Mobile-first: on coarse-pointer devices the camera boots LOCKED so a thumb
- * circling the wheel can never knock the composed hero angle — orbit is an
- * explicit opt-in via the small toggle. `touch-action: none` on the stage stops
- * the browser from translating wheel gestures into scroll/zoom, which is what
- * makes the touch click-wheel usable "immediately" on an iPhone.
+ * Mobile-first: on coarse-pointer devices the camera boots LOCKED so a thumb circling
+ * the wheel can never knock the composed hero angle — orbit is an explicit opt-in.
  */
-export function IpodPortfolioStage() {
+export function IpodPortfolioStage({ feed }: { feed: IpodFeed }) {
 	const audioRef = useRef<HTMLAudioElement | null>(null);
+	const playClick = useCallback(() => playClickAudio(audioRef), []);
 
-	const playClick = useCallback(() => {
-		playClickAudio(audioRef);
-	}, []);
+	const { model, state, onKeyDown, wheel } = usePortfolioFeed(feed);
 
-	const openUrl = useCallback((url: string) => {
-		window.open(url, "_blank", "noopener,noreferrer");
-	}, []);
-
-	const os = usePortfolioOs(openUrl);
-
-	// The factory model IS the noir look — one source of truth with /3d.
+	// The factory model IS the Noir look — one source of truth with `/3d`.
 	const initialModel = useMemo(() => createInitialIpodWorkbenchModel(), []);
 	const presentation = initialModel.presentation;
 	const lighting = initialModel.studio.lighting;
@@ -69,9 +60,7 @@ export function IpodPortfolioStage() {
 		if (window.matchMedia("(pointer: fine)").matches) setOrbitEnabled(true);
 	}, []);
 
-	const screenComponent = (
-		<PortfolioScreen preset={preset} frame={os.frame} rows={os.rows} />
-	);
+	const screenComponent = <PortfolioFeedScreen preset={preset} state={state} model={model} />;
 
 	const wheelComponent = (
 		<IpodClickWheel
@@ -81,26 +70,29 @@ export function IpodPortfolioStage() {
 			ringColor={presentation.ringColor || undefined}
 			centerColor={presentation.centerColor || undefined}
 			playClick={playClick}
-			onSeek={(direction) => {
-				os.seek(direction);
-			}}
-			onCenterClick={os.select}
-			onMenuPress={os.back}
-			onPreviousPress={() => os.step(-1)}
-			onNextPress={() => os.step(1)}
-			onPlayPausePress={os.select}
+			onSeek={wheel.onSeek}
+			onCenterClick={wheel.onCenterClick}
+			onMenuPress={wheel.onMenuPress}
+			onPreviousPress={wheel.onPreviousPress}
+			onNextPress={wheel.onNextPress}
+			onPlayPausePress={wheel.onPlayPausePress}
 		/>
 	);
 
 	return (
+		// eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the stage IS the control surface
 		<div
-			className="relative h-dvh w-full touch-none select-none overflow-hidden overscroll-none"
-			style={{ backgroundColor: presentation.bgColor }}
+			tabIndex={0}
+			role="application"
+			aria-label={`${feed.meta.title} — 3D iPod portfolio`}
+			onKeyDown={onKeyDown}
+			className="relative h-dvh w-full touch-none select-none overflow-hidden overscroll-none outline-none"
+			style={{ backgroundColor: feed.theme.background ?? presentation.bgColor }}
 		>
 			{/* Identity Signature Background — large, clean watermark behind the device */}
 			<div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
 				<div className="text-[18vw] font-black uppercase tracking-[-0.05em] text-white/[0.04] leading-none select-none">
-					{profile.handle}
+					{feed.meta.title}
 				</div>
 			</div>
 
@@ -114,7 +106,7 @@ export function IpodPortfolioStage() {
 					backColor={presentation.backColor}
 					edgeColor={presentation.edgeColor}
 					bezelColor={presentation.bezelColor}
-					captureBackground={presentation.bgColor}
+					captureBackground={feed.theme.background ?? presentation.bgColor}
 					lighting={lighting}
 					cameraLocked={!orbitEnabled}
 					screen={screenComponent}
@@ -123,16 +115,17 @@ export function IpodPortfolioStage() {
 				/>
 			</div>
 
-			{/* Identity — top-left, inked for the blue stage */}
+			{/* Identity — top-left, inked for the stage */}
 			<div className="pointer-events-none absolute left-6 top-6 z-20 pt-[env(safe-area-inset-top)]">
 				<div className="text-[12px] font-bold uppercase tracking-[0.3em] text-white">
-					{profile.handle}
+					{feed.meta.title}
 				</div>
-				<div className="text-[13px] font-medium text-white/75">{profile.role}</div>
+				{feed.meta.author ? (
+					<div className="text-[13px] font-medium text-white/75">{feed.meta.author}</div>
+				) : null}
 			</div>
 
-			{/* Orbit lock — the HOLD switch of the stage. Locked = the wheel owns
-			    every gesture; unlocked = drag the stage to orbit the device. */}
+			{/* Orbit lock — locked = the wheel owns every gesture; unlocked = drag to orbit. */}
 			<button
 				type="button"
 				onClick={() => setOrbitEnabled((v) => !v)}

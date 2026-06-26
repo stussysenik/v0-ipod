@@ -169,7 +169,9 @@ export function KumaSettingsPanel({
 						...panelPosition,
 					}}
 				>
-					{/* Hardware Selection */}
+					{/* Hardware Selection — ARCHIVED: hidden behind SHOW_PHYSICAL_REVISION because each
+					    revision is an unfinished physical assembly (see lib/feature-flags.ts). */}
+					{FEATURE_FLAGS.SHOW_PHYSICAL_REVISION && (
 					<div className="mb-6">
 						<SectionHeading>Physical Revision</SectionHeading>
 						<ListBox
@@ -207,6 +209,7 @@ export function KumaSettingsPanel({
 							))}
 						</ListBox>
 					</div>
+					)}
 
 					{/* Interaction Model */}
 					<div className="mb-6">
@@ -266,7 +269,7 @@ export function KumaSettingsPanel({
                     fullWidth: true
                   })}
 								>
-									{mode === "manual" ? "Standard" : "Solar Drain"}
+									{mode === "manual" ? "Manual" : "Automatic"}
 								</Button>
 							))}
 						</div>

@@ -46,46 +46,49 @@ export function SettingsPanelBody() {
 
 	return (
 		<div className="flex flex-col">
-			{/* Physical Revision */}
-			<div className="mb-6">
-				<SectionHeading>Physical Revision</SectionHeading>
-				<ListBox
-					aria-label="Hardware Preset"
-					selectedKeys={[hardwarePreset]}
-					selectionMode="single"
-					onSelectionChange={(keys) => {
-						const key = Array.from(keys)[0] as IpodHardwarePresetId;
-						if (key) send({ type: "SET_HARDWARE_PRESET", payload: key });
-					}}
-					className="flex flex-col gap-2"
-				>
-					{IPOD_CLASSIC_PRESETS.filter(
-						(p) => FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS || p.id === "classic-2008-black",
-					).map((preset) => (
-						<ListBoxItem
-							key={preset.id}
-							id={preset.id}
-							className={({ isSelected, isFocused }) =>
-								cn(
-									"flex flex-col p-3 rounded-xl border transition-all cursor-pointer outline-none",
-									isSelected ? "bg-white border-[#111827] shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60",
-									isFocused && "ring-2 ring-blue-500 ring-inset",
-								)
-							}
-						>
-							{({ isSelected }) => (
-								<div className="flex items-center justify-between">
-									<div className="flex flex-col">
-										<span className="text-[11px] font-bold text-[#111827]">{preset.label}</span>
-										<span className="text-[10px] text-[#6B7280] mt-0.5">{preset.notes}</span>
+			{/* Physical Revision — ARCHIVED: hidden behind SHOW_PHYSICAL_REVISION because each
+			    revision is an unfinished physical assembly (see lib/feature-flags.ts). */}
+			{FEATURE_FLAGS.SHOW_PHYSICAL_REVISION && (
+				<div className="mb-6">
+					<SectionHeading>Physical Revision</SectionHeading>
+					<ListBox
+						aria-label="Hardware Preset"
+						selectedKeys={[hardwarePreset]}
+						selectionMode="single"
+						onSelectionChange={(keys) => {
+							const key = Array.from(keys)[0] as IpodHardwarePresetId;
+							if (key) send({ type: "SET_HARDWARE_PRESET", payload: key });
+						}}
+						className="flex flex-col gap-2"
+					>
+						{IPOD_CLASSIC_PRESETS.filter(
+							(p) => FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS || p.id === "classic-2008-black",
+						).map((preset) => (
+							<ListBoxItem
+								key={preset.id}
+								id={preset.id}
+								className={({ isSelected, isFocused }) =>
+									cn(
+										"flex flex-col p-3 rounded-xl border transition-all cursor-pointer outline-none",
+										isSelected ? "bg-white border-[#111827] shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60",
+										isFocused && "ring-2 ring-blue-500 ring-inset",
+									)
+								}
+							>
+								{({ isSelected }) => (
+									<div className="flex items-center justify-between">
+										<div className="flex flex-col">
+											<span className="text-[11px] font-bold text-[#111827]">{preset.label}</span>
+											<span className="text-[10px] text-[#6B7280] mt-0.5">{preset.notes}</span>
+										</div>
+										{isSelected && <Check size={14} className="text-[#111827]" />}
 									</div>
-									{isSelected && <Check size={14} className="text-[#111827]" />}
-								</div>
-							)}
-						</ListBoxItem>
-					))}
-				</ListBox>
-			</div>
+								)}
+							</ListBoxItem>
+						))}
+					</ListBox>
+				</div>
+			)}
 
 			{/* Control Interface */}
 			<div className="mb-6">
@@ -142,7 +145,7 @@ export function SettingsPanelBody() {
 							onPress={() => send({ type: "SET_BATTERY_MODE", payload: mode as BatteryMode })}
 							className={racButton({ isActive: batteryMode === mode, fullWidth: true })}
 						>
-							{mode === "manual" ? "Standard" : "Live"}
+							{mode === "manual" ? "Manual" : "Automatic"}
 						</Button>
 					))}
 				</div>
