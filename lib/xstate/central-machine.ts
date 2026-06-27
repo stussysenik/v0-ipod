@@ -322,7 +322,7 @@ export const ipodCentralMachine = createMachine(
 				actions: assign(({ event }) => normalizeModel(event.payload)),
 			},
 			RESET_MODEL: {
-				actions: assign(() => createInitialIpodWorkbenchModel()),
+				actions: assign(() => normalizeModel(createInitialIpodWorkbenchModel())),
 			},
 			APPLY_SONG_SNAPSHOT: {
 				actions: assign(({ context, event }) => applySongSnapshotToModel(context, event.payload)),

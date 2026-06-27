@@ -536,7 +536,7 @@ export function ipodWorkbenchReducer(
 		case "RESTORE_MODEL":
 			return normalizeModel(action.payload);
 		case "RESET_MODEL":
-			return createInitialIpodWorkbenchModel();
+			return normalizeModel(createInitialIpodWorkbenchModel());
 		case "APPLY_SONG_SNAPSHOT":
 			return applySongSnapshotToModel(state, action.payload);
 

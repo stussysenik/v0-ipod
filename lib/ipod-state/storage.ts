@@ -248,6 +248,25 @@ function normalizePlaybackSnapshot(
 	};
 }
 
+/**
+ * Range start/end are valid only inside a "range" selection — the same invariant
+ * `normalizeModel`/`normalizePlaybackSnapshot` already enforce. Applying it on every
+ * load boundary too means a persisted "moment" can never resurrect stale range times,
+ * which is what desynced the start/end (and their difference) after a hard refresh.
+ */
+function readGuardedRange(
+	selectionKind: SnapshotSelectionKind | undefined,
+	candidate: { rangeStartTime?: unknown; rangeEndTime?: unknown },
+): Partial<Pick<IpodUiState, "rangeStartTime" | "rangeEndTime">> {
+	if (selectionKind !== "range") return {};
+	const guarded: Partial<Pick<IpodUiState, "rangeStartTime" | "rangeEndTime">> = {};
+	const start = getFiniteNonNegativeNumber(candidate.rangeStartTime);
+	if (start !== null) guarded.rangeStartTime = start;
+	const end = getFiniteNonNegativeNumber(candidate.rangeEndTime);
+	if (end !== null) guarded.rangeEndTime = end;
+	return guarded;
+}
+
 export function loadUiState(): Partial<IpodUiState> | null {
 	try {
 		const raw = localStorage.getItem(UI_STORAGE_KEY);
@@ -273,10 +292,7 @@ export function loadUiState(): Partial<IpodUiState> | null {
 		if (typeof candidate.isPlaying === "boolean") {
 			safe.isPlaying = candidate.isPlaying;
 		}
-		const rangeStartTime = getFiniteNonNegativeNumber(candidate.rangeStartTime);
-		if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
-		const rangeEndTime = getFiniteNonNegativeNumber(candidate.rangeEndTime);
-		if (rangeEndTime !== null) safe.rangeEndTime = rangeEndTime;
+		Object.assign(safe, readGuardedRange(safe.selectionKind, candidate));
 		if (
 			typeof candidate.menuIndex === "number" &&
 			Number.isFinite(candidate.menuIndex)
@@ -417,10 +433,7 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
 	if (typeof parsed.batteryLevel === "number") safe.batteryLevel = parsed.batteryLevel;
 	if (isBatteryMode(parsed.batteryMode)) safe.batteryMode = parsed.batteryMode;
 
-	const rangeStartTime = getFiniteNonNegativeNumber(parsed.rangeStartTime);
-	if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
-	const rangeEndTime = getFiniteNonNegativeNumber(parsed.rangeEndTime);
-	if (rangeEndTime !== null) safe.rangeEndTime = rangeEndTime;
+	Object.assign(safe, readGuardedRange(safe.selectionKind, parsed));
 	if (typeof parsed.menuIndex === "number" && Number.isFinite(parsed.menuIndex)) {
 		safe.menuIndex = Math.max(0, Math.floor(parsed.menuIndex));
 	}
