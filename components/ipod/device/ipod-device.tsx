@@ -4,16 +4,12 @@ import React from "react";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import { deriveGasketColor, hexToHsl } from "@/lib/color-proximity";
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import { ipodDeviceVariants } from "./ipod-device-variants";
 
 import { liveTheme, captureTheme, vars } from "@/lib/ipod-state/theme.css";
 
-/**
- * Utility to merge tailwind/unocss classes safely
- */
 function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(inputs));
+	return clsx(inputs);
 }
 
 interface IpodDeviceProps {

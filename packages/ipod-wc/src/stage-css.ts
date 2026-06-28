@@ -1,4 +1,5 @@
-import { css } from "lit";
+import { css, unsafeCSS } from "lit";
+import { UNO_CSS } from "./uno-generated";
 
 /**
  * Keep-out stage CSS for the shadow root — the JS-free mirror of
@@ -7,7 +8,11 @@ import { css } from "lit";
  * the host container (`container-type: inline-size`), never the viewport. `--ipod-*`
  * theme tokens are read straight off the host, so a feed swap re-skins everything.
  */
-export const stageStyles = css`
+// UnoCSS-generated utilities are prepended first so bespoke geometry rules
+// (lower in this block) win specificity conflicts, matching shadow-dom intent.
+export const stageStyles = [
+	unsafeCSS(UNO_CSS),
+	css`
 	:host {
 		display: block;
 		container: ipod-stage / inline-size;
@@ -193,4 +198,4 @@ export const stageStyles = css`
 	.work-body { max-inline-size: 68ch; line-height: 1.6; white-space: pre-wrap; }
 	.work-links { display: flex; flex-wrap: wrap; gap: 10px; }
 	.work-link { text-decoration: none; color: var(--ipod-foreground, #fff); background: rgba(77, 130, 255, 0.28); padding: 9px 18px; border-radius: 999px; }
-`;
+`];

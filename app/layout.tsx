@@ -6,6 +6,12 @@ import { BuildVersionBadge } from "@/components/build-version-badge";
 import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
 
 import type { Metadata, Viewport } from "next";
+// Preflight reset — the UnoCSS replacement for `@tailwind base`, dropped in the
+// engine migration. Must load first so utilities (uno.css) and component CSS
+// (globals.css) win in the cascade. Without it, native `<button>` chrome, the
+// default body margin, and `content-box` sizing leak through the device.
+import "@unocss/reset/tailwind.css";
+import "./uno.css";
 import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });

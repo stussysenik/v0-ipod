@@ -152,7 +152,7 @@ function startCloudflareTunnel(port) {
 
 	const tunnel = spawn(
 		cloudflaredBin,
-		["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate"],
+		["tunnel", "--url", `http://127.0.0.1:${port}`, "--no-autoupdate", "--retries", "0"],
 		{
 			stdio: ["ignore", "pipe", "pipe"],
 			env: process.env,

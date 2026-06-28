@@ -1,0 +1,58 @@
+# CodeRabbit — AI PR review. Free (full Pro) on public repos.
+# Enable by installing the CodeRabbit GitHub App on this repo: https://github.com/apps/coderabbitai
+# Schema: https://docs.coderabbit.ai/reference/yaml-template
+language: en-US
+
+reviews:
+  # Low-noise profile — this repo already has heavy CI gates (oxlint, vitest,
+  # playwright, Lighthouse). The bot is a second set of eyes, not a nag.
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: ["main", "develop"]
+
+  path_filters:
+    - "!**/*.lockb"
+    - "!pnpm-lock.yaml"
+    - "!**/dist/**"
+    - "!**/storybook-static/**"
+    - "!public/**"
+    - "!**/*.gif"
+    - "!**/*.png"
+
+  # The architecture invariants worth defending on every PR. These encode the
+  # decisions from the design review, so drift gets caught at review time.
+  path_instructions:
+    - path: "packages/ipod-wc/src/**"
+      instructions: >
+        This is the portable, embeddable Lit custom element — the sellable artifact.
+        INVARIANT: navigation/menu/selection logic must live in lib/nav and lib/feed
+        (framework-neutral), NEVER inline in the element. Flag any new stateful nav
+        logic added here instead of in lib/nav. The published output must stay
+        React-free and must NOT import xstate or effect. It must size via container
+        queries only — flag any reads of window/viewport dimensions.
+    - path: "lib/nav/**"
+      instructions: >
+        Pure reducer — the single source of truth for iPod navigation, shared
+        verbatim by the Lit element and the React surfaces. Flag any import of React,
+        DOM globals, timers, xstate, or effect. Must stay a pure, synchronous,
+        unit-testable function of (state, action).
+    - path: "**/*.{ts,tsx}"
+      instructions: >
+        Hold to the repo's essentialist axiom: code is a liability. Flag dead code,
+        speculative abstraction, and heavyweight dependencies pulled in for trivial
+        work. Prefer native web-platform features over libraries.
+    - path: "{app,components}/**/*.tsx"
+      instructions: >
+        Production UI. Enforce accessibility (semantic elements, focus-visible,
+        labelled controls, prefers-reduced-motion for animation) and Core Web Vitals
+        (no layout shift, no unnecessary client components). This repo gates
+        Lighthouse a11y >= 0.95 and CLS <= 0.1 in CI — review should pre-empt those.
+
+chat:
+  auto_reply: true

@@ -11,7 +11,12 @@
 		"./element": "./src/ipod-classic.ts"
 	},
 	"scripts": {
-		"build": "esbuild src/index.ts --bundle --format=esm --minify --outfile=dist/ipod-classic.js"
+		"generate-uno": "node scripts/generate-uno.mjs",
+		"build": "node scripts/generate-uno.mjs && esbuild src/index.ts --bundle --format=esm --minify --outfile=dist/ipod-classic.js"
+	},
+	"devDependencies": {
+		"esbuild": "^0.27.7",
+		"unocss": "^66.7.0"
 	},
 	"peerDependencies": {
 		"lit": "^3"

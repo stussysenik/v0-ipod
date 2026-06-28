@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @layer utilities {
 	.text-balance {
 		text-wrap: balance;
@@ -88,10 +84,11 @@
 
 @layer base {
 	* {
-		@apply border-border;
+		border-color: hsl(var(--border));
 	}
 	body {
-		@apply bg-background text-foreground;
+		background-color: hsl(var(--background));
+		color: hsl(var(--foreground));
 	}
 
 	[data-exporting="true"],
@@ -238,7 +235,7 @@
 		animation-delay: 0s !important;
 	}
 
-	/* Beyond view-transitions: neutralize the scrolling marquee and every Tailwind
+	/* Beyond view-transitions: neutralize the scrolling marquee and every UnoCSS
 	   `animate-*` utility (entrance, pulse, spin, shutter) so a reduced-motion user
 	   gets a still interface. Export already freezes motion via [data-exporting]. */
 	.ipod-marquee {
