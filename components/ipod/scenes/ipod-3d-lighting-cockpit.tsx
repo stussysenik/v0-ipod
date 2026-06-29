@@ -109,10 +109,7 @@ export function Ipod3DLightingCockpit({
 								<button
 									key={preset.id}
 									type="button"
-									onClick={() => {
-										dispatch({ type: "SET_LIGHTING", payload: cloneLightingConfig(preset.config) });
-										if (preset.stage) dispatch({ type: "SET_BG_COLOR", payload: preset.stage });
-									}}
+									onClick={() => dispatch({ type: "SET_LIGHTING", payload: cloneLightingConfig(preset.config) })}
 									aria-pressed={active}
 									className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
 										active

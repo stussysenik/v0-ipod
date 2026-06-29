@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type Dispatch } from "react";
 
 import { StudioControlScope } from "@/components/ui/studio-controls";
+import { haptic } from "@/lib/haptics";
 import type { IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import type { IpodPresentationState } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
@@ -109,11 +110,13 @@ export function Ipod3DStudioShots({
 			bgColor: presentation.bgColor,
 		};
 		persist([...shots, { id: `S${counter.current++}`, pose, look }]);
+		haptic("select");
 		onNotice?.("Studio shot saved");
 	}, [apiRef, persist, presentation, shots, onNotice]);
 
 	const recallShot = useCallback(
 		(shot: StudioShot) => {
+			haptic("select");
 			// Repaint the body, then fly the camera. Colors are React state; the pose
 			// eases through the orbit rig — both land together as one composed look.
 			dispatch({ type: "SET_SKIN_COLOR", payload: shot.look.skinColor });
@@ -162,7 +165,10 @@ export function Ipod3DStudioShots({
 					<button
 						key={f.id}
 						type="button"
-						onClick={() => onFocus(f.id)}
+						onClick={() => {
+							haptic("select");
+							onFocus(f.id);
+						}}
 						className="rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight outline-none transition-all duration-200"
 						style={{
 							background: active ? "var(--studio-selected-fill)" : "transparent",

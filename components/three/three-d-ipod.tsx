@@ -53,7 +53,7 @@ import {
 	FLAT_TECHNICAL_RIG,
 	type StudioLightingConfig,
 } from "@/lib/studio-lighting-config";
-import { STEEL_ROUGHNESS_FLOOR, deriveOwnedRig } from "@/lib/studio-owned-finish";
+import { STEEL_ROUGHNESS_FLOOR } from "@/lib/studio-owned-finish";
 
 // ─── Technical-Flat ("Lights Off") material mode ───────────────────────────────────
 
@@ -1517,8 +1517,11 @@ const CAMERA_FOCUS: Record<
 	IpodCameraFocus,
 	{ position: [number, number, number]; target: [number, number, number] }
 > = {
-	// Deliberate hero 3/4 angle that catches the chrome rim and depth.
-	product: { position: [3.0, 1.1, 11.6], target: [0, 0, 0] },
+	// Deliberate hero 3/4 angle that catches the chrome rim and depth, framed at the
+	// far end of REACH_RANGE (|position| ≈ 19) so the device boots fully zoomed out —
+	// same azimuth/elevation as before (scaling the vector preserves the angles), just
+	// dollied all the way back. Wheel/pinch only zoom IN from this rest pose.
+	product: { position: [4.74, 1.74, 18.32], target: [0, 0, 0] },
 	// Dead-on, square to the face.
 	front: { position: [0, 0.05, 10.2], target: [0, 0.05, 0] },
 	// Square to the engraved steel back.
@@ -1593,8 +1596,6 @@ function OrbitRig({
 	const cur = useRef<Spherical>({ ...initial.sph, rad: initial.sph.rad + 5 });
 	const goal = useRef<Spherical>({ ...initial.sph });
 	const target = useRef(new THREE.Vector3().copy(initial.target));
-	const dragging = useRef(false);
-	const last = useRef({ x: 0, y: 0 });
 	// Mirror `locked` into a ref so the persistent pointer/wheel listeners read the
 	// current value without re-binding every toggle.
 	const lockedRef = useRef(locked);
@@ -1650,35 +1651,99 @@ function OrbitRig({
 		target.current.copy(next.target);
 	}, [focus]);
 
+	// Native pointer control on the canvas itself. One pointer orbits; two pointers
+	// pinch-to-zoom (reach) and drag-orbit by their centroid. The iPod's live screen +
+	// click wheel are separate pointerEvents:auto overlays above the canvas, so a single
+	// finger on them drives the device while a finger on the metal/background orbits — and
+	// two fingers, which the iPod UI never needs, always mean "move the camera". This rig
+	// stays the sole camera owner (design memo): the gesture only nudges `goal`.
 	useEffect(() => {
 		const el = gl.domElement;
+		// We own every touch gesture on the canvas. Without this the browser keeps the
+		// touch for page scroll / pinch-zoom — the thing that makes web 3D feel slippery.
+		el.style.touchAction = "none";
+
+		const ORBIT_RAD_PER_PX = 0.006; // matches the prior drag sensitivity
+		const active = new Map<number, { x: number; y: number }>();
+		// Anchors captured at gesture start so an eased mid-flight pose never drifts the input.
+		let orbit: { az: number; pol: number; x: number; y: number } | null = null;
+		let pinch: { dist: number; rad: number } | null = null;
+
+		const centroid = () => {
+			let x = 0;
+			let y = 0;
+			for (const p of active.values()) {
+				x += p.x;
+				y += p.y;
+			}
+			const n = active.size || 1;
+			return { x: x / n, y: y / n };
+		};
+		const spread = () => {
+			const pts = [...active.values()];
+			return pts.length < 2 ? 1 : Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+		};
+		// Anchor orbit on the committed GOAL (not the eased pose) so a fine drag can't drift
+		// while the rig is still easing toward a prior snap.
+		const anchorOrbit = () => {
+			const c = centroid();
+			orbit = { az: goal.current.az, pol: goal.current.pol, x: c.x, y: c.y };
+		};
+		const anchorPinch = () => {
+			pinch = { dist: spread(), rad: goal.current.rad };
+		};
+
 		const onDown = (e: PointerEvent) => {
-			if (lockedRef.current) return; // perspective locked — don't start an orbit drag
-			dragging.current = true;
-			last.current = { x: e.clientX, y: e.clientY };
+			if (lockedRef.current) return; // perspective locked — ignore
+			active.set(e.pointerId, { x: e.clientX, y: e.clientY });
+			el.setPointerCapture?.(e.pointerId);
+			if (active.size >= 2) anchorPinch();
+			anchorOrbit(); // (re)anchor so orbit tracks the centroid in both 1- and 2-finger modes
 		};
 		const onMove = (e: PointerEvent) => {
-			if (!dragging.current) return;
-			const dx = e.clientX - last.current.x;
-			const dy = e.clientY - last.current.y;
-			last.current = { x: e.clientX, y: e.clientY };
-			goal.current.az -= dx * 0.006;
-			goal.current.pol = THREE.MathUtils.clamp(goal.current.pol - dy * 0.006, 0.18, Math.PI - 0.18);
+			if (lockedRef.current || !active.has(e.pointerId)) return;
+			active.set(e.pointerId, { x: e.clientX, y: e.clientY });
+			if (active.size >= 2 && pinch) {
+				// Fingers apart (dist↑) → reach↓ → zoom in. The rig clamps to REACH_RANGE.
+				goal.current.rad = THREE.MathUtils.clamp(pinch.rad * (pinch.dist / spread()), REACH_RANGE[0], REACH_RANGE[1]);
+			}
+			if (orbit) {
+				const c = centroid();
+				goal.current.az = orbit.az - (c.x - orbit.x) * ORBIT_RAD_PER_PX;
+				goal.current.pol = THREE.MathUtils.clamp(orbit.pol - (c.y - orbit.y) * ORBIT_RAD_PER_PX, 0.18, Math.PI - 0.18);
+			}
 		};
-		const onUp = () => { dragging.current = false; };
+		const onUp = (e: PointerEvent) => {
+			active.delete(e.pointerId);
+			el.releasePointerCapture?.(e.pointerId);
+			// Re-anchor whatever's still down so dropping a finger never jumps the view.
+			if (active.size >= 2) {
+				anchorPinch();
+				anchorOrbit();
+			} else if (active.size === 1) {
+				pinch = null;
+				anchorOrbit();
+			} else {
+				pinch = null;
+				orbit = null;
+			}
+		};
 		const onWheel = (e: WheelEvent) => {
 			if (lockedRef.current) return; // perspective locked — don't zoom-dolly
 			e.preventDefault();
-			goal.current.rad = THREE.MathUtils.clamp(goal.current.rad + e.deltaY * 0.012, 5.5, 22);
+			goal.current.rad = THREE.MathUtils.clamp(goal.current.rad + e.deltaY * 0.012, REACH_RANGE[0], REACH_RANGE[1]);
 		};
+
 		el.addEventListener("pointerdown", onDown);
-		window.addEventListener("pointermove", onMove);
-		window.addEventListener("pointerup", onUp);
+		el.addEventListener("pointermove", onMove);
+		el.addEventListener("pointerup", onUp);
+		el.addEventListener("pointercancel", onUp);
 		el.addEventListener("wheel", onWheel, { passive: false });
 		return () => {
 			el.removeEventListener("pointerdown", onDown);
-			window.removeEventListener("pointermove", onMove);
-			window.removeEventListener("pointerup", onUp);
+			el.removeEventListener("pointermove", onMove);
+			el.removeEventListener("pointerup", onUp);
+			el.removeEventListener("pointercancel", onUp);
 			el.removeEventListener("wheel", onWheel);
 		};
 	}, [gl]);
@@ -2368,24 +2433,13 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			...modelProps 
 		} = props;
 
-		// In the flat technical view the device is rendered as unlit albedo (a material swap),
-		// so the rig is a neutral one that only keeps the LCD legible — see FlatFinish.
-		// The render OWNS the finish: reshape the curated rig to the chosen colours so any
-		// colour × motion exports cleanly (separation, no crush/wash). Skipped for the flat
-		// spec-sheet view, which wants the neutral rig untouched. One derived rig drives both
-		// the live preview and the offline export → WYSIWYG. See studio-owned-finish.
-		const baseLighting = technicalFlat ? FLAT_TECHNICAL_RIG : (lighting ?? APPLE_PRODUCT_RIG);
-		const activeLighting = useMemo(
-			() =>
-				technicalFlat
-					? baseLighting
-					: deriveOwnedRig(baseLighting, {
-							skin: modelProps.skinColor,
-							back: modelProps.backColor,
-							stage: captureBackground ?? "#ffffff",
-						}),
-			[baseLighting, technicalFlat, modelProps.skinColor, modelProps.backColor, captureBackground],
-		);
+		// The studio lighting is a pure function of the chosen rig — the lighting dials,
+		// nothing else. It no longer reshapes itself from the device or stage colours, so
+		// changing a finish or the background never shifts the light: lighting and colour are
+		// fully independent and deterministic. The export fingerprint's `lighting` field
+		// therefore fully determines the rig, and preview + export stay WYSIWYG by reading this
+		// one config. The flat/technical view still swaps to the neutral unlit rig.
+		const activeLighting = technicalFlat ? FLAT_TECHNICAL_RIG : (lighting ?? APPLE_PRODUCT_RIG);
 
 		const captureRef = useRef<((w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) | null>(null);
 		const frameCaptureRef = useRef<((w: number, h: number) => Promise<ImageBitmap | null>) | null>(null);

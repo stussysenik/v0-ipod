@@ -291,14 +291,19 @@ export const FLAT_TECHNICAL_RIG: StudioLightingConfig = {
 };
 
 /**
- * One-tap rig presets for the cockpit — the named ends of the creative range. Each carries an
- * optional `stage` colour so a preset can set the whole look (rig + backdrop) in one gesture.
+ * One-tap rig presets for the cockpit — the named ends of the creative range. Picking a preset
+ * only sets the LIGHTING; it never touches the background, so the lighting and the stage stay
+ * independent (deterministic by value, no cross-talk).
  */
 export interface RigPreset {
 	id: string;
 	label: string;
 	config: StudioLightingConfig;
-	/** Stage/backdrop colour that completes the look (dispatched as SET_BG_COLOR). */
+	/**
+	 * The stage/backdrop colour this rig was *designed against* — a descriptor of the intended
+	 * pairing (theme authoring, docs), NOT auto-applied to the live background. The lighting
+	 * cockpit reads only `config`; the stage is the user's to set separately.
+	 */
 	stage?: string;
 }
 

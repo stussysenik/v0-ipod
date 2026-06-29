@@ -45,6 +45,7 @@ import {
 } from "./ipod-3d-export-dock";
 import { Ipod3DExportProofPanel } from "./ipod-3d-export-proof-panel";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
+import { Ipod3DCoachHint } from "./ipod-3d-coach-hint";
 import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
 import { Ipod3DTouchControls } from "./ipod-3d-touch-controls";
 import { TheatreStudioDev } from "./theatre-studio-dev";
@@ -878,6 +879,9 @@ export function Ipod3DStage() {
 			    one-thumb reach. Unmounted (listeners detached) when toggled off; the
 			    component is `lg:hidden` so desktop never shows it even if enabled. */}
 			{touchControls && <Ipod3DTouchControls apiRef={ipodApiRef} landscape={landscape} />}
+
+			{/* One-time coach for the native two-finger camera gesture (touch only). */}
+			<Ipod3DCoachHint />
 
 			{/* Export veil — a cinematic shutter that covers the canvas for the render.
 			    It uses 'shutter' optics: a high-speed blade snap followed by a white
