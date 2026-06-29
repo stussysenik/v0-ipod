@@ -1,35 +1,28 @@
 "use client";
 
 import { useCallback } from "react";
-import { 
-  Button, 
-  Heading, 
-  Slider, 
-  SliderOutput, 
-  SliderTrack, 
-  SliderThumb,
-  Label,
-  ListBox,
-  ListBoxItem,
-  Popover,
-  DialogTrigger,
-  Dialog,
-  ColorPicker,
-  ColorArea,
-  ColorThumb,
-  ColorSlider,
-  ColorWheel,
-  ColorField as RACColorField,
-  Input
+import {
+	Heading,
+	Slider,
+	SliderOutput,
+	SliderTrack,
+	SliderThumb,
+	ListBox,
+	ListBoxItem,
 } from "react-aria-components";
 import { ColorField } from "../editors/color-field";
+import {
+	StudioButton,
+	StudioControlScope,
+	StudioLabel,
+	StudioSegment,
+} from "@/components/ui/studio-controls";
 import { IPOD_6G_COLORS } from "@/hooks/use-ipod-theme";
 import { IPOD_CLASSIC_PRESETS } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import type { BatteryMode, ColorTarget, IpodHardwarePresetId, IpodInteractionModel } from "@/lib/ipod-state/model";
 import { Settings, Check } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
-import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 interface KumaSettingsPanelProps {
@@ -61,36 +54,13 @@ interface KumaSettingsPanelProps {
 	onSaveSnapshot: () => void;
 }
 
-const TEXT_ACTIVE = "#111827";
-const TEXT_MUTED = "#6B7280";
-
-const sectionHeadingVariants = cva(
-	"text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1"
-);
-
 function SectionHeading({ children, className }: { children: React.ReactNode; className?: string }) {
-	return <Heading className={cn(sectionHeadingVariants(), className)}>{children}</Heading>;
+	return (
+		<Heading className={cn("mb-3 px-1", className)}>
+			<StudioLabel>{children}</StudioLabel>
+		</Heading>
+	);
 }
-
-const racButtonVariants = cva(
-	"flex items-center justify-center text-[11px] font-semibold transition-all duration-200 h-auto py-2.5 px-3 rounded-xl border outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-	{
-		variants: {
-			isActive: {
-				true: "bg-white border-[#111827] text-[#111827] shadow-sm",
-				false: "bg-white/60 border-[#D0D4DA] text-[#6B7280] hover:bg-white/80",
-			},
-			fullWidth: {
-				true: "w-full",
-				false: "flex-1",
-			},
-		},
-		defaultVariants: {
-			isActive: false,
-			fullWidth: false,
-		},
-	}
-);
 
 export function KumaSettingsPanel({
 	showSettings,
@@ -145,7 +115,7 @@ export function KumaSettingsPanel({
 				right: "64px",
 				width: "320px",
 				maxHeight: "min(85dvh, 48rem)",
-        borderRadius: "24px",
+				borderRadius: "24px",
 			};
 
 	return (
@@ -156,11 +126,12 @@ export function KumaSettingsPanel({
 				data-testid="theme-button"
 				onClick={handleToggle}
 				isActive={showSettings}
-        className="w-12 h-12"
+				className="w-12 h-12"
 			/>
 
 			{showSettings && (
-				<div
+				<StudioControlScope
+					stageBackground={bgColor}
 					data-testid="theme-panel"
 					className="z-50 overflow-y-auto border border-[#D6D8DC] bg-[#F5F5F2]/95 backdrop-blur-xl shadow-[0_24px_50px_rgba(0,0,0,0.2)] p-5 animate-in fade-in zoom-in-95 duration-200"
 					style={{
@@ -172,107 +143,102 @@ export function KumaSettingsPanel({
 					{/* Hardware Selection — ARCHIVED: hidden behind SHOW_PHYSICAL_REVISION because each
 					    revision is an unfinished physical assembly (see lib/feature-flags.ts). */}
 					{FEATURE_FLAGS.SHOW_PHYSICAL_REVISION && (
-					<div className="mb-6">
-						<SectionHeading>Physical Revision</SectionHeading>
-						<ListBox
-							aria-label="Hardware Preset"
-							selectedKeys={[hardwarePreset]}
-							selectionMode="single"
-							onSelectionChange={(keys) => {
-                const key = Array.from(keys)[0] as IpodHardwarePresetId;
-                if (key) onHardwarePresetChange(key);
-              }}
-							className="flex flex-col gap-2"
-						>
-							{IPOD_CLASSIC_PRESETS.filter(
-								(p) => FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS || p.id === "classic-2008-black",
-							).map((preset) => (
-								<ListBoxItem
-									key={preset.id}
-									id={preset.id}
-									className={({ isSelected, isFocused }) => cn(
-                    "flex flex-col p-3 rounded-xl border transition-all cursor-pointer outline-none",
-                    isSelected ? "bg-white border-[#111827] shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60",
-                    isFocused && "ring-2 ring-blue-500 ring-inset"
-                  )}
-								>
-                  {({ isSelected }) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[11px] font-bold text-[#111827]">{preset.label}</span>
-                        <span className="text-[10px] text-[#6B7280] mt-0.5">{preset.notes}</span>
-                      </div>
-                      {isSelected && <Check size={14} className="text-[#111827]" />}
-                    </div>
-                  )}
-								</ListBoxItem>
-							))}
-						</ListBox>
-					</div>
+						<div className="mb-6">
+							<SectionHeading>Physical Revision</SectionHeading>
+							<ListBox
+								aria-label="Hardware Preset"
+								selectedKeys={[hardwarePreset]}
+								selectionMode="single"
+								onSelectionChange={(keys) => {
+									const key = Array.from(keys)[0] as IpodHardwarePresetId;
+									if (key) onHardwarePresetChange(key);
+								}}
+								className="flex flex-col gap-2"
+							>
+								{IPOD_CLASSIC_PRESETS.filter(
+									(p) => FEATURE_FLAGS.SHOW_EXTRA_HARDWARE_PRESETS || p.id === "classic-2008-black",
+								).map((preset) => (
+									<ListBoxItem
+										key={preset.id}
+										id={preset.id}
+										className={({ isSelected, isFocused }) =>
+											cn(
+												"flex flex-col p-3 rounded-[8px] border transition-all cursor-pointer outline-none",
+												isSelected
+													? "bg-[color:var(--studio-surface)] border-[color:var(--studio-accent)] shadow-sm"
+													: "bg-white/40 border-transparent hover:bg-white/60",
+												isFocused && "ring-2 ring-[color:var(--studio-focus-ring)] ring-inset",
+											)
+										}
+									>
+										{({ isSelected }) => (
+											<div className="flex items-center justify-between">
+												<div className="flex flex-col">
+													<span className="text-[11px] font-bold text-[color:var(--studio-label)]">{preset.label}</span>
+													<span className="text-[10px] text-[#6B7280] mt-0.5">{preset.notes}</span>
+												</div>
+												{isSelected && <Check size={14} className="text-[color:var(--studio-accent)]" />}
+											</div>
+										)}
+									</ListBoxItem>
+								))}
+							</ListBox>
+						</div>
 					)}
 
 					{/* Interaction Model */}
 					<div className="mb-6">
 						<SectionHeading>Control Interface</SectionHeading>
-						<div className="flex gap-2.5">
-							<Button
-								onPress={() => onInteractionModelChange("direct")}
-								className={racButtonVariants({ isActive: interactionModel === "direct" })}
-							>
-								Direct Edit
-							</Button>
-							<Button
-								onPress={() => onInteractionModelChange("ipod-os")}
-								className={racButtonVariants({ isActive: interactionModel === "ipod-os" })}
-							>
-								iPod OS
-							</Button>
-						</div>
+						<StudioSegment
+							aria-label="Control Interface"
+							value={interactionModel}
+							onChange={(value: IpodInteractionModel) => onInteractionModelChange(value)}
+							options={[
+								{ value: "direct", label: "Direct Edit" },
+								{ value: "ipod-os", label: "iPod OS" },
+							]}
+						/>
 					</div>
 
 					{/* Battery Level - Real RAC Slider */}
 					<div className="mb-8">
-            <Slider
-              value={batteryLevel}
-              onChange={(val) => onBatteryLevelChange(val as number)}
-              minValue={0.05}
-              maxValue={1}
-              step={0.01}
-              className="flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between px-1">
-                <SectionHeading className="mb-0 px-0">Power Cell</SectionHeading>
-                <SliderOutput className="text-[10px] font-mono font-bold text-[#111827]">
-                  {({state}) => `${Math.round(state.getThumbValue(0) * 100)}%`}
-                </SliderOutput>
-              </div>
-              <SliderTrack className="relative h-2 w-full rounded-full bg-black/10">
-                {({ state }) => (
-                  <>
-                    <div 
-                      className="absolute h-full rounded-full bg-[#111827]" 
-                      style={{ width: `${state.getThumbPercent(0) * 100}%` }} 
-                    />
-                    <SliderThumb className="h-5 w-5 rounded-full bg-white border-2 border-[#111827] shadow-md outline-none focus-visible:ring-4 focus-visible:ring-blue-500/30 transition-shadow top-1/2" />
-                  </>
-                )}
-              </SliderTrack>
-            </Slider>
+						<Slider
+							value={batteryLevel}
+							onChange={(val) => onBatteryLevelChange(val as number)}
+							minValue={0.05}
+							maxValue={1}
+							step={0.01}
+							className="flex flex-col gap-3"
+						>
+							<div className="flex items-center justify-between px-1">
+								<SectionHeading className="mb-0 px-0">Power Cell</SectionHeading>
+								<SliderOutput className="text-[10px] font-mono font-bold text-[color:var(--studio-label)]">
+									{({ state }) => `${Math.round(state.getThumbValue(0) * 100)}%`}
+								</SliderOutput>
+							</div>
+							<SliderTrack className="relative h-2 w-full rounded-full bg-black/10">
+								{({ state }) => (
+									<>
+										<div
+											className="absolute h-full rounded-full bg-[color:var(--studio-accent)]"
+											style={{ width: `${state.getThumbPercent(0) * 100}%` }}
+										/>
+										<SliderThumb className="h-5 w-5 rounded-full bg-white border-2 border-[color:var(--studio-accent)] shadow-md outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--studio-focus-ring)]/30 transition-shadow top-1/2" />
+									</>
+								)}
+							</SliderTrack>
+						</Slider>
 
-						<div className="flex gap-2 mt-4">
-							{(["manual", "solar"] as const).map((mode) => (
-								<Button
-									key={mode}
-									onPress={() => onBatteryModeChange(mode)}
-									className={racButtonVariants({ 
-                    isActive: batteryMode === mode,
-                    fullWidth: true
-                  })}
-								>
-									{mode === "manual" ? "Manual" : "Automatic"}
-								</Button>
-							))}
-						</div>
+						<StudioSegment
+							className="mt-4"
+							aria-label="Power Cell Mode"
+							value={batteryMode}
+							onChange={(value: BatteryMode) => onBatteryModeChange(value)}
+							options={[
+								{ value: "manual", label: "Manual" },
+								{ value: "solar", label: "Automatic" },
+							]}
+						/>
 					</div>
 
 					{/* Colors */}
@@ -280,40 +246,32 @@ export function KumaSettingsPanel({
 						<div>
 							<SectionHeading>Case Finish</SectionHeading>
 							<div className="grid grid-cols-2 gap-2.5 mb-4">
-								<Button
+								<StudioButton
+									fullWidth
+									isActive={skinColor === IPOD_6G_COLORS.case.black}
 									onPress={() => {
 										onSkinColorChange(IPOD_6G_COLORS.case.black);
 										onRingColorChange(IPOD_6G_COLORS.wheel.dark.surface);
 										onCenterColorChange(IPOD_6G_COLORS.wheel.dark.center);
 										onBgColorChange(IPOD_6G_COLORS.background.white);
 									}}
-									className={racButtonVariants({
-										isActive: skinColor === IPOD_6G_COLORS.case.black,
-										fullWidth: true
-									})}
 								>
-									<span className="flex items-center gap-2">
-										<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#1A1A1A]" />
-										Jet Black
-									</span>
-								</Button>
-								<Button
+									<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#1A1A1A]" />
+									Jet Black
+								</StudioButton>
+								<StudioButton
+									fullWidth
+									isActive={skinColor === IPOD_6G_COLORS.case.white}
 									onPress={() => {
 										onSkinColorChange(IPOD_6G_COLORS.case.white);
 										onRingColorChange(IPOD_6G_COLORS.wheel.light.surface);
 										onCenterColorChange(IPOD_6G_COLORS.wheel.light.center);
 										onBgColorChange(IPOD_6G_COLORS.background.white);
 									}}
-									className={racButtonVariants({
-										isActive: skinColor === IPOD_6G_COLORS.case.white,
-										fullWidth: true
-									})}
 								>
-									<span className="flex items-center gap-2">
-										<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#F5F5F5]" />
-										Classic White
-									</span>
-								</Button>
+									<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#F5F5F5]" />
+									Classic White
+								</StudioButton>
 							</div>
 							<ColorField
 								label=""
@@ -356,21 +314,15 @@ export function KumaSettingsPanel({
 					{/* Persistence */}
 					<div className="mt-10 pt-6 border-t border-[#D5D7DA]">
 						<div className="grid grid-cols-2 gap-3">
-							<Button
-								onPress={onLoadSnapshot}
-								className={cn(racButtonVariants({ fullWidth: true }), "bg-black/5 border-transparent text-[#111827]")}
-							>
+							<StudioButton fullWidth variant="secondary" onPress={onLoadSnapshot}>
 								Restore
-							</Button>
-							<Button
-								onPress={onSaveSnapshot}
-								className={cn(racButtonVariants({ fullWidth: true }), "bg-[#111827] border-[#111827] text-white hover:bg-black")}
-							>
+							</StudioButton>
+							<StudioButton fullWidth variant="primary" onPress={onSaveSnapshot}>
 								Snapshot
-							</Button>
+							</StudioButton>
 						</div>
 					</div>
-				</div>
+				</StudioControlScope>
 			)}
 		</div>
 	);

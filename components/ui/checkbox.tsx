@@ -1,30 +1,58 @@
 "use client";
 
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { Check } from "lucide-react";
-import * as React from "react";
+import type { ReactNode } from "react";
+import { Checkbox as RACCheckbox } from "react-aria-components";
+import { Check, Minus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Checkbox = React.forwardRef<
-	React.ElementRef<typeof CheckboxPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
->(({ className, ...props }, ref) => (
-	<CheckboxPrimitive.Root
-		ref={ref}
-		className={cn(
-			"peer h-4 w-4 shrink-0 rounded-sm border border-[#726F73] ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2D2D2E] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-[#000000] data-[state=checked]:text-[#FFFFFF] data-[state=checked]:border-[#000000]",
-			className,
-		)}
-		{...props}
-	>
-		<CheckboxPrimitive.Indicator
-			className={cn("flex items-center justify-center text-current")}
+interface CheckboxProps {
+	isSelected?: boolean;
+	defaultSelected?: boolean;
+	isIndeterminate?: boolean;
+	isDisabled?: boolean;
+	onChange?: (isSelected: boolean) => void;
+	value?: string;
+	name?: string;
+	className?: string;
+	children?: ReactNode;
+	"aria-label"?: string;
+}
+
+/**
+ * The single canonical checkbox, on the React Aria headless layer (replacing the prior
+ * Radix + duplicate Carbon checkboxes). Checked state uses the one solved accent fill —
+ * affordance via fill, consistent with the studio control language.
+ */
+function Checkbox({ className, children, ...props }: CheckboxProps) {
+	return (
+		<RACCheckbox
+			{...props}
+			className={cn("group flex items-center gap-2 text-sm text-[#161616]", className)}
 		>
-			<Check className="h-3 w-3" />
-		</CheckboxPrimitive.Indicator>
-	</CheckboxPrimitive.Root>
-));
-Checkbox.displayName = CheckboxPrimitive.Root.displayName;
+			{({ isSelected, isIndeterminate }) => (
+				<>
+					<span
+						className={cn(
+							"flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-all duration-150 outline-none",
+							"border-[#726F73] bg-white",
+							"group-data-[focus-visible]:ring-2 group-data-[focus-visible]:ring-[color:var(--studio-focus-ring,#0048FF)] group-data-[focus-visible]:ring-offset-2",
+							"group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-50",
+							(isSelected || isIndeterminate) &&
+								"border-[color:var(--studio-accent,#0048FF)] bg-[color:var(--studio-accent,#0048FF)] text-white",
+						)}
+					>
+						{isIndeterminate ? (
+							<Minus className="h-3 w-3 stroke-[3]" />
+						) : isSelected ? (
+							<Check className="h-3 w-3 stroke-[3]" />
+						) : null}
+					</span>
+					{children}
+				</>
+			)}
+		</RACCheckbox>
+	);
+}
 
 export { Checkbox };

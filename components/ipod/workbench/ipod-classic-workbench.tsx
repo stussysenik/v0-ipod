@@ -20,6 +20,7 @@ import {
 	Film,
 	Video,
 	Eye,
+	EyeOff,
 	Terminal,
 	Play,
 	Pause,
@@ -100,6 +101,7 @@ import {
 import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
 import { formatTimecode } from "@/lib/time-utils";
 import { IpodStoreContext } from "@/lib/xstate/store";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { PanelSystem } from "../panels/panel-system";
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
@@ -154,6 +156,9 @@ export default function IpodClassicWorkbench() {
 	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [exportCounter, setExportCounter] = useState(0);
 	const [isToolboxOpen, setIsToolboxOpen] = useState(true);
+	// Focus (zen) mode: hide the floating inspector panels for a clean stage view. Purely
+	// presentational and local — independent of "Lock editing" and never mutates config.
+	const [isZenMode, setIsZenMode] = useState(false);
 
 	const state = model.metadata;
 	const selectionKind = model.playback.selectionKind;
@@ -275,7 +280,11 @@ export default function IpodClassicWorkbench() {
 		};
 	}, []);
 
-	useEffect(() => {
+	// Hydrate persisted state in a layout effect (pre-paint), not a post-paint useEffect:
+	// the first interactive frame must already carry the user's saved model, or a tap/drag
+	// landing in the pre-hydration window gets wiped by this whole-model RESTORE. See
+	// hooks/use-isomorphic-layout-effect.ts.
+	useIsomorphicLayoutEffect(() => {
 		send({
 			type: "RESTORE_MODEL",
 			payload: loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel()),
@@ -960,6 +969,13 @@ export default function IpodClassicWorkbench() {
 								/>
 							)}
 							<IconButton
+								icon={<EyeOff className="w-5 h-5" />}
+								label={isZenMode ? "Show Panels" : "Zen Mode"}
+								data-testid="zen-mode-button"
+								isActive={isZenMode}
+								onClick={() => setIsZenMode((on) => !on)}
+							/>
+							<IconButton
 								icon={isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
 								label={isPlaying ? "Pause" : "Play"}
 								data-testid="play-pause-button"
@@ -1115,8 +1131,9 @@ export default function IpodClassicWorkbench() {
 				)}
 
 				{/* Floating tool panels + ⌘K palette (spec: floating-panel-system,
-				    command-palette). Panels default hidden, summoned from the palette. */}
-				<PanelSystem />
+				    command-palette). Panels default hidden, summoned from the palette.
+				    Focus (zen) mode hides this inspector chrome for a clean stage view. */}
+				{!isZenMode && <PanelSystem />}
 			</div>
 		</FixedEditorProvider>
 	);

@@ -1,9 +1,7 @@
 "use client";
 
-import { Button, Heading } from "react-aria-components";
-import { cva } from "class-variance-authority";
-
 import { ColorField } from "../editors/color-field";
+import { StudioButton, StudioControlScope, StudioLabel } from "@/components/ui/studio-controls";
 import { IPOD_6G_COLORS } from "@/hooks/use-ipod-theme";
 import {
 	loadPersistedSongSnapshot,
@@ -12,7 +10,6 @@ import {
 } from "@/lib/ipod-state/effects";
 import type { ColorTarget } from "@/lib/ipod-state/model";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
-import { cn } from "@/lib/utils";
 import { IpodStoreContext } from "@/lib/xstate/store";
 
 /**
@@ -22,21 +19,6 @@ import { IpodStoreContext } from "@/lib/xstate/store";
  * uses — including the now-lifted `savedColors` history — so both surfaces stay in lockstep
  * until the dock control retires.
  */
-
-const sectionHeading = cva("text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1");
-
-const racButton = cva(
-	"flex items-center justify-center text-[11px] font-semibold transition-all duration-200 py-2.5 px-3 rounded-xl border outline-none focus-visible:ring-2 focus-visible:ring-blue-500 w-full",
-	{
-		variants: {
-			isActive: {
-				true: "bg-white border-[#111827] text-[#111827] shadow-sm",
-				false: "bg-white/60 border-[#D0D4DA] text-[#6B7280] hover:bg-white/80",
-			},
-		},
-		defaultVariants: { isActive: false },
-	},
-);
 
 export function ColorsPanelBody() {
 	const actorRef = IpodStoreContext.useActorRef();
@@ -69,12 +51,14 @@ export function ColorsPanelBody() {
 	};
 
 	return (
-		<div className="flex flex-col">
+		<StudioControlScope stageBackground={bgColor} className="flex flex-col">
 			{/* Case Finish */}
 			<div className="mb-6">
-				<Heading className={sectionHeading()}>Case Finish</Heading>
+				<StudioLabel className="mb-3 px-1">Case Finish</StudioLabel>
 				<div className="grid grid-cols-2 gap-2.5 mb-4">
-					<Button
+					<StudioButton
+						fullWidth
+						isActive={skinColor === IPOD_6G_COLORS.case.black}
 						onPress={() =>
 							applyFinish(
 								IPOD_6G_COLORS.case.black,
@@ -83,14 +67,13 @@ export function ColorsPanelBody() {
 								IPOD_6G_COLORS.background.white,
 							)
 						}
-						className={racButton({ isActive: skinColor === IPOD_6G_COLORS.case.black })}
 					>
-						<span className="flex items-center gap-2">
-							<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#1A1A1A]" />
-							Jet Black
-						</span>
-					</Button>
-					<Button
+						<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#1A1A1A]" />
+						Jet Black
+					</StudioButton>
+					<StudioButton
+						fullWidth
+						isActive={skinColor === IPOD_6G_COLORS.case.white}
 						onPress={() =>
 							applyFinish(
 								IPOD_6G_COLORS.case.white,
@@ -99,13 +82,10 @@ export function ColorsPanelBody() {
 								IPOD_6G_COLORS.background.white,
 							)
 						}
-						className={racButton({ isActive: skinColor === IPOD_6G_COLORS.case.white })}
 					>
-						<span className="flex items-center gap-2">
-							<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#F5F5F5]" />
-							Classic White
-						</span>
-					</Button>
+						<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#F5F5F5]" />
+						Classic White
+					</StudioButton>
 				</div>
 				<ColorField
 					label=""
@@ -146,19 +126,13 @@ export function ColorsPanelBody() {
 
 			{/* Persistence */}
 			<div className="mt-6 pt-6 border-t border-[#D5D7DA] grid grid-cols-2 gap-3">
-				<Button
-					onPress={handleRestoreSnapshot}
-					className={cn(racButton(), "bg-black/5 border-transparent text-[#111827]")}
-				>
+				<StudioButton fullWidth variant="secondary" onPress={handleRestoreSnapshot}>
 					Restore
-				</Button>
-				<Button
-					onPress={handleSaveSnapshot}
-					className={cn(racButton(), "bg-[#111827] border-[#111827] text-white hover:bg-black")}
-				>
+				</StudioButton>
+				<StudioButton fullWidth variant="primary" onPress={handleSaveSnapshot}>
 					Snapshot
-				</Button>
+				</StudioButton>
 			</div>
-		</div>
+		</StudioControlScope>
 	);
 }

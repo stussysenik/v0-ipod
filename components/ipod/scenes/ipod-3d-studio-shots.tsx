@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type Dispatch } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type Dispatch } from "react";
 
+import { StudioControlScope } from "@/components/ui/studio-controls";
 import type { IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import type { IpodPresentationState } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
@@ -137,29 +138,44 @@ export function Ipod3DStudioShots({
 		[persist, shots],
 	);
 
+	// The bar is solved against the active stage: it floats over a user-colored stage, so
+	// its surface/label/accent are derived for guaranteed contrast on any stage color.
+	const surfaceStyle: CSSProperties = {
+		background: "var(--studio-surface)",
+		borderColor: "var(--studio-hairline)",
+	};
+
 	return (
-		<div
-			className={`pointer-events-auto fixed z-30 flex items-center gap-1 rounded-full border border-black/10 bg-white/90 p-1 shadow-sm backdrop-blur-md ${
+		<StudioControlScope
+			stageBackground={presentation.bgColor}
+			style={surfaceStyle}
+			className={`pointer-events-auto fixed z-30 flex items-center gap-1 rounded-full border p-1 shadow-sm backdrop-blur-md ${
 				landscape
 					? "bottom-3 left-3 max-w-[58vw]"
 					: "bottom-6 left-1/2 max-w-[calc(100vw-1.5rem)] -translate-x-1/2"
 			}`}
 		>
-			{/* Orientation — the Product / Front / Back snaps */}
-			{FOCI.map((f) => (
-				<button
-					key={f.id}
-					type="button"
-					onClick={() => onFocus(f.id)}
-					className={`rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight transition-colors ${
-						focus === f.id ? "bg-black text-white" : "text-black/50 hover:text-black"
-					}`}
-				>
-					{f.label}
-				</button>
-			))}
+			{/* Orientation — the Product / Front / Back snaps. Active = solved solid fill. */}
+			{FOCI.map((f) => {
+				const active = focus === f.id;
+				return (
+					<button
+						key={f.id}
+						type="button"
+						onClick={() => onFocus(f.id)}
+						className="rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight outline-none transition-all duration-200"
+						style={{
+							background: active ? "var(--studio-selected-fill)" : "transparent",
+							color: active ? "var(--studio-selected-label)" : "var(--studio-label)",
+							opacity: active ? 1 : 0.6,
+						}}
+					>
+						{f.label}
+					</button>
+				);
+			})}
 
-			<span className="mx-0.5 h-4 w-px shrink-0 bg-black/10" />
+			<span className="mx-0.5 h-4 w-px shrink-0" style={{ background: "var(--studio-hairline)" }} />
 
 			{/* Saved studio shots — angle + finish bundles */}
 			<div className="flex items-center gap-1 overflow-x-auto">
@@ -173,7 +189,8 @@ export function Ipod3DStudioShots({
 							e.preventDefault();
 							removeShot(s.id);
 						}}
-						className="flex shrink-0 items-center gap-1.5 rounded-full border border-black/10 py-1 pl-1.5 pr-2.5 font-mono text-[10px] text-black/55 transition-colors hover:border-black/40 hover:text-black"
+						className="flex shrink-0 items-center gap-1.5 rounded-full border py-1 pl-1.5 pr-2.5 font-mono text-[10px] outline-none transition-all duration-200"
+						style={{ borderColor: "var(--studio-hairline)", color: "var(--studio-label)", opacity: 0.7 }}
 					>
 						<span
 							className="h-2.5 w-2.5 rounded-full border border-black/15"
@@ -186,11 +203,12 @@ export function Ipod3DStudioShots({
 					type="button"
 					onClick={saveShot}
 					title="Save the current camera pose + finish as a studio shot"
-					className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold text-black/40 transition-colors hover:text-black"
+					className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold outline-none transition-all duration-200"
+					style={{ color: "var(--studio-label)", opacity: 0.6 }}
 				>
 					＋ Shot
 				</button>
 			</div>
-		</div>
+		</StudioControlScope>
 	);
 }

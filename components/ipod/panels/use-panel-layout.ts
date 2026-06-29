@@ -63,7 +63,10 @@ export function usePanelLayoutSync(): void {
 		if (Object.keys(stored).length > 0) {
 			send({ type: "HYDRATE_PANEL_LAYOUT", payload: stored });
 		}
-		// Hydrate exactly once on mount.
+		// Hydrate exactly once on mount. Panels default to `visible: false` and are summoned
+		// from the ⌘K palette, so none are on screen at first paint — there is no pre-hydration
+		// clobber window here, and a post-paint effect is sufficient (unlike the device model,
+		// whose shell IS painted immediately; see ipod-classic-workbench's layout-effect restore).
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
