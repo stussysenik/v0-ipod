@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
 	cloneLightingConfig,
+	MAX_AMBIENT_INTENSITY,
+	MAX_ENV_INTENSITY,
+	MAX_SOFTBOX_INTENSITY,
+	MAX_SPOT_INTENSITY,
 	NATURAL_LIGHT_RIG,
 	RIG_PRESETS,
 	sanitizeLightingConfig,
@@ -49,6 +53,38 @@ describe("rig preset registry", () => {
 			);
 		},
 	);
+});
+
+describe("intensity ceilings (spec: interaction-robustness)", () => {
+	// NoToneMapping means no highlight rolloff — an unbounded intensity clips the
+	// render to white. The sanitizer is the only safety net, so it must cap every
+	// dial from a corrupt or hand-edited blob at the documented ceilings.
+	it("clamps oversized spot / softbox / env / ambient intensities", () => {
+		const corrupt = cloneLightingConfig(NATURAL_LIGHT_RIG);
+		corrupt.ambient.intensity = 1e6;
+		corrupt.key.intensity = 1e6;
+		corrupt.env.intensity = 1e6;
+		corrupt.env.softboxes[0].intensity = 1e6;
+
+		const healed = sanitizeLightingConfig(corrupt);
+		expect(healed.ambient.intensity).toBe(MAX_AMBIENT_INTENSITY);
+		expect(healed.key.intensity).toBe(MAX_SPOT_INTENSITY);
+		expect(healed.env.intensity).toBe(MAX_ENV_INTENSITY);
+		expect(healed.env.softboxes[0].intensity).toBe(MAX_SOFTBOX_INTENSITY);
+	});
+
+	it("ceilings clear every shipped rig — hand-tuned looks pass untouched", () => {
+		for (const { config } of RIG_PRESETS) {
+			expect(config.ambient.intensity).toBeLessThanOrEqual(MAX_AMBIENT_INTENSITY);
+			expect(config.env.intensity).toBeLessThanOrEqual(MAX_ENV_INTENSITY);
+			for (const spot of [config.key, config.fill, config.rim]) {
+				expect(spot.intensity).toBeLessThanOrEqual(MAX_SPOT_INTENSITY);
+			}
+			for (const s of config.env.softboxes) {
+				expect(s.intensity).toBeLessThanOrEqual(MAX_SOFTBOX_INTENSITY);
+			}
+		}
+	});
 });
 
 describe("Natural Light — the legibility template", () => {

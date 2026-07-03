@@ -333,6 +333,18 @@ export function cloneLightingConfig(config: StudioLightingConfig): StudioLightin
 	};
 }
 
+/**
+ * Upper intensity clamps for the sanitizer. The canvas renders with NoToneMapping —
+ * there is no filmic rolloff, so an oversized intensity clips straight to white and
+ * this sanitizer is the only safety net. Each ceiling sits ~3–4× the hottest shipped
+ * rig value (rim spot 340, softbox 1.6, env 1.25, ambient 1.0), so every hand-tuned
+ * look passes untouched while a corrupt or hand-edited blob cannot white out the render.
+ */
+export const MAX_AMBIENT_INTENSITY = 4;
+export const MAX_SPOT_INTENSITY = 1200;
+export const MAX_SOFTBOX_INTENSITY = 6;
+export const MAX_ENV_INTENSITY = 4;
+
 const HEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const num = (v: unknown, fallback: number): number =>
 	typeof v === "number" && Number.isFinite(v) ? v : fallback;
@@ -350,7 +362,7 @@ function sanitizeSpot(v: unknown, fallback: SpotSpec): SpotSpec {
 	const c = (v ?? {}) as Partial<SpotSpec>;
 	return {
 		color: hex(c.color, fallback.color),
-		intensity: Math.max(0, num(c.intensity, fallback.intensity)),
+		intensity: Math.min(Math.max(num(c.intensity, fallback.intensity), 0), MAX_SPOT_INTENSITY),
 		position: triple(c.position, fallback.position),
 		angle: Math.min(Math.max(num(c.angle, fallback.angle), 0), Math.PI / 2),
 		penumbra: Math.min(Math.max(num(c.penumbra, fallback.penumbra), 0), 1),
@@ -376,14 +388,14 @@ export function sanitizeLightingConfig(value: unknown): StudioLightingConfig {
 		name: typeof c.name === "string" ? c.name : base.name,
 		ambient: {
 			color: hex(c.ambient?.color, base.ambient.color),
-			intensity: Math.max(0, num(c.ambient?.intensity, base.ambient.intensity)),
+			intensity: Math.min(Math.max(num(c.ambient?.intensity, base.ambient.intensity), 0), MAX_AMBIENT_INTENSITY),
 		},
 		key: sanitizeSpot(c.key, base.key),
 		fill: sanitizeSpot(c.fill, base.fill),
 		rim: sanitizeSpot(c.rim, base.rim),
 		env: {
 			preset,
-			intensity: Math.max(0, num(env.intensity, base.env.intensity)),
+			intensity: Math.min(Math.max(num(env.intensity, base.env.intensity), 0), MAX_ENV_INTENSITY),
 			blur: Math.min(Math.max(num(env.blur, base.env.blur), 0), 1),
 			softboxes: Array.isArray(env.softboxes)
 				? env.softboxes.map((s, i) => {
@@ -391,7 +403,7 @@ export function sanitizeLightingConfig(value: unknown): StudioLightingConfig {
 						const sb = (s ?? {}) as Partial<SoftboxSpec>;
 						return {
 							color: hex(sb.color, fb.color),
-							intensity: Math.max(0, num(sb.intensity, fb.intensity)),
+							intensity: Math.min(Math.max(num(sb.intensity, fb.intensity), 0), MAX_SOFTBOX_INTENSITY),
 							position: triple(sb.position, fb.position),
 							scale: triple(sb.scale, fb.scale),
 						};

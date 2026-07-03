@@ -7,6 +7,9 @@ import { useEffect, useMemo, useState } from "react";
 import { IpodStoreContext } from "@/lib/xstate/store";
 import { buildCommands, type PaletteCommand } from "./command-registry";
 
+/** Window event that opens the palette — the touch path for viewports with no ⌘K. */
+export const OPEN_COMMAND_PALETTE_EVENT = "ipod:open-command-palette";
+
 function groupBy(commands: PaletteCommand[]): [string, PaletteCommand[]][] {
 	const byGroup = new Map<string, PaletteCommand[]>();
 	for (const cmd of commands) {
@@ -32,7 +35,8 @@ export function CommandPalette() {
 	const [search, setSearch] = useState("");
 	const [showSecondary, setShowSecondary] = useState(false);
 	const router = useRouter();
-	const { send } = IpodStoreContext.useActorRef();
+	const actorRef = IpodStoreContext.useActorRef();
+	const { send } = actorRef;
 	const viewMode = IpodStoreContext.useSelector((s) => s.context.presentation.viewMode);
 	const layout = IpodStoreContext.useSelector((s) => s.context.panelLayout);
 
@@ -43,8 +47,13 @@ export function CommandPalette() {
 				setOpen((prev) => !prev);
 			}
 		};
+		const onOpenEvent = () => setOpen(true);
 		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
+		window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpenEvent);
+		return () => {
+			document.removeEventListener("keydown", onKey);
+			window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, onOpenEvent);
+		};
 	}, []);
 
 	// Reset triage state on every open so each ⌘K starts from the curated primary list.
@@ -62,6 +71,9 @@ export function CommandPalette() {
 		send,
 		navigate: (href) => router.push(href),
 		close: () => onOpenChange(false),
+		// Machine context is the model plus transient export fields; the codec's
+		// normalize pass strips the extras, so the snapshot is safe to hand over.
+		getModel: () => actorRef.getSnapshot().context,
 	});
 
 	// A query reveals every tier (searching should never hide a match); an empty query honors

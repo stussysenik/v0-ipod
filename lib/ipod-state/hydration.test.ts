@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { IPOD_CLASSIC_PRESETS } from "@/lib/ipod-classic-presets";
 import { loadPersistedWorkbenchModel } from "./effects";
 import { saveUiState } from "./storage";
 import { createInitialIpodWorkbenchModel, normalizeModel } from "./update";
@@ -71,5 +72,34 @@ describe("persisted finish hydration", () => {
 		expect(restored.presentation.ringColor).toBe("#202020");
 		expect(restored.presentation.centerColor).toBe("#303030");
 		expect(restored.presentation.bgColor).toBe("#F0F0F0");
+	});
+});
+
+describe("hardware preset persistence", () => {
+	// Regression: isHardwarePreset was a hand-written literal list that silently
+	// dropped the 2008 black/silver variants, reverting them to the default on
+	// reload. The guard now derives from the canonical preset list — every
+	// selectable preset must survive a save/load round trip.
+	it("restores the 2008 silver variant instead of reverting to the default", () => {
+		saveUiState({ ...BASE_UI, hardwarePreset: "classic-2008-silver" });
+
+		const restored = normalizeModel(
+			loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel()),
+		);
+
+		expect(restored.presentation.hardwarePreset).toBe("classic-2008-silver");
+	});
+
+	it("round-trips every preset id in the canonical list", () => {
+		for (const preset of IPOD_CLASSIC_PRESETS) {
+			localStorage.clear();
+			saveUiState({ ...BASE_UI, hardwarePreset: preset.id });
+
+			const restored = normalizeModel(
+				loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel()),
+			);
+
+			expect(restored.presentation.hardwarePreset).toBe(preset.id);
+		}
 	});
 });

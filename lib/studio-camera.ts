@@ -299,3 +299,36 @@ export function clampPose(p: StudioPose): StudioPose {
 		target: p.target,
 	};
 }
+
+// ─── Gesture guards ──────────────────────────────────────────────────────────────────
+// Input-hardening math for OrbitRig's pointer/wheel gestures, kept here (framework-free)
+// so a unit test can storm it with adversarial sequences (spec: interaction-robustness).
+
+/**
+ * Minimum pinch spread, in px. Two pointers closer than this — including a second
+ * pointer landing exactly atop the first — read as this floor on BOTH the anchor
+ * and the live spread, so the pinch ratio stays bounded near 1 instead of dividing
+ * by ~0 and jumping the zoom.
+ */
+export const PINCH_SPREAD_FLOOR_PX = 24;
+
+/** Floor a raw pointer spread; a non-finite input collapses to the floor. */
+export function pinchSpread(rawDist: number): number {
+	return Number.isFinite(rawDist) ? Math.max(PINCH_SPREAD_FLOOR_PX, rawDist) : PINCH_SPREAD_FLOOR_PX;
+}
+
+/**
+ * Next zoom radius for a pinch: the anchor radius scaled by the floored spread
+ * ratio, clamped to REACH_RANGE. Any non-finite result falls back to the anchor.
+ */
+export function pinchZoomRadius(anchorRad: number, anchorDist: number, liveDist: number): number {
+	const rad = anchorRad * (pinchSpread(anchorDist) / pinchSpread(liveDist));
+	return Number.isFinite(rad)
+		? THREE.MathUtils.clamp(rad, REACH_RANGE[0], REACH_RANGE[1])
+		: anchorRad;
+}
+
+/** Keep a gesture-computed camera value finite — else hold the previous value. */
+export function finiteOr(next: number, prev: number): number {
+	return Number.isFinite(next) ? next : prev;
+}

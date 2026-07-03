@@ -8,12 +8,15 @@ import { useActorRef, useSelector } from "@xstate/react";
 import type { CameraPreviewState, ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import { setCaptureElapsedMs } from "@/lib/capture-clock";
 import { clipMarqueeElapsedMs, clipSongSecond } from "@/lib/export-clock";
+import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { playClickAudio } from "@/lib/ipod-state/effects";
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { createDebouncer } from "@/lib/debounce";
 import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recorder";
 import { downloadBlob } from "@/lib/three-export";
+import { consumePortableStateFromUrl, copyShareLink } from "@/lib/ipod-state/share";
 import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
 import { type LoopStyle, type StudioPose } from "@/lib/studio-camera";
@@ -101,13 +104,35 @@ export function Ipod3DStage() {
 	const [model, dispatch] = useReducer(
 		ipodWorkbenchReducer,
 		undefined,
-		() => loadWorkbenchModel() ?? createInitialIpodWorkbenchModel(),
+		// Client-only surface (ssr:false), so the initializer may read the URL: a
+		// valid `?s=` share link wins over local persistence for this load only —
+		// the param is consumed — and panel geometry stays device-local.
+		() => {
+			const persisted = loadWorkbenchModel() ?? createInitialIpodWorkbenchModel();
+			const shared = consumePortableStateFromUrl();
+			return shared ? { ...shared, panelLayout: persisted.panelLayout } : persisted;
+		},
 	);
 
-	// Persist the hard-earned user state on every change.
+	// Persist the hard-earned user state — debounced (spec: stage-render-performance).
+	// A slider drag dispatches per frame, and serializing the whole model to
+	// localStorage synchronously each time was per-frame jank. The trailing debounce
+	// writes once per pause; the debouncer holds the LATEST model, so the
+	// pagehide/unmount flush below always lands the current state and no
+	// acknowledged edit is ever lost. (Exports never read storage mid-session —
+	// they read the in-memory model — so no flush is needed on that path.)
+	const [persistModel] = useState(() => createDebouncer(saveWorkbenchModel, 300));
 	useEffect(() => {
-		saveWorkbenchModel(model);
-	}, [model]);
+		persistModel.call(model);
+	}, [persistModel, model]);
+	useEffect(() => {
+		const flush = () => persistModel.flush();
+		window.addEventListener("pagehide", flush);
+		return () => {
+			window.removeEventListener("pagehide", flush);
+			flush(); // unmounting inside the debounce window must not drop the edit
+		};
+	}, [persistModel]);
 
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const ipodApiRef = useRef<ThreeDIpodHandle | null>(null);
@@ -328,6 +353,13 @@ export function Ipod3DStage() {
 	useEffect(() => () => {
 		if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
 	}, []);
+
+	const handleShareLink = useCallback(() => {
+		void copyShareLink(model).then((copied) => {
+			showNotice(copied ? "Share link copied" : "Couldn't copy link");
+			if (copied) track(ANALYTICS_EVENTS.configShareLink, {});
+		});
+	}, [model, showNotice]);
 
 	// ── Playhead transport ──
 	// The hero the move orbits = the pose composed the instant the playhead first
@@ -860,6 +892,7 @@ export function Ipod3DStage() {
 						history={exportHistory}
 						peekProofBlob={peekProofBlob}
 						onReopen={handleReopen}
+						onShareLink={handleShareLink}
 					/>
 				</div>
 			</div>

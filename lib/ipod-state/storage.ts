@@ -36,7 +36,7 @@ import {
 	type SnapshotSelectionKind,
 	type SongSnapshot,
 } from "@/types/ipod-state";
-import { DEFAULT_HARDWARE_PRESET_ID } from "@/lib/ipod-classic-presets";
+import { DEFAULT_HARDWARE_PRESET_ID, IPOD_CLASSIC_PRESETS } from "@/lib/ipod-classic-presets";
 
 // Bumped to .v2 so the refreshed default song (Frank Ocean — "In My Room") actually
 // surfaces for returning sessions. Persisted metadata is spread on top of the fallback
@@ -102,8 +102,15 @@ function isInteractionModel(value: unknown): value is IpodInteractionModel {
 	return value === "direct" || value === "ipod-os" || value === "ipod-os-original";
 }
 
-function isHardwarePreset(value: unknown): value is IpodHardwarePresetId {
-	return value === "classic-2007" || value === "classic-2008" || value === "classic-2009";
+// Derived from the canonical preset list so a preset added to the union can never
+// again be silently dropped on reload — the old hand-written literals lost the
+// 2008 black/silver variants (spec: portable-customizer-state).
+const HARDWARE_PRESET_IDS: ReadonlySet<string> = new Set(
+	IPOD_CLASSIC_PRESETS.map((preset) => preset.id),
+);
+
+export function isHardwarePreset(value: unknown): value is IpodHardwarePresetId {
+	return typeof value === "string" && HARDWARE_PRESET_IDS.has(value);
 }
 
 function isSelectionKind(value: unknown): value is SnapshotSelectionKind {

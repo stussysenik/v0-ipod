@@ -117,6 +117,8 @@ interface Ipod3DExportDockProps {
 	peekProofBlob?: (record: ExportRecord) => Blob | undefined;
 	/** Re-open a past export's exact setup (only offered when the record has a snapshot). */
 	onReopen?: (record: ExportRecord) => void;
+	/** Copy the current look as a `?s=` share link (spec: portable-customizer-state). */
+	onShareLink?: () => void;
 }
 
 export function Ipod3DExportDock({
@@ -145,6 +147,7 @@ export function Ipod3DExportDock({
 	history = [],
 	peekProofBlob,
 	onReopen,
+	onShareLink,
 }: Ipod3DExportDockProps) {
 	const busy = exportState !== "idle";
 
@@ -340,6 +343,15 @@ export function Ipod3DExportDock({
 					label="Still · Front"
 					onClick={() => onExportPng("front", still)}
 				/>
+				{onShareLink && (
+					<DockButton
+						busy={false}
+						disabled={busy}
+						hint="Copy URL"
+						label="Share link"
+						onClick={onShareLink}
+					/>
+				)}
 			</div>
 
 			{/* Export History — past 1080p clips saved to PocketBase. Collapsed by default so

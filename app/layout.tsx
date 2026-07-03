@@ -105,6 +105,9 @@ export default function RootLayout({
 							closeButton={false}
 							visibleToasts={2}
 							duration={2200}
+							// Clear the compact toolbox dock band (48px toggle + 16px inset
+							// + breathing room) so toasts never cover the dock on phones.
+							mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 88px)" }}
 							toastOptions={{
 								style: {
 									border: "1px solid rgba(0,0,0,0.14)",

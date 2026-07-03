@@ -19,6 +19,9 @@ export const ANALYTICS_EVENTS = {
 	threeDOrbit: "ipod.3d_orbit",
 	threeDFocusChange: "ipod.3d_focus_change",
 	threeDExport: "ipod.3d_export",
+	configShareLink: "ipod.config_share_link",
+	configExportFile: "ipod.config_export_file",
+	configImportFile: "ipod.config_import_file",
 } as const;
 
 export type AnalyticsEvent =

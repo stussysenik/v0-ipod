@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { Ipod3DStageClient } from "@/components/ipod/scenes/ipod-3d-stage-client";
 
 export const metadata: Metadata = {
@@ -11,7 +12,9 @@ export const metadata: Metadata = {
 export default function ThreeDFocusPage() {
 	return (
 		<main className="min-h-dvh w-full overflow-hidden bg-white">
-			<Ipod3DStageClient />
+			<AppErrorBoundary label="3D stage">
+				<Ipod3DStageClient />
+			</AppErrorBoundary>
 		</main>
 	);
 }

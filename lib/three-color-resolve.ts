@@ -3,24 +3,25 @@ import * as THREE from "three";
 /**
  * WYSIWYG export resolve — make an offscreen render match the live canvas.
  *
- * Why this exists: the live `/3d` view is drawn through the @react-three/postprocessing
- * `EffectComposer`, which (a) forces `renderer.toneMapping = NoToneMapping` while mounted
- * and (b) ends its chain with a vignette + the linear→sRGB output encode. The export path,
- * by contrast, renders the scene to a plain `WebGLRenderTarget`. In three r152+ a render to
- * a non-XR render target is hard-wired to output **LinearSRGBColorSpace with NoToneMapping**
- * (it ignores `texture.colorSpace`), so the read-back pixels are raw linear light — i.e.
- * everything comes out ~2.2 gamma darker than the screen, with no vignette. That is the
- * "exports look significantly darker" bug.
+ * Why this exists: the live `/3d` view renders straight to the drawing buffer — no
+ * post-processing composer in the chain — with `NoToneMapping` and `SRGBColorSpace`
+ * output, so three appends its linear→sRGB output encode to every on-screen pixel.
+ * The export path, by contrast, renders the scene to a plain `WebGLRenderTarget`. In
+ * three r152+ a render to a non-XR render target is hard-wired to output
+ * **LinearSRGBColorSpace with NoToneMapping** (it ignores `texture.colorSpace`), so the
+ * read-back pixels are raw linear light — i.e. everything comes out ~2.2 gamma darker
+ * than the screen. That is the "exports look significantly darker" bug.
  *
- * The fix is a single fullscreen resolve pass that samples the linear scene target and
- * reproduces the live composer's tail EXACTLY: the sRGB OETF. We write the already-encoded
- * bytes from a raw `ShaderMaterial` (three does not append its colorspace_fragment to raw
- * shaders, so our output is passed through untouched) into a byte target, then read those
- * bytes back — so the exported PNG/MP4 is pixel-faithful to what the user composed on screen.
+ * The fix is a single fullscreen resolve pass — used ONLY by the export path, never the
+ * live render — that samples the linear scene target and applies the same sRGB OETF the
+ * live canvas gets from three's output encode. We write the already-encoded bytes from a
+ * raw `ShaderMaterial` (three does not append its colorspace_fragment to raw shaders, so
+ * our output is passed through untouched) into a byte target, then read those bytes back
+ * — so the exported PNG/MP4 is pixel-faithful to what the user composed on screen.
  *
- * The live composer carries NO vignette (a product plate wants a clean, uniform field — see
- * `post-processing.tsx`), so this resolve is a straight encode with nothing to keep in
- * lockstep beyond the colour-space transform.
+ * There is no vignette anywhere in the pipeline (a product plate wants a clean, uniform
+ * field), so this resolve is a straight encode with nothing to keep in lockstep beyond
+ * the colour-space transform.
  */
 
 const RESOLVE_VERT = /* glsl */ `
@@ -46,7 +47,7 @@ vec3 linearToSRGB(vec3 c) {
 void main() {
 	vec4 src = texture2D(tDiffuse, vUv);
 	// Straight linear → sRGB encode. No vignette: a product plate wants a clean, uniform
-	// field, so the live composer carries no darkening and neither does the export.
+	// field, so the live canvas carries no darkening and neither does the export.
 	vec3 color = linearToSRGB(src.rgb);
 	gl_FragColor = vec4(color, src.a);
 }

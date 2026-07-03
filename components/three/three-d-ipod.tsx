@@ -22,7 +22,7 @@ import React, {
 import * as THREE from "three";
 
 import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
-import { deriveWheelColors } from "@/lib/color-manifest";
+import { deriveWheelColors, relativeLuminance } from "@/lib/color-manifest";
 import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@/lib/screen-bake-guard";
 import { ColorResolvePass } from "@/lib/three-color-resolve";
 import {
@@ -34,8 +34,11 @@ import {
 	clampPose,
 	DEFAULT_TARGET,
 	ELEVATION_RANGE,
+	finiteOr,
 	type LoopStyle,
 	phaseForProgress,
+	pinchSpread,
+	pinchZoomRadius,
 	poseToPosition,
 	positionToPose,
 	REACH_RANGE,
@@ -306,7 +309,7 @@ export interface ThreeDIpodProps {
 	 * Inline style merged onto the stage root — used for floating-panel canvas symbiosis
 	 * to inset the canvas (top/right/bottom/left + minHeight:0) so panels never occlude the
 	 * model (spec: floating-panel-system). Inline style overrides the root's `inset-0` /
-	 * `min-h-screen`. Defaults undefined → the canvas fills the stage exactly as before.
+	 * `min-h-dvh`. Defaults undefined → the canvas fills the stage exactly as before.
 	 */
 	stageStyle?: React.CSSProperties;
 	/** Solid background baked into exports (the live canvas stays transparent). */
@@ -343,6 +346,8 @@ interface IpodModelProps {
 	technicalFlat?: boolean;
 	/** Show the chassis-edge ports (jack, hold switch, dock). Default true. */
 	showPorts?: boolean;
+	/** The active rig's env intensity — scales the engraving's reflective "pop". */
+	envIntensity?: number;
 	onRegisterCapture?: (hooks: CaptureHooks) => void;
 }
 
@@ -965,7 +970,7 @@ function IpodPorts({ dims, visible = true }: { dims: Ipod3DDimensions; visible?:
 
 // ─── Polished Steel Back ─────────────────────────────────────────────────────────
 
-function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; capacityLabel: string }) {
+function IpodBack({ dims, z, capacityLabel, envIntensity = 1 }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; capacityLabel: string; envIntensity?: number }) {
 	const flat = useTechnicalFlat();
 	const engraving = useMemo(() => createBackEngravingTexture(capacityLabel), [capacityLabel]);
 
@@ -981,8 +986,12 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 				<FlatFinish map={engraving} transparent depthWrite={false} />
 			) : (
 				// CNC Milled finish: a colored dielectric (etched pixels) on mirror metal.
-				// Clearcoat and high envMapIntensity make the etched bevels "shine" and
-				// "pop" as the device orbits, mimicking the reflective catch of real milling.
+				// Clearcoat and a boosted envMapIntensity make the etched bevels "shine"
+				// and "pop" as the device orbits, mimicking the reflective catch of real
+				// milling. The boost tracks the ACTIVE rig's env intensity (2× — the value
+				// that reproduces the tuned 2.5 look under the Apple rig's env 1.25),
+				// clamped so the etch neither blows out on a bright rig nor vanishes on a
+				// dark one (rigs ship env 0.3–1.25).
 				<meshPhysicalMaterial
 					map={engraving}
 					transparent
@@ -991,7 +1000,7 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 					roughness={0.12}
 					clearcoat={1.0}
 					clearcoatRoughness={0.1}
-					envMapIntensity={2.5}
+					envMapIntensity={THREE.MathUtils.clamp(envIntensity * 2, 0.5, 4)}
 					toneMapped={false}
 				/>
 			)}
@@ -1001,7 +1010,7 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, stageColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, stageColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, envIntensity = 1, onRegisterCapture }: IpodModelProps) {
 	// Edge defaults to the back colour so an un-edited device is pixel-identical
 	// to the single-material chassis (edge == back until the user sets it).
 	const resolvedEdgeColor = edgeColor ?? backColor;
@@ -1132,14 +1141,18 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, s
 	// A small under-damped spring whose value kicks to 1 and settles to 0. We map
 	// that decay onto a slight tilt-back + lift, so the device "drops" into rest
 	// like a tonearm settling onto a record — on first load and again on every
-	// finish change, acknowledging the edit with a physical beat. Subtraction:
-	// the motion is a few degrees and a hair of travel, never a showy swing.
+	// hardware-preset change, acknowledging the new device with a physical beat.
+	// Color-only edits deliberately do NOT re-arm it (spec: stage-render-
+	// performance): a rapid color spam would otherwise keep the device
+	// perpetually mid-drop, restarting per-frame spring work on every tweak.
+	// Subtraction: the motion is a few degrees and a hair of travel, never a
+	// showy swing.
 	const settle = useRef({ value: 1, velocity: 0 });
 
 	useEffect(() => {
 		settle.current.value = 1;
 		settle.current.velocity = 0;
-	}, [skinColor, ringColor, centerColor, backColor, resolvedEdgeColor, bezelColor]);
+	}, [preset.id]);
 
 	useEffect(() => {
 		if (!onRegisterCapture) return;
@@ -1414,7 +1427,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, s
 					</mesh>
 
 					{/* ── BACK ENGRAVING ── */}
-					<IpodBack dims={dims} z={z} capacityLabel={capacityLabel} />
+					<IpodBack dims={dims} z={z} capacityLabel={capacityLabel} envIntensity={envIntensity} />
 
 					{/* ── CHASSIS EDGE PORTS (jack · hold switch · 30-pin dock) ── */}
 					<IpodPorts dims={dims} visible={showPorts} />
@@ -1663,6 +1676,8 @@ function OrbitRig({
 		const el = gl.domElement;
 		// We own every touch gesture on the canvas. Without this the browser keeps the
 		// touch for page scroll / pinch-zoom — the thing that makes web 3D feel slippery.
+		// The prior value is restored on cleanup so unmounting the rig leaves no trace.
+		const prevTouchAction = el.style.touchAction;
 		el.style.touchAction = "none";
 
 		const ORBIT_RAD_PER_PX = 0.006; // matches the prior drag sensitivity
@@ -1685,9 +1700,12 @@ function OrbitRig({
 			const n = active.size || 1;
 			return { x: x / n, y: y / n };
 		};
+		// Floored via pinchSpread so a second pointer landing atop the first can't
+		// blow the pinch ratio up (spec: interaction-robustness) — both the anchored
+		// dist and the live spread read at least the floor, bounding the ratio near 1.
 		const spread = () => {
 			const pts = [...active.values()];
-			return pts.length < 2 ? 1 : Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+			return pinchSpread(pts.length < 2 ? 0 : Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y));
 		};
 		// Anchor orbit on the committed GOAL (not the eased pose) so a fine drag can't drift
 		// while the rig is still easing toward a prior snap.
@@ -1710,13 +1728,20 @@ function OrbitRig({
 			if (lockedRef.current || !active.has(e.pointerId)) return;
 			active.set(e.pointerId, { x: e.clientX, y: e.clientY });
 			if (active.size >= 2 && pinch) {
-				// Fingers apart (dist↑) → reach↓ → zoom in. The rig clamps to REACH_RANGE.
-				goal.current.rad = THREE.MathUtils.clamp(pinch.rad * (pinch.dist / spread()), REACH_RANGE[0], REACH_RANGE[1]);
+				// Fingers apart (dist↑) → reach↓ → zoom in. pinchZoomRadius floors both
+				// spreads, clamps to REACH_RANGE, and falls back to the anchor radius if
+				// the math ever goes non-finite — the camera can never jump or wedge.
+				goal.current.rad = pinchZoomRadius(pinch.rad, pinch.dist, spread());
 			}
 			if (orbit) {
 				const c = centroid();
-				goal.current.az = orbit.az - (c.x - orbit.x) * ORBIT_RAD_PER_PX;
-				goal.current.pol = THREE.MathUtils.clamp(orbit.pol - (c.y - orbit.y) * ORBIT_RAD_PER_PX, 0.18, Math.PI - 0.18);
+				// finiteOr: a hostile pointer event (NaN clientX) must hold the previous
+				// value, never poison the eased goal — cheap, no per-frame allocation.
+				goal.current.az = finiteOr(orbit.az - (c.x - orbit.x) * ORBIT_RAD_PER_PX, goal.current.az);
+				goal.current.pol = finiteOr(
+					THREE.MathUtils.clamp(orbit.pol - (c.y - orbit.y) * ORBIT_RAD_PER_PX, 0.18, Math.PI - 0.18),
+					goal.current.pol,
+				);
 				// Semantic "user manipulated the camera" signal autocapture can't see
 				// (the canvas is one opaque node). Once per gesture; `pointers` tells
 				// 1-finger orbit from 2-finger pinch-zoom.
@@ -1745,7 +1770,10 @@ function OrbitRig({
 		const onWheel = (e: WheelEvent) => {
 			if (lockedRef.current) return; // perspective locked — don't zoom-dolly
 			e.preventDefault();
-			goal.current.rad = THREE.MathUtils.clamp(goal.current.rad + e.deltaY * 0.012, REACH_RANGE[0], REACH_RANGE[1]);
+			goal.current.rad = finiteOr(
+				THREE.MathUtils.clamp(goal.current.rad + e.deltaY * 0.012, REACH_RANGE[0], REACH_RANGE[1]),
+				goal.current.rad,
+			);
 		};
 
 		el.addEventListener("pointerdown", onDown);
@@ -1759,6 +1787,7 @@ function OrbitRig({
 			el.removeEventListener("pointerup", onUp);
 			el.removeEventListener("pointercancel", onUp);
 			el.removeEventListener("wheel", onWheel);
+			el.style.touchAction = prevTouchAction;
 		};
 	}, [gl]);
 
@@ -1929,8 +1958,9 @@ function SceneCapture({
 	const { gl, scene, camera } = useThree();
 	const setFrameloop = useThree((s) => s.setFrameloop);
 
-	// WYSIWYG resolve pass — reproduces the live composer's vignette + sRGB encode on the
-	// offscreen export target, which three otherwise leaves as raw linear light (dark).
+	// WYSIWYG resolve pass (export-only) — applies the linear→sRGB encode the live canvas
+	// gets from three's output pipeline (NoToneMapping + SRGBColorSpace) to the offscreen
+	// export target, which three otherwise leaves as raw linear light (dark).
 	const colorResolveRef = useRef<ColorResolvePass | null>(null);
 	// Lazy-init with the `== null` check the react-hooks/refs rule requires (a bare
 	// `!ref.current` reads as an illegal render-time ref access and fails `next build`).
@@ -2002,10 +2032,9 @@ function SceneCapture({
 		};
 
 		// Paint a solid export background; returns a restore() back to the live
-		// transparent canvas. We set scene.background (not the clear color) because
-		// the post-processing EffectComposer runs with autoClear off — a Color
-		// background is rendered by both the direct RT render and the composer, so
-		// it bakes the stage color into the still and the clip alike, matching 2D.
+		// transparent canvas. We set scene.background (not the clear color) so the
+		// stage colour lands in every offscreen render path — the direct RT still
+		// and each offline clip frame alike — baking it into the export, matching 2D.
 		const applyBackground = () => {
 			const prevBackground = scene.background;
 			if (bgRef.current) {
@@ -2042,8 +2071,8 @@ function SceneCapture({
 				gl.render(scene, camera);
 				gl.setRenderTarget(null);
 
-				// Resolve linear scene → sRGB bytes matching the live composer (vignette +
-				// sRGB encode). Reading the RT directly would return raw linear → dark export.
+				// Resolve linear scene → sRGB bytes matching the live canvas's output encode.
+				// Reading the RT directly would return raw linear → dark export.
 				const buffer = new Uint8Array(width * height * 4);
 				colorResolveRef.current!.resolve(gl, renderTarget, width, height, buffer);
 
@@ -2117,14 +2146,14 @@ function SceneCapture({
 		// ── Deterministic offline clip render ──
 		// Renders each frame to a multisampled WebGLRenderTarget — exactly the path
 		// captureHighRes uses for the still — instead of grabbing the live canvas.
-		// That's the fix for the base clip's stale-frame pop: the old path called
-		// `gl.render` to the on-screen canvas while the post-processing EffectComposer
-		// owned the real-time frameloop, so the first frames captured the composer's
-		// pre-move render (a 7-frame stale opening, then a hard cut, and a loop seam
-		// that never closed). Rendering offline to an RT touches neither the canvas
-		// nor the composer, so every frame is exactly the pose we set and pose(total)
-		// === pose(0) — a genuinely seamless loop. The camera flies a studio-coordinate
-		// move (orbit or robo diagonal) anchored on the composed hero framing.
+		// That's the fix for the base clip's stale-frame pop: the old path grabbed
+		// the on-screen canvas while the live frameloop still owned it, so the first
+		// frames captured a pre-move render (a 7-frame stale opening, then a hard
+		// cut, and a loop seam that never closed). Rendering offline to an RT never
+		// touches the live canvas or its frameloop, so every frame is exactly the
+		// pose we set and pose(total) === pose(0) — a genuinely seamless loop. The
+		// camera flies a studio-coordinate move (orbit or robo diagonal) anchored on
+		// the composed hero framing.
 		const renderClipFrames = async (
 			opts: ClipRenderOptions,
 			onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
@@ -2487,6 +2516,38 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			typeof window !== "undefined" &&
 			new URLSearchParams(window.location.search).has("perf");
 
+		// WebGL context-loss recovery (spec: interaction-robustness). preventDefault
+		// on `webglcontextlost` is what PERMITS restoration (the default is to never
+		// restore); R3F re-renders the tree itself on `webglcontextrestored`, so all
+		// we own is a non-blocking notice while the GPU is away. The canvas element
+		// arrives via onCreated below; the effect detaches the listeners on unmount.
+		const [glCanvas, setGlCanvas] = useState<HTMLCanvasElement | null>(null);
+		const [contextLost, setContextLost] = useState(false);
+		useEffect(() => {
+			if (!glCanvas) return;
+			const onLost = (event: Event) => {
+				event.preventDefault();
+				setContextLost(true);
+			};
+			const onRestored = () => setContextLost(false);
+			glCanvas.addEventListener("webglcontextlost", onLost);
+			glCanvas.addEventListener("webglcontextrestored", onRestored);
+			return () => {
+				glCanvas.removeEventListener("webglcontextlost", onLost);
+				glCanvas.removeEventListener("webglcontextrestored", onRestored);
+			};
+		}, [glCanvas]);
+
+		// Grounding-shadow strength follows the stage (spec: interaction-robustness
+		// lighting pass). A fixed black 0.65 pool reads right on white but punches a
+		// sooty hole in a dark stage; scaling opacity with the stage's relative
+		// luminance keeps the shadow soft on dark stages (0.25 floor) and a touch
+		// gentler than before on white (0.6). Same luminance util the wheel bands use.
+		const shadowOpacity = useMemo(
+			() => 0.25 + 0.35 * relativeLuminance(captureBackground ?? "#ffffff"),
+			[captureBackground],
+		);
+
 		const buildHandle = useCallback(
 			(): ThreeDIpodHandle => ({
 				captureHighRes: async (width?: number, height?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => {
@@ -2572,9 +2633,10 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 		// controls always take focus over the iPod — a panel overlapping the device covers
 		// it and receives the clicks, never the reverse.
 		return (
-			<div className={`w-full h-full min-h-screen absolute inset-0 z-0 ${stageClassName}`} style={stageStyle}>
+			<div className={`w-full h-full min-h-dvh absolute inset-0 z-0 ${stageClassName}`} style={stageStyle}>
 				<Canvas
 					shadows
+					onCreated={({ gl }) => setGlCanvas(gl.domElement)}
 					// Render at up to 2× device pixels (was 1.5×). On a retina panel this is
 					// the difference between a soft preview and a crisp one — the metal edges,
 					// the screen bezel gloss, and the drei-Html screen all sharpen. R3F still
@@ -2619,19 +2681,21 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 						capacityLabel={capacityLabel}
 						technicalFlat={technicalFlat}
 						stageColor={captureBackground}
+						envIntensity={activeLighting.env.intensity}
 						{...modelProps}
 						onRegisterCapture={handleRegisterCapture}
 					/>
 
 					{/* Grounding contact shadow — suppressed in the Technical view, which is a
-					   shadowless spec-sheet render. */}
+					   shadowless spec-sheet render. Opacity derives from the stage luminance
+					   (see shadowOpacity above) so the pool suits dark and light stages alike. */}
 					{!technicalFlat && (
 						<ContactShadows
 							blur={2.4}
 							color="#000000"
 							far={10}
 							frames={1}
-							opacity={0.65}
+							opacity={shadowOpacity}
 							position={[0, -3.52, 0]}
 							resolution={1024}
 							scale={24}
@@ -2643,6 +2707,14 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 					<SceneCapture capturingRef={capturingRef} captureBackground={captureBackground} captureHooksRef={captureHooksRef} onCapture={handleCapture} onFrameCapture={handleFrameCapture} onRegisterCanvas={handleRegisterCanvas} onRegisterClip={handleRegisterClip} onRegisterViewport={handleRegisterViewport} onReady={onReady} />
 
 				</Canvas>
+
+				{/* Context-loss notice — non-blocking pill while the GPU is away; clears
+				   itself the moment `webglcontextrestored` fires and R3F resumes drawing. */}
+				{contextLost && (
+					<div className="pointer-events-none absolute left-1/2 top-6 z-10 -translate-x-1/2 rounded-full border border-white/15 bg-black/55 px-4 py-1.5 text-xs font-medium text-white/80 backdrop-blur-md">
+						Graphics interrupted — restoring…
+					</div>
+				)}
 			</div>
 		);
 	},

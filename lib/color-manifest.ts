@@ -290,7 +290,7 @@ export function wheelColorwayForLuminance(luminance: number): DerivedWheelColors
 /**
  * Approximate relative luminance from hex (sRGB linearized).
  */
-function relativeLuminance(hex: string): number {
+export function relativeLuminance(hex: string): number {
 	const [r, g, b] = hexToRgb(hex).map((c) => {
 		const s = c / 255;
 		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);

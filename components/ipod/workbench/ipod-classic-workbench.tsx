@@ -15,18 +15,21 @@ import {
 	Monitor,
 	Smartphone,
 	Check,
+	Command,
 	Loader2,
 	Menu,
 	Film,
 	Video,
 	Eye,
 	EyeOff,
+	Link,
 	Terminal,
 	Play,
 	Pause,
 	RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import {
 	probeAnimatedMp4ExportSupport,
 	type ExportProgress,
@@ -71,6 +74,7 @@ import {
 	savePersistedSongSnapshot,
 	saveWorkbenchSnapshot,
 } from "@/lib/ipod-state/effects";
+import { consumePortableStateFromUrl, copyShareLink } from "@/lib/ipod-state/share";
 import { batteryLevelForElapsed } from "@/lib/ipod-state/battery-cycle";
 import {
 	createInitialIpodWorkbenchModel,
@@ -102,6 +106,8 @@ import { resolveMp4ExportStrategy } from "@/lib/export/mp4-support";
 import { formatTimecode } from "@/lib/time-utils";
 import { IpodStoreContext } from "@/lib/xstate/store";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { OPEN_COMMAND_PALETTE_EVENT } from "../command/command-palette";
+import { useViewportSize } from "../panels/use-panel-layout";
 import { PanelSystem } from "../panels/panel-system";
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
@@ -151,7 +157,9 @@ export default function IpodClassicWorkbench() {
 	const savedCenterColors = model.savedColors.center;
 	const [isExportCapturing, setIsExportCapturing] = useState(false);
 	const [titleCanMarquee, setTitleCanMarquee] = useState(false);
-	const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+	// Single viewport subscription shared with the panel system (spec:
+	// stage-render-performance) — no bespoke resize listener here.
+	const viewportSize = useViewportSize();
 	const [softNotice, setSoftNotice] = useState<string | null>(null);
 	const [editorResetKey, setEditorResetKey] = useState(0);
 	const [exportCounter, setExportCounter] = useState(0);
@@ -186,7 +194,12 @@ export default function IpodClassicWorkbench() {
 	const isAsciiView = isAsciiViewMode(viewMode);
 	const canPngExport = isPngExportViewMode(viewMode);
 	const isAuthenticInteraction = isAuthenticInteractionModel(interactionModel);
-	const isCompactToolbox = viewportSize.width > 0 && viewportSize.width < 768;
+	// Compact = narrow (phones/portrait) OR short (landscape phones): a 844×390
+	// landscape phone needs the same dock + scroll-escape treatment as a 390×844
+	// portrait one (spec: workbench-responsive-layout).
+	const isCompactToolbox =
+		(viewportSize.width > 0 && viewportSize.width < 768) ||
+		(viewportSize.height > 0 && viewportSize.height < 480);
 	// Portrait = a phone held upright. There the width-fit device already clears the
 	// height with margin, so we lock scale to width (see previewScale) and let the
 	// container scroll — immune to the constant innerHeight oscillation (URL bar,
@@ -264,30 +277,18 @@ export default function IpodClassicWorkbench() {
 		[send],
 	);
 
-	useEffect(() => {
-		const readViewport = () => {
-			setViewportSize({
-				width: window.innerWidth,
-				height: window.innerHeight,
-			});
-		};
-		readViewport();
-		window.addEventListener("resize", readViewport, { passive: true });
-		window.addEventListener("orientationchange", readViewport, { passive: true });
-		return () => {
-			window.removeEventListener("resize", readViewport);
-			window.removeEventListener("orientationchange", readViewport);
-		};
-	}, []);
-
 	// Hydrate persisted state in a layout effect (pre-paint), not a post-paint useEffect:
 	// the first interactive frame must already carry the user's saved model, or a tap/drag
 	// landing in the pre-hydration window gets wiped by this whole-model RESTORE. See
 	// hooks/use-isomorphic-layout-effect.ts.
 	useIsomorphicLayoutEffect(() => {
+		const persisted = loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel());
+		// A `?s=` share link wins over local persistence for this load only (the param
+		// is consumed), and panel geometry stays device-local — it never travels.
+		const shared = consumePortableStateFromUrl();
 		send({
 			type: "RESTORE_MODEL",
-			payload: loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel()),
+			payload: shared ? { ...shared, panelLayout: persisted.panelLayout } : persisted,
 		});
 		setIsModelHydrated(true);
 	}, [send]);
@@ -628,6 +629,14 @@ export default function IpodClassicWorkbench() {
 		showSoftNotice("Snapshot saved");
 	}, [model, playClick, showSoftNotice, resetInteractionChrome]);
 
+	const handleShareLink = useCallback(() => {
+		playClick();
+		void copyShareLink(model).then((copied) => {
+			showSoftNotice(copied ? "Share link copied" : "Couldn't copy link");
+			if (copied) track(ANALYTICS_EVENTS.configShareLink, {});
+		});
+	}, [model, playClick, showSoftNotice]);
+
 	const handleResetModel = useCallback(() => {
 		resetInteractionChrome({
 			closeSettings: true,
@@ -866,7 +875,7 @@ export default function IpodClassicWorkbench() {
 			<div
 				ref={containerRef}
 				className={`relative min-h-dvh w-full flex flex-col items-center transition-colors duration-500 ${
-					isCompactPortrait
+					isCompactToolbox
 						? "justify-start overflow-y-auto overscroll-contain"
 						: "justify-center overflow-hidden"
 				}`}
@@ -975,6 +984,14 @@ export default function IpodClassicWorkbench() {
 								isActive={isZenMode}
 								onClick={() => setIsZenMode((on) => !on)}
 							/>
+							{isCompactToolbox && (
+								<IconButton
+									icon={<Command className="w-5 h-5" />}
+									label="Command Palette"
+									data-testid="command-palette-button"
+									onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))}
+								/>
+							)}
 							<IconButton
 								icon={isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
 								label={isPlaying ? "Pause" : "Play"}
@@ -1042,16 +1059,31 @@ export default function IpodClassicWorkbench() {
 							disabled={!canMp4Export || exportStatus !== "idle"}
 							className={activeExportKind === "mp4" && exportStatus === "success" ? "bg-green-500" : mp4Busy ? "bg-blue-500" : ""}
 						/>
+						<IconButton
+							icon={<Link className="w-5 h-5" />}
+							label="Copy Share Link"
+							data-testid="share-link-button"
+							onClick={handleShareLink}
+						/>
 					</div>
 				</div>
 
 				{softNotice && exportStatus === "idle" && (
 					<div
 						className="fixed z-50 rounded-full border border-black/10 bg-white/72 px-3 py-1 text-[11px] font-medium text-black/65 shadow-[0_8px_18px_rgba(0,0,0,0.1)] backdrop-blur-sm"
-						style={{
-							right: `calc(1.5rem + var(--safe-inset-right))`,
-							bottom: `calc(1.5rem + var(--safe-inset-bottom))`,
-						}}
+						style={
+							// Compact viewports park the toolbox dock bottom-right, so the
+							// pill moves bottom-left to keep the band collision-free.
+							isCompactToolbox
+								? {
+										left: `calc(1rem + var(--safe-inset-left))`,
+										bottom: `calc(1rem + var(--safe-inset-bottom))`,
+									}
+								: {
+										right: `calc(1.5rem + var(--safe-inset-right))`,
+										bottom: `calc(1.5rem + var(--safe-inset-bottom))`,
+									}
+						}
 					>
 						{softNotice}
 					</div>
@@ -1070,10 +1102,14 @@ export default function IpodClassicWorkbench() {
 					style={{
 						width: `${scaledFrameWidth}px`,
 						height: `${scaledFrameHeight}px`,
-						maxWidth: `calc(100vw - var(--safe-inset-left) - var(--safe-inset-right) - 1.5rem)`,
-						// Portrait phones are width-locked and scroll vertically, so the
-						// device must render at full height (no clamp) or its ends clip.
-						maxHeight: isCompactPortrait
+						// The container's safe-inset padding already carves out the same
+						// budget the old `calc(100vw - insets - 1.5rem)` approximated —
+						// and 100% excludes the scrollbar gutter that 100vw overflows.
+						maxWidth: "100%",
+						// Compact viewports scroll (portrait is width-locked; short
+						// landscape fits but must never clip), so the device renders at
+						// full height with no clamp.
+						maxHeight: isCompactToolbox
 							? undefined
 							: `calc(100dvh - var(--safe-inset-top) - var(--safe-inset-bottom) - 1.5rem)`,
 					}}
