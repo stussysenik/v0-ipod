@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 
+import { AnalyticsProvider } from "@/components/analytics/posthog-provider";
 import { BuildVersionBadge } from "@/components/build-version-badge";
 import { ServiceWorkerCleanup } from "@/components/service-worker-cleanup";
 
@@ -93,6 +94,7 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
 			>
+				<AnalyticsProvider>
 				<IpodStoreProvider>
 					<ServiceWorkerCleanup deployVersion={deployVersion} />
 						{children}
@@ -115,6 +117,7 @@ export default function RootLayout({
 						/>
 					{shouldRenderAnalytics ? <Analytics /> : null}
 				</IpodStoreProvider>
+				</AnalyticsProvider>
 			</body>
 		</html>
 	);

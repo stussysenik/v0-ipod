@@ -4,6 +4,7 @@ import {
 	ContactShadows,
 	Html,
 	PerspectiveCamera,
+	StatsGl,
 } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as htmlToImage from "html-to-image";
@@ -20,6 +21,7 @@ import React, {
 } from "react";
 import * as THREE from "three";
 
+import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { deriveWheelColors } from "@/lib/color-manifest";
 import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@/lib/screen-bake-guard";
 import { ColorResolvePass } from "@/lib/three-color-resolve";
@@ -1664,10 +1666,14 @@ function OrbitRig({
 		el.style.touchAction = "none";
 
 		const ORBIT_RAD_PER_PX = 0.006; // matches the prior drag sensitivity
+		const ORBIT_FIRE_PX = 4; // ignore tap jitter; only a real drag counts as an orbit
 		const active = new Map<number, { x: number; y: number }>();
 		// Anchors captured at gesture start so an eased mid-flight pose never drifts the input.
 		let orbit: { az: number; pol: number; x: number; y: number } | null = null;
 		let pinch: { dist: number; rad: number } | null = null;
+		// One analytics event per gesture, not per pointermove. Flips true on the
+		// first move that clears `ORBIT_FIRE_PX`, resets when all pointers lift.
+		let orbited = false;
 
 		const centroid = () => {
 			let x = 0;
@@ -1711,6 +1717,13 @@ function OrbitRig({
 				const c = centroid();
 				goal.current.az = orbit.az - (c.x - orbit.x) * ORBIT_RAD_PER_PX;
 				goal.current.pol = THREE.MathUtils.clamp(orbit.pol - (c.y - orbit.y) * ORBIT_RAD_PER_PX, 0.18, Math.PI - 0.18);
+				// Semantic "user manipulated the camera" signal autocapture can't see
+				// (the canvas is one opaque node). Once per gesture; `pointers` tells
+				// 1-finger orbit from 2-finger pinch-zoom.
+				if (!orbited && Math.hypot(c.x - orbit.x, c.y - orbit.y) > ORBIT_FIRE_PX) {
+					orbited = true;
+					track(ANALYTICS_EVENTS.threeDOrbit, { pointers: active.size });
+				}
 			}
 		};
 		const onUp = (e: PointerEvent) => {
@@ -1726,6 +1739,7 @@ function OrbitRig({
 			} else {
 				pinch = null;
 				orbit = null;
+				orbited = false; // gesture over — next drag fires a fresh event
 			}
 		};
 		const onWheel = (e: WheelEvent) => {
@@ -2465,6 +2479,14 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 		const setFocus = onFocusChange ?? setFocusState;
 		const isFocusControlled = focusProp !== undefined;
 
+		// Perf HUD opt-in: `/3d?perf` overlays drei's StatsGl (FPS / CPU / GPU /
+		// draw calls) so scene cost is measured, not assumed. The stage is rendered
+		// ssr:false, so reading window here is hydration-safe. Never shown during an
+		// export/preview pass — it must not bake into a captured frame.
+		const showPerf =
+			typeof window !== "undefined" &&
+			new URLSearchParams(window.location.search).has("perf");
+
 		const buildHandle = useCallback(
 			(): ThreeDIpodHandle => ({
 				captureHighRes: async (width?: number, height?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => {
@@ -2570,6 +2592,9 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 						outputColorSpace: THREE.SRGBColorSpace,
 					}}
 				>
+					{/* Perf HUD (drei StatsGl), opt-in via `?perf`, suppressed during capture. */}
+					{showPerf && !preview && <StatsGl className="r3f-perf-hud" />}
+
 					{/* OrbitRig is the sole camera owner — intro dolly, drag-orbit, zoom. */}
 					<PerspectiveCamera makeDefault fov={32} position={[3, 1.1, 16.6]} />
 

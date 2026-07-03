@@ -310,6 +310,29 @@ CI parity checks will fail if any of these four pieces go missing.
 - `docs/figma/component-audit.md` - Per-component satori classification
 - `docs/figma/tooling-costs.md` - Storybook + Figma plan + dep versions
 
+## 📈 Observability & analytics
+
+Two complementary layers, both gated so local dev never pollutes the dataset:
+
+- **Vercel Analytics** — raw traffic. Auto-on in prod (`NODE_ENV=production && VERCEL=1`), wired in `app/layout.tsx`. No config.
+- **PostHog** — interaction analytics + session replay + funnels (answers "are people *using* the iPod?"). Off by default; turns on when a key is present.
+
+```bash
+# Set ONLY in Vercel's production env (leave unset locally):
+NEXT_PUBLIC_POSTHOG_KEY="phc_..."           # project API key — presence is the on/off switch
+NEXT_PUBLIC_POSTHOG_HOST="https://eu.i.posthog.com"   # optional; defaults to EU cloud (this project is EU)
+```
+
+- Init lives in `components/analytics/posthog-provider.tsx` (autocapture + SPA pageviews via `defaults: "2025-05-24"`; `identified_only` profiles to stay free-tier friendly).
+- **Enable session replay** in the PostHog project settings (dashboard, not code).
+- Fire semantic events through the vendor-neutral `track()` in `lib/analytics/events.ts` — never call `posthog` directly from components. Autocapture already covers DOM clicks/taps (click wheel, menu items); use `track()` for non-DOM gestures like the `/3d` canvas drag-orbit.
+
+## 🧪 3D devtools (R3F / three.js)
+
+- **Perf HUD**: visit `/3d?perf` to overlay drei's `StatsGl` (FPS / CPU / GPU / draw calls). Suppressed during export/preview so it never bakes into a captured frame.
+- **Lint gate**: `@react-three/eslint-plugin` flags per-frame allocations (`no-new-in-loop`, `no-clone-in-loop`) on `components/three/**` + `app/3d/**` via `pnpm lint:eslint`.
+- **Scene inspection**: install the official **three.js DevTools** Chrome extension to walk the live scene graph / materials / textures. For runtime verification in-agent, use the **chrome-devtools MCP** — the WebGL canvas isn't visible to Playwright in this environment.
+
 ## 🔄 Maintenance
 
 Run periodically:

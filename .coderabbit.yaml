@@ -42,6 +42,13 @@ reviews:
         verbatim by the Lit element and the React surfaces. Flag any import of React,
         DOM globals, timers, xstate, or effect. Must stay a pure, synchronous,
         unit-testable function of (state, action).
+    - path: "components/three/**/*.{ts,tsx}"
+      instructions: >
+        React Three Fiber / three.js WebGL surfaces. Flag per-frame allocations
+        inside useFrame (new objects, .clone()), missing geometry/material/texture
+        disposal, and anything causing GC churn or GPU-memory growth. The
+        @react-three/eslint-plugin gates no-new-in-loop / no-clone-in-loop in CI —
+        review should pre-empt those and catch the cases lint can't see.
     - path: "**/*.{ts,tsx}"
       instructions: >
         Hold to the repo's essentialist axiom: code is a liability. Flag dead code,

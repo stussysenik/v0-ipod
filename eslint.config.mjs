@@ -1,4 +1,5 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import reactThree from "@react-three/eslint-plugin";
 import storybook from "eslint-plugin-storybook";
 
 import nextConfig from "eslint-config-next";
@@ -45,6 +46,15 @@ const eslintConfig = [
 		files: ["components/ipod/editors/image-upload.tsx"],
 		rules: {
 			"@next/next/no-img-element": "off",
+		},
+	}, // R3F: flag per-frame allocations (new/clone inside useFrame) — the classic
+	// three.js GC-churn footgun oxlint can't see. Scoped to the WebGL surfaces.
+	{
+		files: ["components/three/**/*.{ts,tsx}", "app/3d/**/*.{ts,tsx}"],
+		plugins: { "@react-three": reactThree },
+		rules: {
+			"@react-three/no-clone-in-loop": "error",
+			"@react-three/no-new-in-loop": "error",
 		},
 	},
 	...storybook.configs["flat/recommended"],
