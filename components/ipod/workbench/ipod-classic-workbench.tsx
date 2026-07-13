@@ -9,6 +9,7 @@ import {
 	useEffect,
 	useMemo,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
 	Box,
 	Share,
@@ -167,6 +168,8 @@ export default function IpodClassicWorkbench() {
 	// Focus (zen) mode: hide the floating inspector panels for a clean stage view. Purely
 	// presentational and local — independent of "Lock editing" and never mutates config.
 	const [isZenMode, setIsZenMode] = useState(false);
+	// The rail's 3D control is a route, not a mode (spec: surface-mode-switching).
+	const router = useRouter();
 
 	const state = model.metadata;
 	const selectionKind = model.playback.selectionKind;
@@ -947,6 +950,18 @@ export default function IpodClassicWorkbench() {
 								data-testid="preview-button"
 								isActive={viewMode === "preview"}
 								onClick={() => handleViewModeChange("preview")}
+							/>
+							{/* 3D is a place, not a mode: the rail navigates to the `/3d` studio — the one
+							    3D truth (spec: surface-mode-switching). The inline "3D Experience" render
+							    mode it replaced is archived behind SHOW_3D_VIEW_MODE. */}
+							<IconButton
+								icon={<Box className="w-5 h-5" />}
+								label="3D Studio"
+								data-testid="3d-studio-button"
+								onClick={() => {
+									playClick();
+									router.push("/3d");
+								}}
 							/>
 							{FEATURE_FLAGS.SHOW_3D_VIEW_MODE && (
 								<IconButton

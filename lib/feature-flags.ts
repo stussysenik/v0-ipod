@@ -21,12 +21,29 @@ export const FEATURE_FLAGS = {
 	SHOW_OKLCH_SPECTRUM: true,
 	/** OKLCH Ambient background color palette grid */
 	SHOW_OKLCH_AMBIENT: true,
-	/** "3D Experience" view mode button */
-	SHOW_3D_VIEW_MODE: true,
-	/** "Focus Mode" view mode button */
-	SHOW_FOCUS_VIEW_MODE: true,
-	/** "ASCII Mode" view mode button */
-	SHOW_ASCII_VIEW_MODE: true,
+	/**
+	 * Inline "3D Experience" view mode — a second, lesser 3D iPod rendered *inside* the 2D
+	 * workbench. ARCHIVED: `/3d` is the one 3D truth (spec: surface-mode-switching), and the
+	 * rail now navigates there instead of toggling an inline mode. The inline render path and
+	 * its `viewMode:"3d"` are left intact behind this flag; flip to true to restore.
+	 */
+	SHOW_3D_VIEW_MODE: false,
+	/** "Focus Mode" view mode. ARCHIVED — not a proven surface; the rail ships flat/preview only. */
+	SHOW_FOCUS_VIEW_MODE: false,
+	/** "ASCII Mode" view mode. ARCHIVED — shipped as WIP; flip to true to restore. */
+	SHOW_ASCII_VIEW_MODE: false,
+	/**
+	 * Transport + reset on the `/` rail. ARCHIVED: the device's own click wheel already plays
+	 * and pauses, so a second transport is a duplicate control surface; reset lives in ⌘K.
+	 */
+	SHOW_WORKBENCH_TRANSPORT: false,
+	/**
+	 * The 2D export rail on `/` (PNG still, GIF, MP4). ARCHIVED: `/3d` owns the real export
+	 * dock, and on the shared link these read as authoring chrome rather than the product.
+	 * The whole 2D export pipeline is intact behind this flag — flip to true to restore it
+	 * (tests/export-downloads.spec.ts drives these buttons and is skipped while it is false).
+	 */
+	SHOW_WORKBENCH_EXPORTS: false,
 	/** Materiality VFX — directional specular sheen, noise texture, rim light, cavity groove, and concave center button shading */
 	ENABLE_MATERIALITY: true,
 	/** Mechanical center button — deeper press animation with spring-back, enhanced shadow recess, and a distinct physical click sound via Web Audio API */
