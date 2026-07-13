@@ -1,0 +1,10 @@
+.next
+.next-dev
+node_modules
+test-results
+tmp
+storybook-static
+packages/*/node_modules
+*.tsbuildinfo
+.env*
+.git

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type Dispatch } from "react";
 
 import { StudioButton, StudioChip, StudioControlScope } from "@/components/ui/studio-controls";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { haptic } from "@/lib/haptics";
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import type { IpodPresentationState } from "@/lib/ipod-state/model";
@@ -161,40 +162,46 @@ export function Ipod3DCameraBar({
 				</StudioButton>
 			))}
 
-			{shots.length > 0 && (
-				<span
-					className="mx-0.5 h-4 w-px shrink-0"
-					style={{ background: "var(--studio-hairline)" }}
-					aria-hidden
-				/>
+			{/* Saved studio shots — ARCHIVED behind SHOW_CUSTOM_CAMERA_POSES. A user-saved
+			    point is an arbitrary pose whose framing isn't guaranteed to fit the viewport
+			    it's recalled on; the bar ships the six named angles, which are. */}
+			{FEATURE_FLAGS.SHOW_CUSTOM_CAMERA_POSES && (
+				<>
+					{shots.length > 0 && (
+						<span
+							className="mx-0.5 h-4 w-px shrink-0"
+							style={{ background: "var(--studio-hairline)" }}
+							aria-hidden
+						/>
+					)}
+
+					{shots.map((shot) => (
+						<span
+							key={shot.id}
+							className="flex shrink-0 items-center"
+							onContextMenu={(e) => {
+								e.preventDefault();
+								removeShot(shot.id);
+							}}
+						>
+							<StudioChip
+								color={shot.look.skinColor}
+								isSelected={false}
+								onPress={() => recallShot(shot)}
+								label={`Recall studio shot ${shot.id} — azimuth ${shot.pose.azimuth.toFixed(0)}°, elevation ${shot.pose.elevation.toFixed(0)}° (right-click to remove)`}
+							/>
+						</span>
+					))}
+
+					<StudioButton
+						onPress={saveShot}
+						aria-label="Save the current camera pose and finish as a studio shot"
+						className="shrink-0 rounded-full"
+					>
+						＋ Shot
+					</StudioButton>
+				</>
 			)}
-
-			{/* Saved studio shots — angle + finish, recalled as one swatch. */}
-			{shots.map((shot) => (
-				<span
-					key={shot.id}
-					className="flex shrink-0 items-center"
-					onContextMenu={(e) => {
-						e.preventDefault();
-						removeShot(shot.id);
-					}}
-				>
-					<StudioChip
-						color={shot.look.skinColor}
-						isSelected={false}
-						onPress={() => recallShot(shot)}
-						label={`Recall studio shot ${shot.id} — azimuth ${shot.pose.azimuth.toFixed(0)}°, elevation ${shot.pose.elevation.toFixed(0)}° (right-click to remove)`}
-					/>
-				</span>
-			))}
-
-			<StudioButton
-				onPress={saveShot}
-				aria-label="Save the current camera pose and finish as a studio shot"
-				className="shrink-0 rounded-full"
-			>
-				＋ Shot
-			</StudioButton>
 		</StudioControlScope>
 	);
 }

@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { type StudioPose } from "@/lib/studio-camera";
+import type { SavedPose } from "@/lib/studio-camera-poses";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
 
@@ -20,9 +22,11 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  * already handles that) and this panel mirrors the pose live; the ◄► steppers are
  * for precise nudges. Save a pose to recall it one tap later. Whatever's framed
  * here is the hero the Robo/Orbit clip exports anchor on.
+ *
+ * The cockpit is the *advanced altitude* on the same pose state the bottom camera bar
+ * drives — not a third camera concept. It owns no persistence of its own: the stage
+ * holds the one camera store and hands the saved poses down.
  */
-
-const PRESETS_STORAGE_KEY = "ipod-3d-camera-presets";
 
 interface AxisDef {
 	key: "azimuth" | "elevation" | "reach";
@@ -38,11 +42,6 @@ const AXES: readonly AxisDef[] = [
 	{ key: "reach", label: "Reach", step: 0.5, unit: "", digits: 1 },
 ] as const;
 
-interface SavedPose {
-	id: string;
-	pose: StudioPose;
-}
-
 interface Ipod3DCameraCockpitProps {
 	/** Position in the control surface, rendered as the header's number chip. */
 	index: number;
@@ -57,6 +56,9 @@ interface Ipod3DCameraCockpitProps {
 	showOrigin?: boolean;
 	/** Toggle the origin gizmo (compose-time aid; never baked into exports). */
 	onToggleOrigin?: () => void;
+	/** Saved numeric poses — owned by the stage's camera store, not by this panel. */
+	presets: SavedPose[];
+	onPresetsChange: (presets: SavedPose[]) => void;
 }
 
 export function Ipod3DCameraCockpit({
@@ -67,24 +69,14 @@ export function Ipod3DCameraCockpit({
 	onResetCamera,
 	showOrigin = false,
 	onToggleOrigin,
+	presets,
+	onPresetsChange,
 }: Ipod3DCameraCockpitProps) {
 	const [pose, setPose] = useState<StudioPose | null>(null);
-	const [presets, setPresets] = useState<SavedPose[]>([]);
 	const counter = useRef(1);
-
-	// Hydrate saved poses once.
 	useEffect(() => {
-		try {
-			const raw = localStorage.getItem(PRESETS_STORAGE_KEY);
-			if (raw) {
-				const parsed = JSON.parse(raw) as SavedPose[];
-				setPresets(parsed);
-				counter.current = parsed.length + 1;
-			}
-		} catch {
-			// ignore malformed storage
-		}
-	}, []);
+		counter.current = presets.length + 1;
+	}, [presets.length]);
 
 	// Mirror the live camera pose. The rig drives the camera every frame; we poll a
 	// few times a second for the readout rather than re-rendering on every rAF.
@@ -105,20 +97,11 @@ export function Ipod3DCameraCockpit({
 		[apiRef],
 	);
 
-	const persist = useCallback((next: SavedPose[]) => {
-		setPresets(next);
-		try {
-			localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(next));
-		} catch {
-			// ignore quota / private-mode failures
-		}
-	}, []);
-
 	const savePose = useCallback(() => {
 		const current = apiRef.current?.getCameraPose();
 		if (!current) return;
-		persist([...presets, { id: `P${counter.current++}`, pose: current }]);
-	}, [apiRef, persist, presets]);
+		onPresetsChange([...presets, { id: `P${counter.current}`, pose: current }]);
+	}, [apiRef, onPresetsChange, presets]);
 
 	const recallPose = useCallback(
 		(p: StudioPose) => {
@@ -132,8 +115,8 @@ export function Ipod3DCameraCockpit({
 	);
 
 	const removePose = useCallback(
-		(id: string) => persist(presets.filter((p) => p.id !== id)),
-		[persist, presets],
+		(id: string) => onPresetsChange(presets.filter((p) => p.id !== id)),
+		[onPresetsChange, presets],
 	);
 
 	const fmt = (axis: AxisDef) =>
@@ -213,7 +196,10 @@ export function Ipod3DCameraCockpit({
 				</button>
 			</div>
 
-			{/* Saved poses */}
+			{/* Saved poses — ARCHIVED behind SHOW_CUSTOM_CAMERA_POSES (spec: camera-control-truth).
+			    The camera ships a closed set of six named angle presets; an arbitrary user-saved
+			    point has no framing guarantee on the viewport it's recalled on. Code path intact. */}
+			{FEATURE_FLAGS.SHOW_CUSTOM_CAMERA_POSES && (
 			<div className="flex items-center gap-2 border-t border-black/[0.06] px-3.5 py-2.5">
 				<button
 					type="button"
@@ -243,6 +229,7 @@ export function Ipod3DCameraCockpit({
 					</div>
 				)}
 			</div>
+			)}
 		</div>
 	);
 }

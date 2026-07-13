@@ -22,3 +22,19 @@ export function availableViewModes(): ViewModeOption[] {
 	];
 	return modes.filter((mode) => mode.enabled);
 }
+
+/** The mode a returning user lands in when the one they persisted has been archived. */
+export const FALLBACK_VIEW_MODE = "preview" as const;
+
+/**
+ * Migrate a persisted view mode whose flag is now off.
+ *
+ * Archiving a mode removes its rail button, so a user who last left the app in that
+ * mode would hydrate into a surface with no way out. Hydration runs the persisted mode
+ * through here and persists whatever comes back, so the stranding can't happen — and
+ * flipping the flag back to `true` makes this the identity function again.
+ */
+export function migrateViewMode(mode: IpodViewMode): IpodViewMode {
+	const available = availableViewModes();
+	return available.some((option) => option.id === mode) ? mode : FALLBACK_VIEW_MODE;
+}

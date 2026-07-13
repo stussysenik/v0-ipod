@@ -96,6 +96,7 @@ import {
 import { clampSnapshotTime } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
+import { migrateViewMode } from "@/lib/view-modes";
 import {
 	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	type AnimatedExportFormat,
@@ -296,18 +297,14 @@ export default function IpodClassicWorkbench() {
 		setIsModelHydrated(true);
 	}, [send]);
 
+	// A returning user who persisted a now-archived mode ("3d", "ascii", "focus") would
+	// hydrate into a surface whose rail button no longer exists — stranded with no way
+	// out. Migrate on hydration; the normal persist path then writes the migrated mode.
 	useEffect(() => {
 		if (!isModelHydrated) return;
-		const gatedModes: Array<{ mode: IpodViewMode; flag: boolean }> = [
-			{ mode: "3d", flag: FEATURE_FLAGS.SHOW_3D_VIEW_MODE },
-			{ mode: "focus", flag: FEATURE_FLAGS.SHOW_FOCUS_VIEW_MODE },
-			{ mode: "ascii", flag: FEATURE_FLAGS.SHOW_ASCII_VIEW_MODE },
-		];
-		const activeGated = gatedModes.find(
-			(g) => g.mode === model.presentation.viewMode && !g.flag,
-		);
-		if (activeGated) {
-			send({ type: "SET_VIEW_MODE", payload: "preview" });
+		const migrated = migrateViewMode(model.presentation.viewMode);
+		if (migrated !== model.presentation.viewMode) {
+			send({ type: "SET_VIEW_MODE", payload: migrated });
 		}
 	}, [isModelHydrated, model.presentation.viewMode, send]);
 
@@ -1007,73 +1004,87 @@ export default function IpodClassicWorkbench() {
 									onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))}
 								/>
 							)}
-							<IconButton
-								icon={isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-								label={isPlaying ? "Pause" : "Play"}
-								data-testid="play-pause-button"
-								onClick={() => {
-									playClick();
-									send({ type: "TOGGLE_IS_PLAYING" });
-								}}
-								className={isPlaying ? "bg-blue-100 text-blue-600 border-blue-200" : ""}
-							/>
-							<IconButton
-								icon={<RotateCcw className="w-5 h-5" />}
-								label="Reset Defaults"
-								data-testid="reset-button"
-								onClick={handleResetModel}
-								className="text-red-500 hover:text-red-600 border-red-100"
-							/>
+							{/* Transport — ARCHIVED behind SHOW_WORKBENCH_TRANSPORT (spec:
+							    shipped-surface-minimalism). The device's own click wheel already plays
+							    and pauses, so a second transport is a duplicate control; reset lives in ⌘K. */}
+							{FEATURE_FLAGS.SHOW_WORKBENCH_TRANSPORT && (
+								<>
+									<IconButton
+										icon={isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+										label={isPlaying ? "Pause" : "Play"}
+										data-testid="play-pause-button"
+										onClick={() => {
+											playClick();
+											send({ type: "TOGGLE_IS_PLAYING" });
+										}}
+										className={isPlaying ? "bg-blue-100 text-blue-600 border-blue-200" : ""}
+									/>
+									<IconButton
+										icon={<RotateCcw className="w-5 h-5" />}
+										label="Reset Defaults"
+										data-testid="reset-button"
+										onClick={handleResetModel}
+										className="text-red-500 hover:text-red-600 border-red-100"
+									/>
+								</>
+							)}
 						</div>
 
-						<IconButton
-							icon={activeExportKind === "png" && exportStatus === "success" ? <Check className="w-5 h-5" /> : pngBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share className="w-5 h-5" />}
-							label={!canPngExport ? "Flat/Focus for PNG" : "Export PNG"}
-							data-testid="png-export-button"
-							onClick={handlePngExport}
-							contrast
-							disabled={!canPngExport || exportStatus !== "idle"}
-							className={activeExportKind === "png" && exportStatus === "success" ? "bg-green-500" : pngBusy ? "bg-blue-500" : ""}
-						/>
-						<IconButton
-							icon={activeExportKind === "gif" && exportStatus === "success" ? <Check className="w-5 h-5" /> : gifBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Film className="w-5 h-5" />}
-							label="Export GIF"
-							data-testid="gif-export-button"
-							onClick={() => {
-								if (!isPreviewView && !isAsciiView) {
-									handleViewModeChange("preview");
-									setTimeout(() => setAnimatedExportDialogFormat("gif"), 100);
-									return;
-								}
-								playClick();
-								setAnimatedExportDialogFormat("gif");
-							}}
-							contrast
-							disabled={exportStatus !== "idle"}
-							className={activeExportKind === "gif" && exportStatus === "success" ? "bg-green-500" : gifBusy ? "bg-blue-500" : ""}
-						/>
-						<IconButton
-							icon={activeExportKind === "mp4" && exportStatus === "success" ? <Check className="w-5 h-5" /> : mp4Busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
-							label={!canMp4Export ? "MP4 Not Supported" : "Export MP4"}
-							data-testid="mp4-export-button"
-							onClick={() => {
-								if (!canMp4Export) {
-									playClick();
-									showSoftNotice("Needs newer browser");
-									return;
-								}
-								if (!isPreviewView && !isAsciiView) {
-									handleViewModeChange("preview");
-									setTimeout(() => setAnimatedExportDialogFormat("mp4"), 100);
-									return;
-								}
-								playClick();
-								setAnimatedExportDialogFormat("mp4");
-							}}
-							contrast
-							disabled={!canMp4Export || exportStatus !== "idle"}
-							className={activeExportKind === "mp4" && exportStatus === "success" ? "bg-green-500" : mp4Busy ? "bg-blue-500" : ""}
-						/>
+						{/* The 2D export rail — ARCHIVED behind SHOW_WORKBENCH_EXPORTS (spec:
+						    shipped-surface-minimalism). `/3d` owns the real export dock; on the shared
+						    link these read as authoring chrome. The whole pipeline stays intact. */}
+						{FEATURE_FLAGS.SHOW_WORKBENCH_EXPORTS && (
+							<>
+								<IconButton
+									icon={activeExportKind === "png" && exportStatus === "success" ? <Check className="w-5 h-5" /> : pngBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share className="w-5 h-5" />}
+									label={!canPngExport ? "Flat/Focus for PNG" : "Export PNG"}
+									data-testid="png-export-button"
+									onClick={handlePngExport}
+									contrast
+									disabled={!canPngExport || exportStatus !== "idle"}
+									className={activeExportKind === "png" && exportStatus === "success" ? "bg-green-500" : pngBusy ? "bg-blue-500" : ""}
+								/>
+								<IconButton
+									icon={activeExportKind === "gif" && exportStatus === "success" ? <Check className="w-5 h-5" /> : gifBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Film className="w-5 h-5" />}
+									label="Export GIF"
+									data-testid="gif-export-button"
+									onClick={() => {
+										if (!isPreviewView && !isAsciiView) {
+											handleViewModeChange("preview");
+											setTimeout(() => setAnimatedExportDialogFormat("gif"), 100);
+											return;
+										}
+										playClick();
+										setAnimatedExportDialogFormat("gif");
+									}}
+									contrast
+									disabled={exportStatus !== "idle"}
+									className={activeExportKind === "gif" && exportStatus === "success" ? "bg-green-500" : gifBusy ? "bg-blue-500" : ""}
+								/>
+								<IconButton
+									icon={activeExportKind === "mp4" && exportStatus === "success" ? <Check className="w-5 h-5" /> : mp4Busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+									label={!canMp4Export ? "MP4 Not Supported" : "Export MP4"}
+									data-testid="mp4-export-button"
+									onClick={() => {
+										if (!canMp4Export) {
+											playClick();
+											showSoftNotice("Needs newer browser");
+											return;
+										}
+										if (!isPreviewView && !isAsciiView) {
+											handleViewModeChange("preview");
+											setTimeout(() => setAnimatedExportDialogFormat("mp4"), 100);
+											return;
+										}
+										playClick();
+										setAnimatedExportDialogFormat("mp4");
+									}}
+									contrast
+									disabled={!canMp4Export || exportStatus !== "idle"}
+									className={activeExportKind === "mp4" && exportStatus === "success" ? "bg-green-500" : mp4Busy ? "bg-blue-500" : ""}
+								/>
+							</>
+						)}
 						<IconButton
 							icon={<Link className="w-5 h-5" />}
 							label="Copy Share Link"

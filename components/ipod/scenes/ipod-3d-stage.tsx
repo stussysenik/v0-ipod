@@ -1,11 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { flushSync } from "react-dom";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useActorRef, useSelector } from "@xstate/react";
 
-import type { CameraPreviewState, ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+import { StudioButton, StudioControlScope } from "@/components/ui/studio-controls";
+
+import type { CameraPreviewState, ExportFraming, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import { setCaptureElapsedMs } from "@/lib/capture-clock";
 import { clipMarqueeElapsedMs, clipSongSecond } from "@/lib/export-clock";
 import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
@@ -20,6 +23,13 @@ import { consumePortableStateFromUrl, copyShareLink } from "@/lib/ipod-state/sha
 import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
 import { type LoopStyle, type StudioPose } from "@/lib/studio-camera";
+import type { PoseFraming } from "@/lib/studio-camera-poses";
+import {
+	EMPTY_CAMERA_STORE,
+	readCameraStore,
+	writeCameraStore,
+	type CameraStore,
+} from "@/lib/studio-camera-store";
 import { findStudioClip, isTheatreClip, STUDIO_CLIPS } from "@/lib/studio-clip-presets";
 import { STEEL_ROUGHNESS_FLOOR } from "@/lib/studio-owned-finish";
 import { exportJobOf, exportMachine, exportProgressOf } from "@/lib/xstate/export-machine";
@@ -49,12 +59,8 @@ import {
 import { Ipod3DExportProofPanel } from "./ipod-3d-export-proof-panel";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DCoachHint } from "./ipod-3d-coach-hint";
-import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
-import { Ipod3DTouchControls } from "./ipod-3d-touch-controls";
+import { Ipod3DCameraBar, type PoseRequest } from "./ipod-3d-camera-bar";
 import { TheatreStudioDev } from "./theatre-studio-dev";
-
-/** localStorage key for the locked hero perspective (design D13). */
-const LOCKED_POSE_KEY = "ipod-3d-locked-pose";
 
 /**
  * Export dimensions per aspect — stills are 2160-wide PNGs, clips are 1080-wide MP4s.
@@ -101,6 +107,7 @@ const ThreeDIpod = dynamic(
  * authoring workbench, just without the export/authoring chrome.
  */
 export function Ipod3DStage() {
+	const router = useRouter();
 	const [model, dispatch] = useReducer(
 		ipodWorkbenchReducer,
 		undefined,
@@ -179,28 +186,25 @@ export function Ipod3DStage() {
 	const symbiosisViewport = useViewportSize();
 	const safeInsets = useSafeInsets(symbiosisViewport);
 	const stageStyle = useMemo<React.CSSProperties | undefined>(() => {
-		if (exporting) return undefined;
+		// Panel symbiosis is a DESKTOP affordance — panels only float at ≥lg. Below that the
+		// controls live in the bottom drawer, so insetting the canvas by their frames shoved
+		// the device clean off the bottom-right corner of a phone. The framing must be a
+		// deterministic function of the VIEWPORT, never of chrome that isn't even floating.
+		// Suspended during export for the same reason: capture framing is untouched.
+		if (exporting || symbiosisViewport.width < 1024) return undefined;
 		const { top, right, bottom, left } = safeInsets;
 		if (!top && !right && !bottom && !left) return undefined;
 		return { top, right, bottom, left, minHeight: 0 };
-	}, [exporting, safeInsets]);
+	}, [exporting, safeInsets, symbiosisViewport.width]);
 
 	// Mobile control drawer. Desktop ignores this (the panels float at the corners);
 	// on narrow viewports the controls collapse into a bottom sheet so they never
 	// overlap the device.
 	const [controlsOpen, setControlsOpen] = useState(false);
 
-	// Mobile on-canvas touch camera controls. Defaults ON for coarse pointers
-	// (touch) and OFF for desktop; the cockpit toggle then overrides either way.
-	const [touchControls, setTouchControls] = useState(false);
-	useEffect(() => {
-		if (typeof window === "undefined" || !window.matchMedia) return;
-		setTouchControls(window.matchMedia("(pointer: coarse)").matches);
-	}, []);
-
 	// Short-landscape phones: the floating chrome must reflow to the screen edges so
 	// the centered model stays visible. Below `lg` the cockpit sheet is hidden anyway;
-	// this only re-docks the always-on touch controls + studio-shots bar.
+	// this only re-docks the camera bar.
 	const [landscape, setLandscape] = useState(false);
 	useEffect(() => {
 		if (typeof window === "undefined" || !window.matchMedia) return;
@@ -210,9 +214,37 @@ export function Ipod3DStage() {
 		mq.addEventListener("change", update);
 		return () => mq.removeEventListener("change", update);
 	}, []);
-	// Camera orientation (Product / Front / Back) — owned here so the bottom bar can
-	// place the snaps alongside the saved studio shots.
-	const [focus, setFocus] = useState<IpodCameraFocus>("product");
+	// ── The one camera state (spec: camera-control-truth) ──
+	// `framing` is which face the shot is about — it feeds the rig as the camera target
+	// and rest distance. It is no longer a user-facing "focus mode" with its own control:
+	// each named pose in the bar *carries* its framing, so there is one "Front" on the
+	// page. The bar and the cockpit (05) are two altitudes on this same state; there is
+	// no third owner.
+	const [framing, setFraming] = useState<PoseFraming>("product");
+	// Applying a pose is two writes and THE ORDER MATTERS (design D1): the framing sets
+	// the camera target, then the angles aim it. Both are dispatched in one commit, and
+	// the rig's framing effect (a child) runs before this stage's pose effect (a parent),
+	// so `setCameraGoal` lands last and wins instead of being clobbered by the framing
+	// snap. The nonce makes re-requesting the SAME pose re-fire (tap Front, orbit away,
+	// tap Front again).
+	const [poseRequest, setPoseRequest] = useState<(PoseRequest & { nonce: number }) | null>(null);
+	const poseNonce = useRef(0);
+	const requestPose = useCallback((request: PoseRequest) => {
+		setFraming(request.framing);
+		setPoseRequest({ ...request, nonce: ++poseNonce.current });
+	}, []);
+	useEffect(() => {
+		if (!poseRequest) return;
+		ipodApiRef.current?.setCameraGoal({
+			azimuth: poseRequest.azimuth,
+			elevation: poseRequest.elevation,
+			// A named view omits `reach` — it re-aims, it does not dolly, so the framing's
+			// rest distance and the rig's responsive fit floor keep the device framed on a
+			// phone. A recalled studio shot DOES carry its reach.
+			...(poseRequest.reach === undefined ? {} : { reach: poseRequest.reach }),
+		});
+	}, [poseRequest]);
+
 	// Lockable perspective (design D13): when locked, the orbit rig ignores drag/wheel
 	// so the composed angle can't be knocked off, the pose persists across reloads, and
 	// it's the angle every Hero/clip export flies. Owned here so it reaches both the
@@ -233,18 +265,30 @@ export function Ipod3DStage() {
 		getExportHistory().then(setExportHistory).catch(() => {});
 	}, []);
 
-	// Hydrate the locked pose once; re-apply it to the rig as soon as the canvas mounts.
+	// Everything the camera remembers — locked pose, studio shots, cockpit presets — in
+	// one versioned store. The stage owns it and hands slices down, so the bar and the
+	// cockpit edit the same state instead of each writing its own ad-hoc key (which is
+	// what let the three camera surfaces drift apart). `null` = not hydrated yet, so the
+	// first render's empty default can never stomp real storage.
+	const [camera, setCamera] = useState<CameraStore | null>(null);
 	useEffect(() => {
-		try {
-			const raw = localStorage.getItem(LOCKED_POSE_KEY);
-			if (raw) {
-				lockedPoseRef.current = JSON.parse(raw) as StudioPose;
-				setCameraLocked(true);
-			}
-		} catch {
-			// ignore malformed storage
+		const stored = readCameraStore(localStorage);
+		setCamera(stored);
+		if (stored.lockedPose) {
+			lockedPoseRef.current = stored.lockedPose;
+			setCameraLocked(true);
 		}
 	}, []);
+	// Write-back doubles as the legacy-key migration: the first write folds the three old
+	// keys into `ipod-3d-camera.v1` and retires them.
+	useEffect(() => {
+		if (camera) writeCameraStore(localStorage, camera);
+	}, [camera]);
+	const patchCamera = useCallback(
+		(patch: Partial<CameraStore>) =>
+			setCamera((prev) => ({ ...(prev ?? EMPTY_CAMERA_STORE), ...patch })),
+		[],
+	);
 
 	// next/dynamic mounts the canvas async, so poll briefly until the api is live, then
 	// ease the rig to the locked pose. Runs whenever the lock turns on with a stored pose.
@@ -268,27 +312,12 @@ export function Ipod3DStage() {
 	}, [cameraLocked]);
 
 	const toggleCameraLock = useCallback(() => {
-		setCameraLocked((prev) => {
-			const next = !prev;
-			if (next) {
-				const pose = ipodApiRef.current?.getCameraPose() ?? null;
-				lockedPoseRef.current = pose;
-				try {
-					if (pose) localStorage.setItem(LOCKED_POSE_KEY, JSON.stringify(pose));
-				} catch {
-					// ignore quota / private-mode failures
-				}
-			} else {
-				lockedPoseRef.current = null;
-				try {
-					localStorage.removeItem(LOCKED_POSE_KEY);
-				} catch {
-					// ignore
-				}
-			}
-			return next;
-		});
-	}, []);
+		const next = !cameraLocked;
+		const pose = next ? (ipodApiRef.current?.getCameraPose() ?? null) : null;
+		lockedPoseRef.current = pose;
+		setCameraLocked(next);
+		patchCamera({ lockedPose: pose });
+	}, [cameraLocked, patchCamera]);
 
 	// Progress the now-playing clock while the iPod is playing — the on-screen
 	// elapsed time + progress bar advance one second per second (wrapping at the
@@ -739,6 +768,25 @@ export function Ipod3DStage() {
 			    is consistent across mobile and desktop. */}
 			<header className="absolute inset-x-0 top-0 z-[60] flex h-16 items-center justify-end px-6 pointer-events-none">
 				<nav className="shell-nav flex items-center gap-4 pointer-events-auto">
+					{/* The return half of the 2D↔3D toggle (spec: surface-mode-switching) — the
+					    mirror of the `/` rail's "3D Studio" button, in the same header slot. The
+					    customization carries across on its own: both surfaces read and write the
+					    same persisted model. */}
+					<StudioControlScope
+						stageBackground={presentation.bgColor}
+						style={{ background: "var(--studio-surface)", borderColor: "var(--studio-hairline)" }}
+						className="flex items-center rounded-full border p-1 shadow-sm backdrop-blur-md"
+					>
+						<StudioButton
+							onPress={() => router.push("/")}
+							aria-label="Back to the 2D workbench"
+							className="shrink-0 rounded-full"
+							data-testid="2d-button"
+						>
+							2D
+						</StudioButton>
+					</StudioControlScope>
+
 					{/* Shell Nav Button — a high-performance anchor for the creation flow. */}
 					<span>
 						<button
@@ -768,8 +816,9 @@ export function Ipod3DStage() {
 				apiRef={ipodApiRef}
 				preset={activePreset}
 				capacityLabel={activePreset.capacityLabel}
-				focus={focus}
-				onFocusChange={setFocus}
+				// Framing is controlled by the pose model now, so the rig's own in-canvas
+				// focus buttons stay unmounted — the bar is the only quick camera control.
+				focus={framing}
 				cameraLocked={cameraLocked}
 				preview={preview}
 				onPreviewTick={handlePreviewTick}
@@ -801,14 +850,7 @@ export function Ipod3DStage() {
 				    like (02), what's on screen (03), its charge state (04), your angle (05).
 				    Numbered 01→05 so the column reads top-to-bottom as a shoot pipeline. */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:left-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
-					<Ipod3DStudioCockpit
-						index={1}
-						interaction={interaction}
-						studio={studio}
-						dispatch={dispatch}
-						touchControls={touchControls}
-						onToggleTouchControls={() => setTouchControls((v) => !v)}
-					/>
+					<Ipod3DStudioCockpit index={1} interaction={interaction} studio={studio} dispatch={dispatch} />
 					<Ipod3DColorCockpit
 						index={2}
 						presentation={presentation}
@@ -832,6 +874,8 @@ export function Ipod3DStage() {
 						onResetCamera={() => ipodApiRef.current?.resetCamera()}
 						showOrigin={showOrigin}
 						onToggleOrigin={() => setShowOrigin((v) => !v)}
+						presets={camera?.presets ?? []}
+						onPresetsChange={(presets) => patchCamera({ presets })}
 					/>
 				</div>
 
@@ -897,21 +941,20 @@ export function Ipod3DStage() {
 				</div>
 			</div>
 
-			{/* Bottom bar — orientation snaps + saved studio shots */}
-			<Ipod3DStudioShots
+			{/* The ONE bottom bar (spec: camera-control-truth) — six named views, each
+			    carrying its own framing, plus the saved studio shots. It replaces both the
+			    touch gizmo and the focus segment that used to stack on top of each other. */}
+			<Ipod3DCameraBar
 				apiRef={ipodApiRef}
-				focus={focus}
-				onFocus={setFocus}
+				onPose={requestPose}
+				framing={framing}
+				shots={camera?.shots ?? []}
+				onShotsChange={(shots) => patchCamera({ shots })}
 				presentation={presentation}
 				dispatch={dispatch}
 				onNotice={showNotice}
 				landscape={landscape}
 			/>
-
-			{/* Mobile on-canvas camera controls — floats above the bottom bar, within
-			    one-thumb reach. Unmounted (listeners detached) when toggled off; the
-			    component is `lg:hidden` so desktop never shows it even if enabled. */}
-			{touchControls && <Ipod3DTouchControls apiRef={ipodApiRef} landscape={landscape} />}
 
 			{/* One-time coach for the native two-finger camera gesture (touch only). */}
 			<Ipod3DCoachHint />

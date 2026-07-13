@@ -44,6 +44,17 @@ export const FEATURE_FLAGS = {
 	 * (tests/export-downloads.spec.ts drives these buttons and is skipped while it is false).
 	 */
 	SHOW_WORKBENCH_EXPORTS: false,
+	/**
+	 * User-authored camera points on `/3d` — the saved studio shots (`＋ Shot` + its chips in
+	 * the camera bar) and the camera cockpit's numeric "Save pose" presets.
+	 *
+	 * ARCHIVED (spec: camera-control-truth): the camera must move deterministically, and a
+	 * user-saved point is an arbitrary pose whose framing is not guaranteed to fit the
+	 * viewport it is recalled on. `/3d` ships the SIX named angle presets only — a closed,
+	 * proven set. The shots/presets code paths and their persisted store entries are intact;
+	 * flip to true to restore both surfaces.
+	 */
+	SHOW_CUSTOM_CAMERA_POSES: false,
 	/** Materiality VFX — directional specular sheen, noise texture, rim light, cavity groove, and concave center button shading */
 	ENABLE_MATERIALITY: true,
 	/** Mechanical center button — deeper press animation with spring-back, enhanced shadow recess, and a distinct physical click sound via Web Audio API */

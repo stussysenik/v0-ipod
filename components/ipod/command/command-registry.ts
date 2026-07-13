@@ -2,7 +2,6 @@ import { toast } from "sonner";
 
 import { PANEL_REGISTRY } from "@/components/ipod/panels/panel-registry";
 import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
-import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import type { IpodViewMode, IpodWorkbenchModel, PanelLayoutState } from "@/lib/ipod-state/model";
 import { getModeLayout, resolveFrame } from "@/lib/ipod-state/panel-layout";
 import { copyShareLink, downloadConfigFile, pickConfigFile } from "@/lib/ipod-state/share";
@@ -52,19 +51,18 @@ export function buildCommands({ viewMode, layout, send, navigate, close, getMode
 		close();
 	};
 
-	// Open the dedicated /3d studio — a real navigation to the focused fullscreen R3F surface,
-	// distinct from the inline "Switch to 3D Experience" mode toggle below. Gated by the same
-	// flag so the two 3D affordances appear and disappear together.
-	if (FEATURE_FLAGS.SHOW_3D_VIEW_MODE) {
-		commands.push({
-			id: "nav:3d-studio",
-			group: "Switch mode",
-			label: "Open 3D studio (/3d)",
-			keywords: ["3d", "studio", "render", "stage", "navigate", "open", "fullscreen"],
-			tier: "primary",
-			run: go("/3d"),
-		});
-	}
+	// Open the dedicated /3d studio. This is the ONE 3D truth (spec: surface-mode-switching),
+	// so it is deliberately NOT gated on SHOW_3D_VIEW_MODE — that flag archives the *inline*
+	// 3D render mode, and gating this on it would remove the only palette route to /3d. The
+	// inline mode's own command disappears on its own via `availableViewModes()` below.
+	commands.push({
+		id: "nav:3d-studio",
+		group: "Switch mode",
+		label: "Open 3D studio (/3d)",
+		keywords: ["3d", "studio", "render", "stage", "navigate", "open", "fullscreen"],
+		tier: "primary",
+		run: go("/3d"),
+	});
 
 	// Mode switching — only modes the feature flags expose. Switching restores that mode's
 	// own persisted panel arrangement (the layout is keyed by mode).
@@ -110,6 +108,17 @@ export function buildCommands({ viewMode, layout, send, navigate, close, getMode
 			run: run({ type: "SET_PANEL_COLLAPSED", payload: { id: spec.id, collapsed: !frame.collapsed } }),
 		});
 	}
+
+	// Reset the device to defaults. The rail's Reset button is archived behind
+	// SHOW_WORKBENCH_TRANSPORT, so the palette is now its only trigger (design D7).
+	commands.push({
+		id: "model:reset",
+		group: "Configuration",
+		label: "Reset to defaults",
+		keywords: ["reset", "defaults", "clear", "start over", "revert"],
+		tier: "secondary",
+		run: run({ type: "RESET_MODEL" }),
+	});
 
 	// Layout reset for the current mode.
 	commands.push({

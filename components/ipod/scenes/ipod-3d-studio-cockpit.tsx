@@ -30,9 +30,6 @@ interface Ipod3DStudioCockpitProps {
 	interaction: IpodInteractionState;
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
-	/** On-canvas mobile touch camera controls (gizmo + orbit-pad + pinch). */
-	touchControls: boolean;
-	onToggleTouchControls: () => void;
 }
 
 const MODES: readonly { id: IpodInteractionModel; label: string }[] = [
@@ -46,8 +43,6 @@ export function Ipod3DStudioCockpit({
 	interaction,
 	studio,
 	dispatch,
-	touchControls,
-	onToggleTouchControls,
 }: Ipod3DStudioCockpitProps) {
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -99,14 +94,6 @@ export function Ipod3DStudioCockpit({
 				hint="Jack, hold switch & 30-pin dock"
 				on={studio.showPorts}
 				onToggle={() => dispatch({ type: "TOGGLE_SHOW_PORTS" })}
-			/>
-
-			{/* Touch controls — the mobile on-canvas gizmo + orbit-pad + pinch */}
-			<ToggleRow
-				label="Touch controls"
-				hint="On-screen orbit, snap & pinch (mobile)"
-				on={touchControls}
-				onToggle={onToggleTouchControls}
 			/>
 
 			{/* Layout tool — dashed bounding boxes + drag handles to reposition Now Playing

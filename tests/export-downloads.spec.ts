@@ -160,7 +160,12 @@ async function prepareExportSurface(page: Page) {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Export downloads", () => {
+// SKIPPED, not deleted (spec: shipped-surface-minimalism). This suite drives the `/` rail's
+// GIF/MP4 export buttons, which are archived behind `FEATURE_FLAGS.SHOW_WORKBENCH_EXPORTS`
+// — so its triggers no longer render, and there is no command-palette equivalent to drive
+// instead. The 2D export pipeline itself is intact; flipping that flag back to `true` is the
+// one change needed to restore both the buttons and this coverage.
+test.describe.skip("Export downloads", () => {
 	test("GIF export lands in ~/Downloads", async ({ page }) => {
 		await allowDownloadsToHomeDirectory(page);
 		await prepareExportSurface(page);

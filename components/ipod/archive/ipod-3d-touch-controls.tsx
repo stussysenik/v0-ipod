@@ -7,6 +7,15 @@ import { haptic } from "@/lib/haptics";
 import type { StudioPose } from "@/lib/studio-camera";
 
 /**
+ * ARCHIVED (spec: camera-control-truth, design D1/D6) — no longer rendered.
+ *
+ * Its six-view gizmo *won*: those views are now the single bottom camera bar
+ * (`scenes/ipod-3d-camera-bar.tsx`), which folds in the saved studio shots and is the
+ * only quick camera control on `/3d` at every viewport. This file was a second, stacked
+ * bar; it is kept intact rather than deleted so the on-canvas floating-gizmo treatment
+ * can be brought back by rendering it from `ipod-3d-stage.tsx` again.
+ *
+ * ── original doc ──
  * On-canvas camera snapping for /3d on mobile — a 3D-modeling-style orientation
  * gizmo. Tap a face to fly the camera to that canonical product view.
  *
