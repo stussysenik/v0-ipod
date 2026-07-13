@@ -24,6 +24,27 @@ spec.
 - **THEN** interactive elements use the same primitives, radius token, and accent
   as `/` and `/3d`
 
+### Requirement: One corner radius family, machined not default
+
+Every studio control and control-holding surface SHALL take its corner radius from the
+two exported constants in `studio-controls.tsx` — `CONTROL_RADIUS` (derived from the
+device's own aperture:body corner ratio) for a control, and `SURFACE_RADIUS`
+(`CONTROL_RADIUS + 4`, the concentric outer corner for a `p-1` surface) for a bar, dock,
+or tray that holds controls. Stadium pills (`rounded-full`) and ad-hoc Tailwind radii
+(`rounded-xl` and friends) SHALL NOT appear on any studio surface: a default corner reads
+as a stock component bolted around a machined one. No page SHALL define its own radius.
+
+#### Scenario: No pills on the studio surfaces
+
+- **WHEN** the `/3d` header controls and bottom camera bar render
+- **THEN** their corners come from `CONTROL_RADIUS` / `SURFACE_RADIUS`, and no
+  `rounded-full` class is applied to any control or control surface
+
+#### Scenario: Surfaces nest concentrically
+
+- **WHEN** a surface wraps controls with `p-1` padding
+- **THEN** its radius is the control radius plus that padding, so the corners run parallel
+
 ### Requirement: No same-page duplicate control surfaces
 
 On `/3d`, floating panels that duplicate a cockpit's function SHALL be removed

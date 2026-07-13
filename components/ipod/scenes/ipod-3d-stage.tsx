@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useActorRef, useSelector } from "@xstate/react";
 
-import { StudioButton, StudioControlScope } from "@/components/ui/studio-controls";
+import { StudioButton, StudioControlScope, SURFACE_RADIUS } from "@/components/ui/studio-controls";
 
 import type { CameraPreviewState, ExportFraming, ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import { setCaptureElapsedMs } from "@/lib/capture-clock";
@@ -774,13 +774,17 @@ export function Ipod3DStage() {
 					    same persisted model. */}
 					<StudioControlScope
 						stageBackground={presentation.bgColor}
-						style={{ background: "var(--studio-surface)", borderColor: "var(--studio-hairline)" }}
-						className="flex items-center rounded-full border p-1 shadow-sm backdrop-blur-md"
+						style={{
+							background: "var(--studio-surface)",
+							borderColor: "var(--studio-hairline)",
+							borderRadius: SURFACE_RADIUS,
+						}}
+						className="flex items-center border p-1 shadow-sm backdrop-blur-md"
 					>
 						<StudioButton
 							onPress={() => router.push("/")}
 							aria-label="Back to the 2D workbench"
-							className="shrink-0 rounded-full"
+							className="shrink-0"
 							data-testid="2d-button"
 						>
 							2D
@@ -792,7 +796,10 @@ export function Ipod3DStage() {
 						<button
 							type="button"
 							onClick={() => setControlsOpen((o) => !o)}
-							className={`group relative flex h-10 items-center gap-3 rounded-full border px-4 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.94] ${
+							// Same machined corner as the 2D control beside it — the header reads as
+							// one instrument, not a stadium pill next to a rectangle.
+							style={{ borderRadius: SURFACE_RADIUS }}
+							className={`group relative flex h-10 items-center gap-3 border px-4 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.94] ${
 								controlsOpen 
 									? "border-black/20 bg-black text-white shadow-2xl" 
 									: "border-black/10 bg-white/70 text-black/80 backdrop-blur-xl hover:border-black/30 hover:bg-white/90"

@@ -137,6 +137,66 @@ real cost: `tests/export-downloads.spec.ts` drives the GIF/MP4 rail buttons and 
 palette equivalent, so it is **skipped while `SHOW_WORKBENCH_EXPORTS` is false** — the
 2D export pipeline keeps its code and loses its E2E coverage until the flag returns.
 
+### D8 — The camera moves deterministically: framing ⟂ chrome (found live, 2026-07-14)
+
+**Root cause, measured, not guessed.** On a 390px phone the device hung off the
+bottom-right corner of the stage — a real, screenshotted defect (it survived a reload,
+so it was not a mid-ease transient). The canvas was the correct size (390×844) but its
+container was inset to `left:156, top:338`.
+
+The culprit is the floating-panel *symbiosis* inset in `ipod-3d-stage.tsx`:
+`useSafeInsets` computes an inset from **every non-collapsed panel frame, regardless of
+viewport**, and the stage applies it as `stageStyle`. On desktop that is the intended
+behaviour (nudge the canvas out from under a floating panel). On a phone the panels do
+not float at all — the controls live in the bottom drawer — yet their frames still
+produced a large inset, which shoved the whole stage off-screen.
+
+**Decision: panel symbiosis is a desktop affordance.** The inset applies only at
+≥1024px (`lg`, the same breakpoint at which the cockpits actually float); below it the
+stage fills the viewport untouched. The framing of the device is now a pure function of
+*the pose and the viewport* and never of control chrome — which is the property the
+user asked for ("be really deterministic and in ownership of how it moves").
+
+This was pre-existing (nothing in this change touched the panel or inset code), but it
+only became *visible* once the stacked bars were removed and the device was the only
+thing on screen. Fixed here rather than deferred: it is the single worst thing a
+designer tapping the link from a tweet would see.
+
+### D9 — Ship a closed set of angles; archive user-authored camera points (user, 2026-07-14)
+
+**Decision (user): archive the custom camera point for now — just give presets for the
+angles.** The `/3d` bar ships the six named angle presets and nothing else. The saved
+studio shots (`＋ Shot` + chips) and the camera cockpit's numeric "Save pose" presets go
+behind `SHOW_CUSTOM_CAMERA_POSES` (false).
+
+Rationale, and it is the same one as D8: a *named preset* is a pose the product
+guarantees — it carries its framing, omits `reach`, and is proven to frame the device on
+every supported viewport. A *user-saved point* is an arbitrary azimuth/elevation/reach
+captured on whatever viewport the user happened to be on, with no such guarantee when it
+is recalled somewhere else. Shipping both means shipping one control the camera can keep
+its promise about and one it cannot. The determinism requirement therefore *implies*
+this cut; it is not merely a scope trim.
+
+Per D6 this is an archive, not a deletion: the shots and presets already in a user's
+`ipod-3d-camera.v1` store are preserved, still migrated, and simply not rendered. One
+flag flip brings both surfaces back with their data intact.
+
+### D10 — The corner is machined, not a pill (user, 2026-07-14)
+
+**Decision (user): drop the stadium pills — rectangles, or a custom corner; the default
+`rounded-full` is too easy to catch.** They are right, and the system already had the
+answer: `studio-controls.tsx` derives `CONTROL_RADIUS` from the *device's own* radius
+family (screen aperture 3.0mm ÷ body corner 6.4mm ≈ 0.47, applied to the 16px base ≈ 7px).
+Every `Studio*` primitive already sets it inline. The new camera bar and header controls
+were overriding that with `rounded-full` — an ad-hoc pill bolted around a machined corner.
+
+The fix is to *stop overriding the system*, plus one addition it was missing: a radius for
+a **surface** that holds controls. Concentric corners require `outer = inner + padding`,
+and our surfaces pad by `p-1` (4px), so `SURFACE_RADIUS = CONTROL_RADIUS + 4`. The bar,
+the `2D` control and the `Menu` button now all sit on that family. No component invents a
+radius; §4's adoption sweep should delete every remaining `rounded-full` / `rounded-xl`
+on a studio surface in favour of these two constants.
+
 ### D4 — Adoption means deletion
 
 `studio-control-adoption` is measured by what is removed: bespoke button/pill/chip

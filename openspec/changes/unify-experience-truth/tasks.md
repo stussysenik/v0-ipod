@@ -1,22 +1,28 @@
 # Tasks — unify-experience-truth
 
 **Read `design.md` first.** D1 (the gizmo is the surviving bar), D3 (the double
-"Now Playing" does NOT reproduce — do not "fix" it), D6 (archive, never delete) and
-D7 (the `/` rail is five controls) are decisions, not suggestions. They were made
-against the running app, not from reading code.
+"Now Playing" does NOT reproduce — do not "fix" it), D6 (archive, never delete),
+D7 (the `/` rail is five controls), **D8 (framing ⟂ chrome — the camera is
+deterministic)** and **D9 (ship six angle presets; archive user-authored camera
+points)** are decisions, not suggestions. They were made against the running app, not
+from reading code.
 
 Verification environment note: Playwright cannot see the `/3d` WebGL canvas here
 (known env limitation) — verify `/3d` visuals via chrome-devtools MCP screenshots at
 iPhone viewport (390×844, DPR 3); cover logic with unit tests. Run the dev server
 under a captured log (`pnpm dev:raw`, port 4001) and read it; a clean 200 hides
-streamed errors.
+streamed errors. **Beware a stale tab:** an already-open tab at `localhost:4001` will
+HMR your in-progress edits and dump `ReferenceError`s into the log that are not real.
+Confirm against a *fresh* load before believing an error.
 
 ---
 
-## 0. Already landed (session of 2026-07-14) — verify, don't redo
+## 0. Already landed — verify, don't redo
 
-Tree is green at this point: `pnpm lint` 0 errors, `pnpm type-check` clean,
-`pnpm test:unit` 461 passed.
+**§1, §2 and §3 are DONE** and committed (`3edabe5` + `c7ac1a5`). Tree is green:
+`pnpm lint` 0 errors, `pnpm type-check` clean, `pnpm test:unit` **466 passed**.
+Verified on the running app at 390×844/DPR 3 (screenshots): device framed on every
+one of the six presets, one bottom bar inside the viewport, one live screen.
 
 - [x] 0.1 `lib/studio-camera-poses.ts` — the one pose model. `NamedPose`
       (azimuth/elevation/framing), the six `NAMED_POSES`, `StudioShot`/`ShotLook`/
@@ -24,83 +30,70 @@ Tree is green at this point: `pnpm lint` 0 errors, `pnpm type-check` clean,
       camera *actually* is, so free-orbit honestly deselects).
 - [x] 0.2 `lib/studio-camera-store.ts` — `ipod-3d-camera.v1`, one versioned home for
       `lockedPose` + `shots` + `presets`, with a one-time fold-in of the three legacy
-      keys (legacy `focus` → pose framing; missing `edgeColor` → `backColor`).
-- [x] 0.3 `lib/studio-camera-store.test.ts` — 9 tests, green: migration, framing
-      default, round-trip + legacy-key retirement, v1-wins-over-stale, malformed
-      storage, and named-pose matching across the ±180° azimuth seam.
-- [x] 0.4 `components/ipod/scenes/ipod-3d-camera-bar.tsx` — the merged single bar
-      (six named views + shot chips + `＋ Shot`), built on `StudioButton`/`StudioChip`/
-      `StudioControlScope`. **Written but not yet wired into the stage** — see 1.2.
+      keys. **Confirmed live**: after one load the legacy keys are gone and `v1` holds
+      the migrated shots.
+- [x] 0.3 `lib/studio-camera-store.test.ts` — 9 tests, green.
+- [x] 0.4 `ipod-3d-camera-bar.tsx` — the single bar, **wired into the stage**.
 - [x] 0.5 `lib/feature-flags.ts` — `SHOW_3D_VIEW_MODE`, `SHOW_FOCUS_VIEW_MODE`,
-      `SHOW_ASCII_VIEW_MODE` flipped to `false` with ARCHIVED comments; new
-      `SHOW_WORKBENCH_TRANSPORT` and `SHOW_WORKBENCH_EXPORTS` flags added (both
-      `false`).
-- [x] 0.6 `ipod-classic-workbench.tsx` — `useRouter` + the `3D Studio` rail button
-      (`data-testid="3d-studio-button"`) that navigates to `/3d`. **The remaining rail
-      buttons are not yet gated** — see 3.2.
+      `SHOW_ASCII_VIEW_MODE`, `SHOW_WORKBENCH_TRANSPORT`, `SHOW_WORKBENCH_EXPORTS` and
+      **`SHOW_CUSTOM_CAMERA_POSES`** all `false`, each with an ARCHIVED comment.
+- [x] 0.6 `ipod-classic-workbench.tsx` — the `3D Studio` rail button → `/3d`.
 
----
+## 1. Camera control truth (/3d) — DONE
 
-## 1. Camera control truth (/3d) — one bar, the gizmo's
-
-- [ ] 1.1 Wire the pose request path in `ipod-3d-stage.tsx`. Replace the local
-      `focus` state with `framing` + a `requestPose({framing, azimuth, elevation, reach?})`
-      callback. **Order matters** (design D1): set framing state, then apply the angles
-      in an effect keyed on a request nonce, so the stage's `setCameraGoal` lands after
-      the rig's framing effect instead of being clobbered by it.
-- [ ] 1.2 Swap `Ipod3DStudioShots` for `Ipod3DCameraBar` (already written, 0.4) and pass
-      it `onPose`, `framing`, `shots`, `onShotsChange`.
-- [ ] 1.3 Archive `ipod-3d-touch-controls.tsx` — **move it, do not delete it** (D6) to
-      `components/ipod/archive/` with a header comment saying what replaced it. Remove
-      its render + the `touchControls` state/gating in `ipod-3d-stage.tsx`, and the
-      "Touch controls" `ToggleRow` in `ipod-3d-studio-cockpit.tsx` (plus its now-unused
-      `touchControls`/`onToggleTouchControls` props).
-- [ ] 1.4 Delete `ipod-3d-studio-shots.tsx` outright — it is *replaced in place* by the
-      camera bar, not archived (D6: archive the feature, delete the duplicate).
-- [ ] 1.5 Point the camera cockpit at the shared store: the stage owns the `CameraStore`
-      and passes `presets` + `onPresetsChange` down, so the cockpit stops owning
-      `ipod-3d-camera-presets` itself. Same for the locked pose (drop `LOCKED_POSE_KEY`
-      from the stage in favour of `readCameraStore`/`writeCameraStore`). **No third
-      camera state owner** — the bar and the cockpit must edit the same pose state.
-- [ ] 1.6 Confirm the export/capture path is untouched: `heroAnchorRef`, `captureHighRes`,
-      and the prepare/restore contract must behave exactly as before.
+- [x] 1.1 Pose request path in `ipod-3d-stage.tsx`: `framing` state + `requestPose(...)`
+      + a nonce-keyed effect. The ordering trap is handled — framing and angles dispatch
+      in one commit, and the rig's framing effect (child) runs before the stage's pose
+      effect (parent), so `setCameraGoal` lands last. Verified on `Back` (framing change
+      + 180° azimuth land together, device squared and framed).
+- [x] 1.2 `Ipod3DStudioShots` → `Ipod3DCameraBar`.
+- [x] 1.3 `ipod-3d-touch-controls.tsx` **moved** to `components/ipod/archive/` with a
+      header saying what replaced it; `touchControls` state + the cockpit `ToggleRow` gone.
+- [x] 1.4 `ipod-3d-studio-shots.tsx` deleted (replaced in place).
+- [x] 1.5 The stage owns the `CameraStore`; the cockpit takes `presets`/`onPresetsChange`
+      and owns no localStorage. No third camera state owner.
+- [x] 1.6 Export/capture path untouched (`heroAnchorRef`, `captureHighRes`,
+      prepare/restore) — no edits to those paths. **Still unproven at runtime → 2.3.**
+- [x] 1.7 **(D9)** Saved studio shots + the cockpit's "Save pose" archived behind
+      `SHOW_CUSTOM_CAMERA_POSES`. The bar ships exactly six angle presets.
 
 ## 2. Mobile correctness (/3d)
 
-- [ ] 2.1 **Do not "fix" the double Now Playing — it does not reproduce** (design D3).
-      Verify the invariant instead: one screen at 390×844/DPR 3 across the six views and
-      in short landscape. If a genuine duplicate ever appears, the root cause is *not*
-      the LCD shader (it is backlight-only, `three-d-ipod.tsx:677-707`).
-- [ ] 2.2 Fix the real defect: the bottom bar **overflows the viewport** at 390px (its
-      `＋ Shot` label is clipped off the right edge). The bar must fit within
-      `100vw - 1.5rem`, scroll horizontally within itself, and respect
-      `env(safe-area-inset-bottom)`. Audit stacking (header, stage, bar, drawer, toasts,
-      coach hint) at 390×844 and short landscape (≤540px height).
-- [ ] 2.3 Verify export still captures exactly one screen (existing export path).
+- [x] 2.1 One-screen invariant **verified, not fixed** (D3). A DOM query finds two
+      `Now Playing` nodes: the device status bar (on-screen) and the `03 Now Playing`
+      cockpit title at `y≈2190` (`onScreen: false`, in the closed drawer). Exactly one
+      live screen. Occlusion on the `Back` pose confirmed by screenshot.
+- [x] 2.2 The bar fits the viewport: measured `left:12 → right:378` inside 390, body does
+      not overflow in x, and it scrolls within itself when it needs to. With the six
+      presets alone it no longer needs to.
+- [x] 2.3 **(D8) The real mobile defect, found live:** the device hung off the
+      bottom-right corner. The stage was inset by *every* floating-panel frame regardless
+      of viewport (`left:156, top:338` on a phone). Panel symbiosis is now desktop-only
+      (≥1024px). Canvas measures exactly `0,0,390×844`.
+- [ ] 2.4 Verify **export** still captures exactly one screen and one device, on the
+      current build (the export path was not edited, but it has not been re-run since the
+      camera rewire — this is the one unproven claim in §1–3).
+- [ ] 2.5 Short-landscape (≤540px height) pass — the bar re-docks bottom-left via
+      `landscape`, but this was not re-verified after the inset fix.
 
-## 3. Surface mode switching + the `/` rail (design D7)
+## 3. Surface mode switching + the `/` rail (design D7) — DONE
 
-- [ ] 3.1 Mirror the header affordance: `/3d` gets a `2D` control returning to `/`, in
-      the same header slot as the `/` rail's `3D Studio` button, in the studio control
-      language. Customization carries across via the existing localStorage/portable-state
-      bridge — check both directions by hand.
-- [ ] 3.2 Gate the archived rail controls in `ipod-classic-workbench.tsx` behind the
-      flags added in 0.5: Play/Pause + Reset under `SHOW_WORKBENCH_TRANSPORT`; the PNG,
-      GIF and MP4 export buttons under `SHOW_WORKBENCH_EXPORTS`. The rail must end up as
-      exactly five visible controls: Flat, Preview, 3D Studio, Zen, Copy share link.
-      Nothing is deleted.
-- [ ] 3.3 Hydration migration: a persisted `viewMode` whose flag is now off
-      (`"3d"`, `"ascii"`, `"focus"`) must hydrate as `"preview"` and persist the migrated
-      mode — otherwise a returning user is stranded in an unreachable mode with no rail
-      button to leave it. Unit-test it.
-- [ ] 3.4 `command-registry.ts`: the `nav:3d-studio` command is currently gated behind
-      `SHOW_3D_VIEW_MODE` — **decouple it** (that flag is now `false`, which would remove
-      the only palette route to `/3d`). The inline-mode command disappears on its own via
-      `availableViewModes()`. Confirm the archived-but-useful actions (reset, share,
-      config import/export) are still in the palette.
-- [ ] 3.5 `tests/export-downloads.spec.ts` drives the now-archived GIF/MP4 rail buttons
-      and has no palette equivalent → `test.skip` it with a comment naming
-      `SHOW_WORKBENCH_EXPORTS` as the restore switch. **Do not delete the spec.**
+- [x] 3.1 `/3d` header gets a `2D` control (`data-testid="2d-button"`) returning to `/`,
+      in the studio control language, mirroring the `/` rail's `3D Studio` button.
+      **Not yet hand-checked:** that customization survives the round trip both ways.
+- [x] 3.2 Rail gated to five controls: Flat, Preview, 3D Studio, Zen, Copy share link.
+      Transport + reset behind `SHOW_WORKBENCH_TRANSPORT`; PNG/GIF/MP4 behind
+      `SHOW_WORKBENCH_EXPORTS`. Nothing deleted. **Note:** the ⌘K opener button still
+      renders on compact viewports — it is the *only* way a touch user reaches the
+      archived actions the spec promises stay reachable, so it stays. Flag if unwanted.
+- [x] 3.3 Hydration migration extracted to `migrateViewMode()` in `lib/view-modes.ts`
+      (the rule now lives where the gating lives) and unit-tested in
+      `lib/view-modes.test.ts` — 5 tests, asserted against the flags, not hard-coded.
+- [x] 3.4 `nav:3d-studio` decoupled from `SHOW_3D_VIEW_MODE`. **Also found and fixed:**
+      `RESET_MODEL` had *no* palette command at all, so archiving the rail's Reset button
+      would have orphaned it — D7 promised it "lives in ⌘K". Added `model:reset`.
+- [x] 3.5 `tests/export-downloads.spec.ts` → `test.describe.skip` with a comment naming
+      `SHOW_WORKBENCH_EXPORTS` as the restore switch. Not deleted.
 
 ## 4. Studio control language adoption
 

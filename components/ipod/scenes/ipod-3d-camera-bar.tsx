@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type Dispatch } from "react";
 
-import { StudioButton, StudioChip, StudioControlScope } from "@/components/ui/studio-controls";
+import {
+	StudioButton,
+	StudioChip,
+	StudioControlScope,
+	SURFACE_RADIUS,
+} from "@/components/ui/studio-controls";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { haptic } from "@/lib/haptics";
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
@@ -138,6 +143,8 @@ export function Ipod3DCameraBar({
 	const surfaceStyle: CSSProperties = {
 		background: "var(--studio-surface)",
 		borderColor: "var(--studio-hairline)",
+		// Concentric with the machined control corner, not a stadium pill (see SURFACE_RADIUS).
+		borderRadius: SURFACE_RADIUS,
 		paddingBottom: "max(0.25rem, env(safe-area-inset-bottom))",
 	};
 
@@ -145,7 +152,7 @@ export function Ipod3DCameraBar({
 		<StudioControlScope
 			stageBackground={presentation.bgColor}
 			style={surfaceStyle}
-			className={`pointer-events-auto fixed z-30 flex max-w-[calc(100vw-1.5rem)] items-center gap-1 overflow-x-auto rounded-full border p-1 shadow-sm backdrop-blur-md ${
+			className={`pointer-events-auto fixed z-30 flex max-w-[calc(100vw-1.5rem)] items-center gap-1 overflow-x-auto border p-1 shadow-sm backdrop-blur-md ${
 				landscape ? "bottom-3 left-3" : "bottom-6 left-1/2 -translate-x-1/2"
 			}`}
 		>
@@ -156,7 +163,7 @@ export function Ipod3DCameraBar({
 					isActive={activePoseId === pose.id}
 					onPress={() => selectPose(pose)}
 					aria-label={`Camera pose: ${pose.label}`}
-					className="shrink-0 rounded-full"
+					className="shrink-0"
 				>
 					{pose.label}
 				</StudioButton>
@@ -196,7 +203,7 @@ export function Ipod3DCameraBar({
 					<StudioButton
 						onPress={saveShot}
 						aria-label="Save the current camera pose and finish as a studio shot"
-						className="shrink-0 rounded-full"
+						className="shrink-0"
 					>
 						＋ Shot
 					</StudioButton>

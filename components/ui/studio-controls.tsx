@@ -34,6 +34,19 @@ export const CONTROL_RADIUS = Math.round(
 	(IPOD_CLASSIC_MM.screen.cornerRadius / IPOD_CLASSIC_MM.body.cornerRadius) * 16,
 );
 
+/**
+ * The radius of a *surface* that holds controls (a bar, a dock, a tray).
+ *
+ * Concentric corners: an outer corner is only parallel to the corner it wraps when it
+ * equals the inner radius plus the padding between them. Our surfaces pad their controls
+ * by `p-1` (4px), so the surface corner is `CONTROL_RADIUS + 4`. Anything else — and a
+ * `rounded-full` pill especially — reads as a default shape bolted around a machined one.
+ * This is the rectangle language: crisp corners from the device's own radius family
+ * (body 6.4mm : aperture 3.0mm), never a stadium.
+ */
+export const SURFACE_PAD = 4;
+export const SURFACE_RADIUS = CONTROL_RADIUS + SURFACE_PAD;
+
 // One timing table. Hover is a quick acknowledgement; selection is a deliberate state
 // change. Ease-out, no bounce — an instrument, not a toy.
 const HOVER_MS = 130;

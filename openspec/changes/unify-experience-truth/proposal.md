@@ -20,12 +20,16 @@ gets one coherent hierarchy, and the portfolio says what the real site says.
 ## What Changes
 
 - **Camera control truth on `/3d`:** merge the touch gizmo (`Ipod3DTouchControls`)
-  and the focus segment of `Ipod3DStudioShots` into **one** bottom `StudioSegment`
-  bar — named view poses + `＋ Shot` — on all viewports. Delete the touch gizmo.
-  The camera cockpit (05) remains the advanced numeric editor of the *same* pose
-  state. Ad-hoc camera persistence keys consolidate under one namespace.
+  and the focus segment of `Ipod3DStudioShots` into **one** bottom bar — the six
+  named angle presets — on all viewports. The camera cockpit (05) remains the
+  advanced numeric editor of the *same* pose state. Ad-hoc camera persistence keys
+  consolidate under one namespace. The camera also becomes **deterministic**: the
+  device's framing is a pure function of the pose and the viewport, never of control
+  chrome (a panel inset was shoving the device off-frame on phones — design D8), and
+  user-authored camera points (saved shots, "Save pose") are archived so the product
+  only ships poses it can guarantee frame the device (D9).
   **BREAKING** (removes the separate "focus mode" user-facing concept; framing folds
-  into named poses).
+  into named poses; removes saved studio shots from the shipped surface).
 - **Visible 2D↔3D switching:** a header affordance on `/` opens `/3d` and one on
   `/3d` returns to `/`, styled with the studio control language; customization state
   carries over (existing localStorage/portable-state bridge). The workbench's inline
