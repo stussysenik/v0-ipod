@@ -164,17 +164,66 @@ and had drifted: a cut work, a retitled role, a dead URL. So the feed is now *de
       already matched it exactly — so the CV is the authority and the stray "dropped out
       junior year" in the description was the thing that disagreed with it. Cut.
 
+## 10. Reachability — the graph, not just the pages (NEW, launch-blocking)
+
+Raised by the user, and it was right. Nothing in this change — or any spec, or any test —
+asserted that the surfaces are **connected**. They are not. A page that exists and a page
+a visitor can *find* are different claims, and only the first was ever checked.
+
+Measured route graph (`router.push` + the ⌘K registry are the complete set of edges):
+
+```
+/  ⇄  /3d          ← the only two edges in the entire app
+/portfolio         ← no inbound edge, and no way back out
+/3d-portfolio      ← no inbound edge, and no way back out
+/whitelabel        ← no inbound edge
+```
+
+- [x] 10.1 **Every work's link was dead** (`1caf027`). A *menu* node's `href` opened; a
+      *work's* `links[]` did not — center on an open work was a silent no-op, and the
+      screen drew the link as inert text wearing a `↗`. All eleven project URLs were dead
+      ends on the surface whose whole job is to show the work. The reducer now carries
+      slug → primary href from `initNav` and emits it through the same `pendingLink` path
+      the contact nodes already used, so it works on both portfolio surfaces; the links
+      are real anchors for pointer and keyboard. Three tests, one per branch.
+- [ ] 10.2 **`/portfolio` and `/3d-portfolio` are orphan routes.** The shared link lands on
+      `/`, and from there the portfolio — the reason the link is being shared at all — is
+      reachable only by typing its URL. §9's own preamble calls these surfaces "the shared
+      link's actual destination for a designer who **taps through**"; there is nothing to
+      tap. Add an inbound route: a `/` rail control and a ⌘K `nav:portfolio` command
+      (today `nav:3d-studio` is the registry's *only* navigation command).
+- [ ] 10.3 **Neither portfolio surface can get home.** Both are terminal — they mount no
+      panel system, no command palette, no link. A visitor who does reach one is stuck
+      there. Note the tension with **D12** ("the device is the product — cut the chrome"):
+      a way home is navigation, not chrome, but it is the one affordance D12's cut did not
+      account for. Resolve it explicitly rather than by accident.
+- [ ] 10.4 Mirror the device pair: `/portfolio ⇄ /3d-portfolio` should switch the same way
+      `/ ⇄ /3d` does, or the 3D portfolio is a second orphan behind the first.
+- [ ] 10.5 Add a **graph test**, not a page test: assert every shipped route has at least
+      one inbound in-app edge and one path home. This class of bug is invisible to every
+      per-page test in the suite, which is exactly why it survived to launch.
+- [ ] 10.6 Decide `/whitelabel` and `/dev`: intentionally unlisted (fine — say so in a
+      comment) or archived behind a flag like everything else in §3.
+
 ## 7. Gate
 
 - [x] 7.1 `pnpm lint` **0 errors** (49 warnings, pre-existing) · `pnpm type-check` clean ·
       `pnpm test:unit` **481 passed** across 44 files.
-- [ ] 7.2 Playwright on `/`. **Correction to this task's own baseline:** the known-failure
-      set is larger than the two named here. `classic-fidelity` fails *in full* — proven
-      pre-existing by re-running it at `dd3e885`, before any commit in this change, where
-      it fails identically. Same root cause as the two named failures: the panel migration
-      moved `screen-progress` into a ⌘K panel, and these specs still wait for it on the
-      bare `/`. Not a regression, but the specs are now lying about the product and should
-      be re-pointed — filed as a follow-up, not fixed under a launch gate.
+- [ ] 7.2 Playwright on `/` — **UNRESOLVED, do not mark green without the baseline.**
+      Current run of the seven `/`-surface specs: **23 failed, 4 passed** (13.1m), spread
+      across `floating-panels` (8), `classic-fidelity` (4), `preview-marquee` (3),
+      `mobile-usability` (3), `rapid-interaction` (2), `hydration-desync` (2),
+      `interaction-sanity` (1). That is far beyond the two failures this task predicted, so
+      **this task's baseline is wrong** and the honest question — regression or
+      pre-existing? — is not yet answered.
+      What is already known: `classic-fidelity` fails identically at `dd3e885`, and the
+      root cause of that one is the panel migration moving `screen-progress` into a ⌘K
+      panel while the specs still wait for it on the bare `/`.
+      **Next step (in flight when the session ended):** a git worktree at `8be7b16` — the
+      commit *before* this change's first — running the identical spec set, to compare
+      failure-for-failure. Nothing may be claimed about regressions until that lands. If
+      the sets match, the specs are stale and should be re-pointed as their own change; if
+      they do not, the difference is a real regression and blocks the launch.
 - [x] 7.3 Visual pass done via chrome-devtools at 390×844 and 1440×900 on `/`, `/3d`,
       `/portfolio`. One bottom bar, one live screen, no WIP badge, 2D↔3D toggle present
       and correctly labelled, device framed on every surface. Console clean (only benign
@@ -209,12 +258,26 @@ builds differ (minification, caching, env).
 - [ ] 8.2 Proofread pass on all user-facing copy: `/portfolio` verbatim against the D5
       snapshot, every external link resolves (no 404s), control labels/toasts/microcopy on
       every surface; zero placeholder, lorem, or debug strings anywhere.
-- [ ] 8.3 Deploy a Vercel preview; repeat the 7.3 visual pass against the preview URL at
-      390×844/DPR 3, and confirm PostHog events fire from the deployment.
-- [ ] 8.4 Cold-load performance on the deployed `/` and `/3d` at mobile emulation:
-      chrome-devtools Lighthouse, plus a performance trace across a camera pose transition
-      and wheel interaction — no sustained long-frame jank; fix anything that blocks first
-      meaningful paint of the framed device.
+- [~] 8.3 Preview deployed and visually verified at 390×844 and 844×390 (landscape). The
+      **Next.js dev badge is confirmed absent from the production build** — it was sitting
+      over the `Front` pose button in dev landscape (2.5); on the preview, `Front` is fully
+      visible. Unfurl validated on the deployment: `summary_large_image`, absolute
+      `og:image`, and `/og.png` served as a real 1200×630 PNG.
+      **Still owed:** confirm PostHog events fire from the deployment.
+      ⚠️ **The card will not render until you promote.** `og:image` is absolute to
+      `ipod-music.stussysenik.com`, and *current production* still 404s `/og.png` and still
+      serves `generator: "v0.app"`. Sharing the link before promoting yields a broken card.
+- [~] 8.4 Lighthouse on the deployed `/3d` (mobile): **Best Practices 96 · Accessibility
+      90 · SEO 63**. SEO is a false alarm — the only failure is `is-crawlable`, i.e.
+      Vercel's preview `noindex` header, which does not exist in production.
+      **Found and fixed (`e8c88d8`):** Best Practices flagged console errors, and the
+      failing request was `http://127.0.0.1:8090` — `lib/pocketbase.ts` fell back to a
+      localhost URL when unset, so the deployed page fired a request at **the visitor's own
+      machine** on every `/3d` load. Unconfigured in production now disables the feature.
+      Re-verified on the redeployed preview: **zero localhost requests**.
+      **Still owed:** the two real Accessibility failures (`aria-command-name` — buttons
+      without accessible names; `label` — form elements without labels; both in the `/3d`
+      cockpits), and the performance trace across a pose transition + wheel interaction.
 - [ ] 8.5 Promote to production; smoke the prod URL (unfurl card, `/`, `/3d`,
       `/portfolio`); confirm a PostHog event from prod; note the previous deployment as
       the instant-rollback target.
