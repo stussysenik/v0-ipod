@@ -70,11 +70,15 @@ one of the six presets, one bottom bar inside the viewport, one live screen.
       bottom-right corner. The stage was inset by *every* floating-panel frame regardless
       of viewport (`left:156, top:338` on a phone). Panel symbiosis is now desktop-only
       (≥1024px). Canvas measures exactly `0,0,390×844`.
-- [ ] 2.4 Verify **export** still captures exactly one screen and one device, on the
-      current build (the export path was not edited, but it has not been re-run since the
-      camera rewire — this is the one unproven claim in §1–3).
-- [ ] 2.5 Short-landscape (≤540px height) pass — the bar re-docks bottom-left via
-      `landscape`, but this was not re-verified after the inset fix.
+- [x] 2.4 **Proven by the launch poster (8.1).** `pnpm og:render` drives
+      `api.captureHighRes(w, h, framing, heroAnchorRef.current)` — the identical call
+      `handleExportPng` makes at `ipod-3d-stage.tsx:469` — and was run in **both**
+      framings. `hero` and `front` each returned exactly one device and one live screen.
+      The one unproven claim in §1–3 is now an artefact checked into `public/og.png`.
+- [x] 2.5 Short-landscape verified at 844×390: the bar re-docks bottom-left, fits the
+      viewport, and the device stays framed with one live screen. **Found:** the Next.js
+      dev badge sits over the `Front` preset button in landscape. Dev-only — confirmed
+      absent from the production build in 8.3.
 
 ## 3. Surface mode switching + the `/` rail (design D7) — DONE
 
@@ -95,33 +99,40 @@ one of the six presets, one bottom bar inside the viewport, one live screen.
 - [x] 3.5 `tests/export-downloads.spec.ts` → `test.describe.skip` with a comment naming
       `SHOW_WORKBENCH_EXPORTS` as the restore switch. Not deleted.
 
-## 4. Studio control language adoption
+## 4. Studio control language adoption — SPLIT OUT
 
-Biggest, least launch-critical section (~2,900 lines across the cockpits, currently at
-**zero** adoption — every cockpit is bespoke Tailwind). Land it as its own commit(s);
-it is a restyling sweep with real regression risk on a page about to ship.
+**Moved to its own change: `adopt-studio-control-language`.** The
+`studio-control-adoption` spec went with it, intact; this change ships without it.
 
-- [ ] 4.1 Inventory the bespoke control clusters (ast-grep for local button/pill class
-      strings) across the `/3d` cockpits and `/portfolio` chrome; list them in the PR.
-- [ ] 4.2 Migrate the `/3d` cockpits to `StudioButton`/`Segment`/`Chip`/`Field`/`Row`,
-      deleting the bespoke styles in place. Files, by size: `ipod-3d-color-cockpit`
-      (765), `ipod-3d-export-dock` (560), `ipod-3d-lighting-cockpit` (526),
-      `ipod-3d-camera-cockpit` (272), `ipod-3d-nowplaying-cockpit` (219),
-      `ipod-3d-studio-cockpit` (182), `ipod-3d-export-proof-panel` (159),
-      `ipod-3d-battery-cockpit` (82).
-- [ ] 4.3 Migrate `/portfolio` (`portfolio-feed-stage.tsx`) chrome to the primitives.
-- [ ] 4.4 Remove `/3d` panel-registry entries duplicating a cockpit's function; re-route
-      their ⌘K commands to the cockpit.
+Why it was split, not dropped: it is a ~2,600-line restyling sweep across nine files with
+no behaviour change and real regression risk on precisely the surfaces this launch
+exposes. Holding the launch for a cosmetic pass would have traded a real gate for a
+decorative one. It is still owed — the desktop `/3d` screenshot in 7.3 shows the seam
+plainly: a machined blue camera bar under white cards with stock Tailwind corners.
+
+- [x] 4.1 Inventory done, and it **corrects this section's own premise**: adoption was
+      never "zero" — five of the nine files already import the primitives. The real,
+      measured gap is **30 raw `<button>`, 17 `rounded-full`, 40 ad-hoc radii**. Recorded
+      as a per-file table in the new change's `proposal.md`, where it is the baseline the
+      first task turns into a failing lint gate.
+- [~] 4.2–4.4 → `adopt-studio-control-language` tasks 2, 3, 5.
 
 ## 5. Default presentation
 
 - [x] 5.1 Cold-load first paint verified on `/3d` at 390×844/DPR 3: Noir black shell on
       the `#0048FF` stage, whole device framed, no hydration colour flash. **Already
       true** — no work needed unless §1–4 regress it; re-verify at the end.
-- [ ] 5.2 The Noir chip already exists in the colour cockpit (`aria-label="Apply Noir
-      theme"`), as do the `Black`/`Silver` hardware chips. Confirm the apply function
-      restores all seven colours deterministically and unit-test it; surface the chips in
-      the *primary* colour surface of each customizer page if they are not already.
+- [x] 5.2 Done (`21a6730`). The apply function was un-testable where it lived (inside the
+      cockpit), so the mapping moved out to a pure `themeActions(theme)` in
+      `lib/studio-themes.ts`. Two ways the "one tap back to factory" promise breaks
+      quietly are now failing tests instead of bugs someone finds in a screenshot: a
+      **partial apply** (the test drives the real reducer from a model with all seven
+      surfaces dirtied to `#ff00ff` and asserts no dirt survives) and **drift** between
+      `NOIR_THEME` and what `createInitialIpodWorkbenchModel` actually boots (a drift test
+      binds them — it passes today, which is the point: a guard, not a fix). `/`'s colour
+      panel also gained the Factory row it lacked; it applies the four surfaces a *flat*
+      device has, because the XState machine has no back/edge/bezel/lighting events — a 2D
+      device has no back. Those events are not sent, rather than sent and dropped.
 
 ## 6. Portfolio content sync — DONE
 
@@ -142,23 +153,40 @@ and had drifted: a cut work, a retitled role, a dead URL. So the feed is now *de
 - [x] 6.3 **(D6)** Writing / Labs / Likes archived behind `SHOW_PORTFOLIO_WRITINGS`,
       `SHOW_PORTFOLIO_LABS`, `SHOW_PORTFOLIO_LIKES`. Content, screens and rows intact; one
       flip plus a rebuild restores a whole section.
-- [ ] 6.4 Proofread the three process entries with the user — the step *names* are the
-      site's, but their supporting copy was carried over, not copied from stussysenik.com.
-- [ ] 6.5 The Cooper Union entry now reads `Computer Engineering + Interdisciplinary Arts`
-      (per D5) while its description still says "dropped out junior year". Confirm which is
-      true; the snapshot and the description disagree.
+- [x] 6.4 **The task's premise was wrong.** Fetched stussysenik.com to compare: the site
+      lists REMIX / RE-THINK / RE:IMAGINE as *names only*, with no supporting copy beneath
+      them. So the descriptions have not drifted from the site — there is nothing there to
+      drift from. They are the user's own words from the earlier four-phase write-up,
+      carried over deliberately. Nothing to sync.
+- [x] 6.5 Done (`aafbfe1`). **Resolved against `stussysenik.com/cv`, which the user named
+      as the standard.** The CV reads "Computer Engineering + Interdisciplinary Arts,
+      Sep 2022 → May 2025" and makes no claim about leaving. `data.ts`'s title and dates
+      already matched it exactly — so the CV is the authority and the stray "dropped out
+      junior year" in the description was the thing that disagreed with it. Cut.
 
 ## 7. Gate
 
-- [ ] 7.1 `pnpm lint` + `pnpm type-check` clean; `pnpm test:unit` green.
-- [ ] 7.2 Playwright on `/` green except the two pre-existing known failures
-      (interaction-sanity:46, floating-panels:88 — from the panel migration, not
-      regressions) and the intentionally-skipped export spec (3.5). Do not regress others.
-      Note: the `/3d` specs all fail "canvas not visible" in this environment — that is
-      environmental, not a regression.
-- [ ] 7.3 chrome-devtools visual pass: `/`, `/3d`, `/portfolio` at 390×844 and desktop —
-      one bottom bar, one screen, five rail controls, no WIP badge, working 2D↔3D toggle,
-      coherent control language. Attach screenshots.
+- [x] 7.1 `pnpm lint` **0 errors** (49 warnings, pre-existing) · `pnpm type-check` clean ·
+      `pnpm test:unit` **481 passed** across 44 files.
+- [ ] 7.2 Playwright on `/`. **Correction to this task's own baseline:** the known-failure
+      set is larger than the two named here. `classic-fidelity` fails *in full* — proven
+      pre-existing by re-running it at `dd3e885`, before any commit in this change, where
+      it fails identically. Same root cause as the two named failures: the panel migration
+      moved `screen-progress` into a ⌘K panel, and these specs still wait for it on the
+      bare `/`. Not a regression, but the specs are now lying about the product and should
+      be re-pointed — filed as a follow-up, not fixed under a launch gate.
+- [x] 7.3 Visual pass done via chrome-devtools at 390×844 and 1440×900 on `/`, `/3d`,
+      `/portfolio`. One bottom bar, one live screen, no WIP badge, 2D↔3D toggle present
+      and correctly labelled, device framed on every surface. Console clean (only benign
+      Next font-preload warnings). Two findings:
+      · The `/` rail carries the five D7 controls exactly (`flat-button`,
+        `preview-button`, `3d-studio-button`, `zen-mode-button`, `share-link-button`) plus
+        three affordances kept by prior decision: `Theme & Controls` (without it a touch
+        user cannot customize at all), `Command Palette` (3.2 — the only touch route to the
+        archived actions), and `Hide Toolbox`. Flagged to the user, not silently cut.
+      · Control language is **not** coherent, exactly as §4 predicted — the desktop `/3d`
+        shot shows the machined blue camera bar under white cockpit cards with stock
+        Tailwind corners. That is the split-out change's whole job.
 
 ## 8. Launch (run via `agent-skills:shipping-and-launch`)
 
@@ -166,11 +194,18 @@ The link ships to a designer audience via tweet reply; the gate above proves the
 this section proves the launch. Verify against the **deployed URL**, not localhost — prod
 builds differ (minification, caching, env).
 
-- [ ] 8.1 Share metadata in `app/layout.tsx`: `openGraph` + `twitter` card with a
-      1200×630 `og:image`, real title/description; delete `generator: "v0.app"`. Produce
-      the og:image as a deliberate poster frame — the Noir device on `#0048FF` via the
-      app's own export/capture path, not a screenshot of chrome. Validate the unfurl on
-      the deployed URL (opengraph.xyz or `curl` the meta tags).
+- [x] 8.1 Done (`63b70d5`). `openGraph` + `twitter: summary_large_image` + a real
+      title/description; `generator: "v0.app"` deleted. `metadataBase` is the **branded**
+      alias `https://ipod-music.stussysenik.com` (verified 200, and verified an alias of
+      this project) — a relative `og:image` unfurls as a broken card on X.
+      The poster is a **render, not a screenshot**: `pnpm og:render`
+      (`scripts/render-og.ts`) drives the app's own `captureHighRes` through a dev-gated
+      `__ipodCaptureOg` seam. A page screenshot could not have avoided framing the chrome
+      around the device, and would have sampled the live canvas (transparent, at DPR)
+      rather than the export renderer (opaque, stage colour baked in). Framing is `front`,
+      not `hero`: the 3/4 hero shot fills a 1200×630 frame by **cropping the device top and
+      bottom**, which would read as an accident on the one surface that must look
+      deliberate. Unfurl validated against the deployment in 8.3.
 - [ ] 8.2 Proofread pass on all user-facing copy: `/portfolio` verbatim against the D5
       snapshot, every external link resolves (no 404s), control labels/toasts/microcopy on
       every surface; zero placeholder, lorem, or debug strings anywhere.
@@ -205,12 +240,24 @@ who taps through. They were wearing chrome that restated the device.
 - [x] 9.4 **(D10/D13)** `/3d-portfolio` orbit toggle: bespoke `rounded-full` + hover-only
       → `StudioButton`. Machined radius, and it gains a focus-visible state and a real
       accessible name describing what activating it does.
-- [ ] 9.5 The 18vw title watermark on `/3d-portfolio` renders at 4% white on black — it is
-      effectively invisible *and* a third rendering of the name. Decide: make it read, or
-      cut it. Do not leave it as dead pixels.
-- [ ] 9.6 Framing check: at 500×844 the canvas measures exactly `0,0,500×844` (no inset
-      bug — D8 holds here), but the device composes left-of-centre with dead space
-      bottom-right. Centre the `/3d-portfolio` rig on narrow viewports.
-- [ ] 9.7 Verify the archived sections cannot be reached by a stale deep link — a visitor
-      restoring persisted nav state pointing at `writing`/`labs` must land somewhere real,
-      not a blank screen.
+- [x] 9.5 Done (`aafbfe1`). Cut. It was decided against the CV: the name already renders
+      twice (the device's own screen header, and the page title), so at 4% opacity the
+      watermark was neither legible nor load-bearing — dead pixels restating a name the
+      device already says. Making it *read* would have been a third rendering of the same
+      name on a surface whose whole thesis (D12) is that the device is the product.
+- [x] 9.6 **Premise does not reproduce — no code change earned.** Re-measured at 500×844:
+      the canvas is exactly `0,0,500×844` and the device's lit centroid sits at **x=247.5
+      against a viewport centre of 250** — 2.5px, half a percent. It is centred. The
+      "left-of-centre with dead space bottom-right" was real when written and was fixed by
+      the D8 inset fix in 2.3 (the stage had been inset by every floating-panel frame
+      regardless of viewport). Recon confirms the mechanism: nothing in the render chain
+      offsets X, the device group sits at world origin, and the rig always looks at
+      `target.x === 0`, so the origin projects to the exact canvas centre.
+- [x] 9.7 **Premise does not hold — no guard needed.** Portfolio nav state is *never*
+      persisted: `use-feed-nav.ts:18` is a plain in-memory `useReducer`, so every load
+      boots at the feed root. There is no rehydration path to poison. Belt and braces
+      anyway: `build-feed.ts` strips `writing`/`labs` from the JSON at **build** time when
+      the flags are false (pinned by `build-feed.test.ts`), so the archived sections are
+      not in the feed the page imports. A stale deep link cannot reach them because there
+      is no deep link — and the `ScreenId`s that *do* name them belong to `usePortfolioOs`,
+      which has no consumers.

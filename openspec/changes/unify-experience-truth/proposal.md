@@ -41,12 +41,13 @@ gets one coherent hierarchy, and the portfolio says what the real site says.
   double "Now Playing" reported in the original proposal **does not reproduce** —
   the LCD shader plane is backlight-only and cannot render a second screen; the
   one-live-screen rule stays as a regression guard (see `design.md` D3).
-- **Studio control language adoption (bound the system):** all interactive chrome on
-  `/3d`, `/portfolio`, and remaining 2D stragglers uses the existing
-  `components/ui/studio-controls.tsx` primitives (StudioButton/Segment/Chip/Field/
-  Row); bespoke one-off button styles are deleted, not restyled. Floating panels on
-  `/3d` that duplicate a cockpit's function are removed from that page's registry;
-  ⌘K commands route to the cockpit instead.
+- **Studio control language adoption — ~~in scope~~ SPLIT OUT to
+  `adopt-studio-control-language`.** The `studio-control-adoption` spec moved there
+  intact; this change ships without it. It is a ~2,600-line restyle across nine files
+  with no behaviour change and real regression risk on exactly the surfaces this launch
+  exposes — holding the launch for a cosmetic pass would trade a real gate for a
+  decorative one. The seam it leaves is visible and acknowledged (see tasks 7.3): the
+  `/3d` camera bar is machined, the cockpits it sits under are still stock Tailwind.
 - **Default presentation:** first paint is the Noir look (black shell, `#0048FF`
   stage) with no hydration flash and the whole device framed on mobile; built-in
   theme presets (Noir, 2008 black/silver hardware) are one-tap chips, presented —
@@ -74,9 +75,9 @@ gets one coherent hierarchy, and the portfolio says what the real site says.
 ## Impact
 
 - Affected specs (all new capabilities): `camera-control-truth`,
-  `surface-mode-switching`, `mobile-experience`, `studio-control-adoption`,
-  `default-presentation`, `portfolio-content`, `shipped-surface-minimalism`,
-  `launch-readiness`.
+  `surface-mode-switching`, `mobile-experience`, `default-presentation`,
+  `portfolio-content`, `shipped-surface-minimalism`, `launch-readiness`.
+  (`studio-control-adoption` moved to `adopt-studio-control-language`.)
 - Affected code: `components/ipod/scenes/ipod-3d-touch-controls.tsx` (deleted),
   `components/ipod/scenes/ipod-3d-studio-shots.tsx`,
   `components/ipod/scenes/ipod-3d-stage.tsx`,
