@@ -485,6 +485,39 @@ export function Ipod3DStage() {
 		[exportActorRef, sendExport, showNotice, nextPaint],
 	);
 
+	// Dev-only seam for `pnpm og:render`. The launch poster must be the device as the
+	// renderer actually draws it, so it goes through the same offscreen captureHighRes
+	// an export uses — a page screenshot could not help but frame the chrome around it.
+	// `NODE_ENV` is inlined at build time, so this whole block is dead code in prod.
+	useEffect(() => {
+		if (process.env.NODE_ENV === "production") return;
+		const host = window as unknown as {
+			__ipodCaptureOg?: (
+				width: number,
+				height: number,
+				framing: ExportFraming,
+			) => Promise<string | null>;
+		};
+		host.__ipodCaptureOg = async (width, height, framing) => {
+			const blob = await ipodApiRef.current?.captureHighRes(
+				width,
+				height,
+				framing,
+				heroAnchorRef.current,
+			);
+			if (!blob) return null;
+			return await new Promise<string>((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onloadend = () => resolve(String(reader.result));
+				reader.onerror = () => reject(new Error("failed to encode capture"));
+				reader.readAsDataURL(blob);
+			});
+		};
+		return () => {
+			delete host.__ipodCaptureOg;
+		};
+	}, []);
+
 	const handleExportClip = useCallback(
 		async (move: string, options: ClipExportOptions) => {
 			const api = ipodApiRef.current;

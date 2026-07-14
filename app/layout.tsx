@@ -56,15 +56,43 @@ export const viewport: Viewport = {
 	userScalable: true,
 };
 
+const SITE_URL = "https://ipod-music.stussysenik.com";
+const SITE_TITLE = "iPod Snapshot";
+const SITE_DESCRIPTION =
+	"A working iPod Classic in the browser. Spin the wheel, recolour the hardware, and render it in 3D.";
+
 export const metadata: Metadata = {
-	title: "iPod Snapshot",
-	description: "iPod Snapshot - Classic simulator and export studio",
+	// The unfurl card resolves `/og.png` against this, so it must be absolute and it
+	// must be the branded alias — a relative og:image renders as a broken card on X.
+	metadataBase: new URL(SITE_URL),
+	title: SITE_TITLE,
+	description: SITE_DESCRIPTION,
 	manifest: "/manifest.webmanifest",
-	generator: "v0.app",
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: "black-translucent",
-		title: "iPod Snapshot",
+		title: SITE_TITLE,
+	},
+	openGraph: {
+		type: "website",
+		url: SITE_URL,
+		siteName: SITE_TITLE,
+		title: SITE_TITLE,
+		description: SITE_DESCRIPTION,
+		images: [
+			{
+				url: "/og.png",
+				width: 1200,
+				height: 630,
+				alt: "A Noir iPod Classic rendered in 3D on a blue field.",
+			},
+		],
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: SITE_TITLE,
+		description: SITE_DESCRIPTION,
+		images: ["/og.png"],
 	},
 	icons: {
 		icon: [

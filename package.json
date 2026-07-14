@@ -29,7 +29,8 @@
 		"build-storybook": "storybook build",
 		"storybook:test": "vitest run --project storybook",
 		"storybook:validate": "pnpm build-storybook && pnpm storybook:test",
-		"prepare": "husky"
+		"prepare": "husky",
+		"og:render": "bun run scripts/render-og.ts"
 	},
 	"dependencies": {
 		"@cloudflare/kumo": "^2.2.1",
