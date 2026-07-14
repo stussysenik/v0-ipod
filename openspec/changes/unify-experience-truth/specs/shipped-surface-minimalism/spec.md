@@ -45,3 +45,41 @@ this change.
 - **WHEN** a surface adopts the studio control primitives
 - **THEN** the bespoke one-off control styles it replaces are deleted in place, while
   the surface's own feature code is preserved
+
+### Requirement: The device is the product — no chrome restates it
+
+The portfolio surfaces SHALL NOT wrap the device in chrome that repeats what the device
+itself renders. The iPod's own screen prints the feed title as its first row, so a
+heading above it MUST NOT restate the title or author, and an instruction caption
+("wheel to scroll…") MUST NOT be presented visually — the product has to explain itself.
+This applies to `/portfolio` and `/3d-portfolio` alike.
+
+#### Scenario: No duplicate title above the device
+
+- **WHEN** `/portfolio` or `/3d-portfolio` renders
+- **THEN** the feed title appears on the device's screen and nowhere else in the DOM
+  chrome around it
+
+#### Scenario: The interaction hint is spoken, not captioned
+
+- **WHEN** the device element is focused by assistive technology
+- **THEN** an `aria-describedby` target describes the wheel, the arrow keys, Enter and
+  Escape, and that description is not rendered visibly
+
+### Requirement: /3d-portfolio ships no camera control
+
+`/3d-portfolio` SHALL suppress the in-canvas `Product / Front / Back` focus segment by
+passing a controlled `focus`, and SHALL expose no camera control other than the orbit
+lock. The focus segment is the control D1 deleted from `/3d` as the most confusing
+element in the mobile shot; a visitor reading the works does not need a camera. The
+pinned value MUST be the rig's own default so the composition is unchanged.
+
+#### Scenario: The focus pill does not render
+
+- **WHEN** `/3d-portfolio` renders
+- **THEN** no `Product / Front / Back` segment appears anywhere on the stage
+
+#### Scenario: Orbit lock is the only camera affordance
+
+- **WHEN** the `/3d-portfolio` stage chrome is enumerated
+- **THEN** the orbit lock is the only camera control, and it is a studio primitive

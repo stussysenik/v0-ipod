@@ -123,13 +123,30 @@ it is a restyling sweep with real regression risk on a page about to ship.
       restores all seven colours deterministically and unit-test it; surface the chips in
       the *primary* colour surface of each customizer page if they are not already.
 
-## 6. Portfolio content sync
+## 6. Portfolio content sync — DONE
 
-- [ ] 6.1 Update `lib/portfolio/data.ts` to the D5 snapshot (identity, the 11 works,
-      process, education, GitHub, footer); remove drifted entries. Copy, do not
-      paraphrase; do not add works.
-- [ ] 6.2 Regenerate `content/senik.feed.json`; confirm `/portfolio` and `/3d-portfolio`
-      render identical content.
+**The task as written would have shipped nothing (D11).** `/portfolio` renders the
+*feed*, not `data.ts` — whose only consumer is mounted nowhere. The feed was hand-authored
+and had drifted: a cut work, a retitled role, a dead URL. So the feed is now *derived*.
+
+- [x] 6.1 `lib/portfolio/data.ts` synced to the D5 snapshot: role → `R&D Experience Design
+      Engineer`; the eleven canonical works in the site's order (the 12th, `iPod emulator`,
+      removed — the visitor is holding it); `uyr-problem`'s dead URL fixed; Cooper Union's
+      real degree; the process is the site's own three steps (REMIX / RE-THINK / RE:IMAGINE),
+      its copy carried over from the previous four-phase write-up rather than invented.
+      Works now carry a stable authored `slug`.
+- [x] 6.2 **(D11)** `lib/portfolio/build-feed.ts` + `pnpm feed:build` + `build-feed.test.ts`:
+      the feed is a projection of `data.ts`, and a unit test fails if the checked-in JSON
+      drifts from the builder. Verified live at 390×844 — root menu is
+      `Works · Process · About · Contact`, both surfaces identical.
+- [x] 6.3 **(D6)** Writing / Labs / Likes archived behind `SHOW_PORTFOLIO_WRITINGS`,
+      `SHOW_PORTFOLIO_LABS`, `SHOW_PORTFOLIO_LIKES`. Content, screens and rows intact; one
+      flip plus a rebuild restores a whole section.
+- [ ] 6.4 Proofread the three process entries with the user — the step *names* are the
+      site's, but their supporting copy was carried over, not copied from stussysenik.com.
+- [ ] 6.5 The Cooper Union entry now reads `Computer Engineering + Interdisciplinary Arts`
+      (per D5) while its description still says "dropped out junior year". Confirm which is
+      true; the snapshot and the description disagree.
 
 ## 7. Gate
 
@@ -170,3 +187,30 @@ builds differ (minification, caching, env).
       from the X app or iMessage; confirm the unfurl card, framed Noir device, one bottom
       bar, working wheel + camera gestures, no safe-area collisions. This is the only step
       Claude cannot run; everything else must already be green before asking for it.
+
+## 9. Portfolio surface — the device is the product (D12/D13)
+
+`/portfolio` and `/3d-portfolio` are the shared link's actual destination for a designer
+who taps through. They were wearing chrome that restated the device.
+
+- [x] 9.1 **(D12)** `/portfolio`: title card + wheel caption cut. Device carries
+      `aria-describedby` → an `sr-only` description of the wheel, arrow keys, Enter and
+      Escape. (First use of `sr-only` in the repo.)
+- [x] 9.2 **(D12)** `/3d-portfolio`: identity card + wheel caption cut, same treatment.
+- [x] 9.3 **(D1, missed until now)** `/3d-portfolio` was still rendering the in-canvas
+      `Product / Front / Back` focus segment — the control D1 deleted from `/3d` as "the
+      single most confusing element in the mobile shot". Pinning `focus="product"` (the
+      rig's own default) makes it controlled, which suppresses the pill; composition
+      unchanged, chrome gone.
+- [x] 9.4 **(D10/D13)** `/3d-portfolio` orbit toggle: bespoke `rounded-full` + hover-only
+      → `StudioButton`. Machined radius, and it gains a focus-visible state and a real
+      accessible name describing what activating it does.
+- [ ] 9.5 The 18vw title watermark on `/3d-portfolio` renders at 4% white on black — it is
+      effectively invisible *and* a third rendering of the name. Decide: make it read, or
+      cut it. Do not leave it as dead pixels.
+- [ ] 9.6 Framing check: at 500×844 the canvas measures exactly `0,0,500×844` (no inset
+      bug — D8 holds here), but the device composes left-of-centre with dead space
+      bottom-right. Centre the `/3d-portfolio` rig on narrow viewports.
+- [ ] 9.7 Verify the archived sections cannot be reached by a stale deep link — a visitor
+      restoring persisted nav state pointing at `writing`/`labs` must land somewhere real,
+      not a blank screen.

@@ -250,3 +250,55 @@ source (do not paraphrase, do not add works):
 - None blocking. (If `¾/Front/Back/Top` proves too wide with saved-shot chips on
   a 320px viewport, the pose segment may scroll horizontally within the bar — the
   bar count stays one.)
+
+### D11 — The feed is derived; `data.ts` is the source (found live, 2026-07-14)
+
+**Root cause, measured.** `/portfolio` and `/3d-portfolio` render
+`content/senik.feed.json`. `lib/portfolio/data.ts` reaches **no rendered surface** — its
+only consumer, `portfolio-screen.tsx`, is mounted nowhere. But the feed was authored *by
+hand* "from" `data.ts`, and the two had silently drifted: the feed served a work that had
+been cut (`iPod emulator`), a role that had been retitled, and a dead project URL. §6 as
+originally written ("update `data.ts`") would have shipped **nothing**.
+
+Two sources of truth with no derivation between them cannot be kept honest by review —
+the drift is not a mistake anyone made, it is the *shape* of the arrangement. So the feed
+becomes a projection: `lib/portfolio/build-feed.ts` is the only writer, `pnpm feed:build`
+runs it, and `build-feed.test.ts` asserts the checked-in JSON still equals the builder's
+output. "Someone forgot to regenerate" stops being a silent content bug and becomes a
+failing unit test that names its own fix.
+
+This follows the repo's existing idiom (`scripts/check-tokens-fresh.ts` does the same for
+design tokens) rather than inventing a mechanism.
+
+Consequence for D6: archiving a portfolio *section* now means flagging it off in
+`feature-flags.ts` **and rebuilding the feed** — the flag gates what the builder projects.
+The content never leaves `data.ts`, so one flip plus a rebuild restores the section whole.
+
+### D12 — The device is the product; chrome around it is not (user, 2026-07-14)
+
+**Decision (user): the title card and the wheel caption "look extra".** They are, and the
+reason is the same one D7 gives for the `/` rail. The iPod's own screen renders the feed
+title as its first row — a heading above it is the same words twice — and a "WHEEL TO
+SCROLL · CENTER TO SELECT · MENU TO GO BACK" caption is scaffolding bolted onto a product
+that has to explain itself. `/3d-portfolio` was worse: title card *plus* an 18vw watermark
+*plus* the device's own screen — the name three times on one viewport.
+
+Both are cut on both surfaces. The hint is **redirected, not lost**: the device carries
+`aria-describedby` → an `sr-only` description of the wheel, the arrow keys, Enter and
+Escape. What a sighted visitor discovers by touching the wheel, an assistive-tech user is
+told outright — which is strictly better than the caption was, because a caption in a
+corner is not programmatically associated with the control it describes. (Nothing in this
+repo used `sr-only` before this change.)
+
+### D13 — Adopting the primitives IS the accessibility fix (2026-07-14)
+
+The `/3d-portfolio` orbit toggle was a bespoke `rounded-full` button with `hover:` classes
+and **no focus-visible state** — invisible to a keyboard user. Rewriting it as a
+`StudioButton` fixed the radius (D10) *and* the a11y in one move, because the primitive is
+built on react-aria and already resolves `isHovered` / `isPressed` / `isFocusVisible`.
+
+This reframes §4. The control-language sweep is not a cosmetic restyle with "real
+regression risk on a page about to ship" — it is how every bespoke control in the repo
+acquires keyboard parity. Bespoke Tailwind buttons express hover only; the primitives
+express hover **and** focus. §4 stays sequenced after launch, but it is an accessibility
+debt payment, and should be argued for on those grounds rather than on consistency alone.
