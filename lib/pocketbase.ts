@@ -4,10 +4,25 @@ import type { ExportSnapshot } from "@/lib/export/export-fingerprint";
 
 /**
  * PocketBase client for persisting export history.
- * Defaults to a local instance; override with NEXT_PUBLIC_POCKETBASE_URL.
+ * Set NEXT_PUBLIC_POCKETBASE_URL to enable it; unset, the feature is off.
+ *
+ * The localhost default is a *development* convenience and must never ship. On a
+ * deployed page it does not point at a server we run — it points at port 8090 on the
+ * **visitor's own machine**, so every load fired a request at their laptop and logged
+ * `ERR_CONNECTION_REFUSED` in their console. Unconfigured in production therefore means
+ * the feature is disabled, not aimed somewhere harmless-looking.
  */
-const pbUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL || "http://127.0.0.1:8090";
-export const pb = new PocketBase(pbUrl);
+const configuredUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL?.trim();
+const localFallback =
+	process.env.NODE_ENV === "production" ? undefined : "http://127.0.0.1:8090";
+const pbUrl = configuredUrl || localFallback;
+
+/** False when no PocketBase is configured — the history calls below then no-op. */
+export const isExportHistoryEnabled = Boolean(pbUrl);
+
+// `pb` stays constructed either way so `getExportVideoUrl` keeps its type; it is simply
+// never asked to reach the network while disabled.
+export const pb = new PocketBase(pbUrl ?? "http://127.0.0.1:8090");
 
 export interface ExportRecord {
 	id: string;
@@ -45,6 +60,7 @@ export async function saveExportToHistory(
 		snapshot?: ExportSnapshot;
 	}
 ): Promise<ExportRecord | null> {
+	if (!isExportHistoryEnabled) return null;
 	try {
 		const formData = new FormData();
 		formData.append("video", videoBlob, filename);
@@ -71,6 +87,7 @@ export async function saveExportToHistory(
  * Fetch the latest export history.
  */
 export async function getExportHistory(limit = 10): Promise<ExportRecord[]> {
+	if (!isExportHistoryEnabled) return [];
 	try {
 		const records = await pb.collection("exports").getList(1, limit, {
 			sort: "-created",
