@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IpodClickWheel } from "@/components/ipod/controls/ipod-click-wheel";
 import { PortfolioFeedScreen } from "@/components/ipod/portfolio/portfolio-feed-screen";
 import { usePortfolioFeed } from "@/components/ipod/portfolio/use-portfolio-feed";
+import { StudioButton } from "@/components/ui/studio-controls";
 import type { IpodFeed } from "@/lib/feed/schema";
 import {
 	DEFAULT_HARDWARE_PRESET_ID,
@@ -13,6 +14,9 @@ import {
 } from "@/lib/ipod-classic-presets";
 import { playClickAudio } from "@/lib/ipod-state/effects";
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
+
+/** Ties the stage's `aria-describedby` to the hidden interaction hint. */
+const HINT_ID = "portfolio-3d-wheel-hint";
 
 const ThreeDIpod = dynamic(
 	() => import("@/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
@@ -85,6 +89,7 @@ export function IpodPortfolioStage({ feed }: { feed: IpodFeed }) {
 			tabIndex={0}
 			role="application"
 			aria-label={`${feed.meta.title} — 3D iPod portfolio`}
+			aria-describedby={HINT_ID}
 			onKeyDown={onKeyDown}
 			className="relative h-dvh w-full touch-none select-none overflow-hidden overscroll-none outline-none"
 			style={{ backgroundColor: feed.theme.background ?? presentation.bgColor }}
@@ -108,6 +113,15 @@ export function IpodPortfolioStage({ feed }: { feed: IpodFeed }) {
 					bezelColor={presentation.bezelColor}
 					captureBackground={feed.theme.background ?? presentation.bgColor}
 					lighting={lighting}
+					/*
+					 * Pinning `focus` makes it CONTROLLED, which suppresses the in-canvas
+					 * Product/Front/Back pill. That pill is the focus segment D1 deleted from
+					 * `/3d` — "the single most confusing element in the mobile shot" — and it
+					 * had been left behind on this route. A visitor reading the works does not
+					 * need a camera control; "product" is the rig's own default, so the shot is
+					 * unchanged, only the chrome is gone.
+					 */
+					focus="product"
 					cameraLocked={!orbitEnabled}
 					screen={screenComponent}
 					wheel={wheelComponent}
@@ -115,30 +129,35 @@ export function IpodPortfolioStage({ feed }: { feed: IpodFeed }) {
 				/>
 			</div>
 
-			{/* Identity — top-left, inked for the stage */}
-			<div className="pointer-events-none absolute left-6 top-6 z-20 pt-[env(safe-area-inset-top)]">
-				<div className="text-[12px] font-bold uppercase tracking-[0.3em] text-white">
-					{feed.meta.title}
-				</div>
-				{feed.meta.author ? (
-					<div className="text-[13px] font-medium text-white/75">{feed.meta.author}</div>
-				) : null}
-			</div>
+			{/*
+			 * No identity card and no instruction strip — the same cut as `/portfolio`. The
+			 * device titles itself on its own screen, and the watermark behind it already
+			 * carries the name as material; a third rendering of "Stüssy Senik" in the
+			 * corner was chrome, not product. The interaction hint is spoken to assistive
+			 * tech below instead of captioned to everyone.
+			 */}
 
 			{/* Orbit lock — locked = the wheel owns every gesture; unlocked = drag to orbit. */}
-			<button
-				type="button"
-				onClick={() => setOrbitEnabled((v) => !v)}
-				aria-pressed={orbitEnabled}
-				className="absolute right-6 top-6 z-20 mt-[env(safe-area-inset-top)] rounded-full border border-white/25 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 transition-all hover:border-white/50 hover:bg-white/5 hover:text-white active:scale-95"
-			>
-				{orbitEnabled ? "Orbit · On" : "Hold · Locked"}
-			</button>
-
-			{/* Hint — bottom-left */}
-			<div className="pointer-events-none absolute bottom-6 left-6 z-20 pb-[env(safe-area-inset-bottom)] text-[11px] font-semibold tracking-wide text-white/50 uppercase">
-				Wheel to scroll · Center to select · Menu to go back
+			<div className="absolute right-6 top-6 z-20 mt-[env(safe-area-inset-top)] flex">
+				<StudioButton
+					isActive={orbitEnabled}
+					onPress={() => setOrbitEnabled((v) => !v)}
+					aria-pressed={orbitEnabled}
+					aria-label={
+						orbitEnabled
+							? "Orbit enabled — drag the stage to rotate the camera. Activate to lock it."
+							: "Camera locked — the click wheel owns every gesture. Activate to orbit."
+					}
+				>
+					{orbitEnabled ? "Orbit · On" : "Hold · Locked"}
+				</StudioButton>
 			</div>
+
+			<p id={HINT_ID} className="sr-only">
+				Spin the click wheel or use the arrow keys to move through the list. Press Enter
+				or the center button to open the selected item. Press Escape or the Menu button
+				to go back.
+			</p>
 		</div>
 	);
 }

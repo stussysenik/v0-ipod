@@ -24,6 +24,9 @@ import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
  * on the device screen (faithful iPod) — wheel is the vertical axis, drill-in/back
  * the depth axis — so nothing ever overlays the device cell.
  */
+/** Ties the device's `aria-describedby` to the hidden interaction hint below it. */
+const HINT_ID = "portfolio-wheel-hint";
+
 export function PortfolioFeedStage({ feed }: { feed: IpodFeed }) {
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const playClick = useCallback(() => playClickAudio(audioRef), []);
@@ -56,24 +59,22 @@ export function PortfolioFeedStage({ feed }: { feed: IpodFeed }) {
 	);
 
 	return (
-		<div className="flex flex-col items-center gap-5">
-			<div className="text-center">
-				<div className="text-[12px] font-bold uppercase tracking-[0.3em] text-white">
-					{feed.meta.title}
-				</div>
-				{feed.meta.author ? (
-					<div className="text-[11px] font-medium tracking-wide text-white/55">
-						{feed.meta.author}
-					</div>
-				) : null}
-			</div>
-
+		<div className="flex flex-col items-center">
+			{/*
+			 * No title card and no instruction strip. The device already titles itself —
+			 * `feed.meta.title` is the first thing its own screen renders — so a heading
+			 * above it was the same words twice, and a "wheel to scroll" caption is
+			 * scaffolding wrapped around a product that has to explain itself. What a
+			 * sighted visitor discovers by touching the wheel, an assistive-tech user is
+			 * told outright, below.
+			 */}
 			{/* The device IS the control: it owns the keyboard, the wheel owns the pointer. */}
 			{/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the device IS the control */}
 			<div
 				tabIndex={0}
 				role="application"
 				aria-label={`${feed.meta.title} — iPod portfolio`}
+				aria-describedby={HINT_ID}
 				onKeyDown={onKeyDown}
 				className="rounded-[2.2rem] outline-none focus-visible:ring-2 focus-visible:ring-white/40"
 			>
@@ -86,9 +87,11 @@ export function PortfolioFeedStage({ feed }: { feed: IpodFeed }) {
 				/>
 			</div>
 
-			<div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
-				Wheel to scroll · Center to select · Menu to go back
-			</div>
+			<p id={HINT_ID} className="sr-only">
+				Spin the click wheel or use the arrow keys to move through the list. Press Enter
+				or the center button to open the selected item. Press Escape or the Menu button
+				to go back.
+			</p>
 		</div>
 	);
 }
