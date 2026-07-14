@@ -10,6 +10,7 @@ import {
 } from "@/lib/ipod-state/effects";
 import type { ColorTarget } from "@/lib/ipod-state/model";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
+import { NOIR_THEME } from "@/lib/studio-themes";
 import { IpodStoreContext } from "@/lib/xstate/store";
 
 /**
@@ -50,8 +51,39 @@ export function ColorsPanelBody() {
 		savePersistedSongSnapshot(persisted);
 	};
 
+	const noir = NOIR_THEME.colors;
+	const isNoir =
+		skinColor === noir.skinColor &&
+		ringColor === noir.ringColor &&
+		centerColor === noir.centerColor &&
+		bgColor === noir.bgColor;
+
 	return (
 		<StudioControlScope stageBackground={bgColor} className="flex flex-col">
+			{/*
+			 * Factory — the same Noir the `/3d` themes shelf applies, and the same look a
+			 * cold load boots, so the customizer always has a way home. It applies the four
+			 * surfaces a FLAT device has; Noir's other three (back, edge, bezel) and its rig
+			 * describe geometry and light that only exist on `/3d`, so they are not sent
+			 * here rather than sent and dropped.
+			 */}
+			<div className="mb-6">
+				<StudioLabel className="mb-3 px-1">Factory</StudioLabel>
+				<StudioButton
+					fullWidth
+					isActive={isNoir}
+					onPress={() =>
+						applyFinish(noir.skinColor, noir.ringColor, noir.centerColor, noir.bgColor)
+					}
+				>
+					<span
+						className="w-3.5 h-3.5 rounded-full border border-black/10"
+						style={{ backgroundColor: noir.skinColor }}
+					/>
+					{NOIR_THEME.label}
+				</StudioButton>
+			</div>
+
 			{/* Case Finish */}
 			<div className="mb-6">
 				<StudioLabel className="mb-3 px-1">Case Finish</StudioLabel>

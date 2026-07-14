@@ -14,6 +14,7 @@
  * colours ARE stored by value because they are the theme.
  */
 
+import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 import {
 	DESIGNER_DARK_RIG,
 	RIG_PRESETS,
@@ -71,6 +72,33 @@ export const BUILT_IN_THEMES: readonly StudioTheme[] = [NOIR_THEME] as const;
 export function rigForTheme(theme: StudioTheme): StudioLightingConfig {
 	const preset = RIG_PRESETS.find((p) => p.config.name === theme.rigName);
 	return cloneLightingConfig(preset?.config ?? DESIGNER_DARK_RIG);
+}
+
+/**
+ * The complete edit that applying a theme makes — every one of the seven surface
+ * colours plus the rig, as data.
+ *
+ * This is a pure function rather than a method on the cockpit because "apply Noir
+ * returns the device to factory" is a claim that has to be TESTABLE. A theme that
+ * sets six colours out of seven still looks applied — the seventh just keeps
+ * whatever the last experiment left there — so the guarantee is not "it dispatched"
+ * but "it overwrote every field the theme owns, from any prior state". A test can
+ * only make that assertion against a value it can hold; so the cockpit dispatches
+ * this list, and the list is what we test.
+ */
+export function themeActions(theme: StudioTheme): IpodWorkbenchAction[] {
+	const { colors } = theme;
+	return [
+		{ type: "SET_SKIN_COLOR", payload: colors.skinColor },
+		{ type: "SET_RING_COLOR", payload: colors.ringColor },
+		{ type: "SET_CENTER_COLOR", payload: colors.centerColor },
+		{ type: "SET_BACK_COLOR", payload: colors.backColor },
+		{ type: "SET_EDGE_COLOR", payload: colors.edgeColor },
+		{ type: "SET_BEZEL_COLOR", payload: colors.bezelColor },
+		{ type: "SET_BG_COLOR", payload: colors.bgColor },
+		// The rig completes the theme — colours and light are one look.
+		{ type: "SET_LIGHTING", payload: rigForTheme(theme) },
+	];
 }
 
 // ─── Persistence ────────────────────────────────────────────────────────────

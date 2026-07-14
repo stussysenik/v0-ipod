@@ -20,7 +20,7 @@ import {
 	loadSavedThemes,
 	nextThemeLabel,
 	persistSavedThemes,
-	rigForTheme,
+	themeActions,
 	type StudioTheme,
 } from "@/lib/studio-themes";
 
@@ -331,16 +331,7 @@ export function Ipod3DColorCockpit({
 	}, []);
 
 	const applyTheme = (theme: StudioTheme) => {
-		const { colors } = theme;
-		dispatch({ type: "SET_SKIN_COLOR", payload: colors.skinColor });
-		dispatch({ type: "SET_RING_COLOR", payload: colors.ringColor });
-		dispatch({ type: "SET_CENTER_COLOR", payload: colors.centerColor });
-		dispatch({ type: "SET_BACK_COLOR", payload: colors.backColor });
-		dispatch({ type: "SET_EDGE_COLOR", payload: colors.edgeColor });
-		dispatch({ type: "SET_BEZEL_COLOR", payload: colors.bezelColor });
-		dispatch({ type: "SET_BG_COLOR", payload: colors.bgColor });
-		// The rig completes the theme — colours and light are one look.
-		dispatch({ type: "SET_LIGHTING", payload: rigForTheme(theme) });
+		for (const action of themeActions(theme)) dispatch(action);
 	};
 
 	const saveCurrentTheme = () => {
