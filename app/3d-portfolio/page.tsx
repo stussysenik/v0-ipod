@@ -7,7 +7,7 @@ import type { IpodFeed } from "@/lib/feed/schema";
 export const metadata: Metadata = {
 	title: "Stüssy Senik · iPod Portfolio (3D)",
 	description:
-		"The portfolio you browse like an iPod — rendered in 3D. Spin the wheel through works, writing, and labs on a physically accurate iPod classic.",
+		"The portfolio you browse like an iPod — rendered in 3D. Spin the wheel through the works and the process on a physically accurate iPod classic.",
 };
 
 // Same canonical feed as `/portfolio`; only the device shell differs (3D vs flat).

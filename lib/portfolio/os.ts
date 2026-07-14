@@ -16,6 +16,7 @@
 
 import { useCallback, useMemo, useReducer } from "react";
 
+import { FEATURE_FLAGS } from "../feature-flags";
 import {
 	contactLinks,
 	cv,
@@ -100,14 +101,27 @@ export interface Frame {
 
 // ─── Screen content (rows) ───────────────────────────────────────────────────
 
-/** Root menu — proof first (Works), then the ask (Hire Me), then the practice. */
+/**
+ * Root menu — proof first (Works), then the ask (Hire Me), then the practice.
+ *
+ * Inspiration / Likes / Writings are ARCHIVED behind flags (spec:
+ * portfolio-content-sync): the shipped surface mirrors stussysenik.com, which serves
+ * Works / Process / About. Their rows, screens and data are all still here — each flag
+ * flip restores a row and everything behind it, so the feed has room to grow back.
+ */
 const MENU_ROWS: Row[] = [
 	{ id: "works", label: "Works", hint: "›", action: { type: "push", screen: "works" } },
 	{ id: "hire", label: "Hire Me", hint: "›", action: { type: "push", screen: "hire" } },
 	{ id: "process", label: "Process", hint: "›", action: { type: "push", screen: "process" } },
-	{ id: "inspiration", label: "Inspiration", hint: "›", action: { type: "push", screen: "inspiration" } },
-	{ id: "likes", label: "Likes", hint: "›", action: { type: "push", screen: "likes" } },
-	{ id: "writings", label: "Writings", hint: "›", action: { type: "push", screen: "writings" } },
+	...(FEATURE_FLAGS.SHOW_PORTFOLIO_LABS
+		? [{ id: "inspiration", label: "Inspiration", hint: "›", action: { type: "push", screen: "inspiration" } } as Row]
+		: []),
+	...(FEATURE_FLAGS.SHOW_PORTFOLIO_LIKES
+		? [{ id: "likes", label: "Likes", hint: "›", action: { type: "push", screen: "likes" } } as Row]
+		: []),
+	...(FEATURE_FLAGS.SHOW_PORTFOLIO_WRITINGS
+		? [{ id: "writings", label: "Writings", hint: "›", action: { type: "push", screen: "writings" } } as Row]
+		: []),
 	{ id: "now", label: "Now", hint: "›", action: { type: "push", screen: "now" } },
 	{ id: "about", label: "About Me", hint: "›", action: { type: "push", screen: "about" } },
 ];

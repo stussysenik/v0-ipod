@@ -7,7 +7,7 @@ import type { IpodFeed } from "@/lib/feed/schema";
 export const metadata: Metadata = {
 	title: "Stüssy Senik · iPod Portfolio",
 	description:
-		"A portfolio you browse like an iPod — spin the wheel through works, writing, labs, and the hiring case. Design Engineer & Creative Producer.",
+		"A portfolio you browse like an iPod — spin the wheel through the works, the process, and the hiring case. R&D Experience Design Engineer.",
 };
 
 // The feed is the single source of truth (authored from lib/portfolio/data.ts); the

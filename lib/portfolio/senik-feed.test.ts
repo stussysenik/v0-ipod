@@ -12,17 +12,19 @@ describe("senik.feed.json", () => {
 		expect(() => loadFeed(feed)).not.toThrow();
 	});
 
-	it("has unique work slugs and a real catalog (> 15 works)", () => {
+	it("has unique work slugs and a real catalog", () => {
 		const { feed: parsed, worksBySlug } = loadFeed(feed);
-		expect(parsed.works.length).toBeGreaterThan(15);
+		expect(parsed.works.length).toBeGreaterThan(0);
 		// Every slug indexed exactly once ⇒ no duplicates collapsed in the map.
 		expect(worksBySlug.size).toBe(parsed.works.length);
 	});
 
 	it("resolves known slugs via worksBySlug", () => {
 		const { worksBySlug } = loadFeed(feed);
-		expect(worksBySlug.get("ipod-emulator")?.title).toBe("iPod emulator");
 		expect(worksBySlug.get("about")?.title).toBe("About");
-		expect(worksBySlug.get("20260410-webgpu-compute")?.tags).toContain("webgpu");
+		expect(worksBySlug.get("wavelength-radio")?.title).toBe("@WAVELENGTH RADIO");
+		expect(worksBySlug.get("fyoa-find-your-own-answer")?.links[0]?.href).toBe(
+			"https://perplexica.stussysenik.com",
+		);
 	});
 });

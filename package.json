@@ -5,6 +5,7 @@
 	"packageManager": "pnpm@10.28.0",
 	"scripts": {
 		"media:sync": "node scripts/sync-portfolio-media.mjs",
+		"feed:build": "bun run scripts/build-portfolio-feed.ts",
 		"predev": "node scripts/sync-portfolio-media.mjs",
 		"dev": "node scripts/run-next.mjs dev",
 		"dev:raw": "CLOUDFLARE_TUNNEL=0 node scripts/run-next.mjs dev",

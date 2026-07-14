@@ -55,6 +55,28 @@ export const FEATURE_FLAGS = {
 	 * flip to true to restore both surfaces.
 	 */
 	SHOW_CUSTOM_CAMERA_POSES: false,
+	/**
+	 * "Inspiration" root row on the portfolio iPod — the `labs` experiment feed.
+	 *
+	 * ARCHIVED (spec: portfolio-content-sync): the shipped portfolio mirrors
+	 * stussysenik.com, which serves Works / Process / About. The labs feed is
+	 * unfinished content, and unfinished content on a link sent to designers reads as
+	 * an unfinished product. The `labs` data, the `inspiration`/`lab` screens and their
+	 * renderers are all intact — flip to true to restore the row and its screens.
+	 */
+	SHOW_PORTFOLIO_LABS: false,
+	/**
+	 * "Writings" root row — the `writings` post feed. ARCHIVED (spec:
+	 * portfolio-content-sync): the posts are not published anywhere the links can reach,
+	 * and stussysenik.com does not serve them. Data and screens intact; flip to restore.
+	 */
+	SHOW_PORTFOLIO_WRITINGS: false,
+	/**
+	 * "Likes" root row — photos, videos and the curated `tasteCollections`. ARCHIVED
+	 * (spec: portfolio-content-sync): media collections are WIP and not part of the
+	 * stussysenik.com surface. Data and screens intact; flip to restore.
+	 */
+	SHOW_PORTFOLIO_LIKES: false,
 	/** Materiality VFX — directional specular sheen, noise texture, rim light, cavity groove, and concave center button shading */
 	ENABLE_MATERIALITY: true,
 	/** Mechanical center button — deeper press animation with spring-back, enhanced shadow recess, and a distinct physical click sound via Web Audio API */

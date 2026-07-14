@@ -33,7 +33,7 @@ export interface PortfolioProfile {
 export const profile: PortfolioProfile = {
 	name: 'MENGXUAN "SENIK" ZOU',
 	handle: "Stüssy Senik",
-	role: "Design Engineer & Creative Producer",
+	role: "R&D Experience Design Engineer",
 	taglineJa: "クリエイティブ・テクノロジスト",
 	shortBio:
 		"Building at the intersection of engineering, creative production, and design — from code to camera",
@@ -90,28 +90,51 @@ export type ProjectCategory =
 	| "film";
 
 export interface Project {
+	/**
+	 * Stable, kebab-case address for this work. It is the permalink the feed indexes by
+	 * (`worksBySlug`), so it is authored here rather than derived from the title —
+	 * retitling a work must not silently break a link that is already in the wild.
+	 */
+	slug: string;
 	year: number;
 	month?: number;
 	title: string;
+	/** Short label for the iPod's list rows, where the full title would truncate. */
+	shortTitle?: string;
 	description?: string;
 	url?: string;
 	category?: ProjectCategory;
 	tools?: string[];
 }
 
-/** Newest-first; mirrors the `content.ts` works feed. */
+/**
+ * Newest-first. The eleven works served at stussysenik.com/works — copied, not
+ * paraphrased (spec: portfolio-content-sync, D5). Do not add works here: this feed is
+ * the portfolio's proof surface, and an entry that is not on the canonical site is
+ * drift. The iPod emulator itself is deliberately absent — the visitor is holding it.
+ */
 export const projects: Project[] = [
 	{
+		slug: "fyoa-find-your-own-answer",
 		year: 2026,
 		month: 1,
-		title: "iPod emulator",
-		description:
-			"A faithful, physically-accurate iPod classic in the browser — you are holding it right now.",
-		url: "https://ipod-music.vercel.app",
+		title: "FYOA: Find your own answer",
+		shortTitle: "FYOA: Find Your Own Answer",
+		description: "An answer-engine experiment.",
+		url: "https://perplexica.stussysenik.com",
 		category: "tool",
-		tools: ["TypeScript", "Three.js", "WebGL"],
 	},
 	{
+		slug: "spinning-wheel-ar-filter",
+		year: 2026,
+		month: 1,
+		title: "spinning wheel AR face filter lottery",
+		shortTitle: "Spinning Wheel AR Filter",
+		url: "https://spinning-wheel-filter.vercel.app",
+		category: "AR/XR",
+	},
+	{
+		slug: "mymind-clone",
 		year: 2026,
 		month: 1,
 		title: "mymind.com clone",
@@ -120,75 +143,74 @@ export const projects: Project[] = [
 		category: "personal software",
 	},
 	{
-		year: 2026,
-		month: 1,
-		title: "spinning wheel AR face filter lottery",
-		url: "https://spinning-wheel-filter.vercel.app",
-		category: "AR/XR",
-	},
-	{
-		year: 2026,
-		month: 1,
-		title: "FYOA: Find your own answer",
-		description: "An answer-engine experiment.",
-		url: "https://perplexica.stussysenik.com",
-		category: "music",
-	},
-	{
+		slug: "clean-writer-typewriter",
 		year: 2025,
 		month: 12,
 		title: "typewriter that doesn't delete, or can't go back",
+		shortTitle: "Typewriter (no backspace)",
 		description: "A writing tool that refuses the backspace.",
 		url: "https://clean-writer.vercel.app",
 		category: "tool",
 	},
 	{
+		slug: "ar-bboy-filter",
 		year: 2025,
 		month: 12,
 		title: "AR b-boy filter",
+		shortTitle: "AR B-Boy Filter",
 		url: "https://bboy-filter.vercel.app",
 		category: "AR/XR",
 	},
 	{
+		slug: "uyr-problem",
 		year: 2025,
 		month: 12,
 		title: "uyr-problem",
 		description: "A cooking tool.",
-		url: "https://uyr-problem.vercel.app",
+		url: "https://reflex-untangle-your-problem.onrender.com",
 		category: "tool",
 	},
 	{
+		slug: "infinite-checklist",
 		year: 2025,
 		month: 12,
 		title: "infinite checklist",
+		shortTitle: "Infinite Checklist",
 		url: "https://infinite-checklist.vercel.app",
 		category: "tool",
 	},
 	{
+		slug: "creative-block",
 		year: 2025,
 		month: 12,
 		title: "ARE YOU HAVING A CREATIVE BLOCK?",
+		shortTitle: "Creative Block?",
 		url: "https://creative-block.vercel.app",
 		category: "art",
 	},
 	{
+		slug: "dvd-corner-animation",
 		year: 2025,
 		month: 2,
 		title: "DVD corner video animation",
+		shortTitle: "DVD Corner Animation",
 		description: "The bouncing DVD logo, done in Three.js.",
 		url: "https://dvd-video-animation.vercel.app",
 		category: "technology",
 		tools: ["Three.js", "WebGL"],
 	},
 	{
+		slug: "ph-213-em-viz",
 		year: 2024,
 		month: 11,
 		title: "PH-213 — Electricity, Current & Magnetism viz",
+		shortTitle: "PH-213 E&M Viz",
 		description: "Concept visualizations for an E&M physics course.",
 		url: "https://ph213.vercel.app",
 		category: "science",
 	},
 	{
+		slug: "wavelength-radio",
 		year: 2024,
 		month: 10,
 		title: "@WAVELENGTH RADIO",
@@ -349,7 +371,7 @@ export const cv: CvEntry[] = [
 	},
 	{
 		type: "education",
-		title: "Engineering Technology",
+		title: "Computer Engineering + Interdisciplinary Arts",
 		organization: "The Cooper Union",
 		location: "New York, NY",
 		startDate: "2022-09",
@@ -412,31 +434,30 @@ export interface ProcessPhase {
 	detail: string;
 }
 
-/** The four-step creative workflow that drives every project. */
+/**
+ * The three-step creative workflow — "1.REMIX 2.RE-THINK 3.RE:IMAGINE", the process
+ * served at stussysenik.com (spec: portfolio-content-sync, D5). The step names are the
+ * site's; the supporting copy is carried over from the earlier four-phase write-up in
+ * this file (Research / Prototype / Refine / Ship) rather than newly invented.
+ */
 export const processPhases: ProcessPhase[] = [
 	{
-		title: "Research",
+		title: "REMIX",
 		summary: "Gather references, constraints, and the real problem.",
 		detail:
 			"Start wide: collect references, talk to people, map constraints and the actual job-to-be-done. Computational tools augment the search — scraping, clustering, moodboarding — but the goal is a sharp problem statement before a single pixel.",
 	},
 	{
-		title: "Prototype",
-		summary: "Make the roughest thing that proves the idea.",
+		title: "RE-THINK",
+		summary: "Make the roughest thing that proves the idea, then tighten it.",
 		detail:
-			"Build the crudest artifact that can be felt: a clickable sketch, a shader toy, a paper cut-out. Optimize for learning per hour, not polish. Throwaway code is fine — the prototype's only job is to kill or confirm the direction.",
+			"Build the crudest artifact that can be felt: a clickable sketch, a shader toy, a paper cut-out. Optimize for learning per hour, not polish — the prototype's only job is to kill or confirm the direction. Once the idea holds, obsess over the invisible details: spacing, easing, contrast, the half-pixel. This is where craft lives.",
 	},
 	{
-		title: "Refine",
-		summary: "Tighten contour, weight, motion, and detail.",
+		title: "RE:IMAGINE",
+		summary: "Get it in front of people; measure; re-open the loop.",
 		detail:
-			"Once the idea holds, obsess over the invisible details: spacing, easing, contrast, the half-pixel. This is where craft lives — diffing against the real reference until it feels inevitable rather than designed.",
-	},
-	{
-		title: "Ship",
-		summary: "Get it in front of people; measure; iterate.",
-		detail:
-			"Ship to learn. Instrument it, watch real use, and treat launch as the start of the loop, not the end. Growth is the feedback signal that re-opens Research.",
+			"Ship to learn. Instrument it, watch real use, and treat launch as the start of the loop, not the end. What comes back from real hands is the feedback signal that re-opens the remix.",
 	},
 ];
 
