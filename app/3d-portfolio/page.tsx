@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { IpodPortfolioStage } from "@/components/ipod/scenes/ipod-portfolio-stage";
 import senikFeed from "@/content/senik.feed.json";
 import type { IpodFeed } from "@/lib/feed/schema";
+import { surfaceNavNodes } from "@/lib/nav/routes";
 
 export const metadata: Metadata = {
 	title: "Stüssy Senik · iPod Portfolio (3D)",
@@ -10,8 +11,14 @@ export const metadata: Metadata = {
 		"The portfolio you browse like an iPod — rendered in 3D. Spin the wheel through the works and the process on a physically accurate iPod classic.",
 };
 
-// Same canonical feed as `/portfolio`; only the device shell differs (3D vs flat).
-const feed = senikFeed as unknown as IpodFeed;
+// Same canonical feed as `/portfolio`; only the device shell differs (3D vs flat) and
+// the surface's own nav nodes, which point back at the flat portfolio and home.
+const base = senikFeed as unknown as IpodFeed;
+
+const feed: IpodFeed = {
+	...base,
+	menu: [...base.menu, ...surfaceNavNodes("/3d-portfolio")],
+};
 
 export default function ThreeDPortfolioPage() {
 	return (

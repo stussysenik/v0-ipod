@@ -14,6 +14,7 @@ import {
 	Box,
 	Share,
 	Monitor,
+	LayoutGrid,
 	Smartphone,
 	Check,
 	Command,
@@ -958,6 +959,18 @@ export default function IpodClassicWorkbench() {
 								onClick={() => {
 									playClick();
 									router.push("/3d");
+								}}
+							/>
+							{/* The portfolio is likewise a place, not a mode. Until this edge existed
+							    `/portfolio` had no inbound link at all — it was the shared link's real
+							    destination, reachable only by typing its URL (§10.2). */}
+							<IconButton
+								icon={<LayoutGrid className="w-5 h-5" />}
+								label="Portfolio"
+								data-testid="portfolio-button"
+								onClick={() => {
+									playClick();
+									router.push("/portfolio");
 								}}
 							/>
 							{FEATURE_FLAGS.SHOW_3D_VIEW_MODE && (

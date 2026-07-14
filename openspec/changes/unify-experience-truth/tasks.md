@@ -186,44 +186,72 @@ Measured route graph (`router.push` + the ⌘K registry are the complete set of 
       slug → primary href from `initNav` and emits it through the same `pendingLink` path
       the contact nodes already used, so it works on both portfolio surfaces; the links
       are real anchors for pointer and keyboard. Three tests, one per branch.
-- [ ] 10.2 **`/portfolio` and `/3d-portfolio` are orphan routes.** The shared link lands on
-      `/`, and from there the portfolio — the reason the link is being shared at all — is
-      reachable only by typing its URL. §9's own preamble calls these surfaces "the shared
-      link's actual destination for a designer who **taps through**"; there is nothing to
-      tap. Add an inbound route: a `/` rail control and a ⌘K `nav:portfolio` command
-      (today `nav:3d-studio` is the registry's *only* navigation command).
-- [ ] 10.3 **Neither portfolio surface can get home.** Both are terminal — they mount no
-      panel system, no command palette, no link. A visitor who does reach one is stuck
-      there. Note the tension with **D12** ("the device is the product — cut the chrome"):
-      a way home is navigation, not chrome, but it is the one affordance D12's cut did not
-      account for. Resolve it explicitly rather than by accident.
-- [ ] 10.4 Mirror the device pair: `/portfolio ⇄ /3d-portfolio` should switch the same way
-      `/ ⇄ /3d` does, or the 3D portfolio is a second orphan behind the first.
-- [ ] 10.5 Add a **graph test**, not a page test: assert every shipped route has at least
-      one inbound in-app edge and one path home. This class of bug is invisible to every
-      per-page test in the suite, which is exactly why it survived to launch.
-- [ ] 10.6 Decide `/whitelabel` and `/dev`: intentionally unlisted (fine — say so in a
-      comment) or archived behind a flag like everything else in §3.
+**Resolved.** The graph is no longer four hard-coded hrefs scattered across a rail button, a
+command entry and two pages — it is one value, `SURFACE_EDGES` in `lib/nav/routes.ts`. That
+is what makes 10.5 assertable at all: reachability became a property of data, not a claim
+about source. The app now has eight edges where it had two.
+
+- [x] 10.2 **Inbound edges to `/portfolio`.** A `Portfolio` rail control on `/` (mirroring
+      the `3D Studio` button — "the portfolio is a place, not a mode") and a ⌘K
+      `nav:portfolio` command, which is the palette's *second* route; `nav:3d-studio` had
+      been its only one, which is half of why the surface stayed orphaned.
+- [x] 10.3 **The way home — D12 honored, not traded against.** Both portfolio surfaces
+      already render a real `IpodDevice` + `IpodClickWheel` with a working MENU button, and
+      an iPod's menu *is* a navigation hierarchy. So the way out lives **inside the device's
+      own menu**, not in chrome wrapped around it: `surfaceNavNodes()` appends href-only
+      menu nodes that ride the existing `href` → `pendingLink` path 10.1 built. No chrome
+      added, so D12's cut stands.
+      This exposed a real bug it depends on: `useFeedNav` opened **every** `pendingLink` via
+      `window.open(…, "_blank")`. Correct for a work's outbound link, wrong for an in-app
+      route — "back to the iPod" would have spawned a second tab instead of going back.
+      Internal routes now navigate in place via the router, guarded against
+      protocol-relative `//evil.com` (which starts with `/` but leaves the origin).
+      The nodes are appended **at the surface, not in `senik.feed.json`** — that file is also
+      the portable custom element's content, and an embedded iPod must not carry links to
+      *this* site's routes (`/` would resolve to the embedder's root). Routes belong to the
+      host, so the host is what adds them. The Lit element is untouched.
+- [x] 10.4 `/portfolio ⇄ /3d-portfolio` now mirrors `/ ⇄ /3d`, asserted directly.
+- [x] 10.5 **The graph test** — `lib/nav/routes.test.ts`. It reads the shipped routes off
+      disk (`app/**/page.tsx`) rather than from a list someone must remember to update, then
+      BFS-asserts: every surface reachable from `/`, and every surface has a path back to it.
+      Proven real by red/green — reverted to the pre-fix graph it fails naming both orphans
+      exactly (`['/portfolio', '/3d-portfolio']` unreachable, same two stranded). A new
+      `page.tsx` that nobody links to now fails on the day it is added.
+- [x] 10.6 `/whitelabel` and `/dev` are **intentionally unlisted** — the embed demo for the
+      portable element and an internal workbench, neither part of a visitor's journey. Said
+      so in `UNLISTED_ROUTES`, which is load-bearing rather than a comment: the graph test
+      treats any route absent from *both* the graph and that list as a failure.
 
 ## 7. Gate
 
 - [x] 7.1 `pnpm lint` **0 errors** (49 warnings, pre-existing) · `pnpm type-check` clean ·
       `pnpm test:unit` **481 passed** across 44 files.
-- [ ] 7.2 Playwright on `/` — **UNRESOLVED, do not mark green without the baseline.**
-      Current run of the seven `/`-surface specs: **23 failed, 4 passed** (13.1m), spread
-      across `floating-panels` (8), `classic-fidelity` (4), `preview-marquee` (3),
-      `mobile-usability` (3), `rapid-interaction` (2), `hydration-desync` (2),
-      `interaction-sanity` (1). That is far beyond the two failures this task predicted, so
-      **this task's baseline is wrong** and the honest question — regression or
-      pre-existing? — is not yet answered.
-      What is already known: `classic-fidelity` fails identically at `dd3e885`, and the
-      root cause of that one is the panel migration moving `screen-progress` into a ⌘K
-      panel while the specs still wait for it on the bare `/`.
-      **Next step (in flight when the session ended):** a git worktree at `8be7b16` — the
-      commit *before* this change's first — running the identical spec set, to compare
-      failure-for-failure. Nothing may be claimed about regressions until that lands. If
-      the sets match, the specs are stale and should be re-pointed as their own change; if
-      they do not, the difference is a real regression and blocks the launch.
+- [x] 7.2 Playwright on `/` — **RESOLVED by measurement: all 23 failures are pre-existing.
+      Zero regressions. This change does not block the launch on E2E.**
+      The baseline landed. A git worktree at `8be7b16` — the commit *before* this change's
+      first — ran the identical spec set, and the seven spec files are **byte-identical** at
+      both commits (`git diff 8be7b16 HEAD -- tests/…` is empty), so this is a controlled
+      comparison: same tests, different app code. Both legs ran with `CI=1` on separate
+      ports, sequentially, so a reused dev server could not serve the wrong commit's code
+      and CPU contention could not fabricate flakes in the timing-sensitive specs.
+
+      | spec | baseline `8be7b16` | HEAD |
+      |---|---|---|
+      | `floating-panels` | 8f / 0p | 8f / 0p |
+      | `classic-fidelity` | 4f / 0p | 4f / 0p |
+      | `preview-marquee` | 3f / 0p | 3f / 0p |
+      | `mobile-usability` | 3f / 1p | 3f / 1p |
+      | `rapid-interaction` | 2f / 2p | 2f / 2p |
+      | `hydration-desync` | 2f / 0p | 2f / 0p |
+      | `interaction-sanity` | 1f / 1p | 1f / 1p |
+      | **total** | **23f / 4p** | **23f / 4p** |
+
+      Identical failure-for-failure. So the task's original prediction of "two failures" was
+      simply wrong about the *count*, but right about the *cause*: the specs are **stale**,
+      not the app. They still wait for elements the panel migration moved into ⌘K panels
+      (`classic-fidelity` fails the same way at `dd3e885` for exactly this reason).
+      **Follow-up, not a blocker:** re-point the seven stale specs at the panel surfaces as
+      their own change. They are asserting a UI that no longer exists.
 - [x] 7.3 Visual pass done via chrome-devtools at 390×844 and 1440×900 on `/`, `/3d`,
       `/portfolio`. One bottom bar, one live screen, no WIP badge, 2D↔3D toggle present
       and correctly labelled, device framed on every surface. Console clean (only benign

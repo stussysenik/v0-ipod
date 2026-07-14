@@ -64,6 +64,17 @@ export function buildCommands({ viewMode, layout, send, navigate, close, getMode
 		run: go("/3d"),
 	});
 
+	// The palette's second route. `nav:3d-studio` was its only one, which is part of why
+	// `/portfolio` stayed orphaned: neither the rail nor the palette could reach it (§10.2).
+	commands.push({
+		id: "nav:portfolio",
+		group: "Switch mode",
+		label: "Open portfolio (/portfolio)",
+		keywords: ["portfolio", "works", "case", "study", "feed", "navigate", "open"],
+		tier: "primary",
+		run: go("/portfolio"),
+	});
+
 	// Mode switching — only modes the feature flags expose. Switching restores that mode's
 	// own persisted panel arrangement (the layout is keyed by mode).
 	for (const mode of availableViewModes()) {
