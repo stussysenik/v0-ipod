@@ -162,13 +162,20 @@ function WorkContent({
 			{work.links.length > 0 ? (
 				<div className="mt-auto flex flex-col gap-[3px] pt-[4px]">
 					{work.links.map((l) => (
-						<div
+						// A real anchor, not a span. The `↗` was drawn on inert text, promising a
+						// link that could not be followed. Pointer and keyboard users now get the
+						// link directly; wheel users get the first one from the center button
+						// (nav machine `select` on an open work).
+						<a
 							key={l.href}
-							className="flex items-center gap-[4px] text-[9px] font-semibold text-[#3189D3]"
+							href={l.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-center gap-[4px] text-[9px] font-semibold text-[#3189D3] hover:underline focus-visible:underline focus-visible:outline-none"
 						>
 							<span aria-hidden>▶</span>
 							<span className="truncate">{l.label} ↗</span>
-						</div>
+						</a>
 					))}
 				</div>
 			) : null}

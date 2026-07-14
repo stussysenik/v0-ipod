@@ -33,6 +33,13 @@ export type NavState = {
 	view: NavView;
 	/** Set transiently when a `href` node is selected; host opens it, then clears. */
 	pendingLink?: string;
+	/**
+	 * slug → the work's primary link. Carried in state because the reducer is pure and
+	 * otherwise has no way to reach the feed's works: a *menu* node's `href` was openable,
+	 * but a *work's* `links[]` were not, so every project URL was a dead end while the
+	 * screen still drew a `↗` promising otherwise.
+	 */
+	workLinks: Readonly<Record<string, string>>;
 };
 
 export type NavAction =
@@ -52,9 +59,17 @@ export type PlainNavActionType = Exclude<NavAction["type"], "focus">;
 
 /** Build the initial state: a single root frame focused on its first row. */
 export function initNav(feed: IpodFeed): NavState {
+	const workLinks: Record<string, string> = {};
+	for (const work of feed.works) {
+		// The first link is the primary one — for every work in this feed that is the
+		// live site. A work with no links simply has no entry, and center does nothing.
+		const primary = work.links[0];
+		if (primary) workLinks[work.slug] = primary.href;
+	}
 	return {
 		stack: [{ parentId: "root", nodes: feed.menu, focus: 0 }],
 		view: { kind: "menu" },
+		workLinks,
 	};
 }
 
@@ -93,6 +108,14 @@ export function navReducer(state: NavState, action: NavAction): NavState {
 			return replaceTop(state, clampFocus(top, action.index));
 
 		case "select": {
+			// Center on an *open* work opens that work's live link. Without this the wheel
+			// had no verb left on a work screen: the link was drawn with a `↗` and could
+			// never be followed, which made all eleven project URLs unreachable.
+			if (state.view.kind === "work") {
+				const href = state.workLinks[state.view.slug];
+				if (!href) return state;
+				return { ...state, pendingLink: href };
+			}
 			if (state.view.kind !== "menu" || !top) return state;
 			const node = top.nodes[top.focus];
 			if (!node) return state;

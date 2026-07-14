@@ -9,6 +9,29 @@ function run(...types: PlainNavActionType[]): NavState {
 	return types.reduce((s, type) => navReducer(s, { type }), initNav(EXAMPLE_FEED));
 }
 
+describe("navReducer — a work's link is reachable", () => {
+	// The bug: a *menu* node's `href` opened, but a *work's* `links[]` did not. Center on
+	// an open work was a no-op, so all eleven project URLs were dead ends — while the
+	// screen still drew a `↗` promising otherwise.
+	it("center on an open work emits its primary link", () => {
+		const state = run("select", "select", "select"); // works → Aurora → open its link
+		expect(state.view).toEqual({ kind: "work", slug: "aurora" });
+		expect(state.pendingLink).toBe("https://example.com/aurora");
+	});
+
+	it("center on a work with no links does nothing rather than emitting undefined", () => {
+		const state = run("select", "next", "select", "select"); // works → Trident (no links)
+		expect(state.view).toEqual({ kind: "work", slug: "trident" });
+		expect(state.pendingLink).toBeUndefined();
+	});
+
+	it("still opens a work rather than its link on the first center press", () => {
+		const state = run("select", "select");
+		expect(state.view).toEqual({ kind: "work", slug: "aurora" });
+		expect(state.pendingLink).toBeUndefined();
+	});
+});
+
 describe("navReducer — list focus", () => {
 	it("starts focused on the first root row", () => {
 		expect(focusedNode(initNav(EXAMPLE_FEED))?.id).toBe("works");
