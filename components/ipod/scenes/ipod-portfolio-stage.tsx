@@ -94,13 +94,6 @@ export function IpodPortfolioStage({ feed }: { feed: IpodFeed }) {
 			className="relative h-dvh w-full touch-none select-none overflow-hidden overscroll-none outline-none"
 			style={{ backgroundColor: feed.theme.background ?? presentation.bgColor }}
 		>
-			{/* Identity Signature Background — large, clean watermark behind the device */}
-			<div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
-				<div className="text-[18vw] font-black uppercase tracking-[-0.05em] text-white/[0.04] leading-none select-none">
-					{feed.meta.title}
-				</div>
-			</div>
-
 			<div className="relative z-10 h-full w-full">
 				<ThreeDIpod
 					preset={preset}
@@ -130,11 +123,14 @@ export function IpodPortfolioStage({ feed }: { feed: IpodFeed }) {
 			</div>
 
 			{/*
-			 * No identity card and no instruction strip — the same cut as `/portfolio`. The
-			 * device titles itself on its own screen, and the watermark behind it already
-			 * carries the name as material; a third rendering of "Stüssy Senik" in the
-			 * corner was chrome, not product. The interaction hint is spoken to assistive
-			 * tech below instead of captioned to everyone.
+			 * No identity card, no instruction strip, and no name watermark — the same cut
+			 * as `/portfolio`, carried to its end. The device titles itself on its own
+			 * screen, so every other rendering of "Stüssy Senik" on this viewport was chrome
+			 * restating the product. The 18vw watermark that used to sit behind the device
+			 * was the last of them, and at 4% white on black it was not even legible: dead
+			 * pixels defending a duplicate. The device is alone on the stage now, lit. The
+			 * interaction hint is spoken to assistive tech below instead of captioned to
+			 * everyone.
 			 */}
 
 			{/* Orbit lock — locked = the wheel owns every gesture; unlocked = drag to orbit. */}

@@ -376,8 +376,6 @@ export const cv: CvEntry[] = [
 		location: "New York, NY",
 		startDate: "2022-09",
 		endDate: "2025-05",
-		description:
-			"Dropped out junior year to self-learn advanced computer science — deep learning, computer vision, and systems engineering.",
 	},
 	{
 		type: "education",
