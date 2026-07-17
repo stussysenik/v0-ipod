@@ -1,6 +1,68 @@
 import * as THREE from "three";
 
 /**
+ * Khronos PBR Neutral display transform — CPU port of three r182's `NeutralToneMapping`
+ * (the GLSL in `tonemapping_pars_fragment`). Operates on **linear** RGB, the space the
+ * GPU tone-maps in *before* the sRGB output encode, and is kept bit-faithful to the
+ * shader so the live canvas and the export path apply one identical transform — WYSIWYG
+ * parity by construction, not by coincidence.
+ *
+ * Why Neutral (and its exact shape, which the tests below pin):
+ *  - **peak < 0.76** → identity minus a black-level offset (≤0.04 linear, tapering to 0
+ *    at true black). All three channels shift by the same offset, so channel *differences*
+ *    are preserved — hue survives; only the shadow floor moves. This is why chosen finish
+ *    colours are not hue-distorted by the transform.
+ *  - **peak ≥ 0.76** → the peak channel compresses monotonically toward, but never
+ *    reaching, white, with a mild desaturation toward that peak. Highlights roll off
+ *    filmically instead of clipping to a flat plateau.
+ *
+ * Note the offset is a *radiance* operation: it darkens near-black final pixel radiance,
+ * not the picked albedo the user reads off a `toneMapped={false}` swatch. A black finish
+ * reading correctly is the job of specular separation (finish table), not of this curve.
+ */
+const NEUTRAL_DESATURATION = 0.15;
+
+/** Linear peak below which Neutral is identity-minus-black-offset (`0.8 - 0.04`). */
+export const NEUTRAL_START_COMPRESSION = 0.8 - 0.04;
+
+export type LinearRgb = readonly [number, number, number];
+
+export function neutralToneMap(color: LinearRgb, exposure = 1): [number, number, number] {
+	let r = color[0] * exposure;
+	let g = color[1] * exposure;
+	let b = color[2] * exposure;
+
+	const x = Math.min(r, g, b);
+	const offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+	r -= offset;
+	g -= offset;
+	b -= offset;
+
+	const peak = Math.max(r, g, b);
+	if (peak < NEUTRAL_START_COMPRESSION) return [r, g, b];
+
+	const d = 1 - NEUTRAL_START_COMPRESSION;
+	const newPeak = 1 - (d * d) / (peak + d - NEUTRAL_START_COMPRESSION);
+	const scale = newPeak / peak;
+	r *= scale;
+	g *= scale;
+	b *= scale;
+
+	const desat = 1 - 1 / (NEUTRAL_DESATURATION * (peak - newPeak) + 1);
+	return [r + (newPeak - r) * desat, g + (newPeak - g) * desat, b + (newPeak - b) * desat];
+}
+
+/** IEC 61966-2-1 sRGB → linear, channel-wise. CPU twin of three's sRGB→linear decode. */
+export function srgbToLinear(c: number): number {
+	return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/** IEC 61966-2-1 linear → sRGB, channel-wise. CPU twin of the export shader's OETF. */
+export function linearToSrgb(c: number): number {
+	return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(Math.max(c, 0), 1 / 2.4) - 0.055;
+}
+
+/**
  * WYSIWYG export resolve — make an offscreen render match the live canvas.
  *
  * Why this exists: the live `/3d` view renders straight to the drawing buffer — no
