@@ -49,6 +49,12 @@ same rigor at the image itself, and adds nothing else.
   Highlight continuity along fillets/chamfers becomes an acceptance criterion (this
   also covers the "optical flaws in lines": banding highlights are either coarse
   fillet segments or badly shaped env — the requirement states the observable).
+- **Export portability**: the render must leave the device the audience opens the link
+  on. Route the `/3d` still/clip delivery through the app's existing capability-aware
+  channel (share/save/preview on mobile, direct download on desktop) instead of the
+  iOS-hostile synthetic download the 3D path was using; scale the offscreen capture
+  target to device GPU limits; fail safe on WebGL context loss. A launch-gate concern:
+  the ProductHunt crowd judges on phones.
 - **Launch readiness**: a golden-pose × finish visual checklist that must pass in a
   dedicated visual session before the public link ships.
 
@@ -64,11 +70,14 @@ same rigor at the image itself, and adds nothing else.
 
 - Affected specs: `3d-color-pipeline` (new), `3d-screen-integration` (new),
   `3d-finish-material-response` (new), `3d-shaped-light-compositions` (new),
-  `launch-readiness` (extends the capability introduced in `unify-experience-truth`)
-- Affected code: `components/three/three-d-ipod.tsx` (screen stack, materials),
-  `lib/studio-lighting-config.ts` (+ per-pose compositions),
+  `3d-export-portability` (new), `launch-readiness` (extends the capability introduced
+  in `unify-experience-truth`)
+- Affected code: `components/three/three-d-ipod.tsx` (screen stack, materials, capture
+  target limits), `lib/studio-lighting-config.ts` (+ per-pose compositions),
   `lib/studio-camera-poses.ts` (pose keys referenced by compositions),
-  `components/ipod/scenes/ipod-3d-lighting-cockpit.tsx` (composition dial)
+  `components/ipod/scenes/ipod-3d-lighting-cockpit.tsx` (composition dial),
+  `components/ipod/scenes/ipod-3d-stage.tsx` (export delivery),
+  `lib/export-delivery.ts` / `lib/export-utils.ts` (shared capability-aware delivery)
 - Verification: unit tests on the pure data (finish table, composition selection);
   visual confirmation deferred to an explicitly-requested dedicated session per the
   project's testing cadence

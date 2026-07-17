@@ -63,6 +63,24 @@
       highlights band, raise the specific fillet segment counts until continuous
       (smallest geometry change that passes)
 
+## 7. Export portability (the render must leave the phone people open the link on)
+
+- [x] 7.1 Route the `/3d` still + clip delivery through the app's existing capability-aware
+      channel (`deliverExportedBlob` → `planExportDelivery` → share/save/preview on mobile,
+      direct download on desktop); stop using the iOS-hostile synthetic `downloadBlob`.
+      Pure routing (`planExportDelivery`) unit-tested red/green (mobile never gets a
+      synthetic download). FINDING: the app already had a full iOS-aware delivery stack
+      (`export-utils.ts`/`export-delivery.ts`) used by 2D exports; the 3D path just bypassed
+      it — the fix was wiring, not new infrastructure.
+- [ ] 7.2 Clamp the offscreen capture target size + MSAA samples to `gl.capabilities` /
+      `MAX_TEXTURE_SIZE` / `MAX_SAMPLES`; pure clamp fn (caps → chosen dims/samples) with
+      vitest red/green on an over-budget request
+- [ ] 7.3 Guard the capture path on `isContextLost()` (abort + surface, non-fatal) so a
+      dropped mobile context yields a clean error, not a blank file or a wedged veil
+- [ ] 7.4 Clip codec fallback ladder: when WebCodecs H.264 at the requested profile is
+      unsupported, step down (profile/resolution/bitrate) before failing, with honest
+      messaging instead of a bare "Clips need Chrome/Edge"
+
 ## 6. Launch gate
 
 - [ ] 6.0 Assemble the reference board: real iPod classic studio photography

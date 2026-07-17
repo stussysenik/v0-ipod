@@ -18,7 +18,7 @@ import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { createDebouncer } from "@/lib/debounce";
 import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recorder";
-import { downloadBlob } from "@/lib/three-export";
+import { deliverExportedBlob } from "@/lib/export-utils";
 import { consumePortableStateFromUrl, copyShareLink } from "@/lib/ipod-state/share";
 import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
@@ -469,9 +469,15 @@ export function Ipod3DStage() {
 				const blob = await api.captureHighRes(w, h, framing, heroAnchorRef.current);
 				if (!blob) throw new Error("capture returned no image");
 				sendExport({ type: "ENCODED" });
-				downloadBlob(blob, `ipod-3d-${framing}-${options.aspect}-${Date.now()}.png`);
+				// Route delivery through the platform-correct channel: desktop downloads
+				// directly; a phone gets the share/save/preview prompt (a synthetic
+				// `<a download>` silently no-ops on iOS, which is why exports never landed).
+				const filename = `ipod-3d-${framing}-${options.aspect}-${Date.now()}.png`;
+				const delivery = await deliverExportedBlob(blob, { filename, mimeType: "image/png" });
 				sendExport({ type: "SAVED" });
-				showNotice(framing === "hero" ? "Saved Hero PNG" : "Saved Front PNG");
+				if (!delivery.cancelled) {
+					showNotice(framing === "hero" ? "Saved Hero PNG" : "Saved Front PNG");
+				}
 			} catch (error) {
 				console.error("[3d-export] png failed", error);
 				sendExport({ type: "FAIL", error: error instanceof Error ? error.message : String(error) });
@@ -594,7 +600,9 @@ export function Ipod3DStage() {
 					options.loop === "hold" ? "hold" : options.loop === "boomerang" ? `${move}-boomerang` : move;
 				const filename = `ipod-3d-${motionTag}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`;
 
-				downloadBlob(blob, filename);
+				// Same platform-correct hand-off as the still: phones get the share/save
+				// prompt instead of a silently-failing synthetic download.
+				await deliverExportedBlob(blob, { filename, mimeType: "video/mp4" });
 
 				// Provenance: stamp the export identity + retained snapshot so the entry is
 				// identifiable and re-openable, and its proof thumbnail resolves from the cache.

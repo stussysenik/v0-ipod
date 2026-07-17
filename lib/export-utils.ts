@@ -1,6 +1,7 @@
 import { toBlob, toPng, toCanvas } from "html-to-image";
 
 import {
+	planExportDelivery,
 	resolveMobileExportDelivery,
 	type ExportCapabilities,
 } from "@/lib/export-delivery";
@@ -1039,6 +1040,47 @@ async function presentMobileExportPrompt(
 			resolve("prompt");
 		}
 	});
+}
+
+export interface DeliverExportResult {
+	/** The file reached (or was offered to) the device — false only on a hard delivery failure. */
+	success: boolean;
+	method: "download" | "share" | "prompt" | "manual";
+	/** The user dismissed the mobile prompt without saving — not an error, just no file kept. */
+	cancelled?: boolean;
+}
+
+/**
+ * Hand a finished export blob to the device through the platform-correct channel.
+ *
+ * This is the single delivery entry point the 3D export path was missing: it bypassed
+ * all of this and used a synthetic `<a download>` (see `downloadBlob`), which silently
+ * no-ops on iOS Safari — so exports never reached a phone. Desktop keeps the direct
+ * download; every mobile shape routes through the in-page share/save/preview prompt that
+ * the 2D exports already use, so the file actually lands on the user's device.
+ */
+export async function deliverExportedBlob(
+	blob: Blob,
+	{ filename, mimeType }: { filename: string; mimeType?: string },
+): Promise<DeliverExportResult> {
+	const type = mimeType ?? blob.type ?? "application/octet-stream";
+	const capabilities = detectExportCapabilities();
+	const plan = planExportDelivery(capabilities);
+
+	if (plan.usesSyntheticDownload) {
+		const result = downloadImageBlobWithOptions(blob, filename, { allowSyntheticClick: true });
+		return { success: result.success, method: "download" };
+	}
+
+	try {
+		const method = await presentMobileExportPrompt(blob, { filename, mimeType: type, capabilities });
+		return { success: true, method };
+	} catch (error) {
+		if (error instanceof Error && /cancel/i.test(error.message)) {
+			return { success: false, method: "manual", cancelled: true };
+		}
+		throw error;
+	}
 }
 
 /**
