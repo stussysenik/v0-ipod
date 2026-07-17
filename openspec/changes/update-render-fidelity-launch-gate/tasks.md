@@ -72,11 +72,14 @@
       synthetic download). FINDING: the app already had a full iOS-aware delivery stack
       (`export-utils.ts`/`export-delivery.ts`) used by 2D exports; the 3D path just bypassed
       it — the fix was wiring, not new infrastructure.
-- [ ] 7.2 Clamp the offscreen capture target size + MSAA samples to `gl.capabilities` /
-      `MAX_TEXTURE_SIZE` / `MAX_SAMPLES`; pure clamp fn (caps → chosen dims/samples) with
-      vitest red/green on an over-budget request
-- [ ] 7.3 Guard the capture path on `isContextLost()` (abort + surface, non-fatal) so a
-      dropped mobile context yields a clean error, not a blank file or a wedged veil
+- [x] 7.2 Clamp the offscreen capture target size + MSAA samples to `gl.capabilities`
+      (`maxTextureSize` / `maxSamples`) plus a mobile long-edge memory ceiling. Pure clamp
+      fn `clampCaptureTarget` (`lib/export-target.ts`, caps → chosen dims/samples, aspect
+      preserved) unit-tested 5/5. Applied to the high-res still (`captureHighRes`); the
+      1080p clip target rides §7.4 with its codec work.
+- [x] 7.3 Guard the still capture on `gl.getContext().isContextLost()` before read-back
+      (throws a surfaced, non-fatal error routed through the export machine's FAIL → RESET,
+      so a dropped mobile context yields a clean error, not a black file or a wedged veil).
 - [ ] 7.4 Clip codec fallback ladder: when WebCodecs H.264 at the requested profile is
       unsupported, step down (profile/resolution/bitrate) before failing, with honest
       messaging instead of a bare "Clips need Chrome/Edge"

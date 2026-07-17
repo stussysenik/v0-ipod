@@ -25,6 +25,8 @@ import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { deriveWheelColors, relativeLuminance } from "@/lib/color-manifest";
 import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@/lib/screen-bake-guard";
 import { ColorResolvePass } from "@/lib/three-color-resolve";
+import { clampCaptureTarget, MOBILE_MAX_LONG_EDGE } from "@/lib/export-target";
+import { detectExportCapabilities } from "@/lib/export-utils";
 import {
 	deriveIpod3DDimensions,
 	type Ipod3DDimensions,
@@ -2058,8 +2060,22 @@ function SceneCapture({
 			if (framing === "hero") frameForHero(width / height, heroPose);
 			else frameForCapture(width / height);
 
-			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
-				samples: 8,
+			// Clamp the offscreen target to the device's GPU + memory budget: a fixed
+			// 4K/8× target (~500MB) drops a phone's WebGL context. The scale is uniform,
+			// so the aspect ratio — and the framing above — is preserved.
+			const target = clampCaptureTarget(
+				{ width, height, samples: 8 },
+				{
+					maxTextureSize: gl.capabilities.maxTextureSize,
+					maxSamples: gl.capabilities.maxSamples,
+					maxLongEdge: detectExportCapabilities().isMobile
+						? MOBILE_MAX_LONG_EDGE
+						: Number.POSITIVE_INFINITY,
+				},
+			);
+
+			const renderTarget = new THREE.WebGLRenderTarget(target.width, target.height, {
+				samples: target.samples,
 				type: THREE.UnsignedByteType,
 				format: THREE.RGBAFormat,
 				minFilter: THREE.LinearFilter,
@@ -2071,22 +2087,29 @@ function SceneCapture({
 				gl.render(scene, camera);
 				gl.setRenderTarget(null);
 
+				// A heavy mobile allocation can drop the context mid-render; a read-back then
+				// yields a black/garbage frame. Fail fast so the caller surfaces it cleanly
+				// instead of saving a corrupt export or wedging the veil.
+				if (gl.getContext().isContextLost()) {
+					throw new Error("WebGL context lost during export");
+				}
+
 				// Resolve linear scene → sRGB bytes matching the live canvas's output encode.
 				// Reading the RT directly would return raw linear → dark export.
-				const buffer = new Uint8Array(width * height * 4);
-				colorResolveRef.current!.resolve(gl, renderTarget, width, height, buffer);
+				const buffer = new Uint8Array(target.width * target.height * 4);
+				colorResolveRef.current!.resolve(gl, renderTarget, target.width, target.height, buffer);
 
 				const canvas = document.createElement("canvas");
-				canvas.width = width;
-				canvas.height = height;
+				canvas.width = target.width;
+				canvas.height = target.height;
 				const ctx = canvas.getContext("2d");
 				if (!ctx) throw new Error("Failed to get canvas 2D context");
 
-				const imageData = ctx.createImageData(width, height);
-				for (let y = 0; y < height; y++) {
-					for (let x = 0; x < width; x++) {
-						const srcIdx = ((height - y - 1) * width + x) * 4;
-						const dstIdx = (y * width + x) * 4;
+				const imageData = ctx.createImageData(target.width, target.height);
+				for (let y = 0; y < target.height; y++) {
+					for (let x = 0; x < target.width; x++) {
+						const srcIdx = ((target.height - y - 1) * target.width + x) * 4;
+						const dstIdx = (y * target.width + x) * 4;
 						imageData.data[dstIdx] = buffer[srcIdx]!;
 						imageData.data[dstIdx + 1] = buffer[srcIdx + 1]!;
 						imageData.data[dstIdx + 2] = buffer[srcIdx + 2]!;
