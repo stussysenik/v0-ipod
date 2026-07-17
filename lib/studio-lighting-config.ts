@@ -334,6 +334,142 @@ export function cloneLightingConfig(config: StudioLightingConfig): StudioLightin
 }
 
 /**
+ * Per-pose light compositions — the softbox arrangement a named camera pose is
+ * *shaped against*, in reflection space.
+ *
+ * A metal surface shows `albedo × environment`, so a highlight is the reflection of
+ * a softbox. To draw one continuous highlight down the chamfer a given view describes,
+ * the panel must sit where the camera sees its mirror. One global arrangement cannot do
+ * that for every angle: the ¾ hero wants a long blade raking the front-right chamfer;
+ * the back-steel view wants a single clean horizon card behind the lens; a side profile
+ * wants the blade on the camera's flank and darkness opposite for edge contrast.
+ *
+ * These compositions are keyed by `studio-camera-poses` ids (see NAMED_POSES). They are
+ * the pose's softbox *base*; the cockpit dials remain the override layer on top, so live
+ * lighting stays a pure function of (dials, pose) with no coupling to the finish colour.
+ * The spots (key/fill/rim), env preset and ambient come from the active rig unchanged —
+ * only the reflected panels are re-shaped per pose. §4.2 tunes the exact panel geometry
+ * visually under the final colour transform; this module fixes the structure + selection.
+ */
+export interface PoseLightComposition {
+	/** Read-only name surfaced in the lighting cockpit (§4.3). */
+	name: string;
+	/** The `studio-camera-poses` id this composition is shaped for. */
+	poseId: string;
+	/** The reflected panels, in reflection space for this pose. Replaces `env.softboxes`. */
+	softboxes: SoftboxSpec[];
+}
+
+/** The big even front-fill panel the face mirrors back to the lens — shared base plate. */
+const FRONT_FILL: SoftboxSpec = { color: "#f8fafc", intensity: 0.85, position: [0, 1.5, 9.5], scale: [30, 38, 1] };
+/** The deep panel behind the device that gives silver/white edges definition. */
+const CONTRAST_PIT: SoftboxSpec = { color: "#000000", intensity: 0.8, position: [0, -2, -10], scale: [20, 20, 1] };
+
+export const POSE_LIGHT_COMPOSITIONS: readonly PoseLightComposition[] = [
+	{
+		// ¾ hero: a long warm blade raked top-right so its reflection runs down the
+		// front-right chamfer the ¾ view is about; cool shoulder opposite for separation.
+		name: "Chamfer Rake",
+		poseId: "hero",
+		softboxes: [
+			FRONT_FILL,
+			{ color: "#ffffff", intensity: 0.9, position: [7, 7, 3], scale: [0.6, 22, 1] },
+			{ color: "#fff4e6", intensity: 0.65, position: [6, 4, 4], scale: [7, 4, 1] },
+			{ color: "#e6f0ff", intensity: 0.6, position: [-6, 2, 4], scale: [7, 4, 1] },
+			CONTRAST_PIT,
+		],
+	},
+	{
+		// Front face-on: the front fill dominates as an even wash; symmetric shoulders and
+		// a crisp top horizon rake the crown. No side bias — the face reads flat and true.
+		name: "Even Wash",
+		poseId: "front",
+		softboxes: [
+			FRONT_FILL,
+			{ color: "#ffffff", intensity: 0.75, position: [0, 9, 1], scale: [14, 0.5, 1] },
+			{ color: "#fff4e6", intensity: 0.6, position: [6, 4, 4], scale: [6, 5, 1] },
+			{ color: "#e6f0ff", intensity: 0.6, position: [-6, 4, 4], scale: [6, 5, 1] },
+			CONTRAST_PIT,
+		],
+	},
+	{
+		// Back steel: the mirror-polished cap wants one clean gradient, not busy panels —
+		// a single tall horizon card behind the lens sweeps the pillowed steel top-to-bottom.
+		name: "Horizon Card",
+		poseId: "back",
+		softboxes: [
+			{ color: "#f4f7fb", intensity: 0.95, position: [0, 3, 10], scale: [34, 30, 1] },
+			{ color: "#ffffff", intensity: 0.7, position: [0, 9, 2], scale: [16, 0.5, 1] },
+			CONTRAST_PIT,
+		],
+	},
+	{
+		// Right profile: blade on the camera flank (+X) rakes the right edge chamfer; the
+		// opposite flank stays dark so the silhouette edge carries a single drawn line.
+		name: "Right Edge Rake",
+		poseId: "right",
+		softboxes: [
+			FRONT_FILL,
+			{ color: "#ffffff", intensity: 1.0, position: [8, 5, 3], scale: [0.6, 20, 1] },
+			CONTRAST_PIT,
+		],
+	},
+	{
+		// Left profile: mirror of Right — blade on -X for the left edge chamfer.
+		name: "Left Edge Rake",
+		poseId: "left",
+		softboxes: [
+			FRONT_FILL,
+			{ color: "#ffffff", intensity: 1.0, position: [-8, 5, 3], scale: [0.6, 20, 1] },
+			CONTRAST_PIT,
+		],
+	},
+	{
+		// Top-down crown: an overhead soft box plus a low even ring so the crown and the
+		// wheel dish both read without a raking edge (there is no side chamfer from above).
+		name: "Overhead Soft",
+		poseId: "top",
+		softboxes: [
+			{ color: "#f8fafc", intensity: 0.9, position: [0, 10, 3], scale: [26, 26, 1] },
+			{ color: "#eef4fc", intensity: 0.5, position: [0, 1, 9], scale: [24, 12, 1] },
+			CONTRAST_PIT,
+		],
+	},
+] as const;
+
+/**
+ * Which composition a pose sits on — a pure function of the pose id. An unknown id or
+ * free orbit (`null`) returns `null`, meaning "keep the rig's own softboxes" (the default
+ * rig). No finish colour is read: lighting stays a pure function of (dials, pose).
+ */
+export function selectPoseComposition(poseId: string | null | undefined): PoseLightComposition | null {
+	if (!poseId) return null;
+	return POSE_LIGHT_COMPOSITIONS.find((c) => c.poseId === poseId) ?? null;
+}
+
+/**
+ * Apply a pose's composition to a rig — the pure `(dials, pose) → rig` map. Returns a new
+ * config with only `env.softboxes` swapped for the pose's reflected panels; the spots, env
+ * preset, ambient and every dial value pass through untouched (dials are the override layer).
+ * An unknown/free-orbit pose returns the base rig cloned, unchanged. The output never depends
+ * on any finish colour — the spec's "no hidden coupling to finish" guarantee, made testable.
+ */
+export function composeRigForPose(
+	base: StudioLightingConfig,
+	poseId: string | null | undefined,
+): StudioLightingConfig {
+	const composition = selectPoseComposition(poseId);
+	const config = cloneLightingConfig(base);
+	if (!composition) return config;
+	config.env.softboxes = composition.softboxes.map((s) => ({
+		...s,
+		position: [...s.position],
+		scale: [...s.scale],
+	}));
+	return config;
+}
+
+/**
  * Upper intensity clamps for the sanitizer. The canvas renders with NoToneMapping —
  * there is no filmic rolloff, so an oversized intensity clips straight to white and
  * this sanitizer is the only safety net. Each ceiling sits ~3–4× the hottest shipped

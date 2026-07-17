@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 
+import { NAMED_POSES } from "./studio-camera-poses";
 import {
+	APPLE_PRODUCT_RIG,
 	cloneLightingConfig,
+	composeRigForPose,
 	MAX_AMBIENT_INTENSITY,
 	MAX_ENV_INTENSITY,
 	MAX_SOFTBOX_INTENSITY,
 	MAX_SPOT_INTENSITY,
 	NATURAL_LIGHT_RIG,
+	POSE_LIGHT_COMPOSITIONS,
 	RIG_PRESETS,
 	sanitizeLightingConfig,
+	selectPoseComposition,
 } from "./studio-lighting-config";
 
 /*
@@ -119,5 +124,68 @@ describe("Natural Light — the legibility template", () => {
 		const preset = RIG_PRESETS.find((p) => p.config.name === "Natural Light");
 		expect(preset).toBeDefined();
 		expect(luminance(preset!.stage!)).toBeGreaterThanOrEqual(0.7);
+	});
+});
+
+describe("per-pose light compositions (§4.1 — spec: 3d-shaped-light-compositions)", () => {
+	it("every named camera pose has exactly one composition, keyed by pose id", () => {
+		for (const pose of NAMED_POSES) {
+			const matches = POSE_LIGHT_COMPOSITIONS.filter((c) => c.poseId === pose.id);
+			expect(matches, `pose "${pose.id}" needs one composition`).toHaveLength(1);
+		}
+		// No composition points at a pose that does not exist.
+		const poseIds = new Set(NAMED_POSES.map((p) => p.id));
+		for (const c of POSE_LIGHT_COMPOSITIONS) expect(poseIds.has(c.poseId)).toBe(true);
+	});
+
+	it("compositions are sane, named panels within the softbox ceiling", () => {
+		for (const c of POSE_LIGHT_COMPOSITIONS) {
+			expect(c.name.length).toBeGreaterThan(0);
+			expect(c.softboxes.length).toBeGreaterThan(0);
+			for (const s of c.softboxes) {
+				expect(Number.isFinite(s.intensity)).toBe(true);
+				expect(s.intensity).toBeGreaterThanOrEqual(0);
+				expect(s.intensity).toBeLessThanOrEqual(MAX_SOFTBOX_INTENSITY);
+			}
+		}
+	});
+
+	it("selection is a pure function of the pose id — known resolves, unknown/free-orbit → null", () => {
+		expect(selectPoseComposition("hero")?.name).toBe("Chamfer Rake");
+		expect(selectPoseComposition("back")?.name).toBe("Horizon Card");
+		// Unknown pose and free orbit both fall back to the default rig (null composition).
+		expect(selectPoseComposition("does-not-exist")).toBeNull();
+		expect(selectPoseComposition(null)).toBeNull();
+		expect(selectPoseComposition(undefined)).toBeNull();
+	});
+
+	it("composeRigForPose swaps only the softboxes; spots, env preset and ambient pass through", () => {
+		const posed = composeRigForPose(APPLE_PRODUCT_RIG, "back");
+		const back = selectPoseComposition("back")!;
+		expect(posed.env.softboxes).toEqual(back.softboxes);
+		// Everything else is the base rig, unchanged — dials remain the override layer.
+		expect(posed.key).toEqual(APPLE_PRODUCT_RIG.key);
+		expect(posed.fill).toEqual(APPLE_PRODUCT_RIG.fill);
+		expect(posed.rim).toEqual(APPLE_PRODUCT_RIG.rim);
+		expect(posed.ambient).toEqual(APPLE_PRODUCT_RIG.ambient);
+		expect(posed.env.preset).toBe(APPLE_PRODUCT_RIG.env.preset);
+		expect(posed.env.intensity).toBe(APPLE_PRODUCT_RIG.env.intensity);
+	});
+
+	it("an unknown pose yields the base rig cloned — softboxes unchanged", () => {
+		const posed = composeRigForPose(APPLE_PRODUCT_RIG, "free-orbit");
+		expect(posed.env.softboxes).toEqual(APPLE_PRODUCT_RIG.env.softboxes);
+	});
+
+	it("is immutable and deterministic — never mutates the base, no hidden coupling", () => {
+		const before = cloneLightingConfig(APPLE_PRODUCT_RIG);
+		const a = composeRigForPose(APPLE_PRODUCT_RIG, "hero");
+		const b = composeRigForPose(APPLE_PRODUCT_RIG, "hero");
+		// Base rig is untouched by composition (no shared references leak through).
+		expect(APPLE_PRODUCT_RIG).toEqual(before);
+		// Pure function of (rig, pose): same inputs → deep-equal output, no colour term.
+		expect(a).toEqual(b);
+		a.env.softboxes[0].intensity = 999;
+		expect(b.env.softboxes[0].intensity).not.toBe(999);
 	});
 });
