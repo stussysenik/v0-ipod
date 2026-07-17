@@ -57,18 +57,29 @@
 
 ## 3. Finish material table
 
-- [ ] 3.1 Write the finish table: finish luminance → per-part params (face, wheel,
+- [x] 3.1 Write the finish table: finish luminance → per-part params (face, wheel,
       ring, glyphs) with documented env-response floor and wheel/face separation
       invariant; vitest asserts floor + monotonic separation across the full color
-      manifest (red first against current 0.16/void behavior)
+      manifest (red first against current 0.16/void behavior). Pure module
+      `lib/finish-material-table.ts` — `darkBoost(luminance)` (0 at ≥0.35, →1 at black)
+      lifts env response (`ENV_RESPONSE_FLOOR` 0.2, cleared with margin on darks) and
+      sharpens roughness while holding a fixed `SEPARATION_EPSILON` 0.06 gap
+      (wheel ‹ ring ‹ face) at every luminance. 33/33 across the full manifest corpus,
+      red-probed (legacy flat 0.16/equal-roughness → 48 failing).
 - [ ] 3.2 Wire the table into `three-d-ipod.tsx` materials (replace the hardcoded
       per-part constants); typecheck + oxlint clean
 
 ## 4. Per-pose light compositions
 
-- [ ] 4.1 Add `POSE_LIGHT_COMPOSITIONS` to `lib/studio-lighting-config.ts` keyed by
+- [x] 4.1 Add `POSE_LIGHT_COMPOSITIONS` to `lib/studio-lighting-config.ts` keyed by
       `studio-camera-poses` ids; selection as pure fn(pose) with vitest coverage
-      (unknown pose → default rig)
+      (unknown pose → default rig). Each named pose has one composition (Chamfer Rake /
+      Even Wash / Horizon Card / Right·Left Edge Rake / Overhead Soft); `selectPoseComposition`
+      is a pure fn(poseId) → composition|null (unknown/free-orbit → null = default rig), and
+      `composeRigForPose` swaps only `env.softboxes`, immutable, reading no finish colour —
+      the "(dials, pose) → rig with no coupling to finish" guarantee, tested. 17 new specs.
+      NOTE: the reflection-space panel geometry here is the documented starting shape; §4.2
+      fine-tunes the exact panels visually under the final colour transform.
 - [ ] 4.2 Shape the hero ¾, front, and back compositions in reflection space
       (chamfer rake / glass strip / horizon card); dials remain the override layer
 - [ ] 4.3 Surface the active composition in the lighting cockpit (read-only name +
