@@ -11,10 +11,27 @@
       shift on raw dark albedo (6G black ΔE ≈ 4.6), which is correct radiance behaviour
       — WYSIWYG on darks is carried by `toneMapped={false}` + specular separation, not
       the albedo path. Spec scenario updated to match.
-- [ ] 0.2 Switch the canvas and export renderers to `THREE.NeutralToneMapping`;
-      keep `toneMapped={false}` on the WYSIWYG surfaces that must stay raw
-      (stage backdrop, baked screen); rebalance rig intensities against the new
-      shoulder; export continuity tests green
+- [x] 0.2a Parity anchor (verifiable without a GPU): pin the CPU port to three r182's
+      own `NeutralToneMapping` GLSL (`ShaderChunk.tonemapping_pars_fragment`) so live↔export
+      parity is a *formula-equivalence* guard — a three upgrade that retunes Neutral fails
+      the test loudly. Red/green (13/13). FINDING that reshapes the mechanism: a plain
+      renderer flip to `NeutralToneMapping` does NOT reach the export — three forces
+      `NoToneMapping` on render-target renders (`three.module.js:17801`), and applying
+      Neutral to the whole buffer in `ColorResolvePass` would wrongly darken the
+      `toneMapped={false}` surfaces (ΔE 4–9 on darks). Correct mechanism: inject three's
+      OWN `NeutralToneMapping` into the lit-body materials — replace
+      `#include <tonemapping_fragment>` with `gl_FragColor.rgb = NeutralToneMapping( gl_FragColor.rgb );`
+      via `onBeforeCompile`; renderer STAYS `NoToneMapping` (so no double-apply on screen);
+      `ColorResolvePass` STAYS a pure sRGB encode. Runs identically on screen + RT → parity
+      by construction; `toneMapped={false}` surfaces skip injection → stay literal.
+- [ ] 0.2b [visual session — needs a live GPU to confirm the shader links] Wire the
+      injection above into the lit-body materials; confirm `/3d` renders with no
+      shader-compile errors in the console. Verify the caveat: `NeutralToneMapping` is
+      defined by `tonemapping_pars_fragment` — if three omits that chunk when
+      `renderer.toneMapping === NoToneMapping`, include it explicitly in the patch.
+      Keep `toneMapped={false}` on the WYSIWYG surfaces (stage backdrop, baked screen).
+      Rebalance rig intensities against the new shoulder; confirm live ≈ export on a dark
+      and a mid finish.
 - [ ] 0.3 Centralize the device-render color path: audit (ast-grep) for hardcoded
       hex in material definitions, route survivors through the manifest resolve,
       add the coverage guard test

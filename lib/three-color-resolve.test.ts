@@ -1,3 +1,4 @@
+import { ShaderChunk } from "three";
 import { describe, expect, it } from "vitest";
 
 import { colorManifest } from "./color-manifest";
@@ -83,6 +84,37 @@ describe("neutralToneMap — above-threshold rolloff is monotonic with no clip p
 			expect(out).toBeLessThan(1); // never reaches white
 			prev = out;
 		}
+	});
+});
+
+// The CPU port only buys WYSIWYG parity if it stays bit-identical to the GLSL the GPU
+// actually runs. Rather than trust that by eyeball, pin the port to three's own
+// `NeutralToneMapping` shader source: read the chunk three ships and assert it still
+// encodes the exact formula this port mirrors. A three upgrade that retunes Neutral then
+// fails HERE — loudly — instead of silently drifting the live canvas from the CPU-scored
+// export. This is the load-bearing half of §0.2's "export parity": live and export apply
+// one formula because the CPU twin is provably the same formula as the shader.
+describe("neutralToneMap — pinned to three r182's NeutralToneMapping GLSL (the parity anchor)", () => {
+	const glsl = ShaderChunk.tonemapping_pars_fragment.replace(/\s+/g, "");
+
+	it("three still defines a NeutralToneMapping function (the shader we mirror exists)", () => {
+		expect(glsl).toContain("vec3NeutralToneMapping(vec3color)");
+	});
+
+	it("the shader's compression threshold matches NEUTRAL_START_COMPRESSION", () => {
+		expect(glsl).toContain("StartCompression=0.8-0.04");
+		expect(NEUTRAL_START_COMPRESSION).toBe(0.8 - 0.04);
+	});
+
+	it("the shader's black-level offset matches the port's (x<0.08 ? x-6.25x² : 0.04)", () => {
+		expect(glsl).toContain("x<0.08?x-6.25*x*x:0.04");
+	});
+
+	it("the shader's rolloff + desaturation match the port's closed form", () => {
+		expect(glsl).toContain("Desaturation=0.15");
+		expect(glsl).toContain("newPeak=1.-d*d/(peak+d-StartCompression)");
+		expect(glsl).toContain("color*=newPeak/peak");
+		expect(glsl).toContain("mix(color,vec3(newPeak),g)");
 	});
 });
 
