@@ -1,9 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { sharedIconButtonTokens } from "@/lib/shared-ui-tokens";
+import { resolveIconButtonVariant, sharedIconButtonTokens } from "@/lib/shared-ui-tokens";
 import { cn } from "@/lib/utils";
+
+/**
+ * Whether IconButtons in this subtree render dark-device chrome. Scoped so only
+ * the panels wrapped in {@link IconButtonChromeProvider} adapt; every other usage
+ * keeps the light default (`false`). See `resolveIconButtonVariant` (§7).
+ */
+const IconButtonChromeContext = createContext(false);
+
+export function IconButtonChromeProvider({
+	dark,
+	children,
+}: {
+	dark: boolean;
+	children: React.ReactNode;
+}) {
+	return <IconButtonChromeContext.Provider value={dark}>{children}</IconButtonChromeContext.Provider>;
+}
 
 const iconButtonVariants = cva(
 	"relative group flex items-center justify-center border transition-all ease-out disabled:cursor-not-allowed disabled:opacity-60",
@@ -51,8 +68,9 @@ export function IconButton({
 	const [isHovered, setIsHovered] = useState(false);
 	const [isPressed, setIsPressed] = useState(false);
 
+	const darkChrome = useContext(IconButtonChromeContext);
 	const variant = variantProp || (isActive ? "active" : contrast ? "contrast" : "default");
-	const variantTokens = sharedIconButtonTokens.variants[variant as keyof typeof sharedIconButtonTokens.variants];
+	const variantTokens = resolveIconButtonVariant(variant, darkChrome);
 	
 	const appearance =
 		!buttonProps.disabled && isHovered && variantTokens.hover

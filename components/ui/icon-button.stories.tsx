@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Download, Sparkles } from "lucide-react";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { IconButton } from "./icon-button";
+import { IconButton, IconButtonChromeProvider } from "./icon-button";
 
 const meta = {
 	title: "components/ui/IconButton",
@@ -77,5 +77,25 @@ export const Focused: Story = {
 		const button = canvas.getByRole("button", { name: "Export" });
 		await userEvent.tab();
 		await expect(button).toHaveFocus();
+	},
+};
+
+// §7 wiring: a resting `default` button reads the dark-filled chrome when its
+// subtree is wrapped for a dark device. Proves IconButtonChromeContext flows
+// into resolveIconButtonVariant and out to the rendered style — the seam the
+// pure `lib/shared-ui-tokens.test.ts` cannot cover.
+export const OnDarkChrome: Story = {
+	name: "Default (dark chrome)",
+	decorators: [
+		(Story) => (
+			<IconButtonChromeProvider dark>
+				<Story />
+			</IconButtonChromeProvider>
+		),
+	],
+	play: async ({ canvasElement }) => {
+		const button = within(canvasElement).getByRole("button", { name: "Export" });
+		// defaultDark.foreground (#F5F5F7) — light text, not the light default's #111315.
+		await expect(getComputedStyle(button).color).toBe("rgb(245, 245, 247)");
 	},
 };

@@ -30,14 +30,14 @@
 - [ ] 6.1 In `components/ui/icon-button.tsx`, replace the yellow chip classes with typographic styling (uppercase, tracked, muted foreground)
 - [ ] 6.2 Verify badge remains positioned at top-right of the button
 
-## 7. Theme-aware `IconButton` default
-- [ ] 7.1 Read the current theme from `IPodThemeContext` in `IconButton`
-- [ ] 7.2 When `theme === "black"`, default (non-active, non-contrast) branch uses the dark filled class set
-- [ ] 7.3 When `theme === "white"`, default branch uses the existing light gradient class set
-- [ ] 7.4 `isActive` and `contrast` branches remain unchanged
+## 7. Theme-aware `IconButton` default (reframed → luminance-adaptive chrome; see handoff)
+- [x] 7.1 Read dark-chrome from a scoped `IconButtonChromeContext` in `IconButton`
+- [x] 7.2 On a dark shell the resting `default` branch uses the `defaultDark` filled token set
+- [x] 7.3 On a light shell the `default` branch keeps the existing light gradient token set
+- [x] 7.4 `isActive` and `contrast` branches remain invariant
 
 ## 8. Validation
-- [ ] 8.1 `openspec validate update-ipod-theme-black-white-toggle --strict --no-interactive`
+- [x] 8.1 `openspec validate update-ipod-theme-black-white-toggle --strict --no-interactive`
 - [ ] 8.2 Toggle theme in-browser; confirm case, wheel, surround, and toolbar all flip together
 - [ ] 8.3 Export a PNG in both themes; confirm exported shell matches on-screen
 
@@ -68,18 +68,27 @@ colour's perceived lightness, not a dead flag.
     `resolveIconButtonVariant(variant, darkChrome)` (only `default` flips; `active`/`contrast`
     invariant per §7.4).
 
-- REMAINING (next session — small, no new design decisions):
-  1. `components/ui/icon-button.tsx`: add a scoped `IconButtonChromeContext` (boolean, default
-     `false`) + `IconButtonChromeProvider`; consume it and call `resolveIconButtonVariant(variant,
-     darkChrome)` instead of indexing `sharedIconButtonTokens.variants[variant]` (line ~55).
-     Default `false` keeps every existing usage (kuma-settings, stories, etc.) unchanged.
-  2. `components/ipod/workbench/ipod-classic-workbench.tsx`: `skinColor` is already in scope
-     (line 182). Wrap ONLY the view-mode toolbar panel `<div className="flex flex-col gap-2 p-2 …>`
-     (lines ~937–1044) in `<IconButtonChromeProvider dark={isDarkChrome(skinColor)}>`. Do NOT wrap
-     KumaSettingsPanel (line 908) or the compact Menu button (line 898) — they use className
-     overrides, not tokens.
-  3. Add a render test asserting a dark `skinColor` yields the `defaultDark` background on a
-     resting toolbar button and a light `skinColor` yields the light gradient.
-  4. Confirm §5.1 order; then §8.1 strict-validate. §8.2/8.3 are the user's visual session.
-  5. Note (out of §7 scope): the toolbar *panel* bg (`#E7E7E3`) stays light — only the buttons
-     adapt. If full panel theming is wanted, that's a separate, freshly-scoped task.
+- LANDED + VERIFIED (session 2026-07-18 cont'd — tsc 0, oxlint 0/0, unit 601/601, strict-validate OK):
+  1. ✅ `components/ui/icon-button.tsx`: scoped `IconButtonChromeContext` (bool, default `false`) +
+     exported `IconButtonChromeProvider`; component now `useContext`es it and calls
+     `resolveIconButtonVariant(variant, darkChrome)`. Default `false` → every existing usage
+     (kuma-settings, stories) unchanged.
+  2. ✅ `components/ipod/workbench/ipod-classic-workbench.tsx`: only the view-mode toolbar panel
+     `<div className="flex flex-col gap-2 p-2 …>` is wrapped in
+     `<IconButtonChromeProvider dark={isDarkChrome(skinColor)}>`. KumaSettingsPanel and the compact
+     Menu button are left outside (they use className overrides, not tokens).
+  3. ✅ Render seam covered by a Storybook `play` story `OnDarkChrome` in
+     `components/ui/icon-button.stories.tsx` (the repo's browser render-test channel): a resting
+     `default` button inside a dark provider computes `color: rgb(245,245,247)` (defaultDark). Runs
+     green in chromium (8/8 for that file). The 2 vanilla-extract story failures in the full
+     `storybook` project are pre-existing (device-shell / click-wheel `theme.css.ts`), untouched here.
+
+- §5.1 order: SUPERSEDED by the "3D/Portfolio is a place, not a mode" refactor. The live toolbar is
+  Flat → Preview → 3D Studio (nav) → Portfolio (nav) → [flagged 3D Experience/Focus/ASCII] → Zen.
+  The §5.1 intent (real modes first, WIP last) holds; the literal order in §5 is stale — do not
+  reorder to match a spec the refactor already replaced.
+
+- REMAINING: only §8.2/8.3 — the user's in-browser visual session (toggle shell dark/light; confirm
+  case + wheel + surround + toolbar flip together; PNG export parity). Nothing code-side pending.
+  Out of §7 scope: the toolbar *panel* bg (`#E7E7E3`) stays light by design — only the buttons
+  adapt. Full panel theming would be a separate, freshly-scoped task.

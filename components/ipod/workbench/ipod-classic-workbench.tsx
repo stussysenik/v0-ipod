@@ -37,7 +37,8 @@ import {
 	type ExportProgress,
 } from "@/lib/export-utils";
 import { TEST_SONG_SNAPSHOT } from "@/lib/song-snapshots";
-import { IconButton } from "@/components/ui/icon-button";
+import { IconButton, IconButtonChromeProvider } from "@/components/ui/icon-button";
+import { isDarkChrome } from "@/lib/shared-ui-tokens";
 import { AnimatedExportDialog } from "@/components/ipod/export/animated-export-dialog";
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import dynamic from "next/dynamic";
@@ -934,6 +935,7 @@ export default function IpodClassicWorkbench() {
 							onSaveSnapshot={handleSaveSnapshot}
 						/>
 
+						<IconButtonChromeProvider dark={isDarkChrome(skinColor)}>
 						<div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
 							<IconButton
 								icon={<Smartphone className="w-5 h-5" />}
@@ -1042,6 +1044,7 @@ export default function IpodClassicWorkbench() {
 								</>
 							)}
 						</div>
+						</IconButtonChromeProvider>
 
 						{/* The 2D export rail — ARCHIVED behind SHOW_WORKBENCH_EXPORTS (spec:
 						    shipped-surface-minimalism). `/3d` owns the real export dock; on the shared
