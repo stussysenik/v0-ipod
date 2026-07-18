@@ -114,9 +114,23 @@
 - [x] 7.3 Guard the still capture on `gl.getContext().isContextLost()` before read-back
       (throws a surfaced, non-fatal error routed through the export machine's FAIL → RESET,
       so a dropped mobile context yields a clean error, not a black file or a wedged veil).
-- [ ] 7.4 Clip codec fallback ladder: when WebCodecs H.264 at the requested profile is
+- [x] 7.4 Clip codec fallback ladder: when WebCodecs H.264 at the requested profile is
       unsupported, step down (profile/resolution/bitrate) before failing, with honest
-      messaging instead of a bare "Clips need Chrome/Edge"
+      messaging instead of a bare "Clips need Chrome/Edge". DONE: pure decision layer
+      `lib/export/clip-codec-ladder.ts` — `buildClipTargetLadder` derives resolution rungs
+      (1 / 0.75 / 0.5 long-edge, even dims, aspect held) with bitrate scaled to pixel count
+      and floored at `MIN_CLIP_BITRATE` (2 Mbps); `resolveClipCodec(request, probe)` walks
+      rung→profile (widest High 5.2 → Baseline 3.1), returns the first encodable config with a
+      `steppedDown` flag, or throws `ClipCodecUnavailableError`. `recordIpodClip` now drives
+      the ladder (injecting the real `VideoEncoder.isConfigSupported` probe) and renders/muxes
+      at the resolved dims — a phone that can't do full-res 1080p H.264 gets a working 720p/540p
+      clip instead of a hard fail. Messaging: the ladder-exhausted case surfaces the honest
+      "This device can't encode H.264 clips"; the no-WebCodecs gate now reads "Clips need
+      Chrome, Edge, or Safari 16.4+". Ladder is probe-injected → unit-tested red/green 9/9
+      (full-res pass, resolution step-down proven by probing the top rung first, profile
+      fall-through, throwing-probe resilience, exhaustion → null). typecheck + oxlint clean;
+      full unit suite green (3 pre-existing Storybook-browser failures unrelated, measured
+      identical without this change).
 
 ## 6. Launch gate
 

@@ -17,6 +17,7 @@ import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { createDebouncer } from "@/lib/debounce";
+import { ClipCodecUnavailableError } from "@/lib/export/clip-codec-ladder";
 import { recordIpodClip, isClipRecordingSupported } from "@/lib/three-clip-recorder";
 import { deliverExportedBlob } from "@/lib/export-utils";
 import { consumePortableStateFromUrl, copyShareLink } from "@/lib/ipod-state/share";
@@ -529,7 +530,7 @@ export function Ipod3DStage() {
 			const api = ipodApiRef.current;
 			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
 			if (!isClipRecordingSupported()) {
-				showNotice("Clips need Chrome/Edge");
+				showNotice("Clips need Chrome, Edge, or Safari 16.4+");
 				return;
 			}
 			setPreviewPlaying(false); // freeze the playhead; the offline render owns the camera
@@ -639,7 +640,13 @@ export function Ipod3DStage() {
 			} catch (error) {
 				console.error("[3d-export] clip failed", error);
 				sendExport({ type: "FAIL", error: error instanceof Error ? error.message : String(error) });
-				showNotice("Clip failed");
+				// Honest, specific messaging when the failure is "this device can't encode
+				// H.264 at all" (ladder exhausted) rather than a generic hiccup.
+				showNotice(
+					error instanceof ClipCodecUnavailableError
+						? "This device can't encode H.264 clips"
+						: "Clip failed",
+				);
 			} finally {
 				// Release the marquee back to its live wall-clock rAF animation, and restore
 				// the composed playhead the clip-time drive advanced during export so the live

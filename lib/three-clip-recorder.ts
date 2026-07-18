@@ -1,6 +1,10 @@
 import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+import {
+	ClipCodecUnavailableError,
+	resolveClipCodec,
+} from "@/lib/export/clip-codec-ladder";
 import type { LoopStyle, StudioPose } from "@/lib/studio-camera";
 
 /**
@@ -59,41 +63,6 @@ export function isClipRecordingSupported(): boolean {
 	);
 }
 
-/**
- * Probe for an H.264 config the platform will actually accept, widest profile
- * first. 1080×1920@30 needs a level that clears the macroblock-rate ceiling, so
- * we lead with High@5.2 and fall back through Main and Baseline.
- */
-async function pickH264Codec(
-	width: number,
-	height: number,
-	fps: number,
-	bitrate: number,
-): Promise<string | null> {
-	const candidates = [
-		"avc1.640034", // High 5.2
-		"avc1.640033", // High 5.1
-		"avc1.64002a", // High 4.2
-		"avc1.4d0034", // Main 5.2
-		"avc1.42e01f", // Baseline 3.1
-	];
-	for (const codec of candidates) {
-		try {
-			const support = await VideoEncoder.isConfigSupported({
-				codec,
-				width,
-				height,
-				bitrate,
-				framerate: fps,
-			});
-			if (support.supported) return codec;
-		} catch {
-			// isConfigSupported can throw on malformed descriptors — keep probing.
-		}
-	}
-	return null;
-}
-
 export async function recordIpodClip(
 	handle: ThreeDIpodHandle,
 	options: ClipRecorderOptions = {},
@@ -117,12 +86,19 @@ export async function recordIpodClip(
 
 	if (!isClipRecordingSupported()) return null;
 
-	const codec = await pickH264Codec(width, height, fps, bitsPerSecond);
-	if (!codec) return null;
+	// Fallback ladder: honour the requested 1080×1920 when the encoder can take it,
+	// otherwise step DOWN (resolution → bitrate → profile) to the first config this
+	// device accepts, rather than failing a phone that just can't do full-res H.264.
+	const resolved = await resolveClipCodec(
+		{ width, height, framerate: fps, bitrate: bitsPerSecond },
+		async (config) => (await VideoEncoder.isConfigSupported(config)).supported === true,
+	);
+	if (!resolved) throw new ClipCodecUnavailableError();
+	const { codec, width: outWidth, height: outHeight, bitrate: outBitrate } = resolved;
 
 	const muxer = new Muxer({
 		target: new ArrayBufferTarget(),
-		video: { codec: "avc", width, height, frameRate: fps },
+		video: { codec: "avc", width: outWidth, height: outHeight, frameRate: fps },
 		fastStart: "in-memory",
 	});
 
@@ -135,9 +111,9 @@ export async function recordIpodClip(
 	});
 	encoder.configure({
 		codec,
-		width,
-		height,
-		bitrate: bitsPerSecond,
+		width: outWidth,
+		height: outHeight,
+		bitrate: outBitrate,
 		framerate: fps,
 		latencyMode: "quality",
 	});
@@ -146,7 +122,7 @@ export async function recordIpodClip(
 
 	try {
 		await handle.renderClipFrames(
-			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor, motionBlurSamples, shutterAngle, onClipProgress },
+			{ width: outWidth, height: outHeight, supersample, durationMs, fps, move, speed, loop, anchor, motionBlurSamples, shutterAngle, onClipProgress },
 			async (frameCanvas, index, total) => {
 				if (encodeError) throw encodeError;
 
