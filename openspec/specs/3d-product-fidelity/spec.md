@@ -1,7 +1,7 @@
 # 3d-product-fidelity Specification
 
 ## Purpose
-TBD - created by archiving change refine-3d-export-wysiwyg-and-color. Update Purpose after archive.
+Governs the visual fidelity of the 3D iPod render: absolute per-surface colour precision, albedo-faithful materials under NoToneMapping, and no auto-generated outline artifacts on light finishes.
 ## Requirements
 ### Requirement: Absolute per-surface colour precision
 The system SHALL render every individually-coloured surface — front face, wheel ring,

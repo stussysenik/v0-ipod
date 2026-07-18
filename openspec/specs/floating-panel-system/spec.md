@@ -1,7 +1,7 @@
 # floating-panel-system Specification
 
 ## Purpose
-TBD - created by archiving change add-floating-panels-and-command-palette. Update Purpose after archive.
+Governs the floating tool-panel system: draggable and resizable panels that collapse to a minimal form, persist layout per mode, reset, coexist with the canvas, and fall back gracefully on compact viewports.
 ## Requirements
 ### Requirement: Draggable Tool Panels
 

@@ -1,7 +1,7 @@
 # lit-embeddable Specification
 
 ## Purpose
-TBD - created by archiving change add-lit-ipod-embeddable. Update Purpose after archive.
+Governs the Lit-based embeddable iPod: a native custom element with viewport-independent embedding and a white-label demonstration route.
 ## Requirements
 ### Requirement: Native Embeddable Element
 

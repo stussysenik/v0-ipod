@@ -1,7 +1,7 @@
 # hardware-presets Specification
 
 ## Purpose
-TBD - created by archiving change add-classic-revision-presets-and-snapshot-state. Update Purpose after archive.
+Governs the documented iPod classic revision presets: per-revision geometry and screen chrome.
 ## Requirements
 ### Requirement: Documented Ipod Classic Revision Presets
 The system SHALL expose documented iPod classic revision presets instead of treating the device as a single averaged front face.

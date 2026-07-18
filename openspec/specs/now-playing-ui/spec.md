@@ -1,7 +1,7 @@
 # now-playing-ui Specification
 
 ## Purpose
-TBD - created by archiving change add-marquee-preview-and-gif-export. Update Purpose after archive.
+Governs the Now Playing marquee preview: a dedicated preview mode with authentic overflow marquee behavior and persistence.
 ## Requirements
 ### Requirement: Dedicated Marquee Preview Mode
 The system SHALL provide a dedicated preview mode for the now-playing screen that focuses on authentic title marquee playback without changing flat-mode editing behavior.

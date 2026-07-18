@@ -1,7 +1,7 @@
 # 3d-control-surface Specification
 
 ## Purpose
-TBD - created by archiving change refine-3d-export-wysiwyg-and-color. Update Purpose after archive.
+Governs the /3d studio control surface: controls take visual focus over the device and lay out responsively without overlap, with preview transport kept distinct from export settings.
 ## Requirements
 ### Requirement: Controls take visual focus over the device
 The control surface (HUD panels, cockpits, bottom bar, command surface) SHALL render

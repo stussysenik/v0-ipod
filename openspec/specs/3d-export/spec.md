@@ -1,7 +1,7 @@
 # 3d-export Specification
 
 ## Purpose
-TBD - created by archiving change refine-3d-export-wysiwyg-and-color. Update Purpose after archive.
+Governs /3d still and clip export: a neutral uniform studio field, WYSIWYG parity with the live preview, deterministic capture, and boomerang / custom-angle / motion-free options.
 ## Requirements
 ### Requirement: Neutral uniform studio field
 The stage backdrop SHALL be a FLAT, unlit field driven by the Stage colour — no radial

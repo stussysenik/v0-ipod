@@ -1,7 +1,7 @@
 # snapshot-state Specification
 
 ## Purpose
-TBD - created by archiving change add-classic-revision-presets-and-snapshot-state. Update Purpose after archive.
+Governs full-state snapshots: a versioned capture contract for moments and ranges, deterministic restoration, and legacy snapshot migration.
 ## Requirements
 ### Requirement: Versioned Full-State Snapshot Contract
 The system SHALL persist a versioned full-state snapshot format that captures metadata, playback, device preset, and render-affecting presentation state.

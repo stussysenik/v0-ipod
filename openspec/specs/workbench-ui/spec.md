@@ -1,7 +1,7 @@
 # workbench-ui Specification
 
 ## Purpose
-TBD - created by archiving change strip-down-ui-feature-flags. Update Purpose after archive.
+Governs the workbench UI shell: feature-flag gating and iPod-OS menu navigation.
 ## Requirements
 ### Requirement: Feature Flag Gating
 The workbench SHALL support gating specific UI sections behind boolean feature flags defined in `lib/feature-flags.ts`. When a flag is `false`, the corresponding UI element MUST not render.

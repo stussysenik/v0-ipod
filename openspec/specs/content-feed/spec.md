@@ -1,7 +1,7 @@
 # content-feed Specification
 
 ## Purpose
-TBD - created by archiving change add-ipod-content-feed. Update Purpose after archive.
+Governs the iPod content feed: a versioned, schema-validated feed model whose theme tokens drive white-labeling of the surface.
 ## Requirements
 ### Requirement: Validated Feed Schema
 

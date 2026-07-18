@@ -1,7 +1,7 @@
 # interaction-models Specification
 
 ## Purpose
-TBD - created by archiving change add-classic-revision-presets-and-snapshot-state. Update Purpose after archive.
+Governs the workbench's dual interaction models: an iPod-OS navigation model alongside a direct mode that preserves fast authoring.
 ## Requirements
 ### Requirement: Dual Interaction Models
 The system SHALL provide both a direct authoring interaction model and an authentic iPod-style navigation model.

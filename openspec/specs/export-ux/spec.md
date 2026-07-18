@@ -1,7 +1,7 @@
 # export-ux Specification
 
 ## Purpose
-TBD - created by archiving change add-marquee-preview-and-gif-export. Update Purpose after archive.
+Governs the 2D export experience: animated GIF and deterministic flat export, non-blocking animated feedback and traceability, unified cross-platform input, a collapsible mobile toolbox, boundary constraints, and deployment-comparison diagnostics.
 ## Requirements
 ### Requirement: Preview-Mode Animated GIF Export
 The system SHALL provide a dedicated animated GIF export action for Preview Mode that captures the full flat iPod frame with the now-playing marquee in motion.

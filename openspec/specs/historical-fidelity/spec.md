@@ -1,7 +1,7 @@
 # historical-fidelity Specification
 
 ## Purpose
-TBD - created by archiving change add-classic-revision-presets-and-snapshot-state. Update Purpose after archive.
+Governs historical device accuracy: source-priority visual decisions with no averaged hybrid device.
 ## Requirements
 ### Requirement: Source-Priority Visual Decisions
 The system SHALL resolve revision geometry and UI details according to a documented source hierarchy.

@@ -1,7 +1,7 @@
 # mobile-responsive-layout Specification
 
 ## Purpose
-TBD - created by archiving change add-mobile-responsive-stability. Update Purpose after archive.
+Governs mobile responsiveness of the workbench: stable device scaling, a reachable compact toolbox, orientation-safe 3D controls, pinch-to-zoom, reduced-motion compliance, minimum touch targets, and iOS focus-zoom avoidance.
 ## Requirements
 ### Requirement: Stable Workbench Device Scaling on Mobile
 

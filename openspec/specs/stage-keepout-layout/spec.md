@@ -1,7 +1,7 @@
 # stage-keepout-layout Specification
 
 ## Purpose
-TBD - created by archiving change refactor-stage-keepout-zones. Update Purpose after archive.
+Governs the stage keep-out layout: a device keep-out zone with container-query sizing, exclusive docked rails, screen content bound to the device, and no horizontal overflow.
 ## Requirements
 ### Requirement: Device Keep-Out Zone
 

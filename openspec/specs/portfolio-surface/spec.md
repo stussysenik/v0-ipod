@@ -1,7 +1,7 @@
 # portfolio-surface Specification
 
 ## Purpose
-TBD - created by archiving change add-portfolio-feed-surface. Update Purpose after archive.
+Governs the portfolio surface: driven by the single canonical Senik feed, rendering the real iPod assembly with faithful wheel-driven navigation, responsive parity, and case studies that respect the keep-out law.
 ## Requirements
 ### Requirement: Portfolio Driven By Senik Feed
 

@@ -1,7 +1,7 @@
 # command-palette Specification
 
 ## Purpose
-TBD - created by archiving change add-floating-panels-and-command-palette. Update Purpose after archive.
+Governs the global command palette: invocation, fuzzy search and keyboard navigation, and mode- and panel-management commands sourced from a live command registry.
 ## Requirements
 ### Requirement: Global Command Palette Invocation
 

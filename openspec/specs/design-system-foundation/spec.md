@@ -1,7 +1,7 @@
 # design-system-foundation Specification
 
 ## Purpose
-TBD - created by archiving change refactor-design-system-foundation. Update Purpose after archive.
+Governs the repository's local design-system contract: an explicit shared-token foundation kept scoped apart from product visual fidelity.
 ## Requirements
 ### Requirement: Repository Defines A Local Design-System Contract
 The system SHALL define a project-local design contract before introducing repository-wide design-system standardization.

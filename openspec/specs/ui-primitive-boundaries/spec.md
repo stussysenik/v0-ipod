@@ -1,7 +1,7 @@
 # ui-primitive-boundaries Specification
 
 ## Purpose
-TBD - created by archiving change refactor-design-system-foundation. Update Purpose after archive.
+Governs ownership boundaries of shared UI primitives: explicit reuse surfaces in components/ui and identification of Storybook candidates before Storybook setup.
 ## Requirements
 ### Requirement: Shared UI Primitives Have Explicit Ownership Boundaries
 The system SHALL define which UI surfaces belong to the reusable primitive layer versus the iPod product layer.

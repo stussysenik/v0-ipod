@@ -1,7 +1,7 @@
 # storybook-design-system Specification
 
 ## Purpose
-TBD - created by archiving change add-storybook-design-system. Update Purpose after archive.
+Governs Storybook coverage of the stabilized shared UI layer: repository-owned primitive tokens, separation of shared-DS from product-showcase stories, and component-state verification.
 ## Requirements
 ### Requirement: Storybook Documents The Stabilized Shared UI Layer
 The system SHALL introduce Storybook only after the repository has defined a stable shared primitive layer and local design contract.

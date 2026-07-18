@@ -1,7 +1,7 @@
 # browser-navigation Specification
 
 ## Purpose
-TBD - created by archiving change add-ipod-browser-navigation. Update Purpose after archive.
+Governs the iPod menu-tree browser: hierarchical menu navigation and per-slug preview rendering.
 ## Requirements
 ### Requirement: Menu-Tree Navigation
 
