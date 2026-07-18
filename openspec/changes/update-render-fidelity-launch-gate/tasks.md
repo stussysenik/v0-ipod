@@ -149,8 +149,14 @@
 - [ ] 6.0 Assemble the reference board: real iPod classic studio photography
       (marketing + teardown shots) committed to the change as the ground-truth
       comparison target for the matrix
-- [ ] 6.1 Write the golden-matrix checklist doc (named poses × black/silver ×
-      checklist items from the four spec deltas)
+- [x] 6.1 Write the golden-matrix checklist doc (named poses × black/silver ×
+      checklist items from the four spec deltas). DONE: `golden-matrix.md` in this
+      change — a 6-pose × {black, silver} matrix (each pose paired with its
+      `POSE_LIGHT_COMPOSITIONS` shape), with per-cell checklist items grouped by the
+      four deltas (A color-pipeline/WYSIWYG, B screen recess+sweep+seam, C finish
+      separation, D shaped-light + line continuity) plus a run-once export-portability
+      block (§7) and a sign-off record. Doubles as the §6.2 evidence artifact: the gate
+      rule is 12/12 cells + 3/3 portability committed before the public link ships.
 - [ ] 6.2 Run the matrix in a dedicated visual session (chrome-devtools MCP; user-
       summoned per testing cadence); record results in the change; fix-and-recheck
       any failing cell
