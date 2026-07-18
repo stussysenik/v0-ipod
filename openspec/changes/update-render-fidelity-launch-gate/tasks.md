@@ -48,8 +48,20 @@
 
 ## 2. Screen recess + glass sweep (DOM treatments)
 
-- [ ] 2.1 Write the pure sweep function: (camera azimuth/elevation) → CSS gradient
-      params; vitest red/green on boundary angles
+- [x] 2.1 Write the pure sweep function: (camera azimuth/elevation) → CSS gradient
+      params; vitest red/green on boundary angles. DONE: `lib/three-glass-sweep.ts` —
+      `resolveGlassSweep({azimuth, elevation}) → {angle, position, intensity, spread}`,
+      a pure fn with no three/DOM/dial dependency. Model: the glass catches the env
+      strip strongest dead-on (the composed hero, peak 0.5) and fades by a Gaussian
+      falloff (σ 42°) as the camera orbits away to reflect the darker surround, floored
+      at 0.05 (glass keeps a faint sheen); the band position tracks orbit (azimuth
+      horizontal, elevation vertical) and the gradient axis tilts with the camera so the
+      streak rotates. `glassSweepGradientCss` renders params → a stops-ordered, 0–100%-
+      clamped `linear-gradient` for §2.2 to paint. Red/green 9/9 on the boundary angles
+      (dead-on centred/un-tilted/peak, azimuth mirror symmetry, monotonic fade, angle
+      tilt sign, elevation shift, extreme-pose clamp, determinism, CSS stop ordering).
+      Constants are the documented starting shape — §2.3's visual session matches the
+      WebGL export glass to these numbers (live ≈ export). typecheck + oxlint clean.
 - [ ] 2.2 Apply recess inner-shadow ring and sweep overlay to the DOM screen;
       pointer-events and inline editing unchanged
 - [ ] 2.3 Match the WebGL export glass params to the CSS sweep so live ≈ export;
