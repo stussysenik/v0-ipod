@@ -159,7 +159,7 @@ export default function IpodClassicWorkbench() {
 	const savedRingColors = model.savedColors.ring;
 	const savedCenterColors = model.savedColors.center;
 	const [isExportCapturing, setIsExportCapturing] = useState(false);
-	const [titleCanMarquee, setTitleCanMarquee] = useState(false);
+	const [_titleCanMarquee, setTitleCanMarquee] = useState(false);
 	// Single viewport subscription shared with the panel system (spec:
 	// stage-render-performance) — no bespoke resize listener here.
 	const viewportSize = useViewportSize();
@@ -483,7 +483,7 @@ export default function IpodClassicWorkbench() {
 			const result = await exportWorkbenchPng(exportTargetRef.current, {
 				filename,
 				backgroundColor: bgColor,
-				onStatusChange: (status) => {
+				onStatusChange: (_status) => {
 					// status handling
 				},
 				onProgressChange: (p) => {
@@ -501,7 +501,7 @@ export default function IpodClassicWorkbench() {
 			} else {
 				send({ type: "EXPORT_ERROR", payload: (result as any).error || "Export failed" });
 			}
-		} catch (error) {
+		} catch {
 			send({ type: "EXPORT_ERROR", payload: "Critical export error" });
 		} finally {
 			setIsExportCapturing(false);
@@ -547,7 +547,7 @@ export default function IpodClassicWorkbench() {
 				quality: animatedExportQuality,
 				layout: animatedExportLayout,
 				durationSeconds: animatedExportDurationSeconds,
-				onStatusChange: (status: any) => {
+				onStatusChange: (_status: any) => {
 					// status handling
 				},
 				onProgressChange: (p: ExportProgress) => {

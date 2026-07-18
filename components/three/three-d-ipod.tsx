@@ -2509,7 +2509,6 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 
 		const captureRef = useRef<((w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) | null>(null);
 		const frameCaptureRef = useRef<((w: number, h: number) => Promise<ImageBitmap | null>) | null>(null);
-		const modelResetRef = useRef<(() => void) | null>(null);
 		const canvasRef = useRef<HTMLCanvasElement | null>(null);
 		const captureHooksRef = useRef<CaptureHooks | null>(null);
 		const viewportRef = useRef<((w: number, h: number) => () => void) | null>(null);

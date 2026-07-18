@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
-import { deriveGasketColor, hexToHsl } from "@/lib/color-proximity";
+import { deriveGasketColor } from "@/lib/color-proximity";
 import { clsx, type ClassValue } from "clsx";
 import { ipodDeviceVariants } from "./ipod-device-variants";
 
@@ -36,7 +36,6 @@ export function IpodDevice({
 		: "0 16px 32px -20px rgba(0,0,0,0.45), 0 0 0 1px rgba(88,94,102,0.15), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.08)";
 
 	const gasketColor = deriveGasketColor(skinColor);
-	const gasketShadowOpacity = hexToHsl(skinColor).l < 0.45 ? "0.5" : "0.18";
 	const activeTheme = exportSafe ? captureTheme : liveTheme;
 
 	return (

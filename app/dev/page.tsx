@@ -2,7 +2,7 @@
 
 import { IpodClickWheel } from "@/components/ipod/controls/ipod-click-wheel";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 const { wheel } = getIpodClassicPreset("classic-2008-black");
 const w = wheel.size;
@@ -12,7 +12,6 @@ const wr = w / 2;
 const ring = wr - cr;
 
 // SVG proportions from Wikipedia IPv4_wheel.svg
-const svgCanvas = 512;
 const svgCenter = 256;
 const svgOuterR = 245;
 const svgInnerR = 90;

@@ -5,7 +5,6 @@ import { IpodDisplay } from "@/components/ipod/display/ipod-display";
 import { useIpodNowPlayingLayout } from "@/components/ipod/hooks/use-ipod-now-playing-layout";
 import { IpodMenuScene } from "@/components/ipod/scenes/ipod-menu-scene";
 import { IpodNowPlayingScene } from "@/components/ipod/scenes/ipod-now-playing-scene";
-import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import type { SongMetadata } from "@/types/ipod";
 import type {

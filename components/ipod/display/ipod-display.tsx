@@ -21,7 +21,6 @@ interface IpodDisplayProps {
 
 export function IpodDisplay({
 	preset,
-	skinColor,
 	exportSafe = false,
 	showOsMenu,
 	frameRef,

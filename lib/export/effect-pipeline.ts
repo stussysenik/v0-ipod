@@ -105,7 +105,7 @@ export const runExportPipeline = (
   options: ExportOptions
 ) => {
   return Effect.gen(function* (_) {
-    const env = yield* _(ExportEnv);
+    const _env = yield* _(ExportEnv);
     const capture = yield* _(CaptureService);
     
     const config = options.format === "mp4" ? MP4_QUALITY_CONFIG[options.quality] : GIF_QUALITY_CONFIG[options.quality];

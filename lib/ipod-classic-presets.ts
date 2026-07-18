@@ -1,7 +1,6 @@
 // iPod Classic 6th Generation Colors (from reference image)
 // Silver: Light anodized aluminum with light wheel
 // Black: Deep black with dark wheel
-import { getRevisionNotes } from "./ipod-revision-data";
 import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR } from "./color-manifest";
 
 import type { IpodHardwarePresetId } from "@/types/ipod-state";

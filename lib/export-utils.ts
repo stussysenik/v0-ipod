@@ -2,17 +2,11 @@ import { toBlob, toPng, toCanvas } from "html-to-image";
 
 import {
 	planExportDelivery,
-	resolveMobileExportDelivery,
 	type ExportCapabilities,
 } from "@/lib/export-delivery";
 import {
-	DEFAULT_GIF_EXPORT_FPS,
-	DEFAULT_MP4_EXPORT_FPS,
-	GIF_CAPTURE_SCALE_BALANCED,
-	GIF_CAPTURE_SCALE_HIGH,
 	MAX_GIF_FRAME_COUNT,
 	MAX_MP4_FRAME_COUNT,
-	MP4_BITRATE_BITS_PER_SECOND,
 	GIF_QUALITY_CONFIG,
 	MP4_QUALITY_CONFIG,
 	buildAnimatedExportPlan,
@@ -25,7 +19,6 @@ import type {
 	EncoderWorkerResponse,
 } from "@/lib/export/export-encoder-protocol";
 import {
-	resolveMp4ExportStrategy,
 	resolveSupportedMp4EncoderConfig,
 } from "@/lib/export/mp4-support";
 import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@/lib/marquee";
@@ -55,9 +48,6 @@ const EXPORT_ATTRIBUTE = "data-exporting";
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
 const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v3";
 const GIF_DELAY_QUANTUM_MS = 10;
-const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.18)";
-const EXPORT_SHELL_CONTOUR =
-	"0 0 0 0.5px rgba(70,76,84,0.06), inset 0 0.5px 0 rgba(255,255,255,0.12)";
 
 type NextDataWindow = Window & {
 	__NEXT_DATA__?: {
@@ -290,8 +280,8 @@ export function createDetachedExportNode(
 }
 
 function sanitizeDetachedCloneForCapture(
-	clone: HTMLElement,
-	options?: {
+	_clone: HTMLElement,
+	_options?: {
 		constrainedFrame?: boolean;
 	},
 ): void {
@@ -795,40 +785,6 @@ function supportsInlinePreview(mimeType: string): boolean {
 	return mimeType.startsWith("image/") || mimeType.startsWith("video/");
 }
 
-function getMobilePromptCopy(
-	filename: string,
-	mimeType: string,
-	capabilities: ExportCapabilities,
-) {
-	if (capabilities.canShareFiles) {
-		return {
-			title: "File ready",
-			detail: `Tap Share / Save to hand off ${filename} to your device.`,
-		};
-	}
-
-	if (capabilities.canSaveWithPicker) {
-		return {
-			title: "File ready",
-			detail: `Tap Save to choose where ${filename} should go on your device.`,
-		};
-	}
-
-	if (mimeType.startsWith("image/")) {
-		return {
-			title: "Image ready",
-			detail:
-				"Long-press the preview and choose Save Image if your browser does not show a save action.",
-		};
-	}
-
-	return {
-		title: "File ready",
-		detail:
-			"Open the file, then use your browser's share or download controls to save it.",
-	};
-}
-
 async function saveBlobWithPicker(
 	blob: Blob,
 	filename: string,
@@ -864,7 +820,6 @@ async function presentMobileExportPrompt(
 	const { filename, mimeType, capabilities } = options;
 	const shareNavigator = navigator as ShareCapableNavigator;
 	const objectUrl = URL.createObjectURL(blob);
-	const copy = getMobilePromptCopy(filename, mimeType, capabilities);
 
 	return new Promise((resolve, reject) => {
 		let settled = false;
@@ -904,16 +859,6 @@ async function presentMobileExportPrompt(
 
 		const setDetail = (message: string) => {
 			detail.textContent = message;
-		};
-
-		const createButton = (label: string) => {
-			const button = document.createElement("button");
-			button.type = "button";
-			button.textContent = label;
-			button.style.cssText =
-				"border:0;border-radius:999px;padding:12px 16px;background:#111827;color:#fff;" +
-				"font:600 14px/1.2 system-ui,sans-serif;cursor:pointer";
-			return button;
 		};
 
 		overlay.style.cssText =
@@ -1497,7 +1442,6 @@ export async function exportAnimatedGif(
 	const captureScale = config.scale;
     // ... rest of implementation stays similar but uses config ...
 	const capabilities = detectExportCapabilities();
-	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
@@ -1851,7 +1795,6 @@ export async function exportAnimatedMp4(
 	const bitrate = config.bitrate;
 
 	const capabilities = detectExportCapabilities();
-	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
@@ -2221,7 +2164,6 @@ export async function exportImage(
 		onProgressChange,
 	} = options;
 	const capabilities = detectExportCapabilities();
-	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);

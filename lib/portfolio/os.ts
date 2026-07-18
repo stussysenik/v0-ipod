@@ -22,7 +22,6 @@ import {
 	cv,
 	hiringTracks,
 	labs,
-	nowLines,
 	processPhases,
 	profile,
 	projects,

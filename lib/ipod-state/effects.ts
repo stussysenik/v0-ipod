@@ -251,7 +251,7 @@ export async function exportWorkbenchMp4(
 	},
 ) {
 	const { runExportPipeline } = await import("@/lib/export/effect-pipeline");
-	const { Effect, Runtime } = await import("effect");
+	const { Effect } = await import("effect");
 
 	const program = runExportPipeline(element, {
 		filename: options.filename,
