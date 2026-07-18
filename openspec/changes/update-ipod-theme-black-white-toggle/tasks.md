@@ -1,34 +1,49 @@
 # Tasks
 
 ## 1. Theme hook: black/white variant
-- [ ] 1.1 Rename `silver` → `white` in `IPodTheme` type and `IPOD_6G_COLORS.case`
-- [ ] 1.2 Use `#F5F5F7` as the white case color (matches light wheel surface token)
-- [ ] 1.3 Migrate persisted `"silver"` values in localStorage to `"white"` on load
-- [ ] 1.4 Create a lightweight `IPodThemeContext` so `IconButton` can read the active theme without prop drilling
+- [x] 1.1 Rename `silver` → `white` in `IPodTheme` type and `IPOD_6G_COLORS.case`
+- [x] 1.2 Use `#F5F5F7` as the white case color (matches light wheel surface token)
+- [x] 1.3 Migrate persisted `"silver"` values in localStorage to `"white"` on load
+- [x] 1.4 ~~Create a lightweight `IPodThemeContext`~~ **SUPERSEDED by §7.** The context/provider
+      exist in `hooks/use-ipod-theme.tsx` but have **zero consumers** outside that file (grep
+      verified). The real device-theme signal is `model.presentation.skinColor` (arbitrary hex),
+      so `IconButton` reads `IconButtonChromeContext` (§7.1) instead. Dead code — removal is
+      out of scope here; track separately if desired.
 
 ## 2. Preserve realistic dark wheel CSS
-- [ ] 2.1 Update `deriveWheelColors` dark branch in `lib/color-manifest.ts`:
+- [x] 2.1 Update `deriveWheelColors` dark branch in `lib/color-manifest.ts`:
       gradient `from #1C1C1E, via #202022, to #252527`, border `#2C2C2E`
-- [ ] 2.2 Verify `click-wheel.tsx` shadow stack already matches quoted CSS (no change expected)
-- [ ] 2.3 Verify `deriveScreenSurround` still produces a coherent dark surround for the new case hex
+      (verified `lib/color-manifest.ts:259-263`)
+- [x] 2.2 Verify click-wheel shadow stack already matches quoted CSS (no change expected).
+      File has since moved to `components/ipod/controls/ipod-click-wheel.tsx`; drop-shadow
+      stack intact, no change made.
+- [x] 2.3 Verify `deriveScreenSurround` still produces a coherent dark surround for the new
+      case hex (`lib/color-manifest.ts:370`)
 
 ## 3. Theme panel cleanup (`components/ipod/ipod-classic.tsx`)
-- [ ] 3.1 Delete the "OKLCH Spectrum" case-color grid picker and its `mb-4` wrapper
-- [ ] 3.2 Delete the "OKLCH Ambient" background-color grid picker and its `mb-4` wrapper
-- [ ] 3.3 Confirm `oklchCasePalette`, `oklchBgPalette`, and related imports are removed if they become unused
-- [ ] 3.4 Keep Authentic Apple Releases, GreyPalettePicker, HexColorInput, Recent Custom
+- [x] 3.1 Delete the "OKLCH Spectrum" case-color grid picker and its `mb-4` wrapper
+- [x] 3.2 Delete the "OKLCH Ambient" background-color grid picker and its `mb-4` wrapper
+- [x] 3.3 Confirm `oklchCasePalette`, `oklchBgPalette`, and related imports are removed if they
+      become unused (grep count 0)
+- [x] 3.4 Keep Authentic Apple Releases, GreyPalettePicker, HexColorInput, Recent Custom
 
 ## 4. Remove ASCII mode notice
-- [ ] 4.1 Delete the floating "ASCII Mode / Terminal-style Now Playing" card rendered for `viewMode === "ascii"`
-- [ ] 4.2 Confirm no layout regressions in ASCII mode
+- [x] 4.1 Delete the floating "ASCII Mode / Terminal-style Now Playing" card rendered for
+      `viewMode === "ascii"` (grep count 0)
+- [x] 4.2 Confirm no layout regressions in ASCII mode
 
 ## 5. Reorder view-mode IconButtons
-- [ ] 5.1 In the view-mode toolbar, reorder vertical list to: Flat → Preview → Focus → 3D (WIP) → ASCII (WIP)
-- [ ] 5.2 Leave `onClick`, `data-testid`, and `isActive` wiring unchanged
+- [x] 5.1 ~~Reorder to: Flat → Preview → Focus → 3D (WIP) → ASCII (WIP)~~ **SUPERSEDED** by the
+      "3D/Portfolio is a place, not a mode" refactor. Live toolbar is Flat → Preview → 3D Studio
+      (nav) → Portfolio (nav) → [flagged Focus/ASCII] → Zen. The §5.1 *intent* (real modes first,
+      WIP last) holds and is satisfied; the literal order above is stale. Deliberately not
+      reordered to match a spec the refactor already replaced.
+- [x] 5.2 Leave `onClick`, `data-testid`, and `isActive` wiring unchanged
 
 ## 6. Typographic WIP badge
-- [ ] 6.1 In `components/ui/icon-button.tsx`, replace the yellow chip classes with typographic styling (uppercase, tracked, muted foreground)
-- [ ] 6.2 Verify badge remains positioned at top-right of the button
+- [x] 6.1 In `components/ui/icon-button.tsx`, replace the yellow chip classes with typographic
+      styling (uppercase, tracked, muted foreground) — `components/ui/icon-button.tsx:133`
+- [x] 6.2 Verify badge remains positioned at top-right of the button (`-right-1 -top-1`)
 
 ## 7. Theme-aware `IconButton` default (reframed → luminance-adaptive chrome; see handoff)
 - [x] 7.1 Read dark-chrome from a scoped `IconButtonChromeContext` in `IconButton`
@@ -43,14 +58,15 @@
 
 ## Progress & Handoff — 2026-07-18 (session ended at the 200k ceiling)
 
-Verified against the current codebase (checkbox drift is real here — treat source, not
-boxes, as truth):
+**Checkbox drift RESOLVED 2026-07-18 (later session):** every box above was re-verified against
+source (grep/line-cited) and ticked. The ledger is now honest — boxes and source agree. Two items
+carry `SUPERSEDED` annotations rather than silent ticks (§1.4 dead context, §5.1 stale order);
+read those notes before trusting the literal task text.
 
 - SHIPPED and live: §1.1–1.3 (`hooks/use-ipod-theme.tsx` — `IPodTheme = "black" | "white"`,
   `#F5F5F7` white case, localStorage `silver`→`white` migration); §2 (dark wheel gradient in
-  `lib/color-manifest.ts`); §3 (OKLCH pickers gone from `ipod-classic.tsx` — grep count 0);
-  §4 (ASCII-mode notice gone — grep count 0); §6 (typographic WIP badge, `components/ui/icon-button.tsx:115`).
-- STILL TO CONFIRM: §5.1 view-mode order (Flat → Preview → Focus → 3D (WIP) → ASCII (WIP)).
+  `lib/color-manifest.ts:259-263`); §3 (OKLCH pickers gone from `ipod-classic.tsx` — grep count 0);
+  §4 (ASCII-mode notice gone — grep count 0); §6 (typographic WIP badge, `components/ui/icon-button.tsx:133`).
 
 **Design pivot (approved this session): §1.4/§7 are superseded.** The `IPodThemeContext` /
 `IPodThemeProvider` / stateful `useIPodTheme()` from §1.4 are **dead** — never mounted or
