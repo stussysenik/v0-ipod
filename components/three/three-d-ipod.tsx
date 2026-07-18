@@ -23,6 +23,7 @@ import * as THREE from "three";
 
 import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { deriveWheelColors, relativeLuminance } from "@/lib/color-manifest";
+import { DEVICE_CHROME } from "@/lib/device-chrome";
 import { resolveFinishMaterial } from "@/lib/finish-material-table";
 import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@/lib/screen-bake-guard";
 import { ColorResolvePass } from "@/lib/three-color-resolve";
@@ -473,10 +474,10 @@ const MECHANICAL = {
 	portRecessLift: 0.002,
 } as const;
 
-/** Matte opening of a machined port recess — near-black, light-absorbing. */
-const PORT_RECESS_COLOR = "#0a0b0c";
-/** The hold switch's slider, the one bright part seated inside its slot. */
-const PORT_SLIDER_COLOR = "#c9cdd1";
+/** Matte opening of a machined port recess — near-black, light-absorbing (§0.3, manifest-routed). */
+const PORT_RECESS_COLOR = DEVICE_CHROME.portRecess;
+/** The hold switch's slider, the one bright part seated inside its slot (§0.3, manifest-routed). */
+const PORT_SLIDER_COLOR = DEVICE_CHROME.portSlider;
 
 // ─── Z-Layer Stack (datum-referenced) ──────────────────────────────────────────────
 
@@ -512,7 +513,7 @@ function createBrushedMetalTexture(): THREE.CanvasTexture {
 	canvas.height = size;
 	const ctx = canvas.getContext("2d")!;
 
-	ctx.fillStyle = "#7c7c7c";
+	ctx.fillStyle = DEVICE_CHROME.brushedBase;
 	ctx.fillRect(0, 0, size, size);
 
 	// Directional anodized grain
@@ -682,7 +683,7 @@ function useLcdShader() {
 		return new THREE.ShaderMaterial({
 			uniforms: {
 				time: { value: 0 },
-				color: { value: new THREE.Color("#c8d4c0") },
+				color: { value: new THREE.Color(DEVICE_CHROME.lcdTint) },
 				brightness: { value: 0.78 },
 			},
 			vertexShader: /* glsl */ `
@@ -711,7 +712,7 @@ function useLcdShader() {
 
 // ─── Screen Bezel ────────────────────────────────────────────────────────────────
 
-function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; color?: string }) {
+function ScreenBezel({ dims, z, color = DEVICE_CHROME.bezel }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; color?: string }) {
 	const flat = useTechnicalFlat();
 	const bezelGeo = useMemo(() => {
 		// Concentric with the screen: the mask extends a fixed reveal beyond the
@@ -1026,7 +1027,7 @@ function IpodBack({ dims, z, capacityLabel, envIntensity = 1 }: { dims: Ipod3DDi
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, stageColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, envIntensity = 1, onRegisterCapture }: IpodModelProps) {
+function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, stageColor, backColor = "#cfd3d7", edgeColor, bezelColor = DEVICE_CHROME.bezel, capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, envIntensity = 1, onRegisterCapture }: IpodModelProps) {
 	// Edge defaults to the back colour so an un-edited device is pixel-identical
 	// to the single-material chassis (edge == back until the user sets it).
 	const resolvedEdgeColor = edgeColor ?? backColor;

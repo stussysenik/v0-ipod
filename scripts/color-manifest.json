@@ -327,6 +327,36 @@
 			"hex": "#FFFFFF",
 			"role": "screen-content",
 			"family": "neutral"
+		},
+		"device.port.recess": {
+			"hex": "#0a0b0c",
+			"role": "device-chrome",
+			"family": "black",
+			"note": "Matte machined port recess — near-black, light-absorbing"
+		},
+		"device.port.slider": {
+			"hex": "#c9cdd1",
+			"role": "device-chrome",
+			"family": "silver",
+			"note": "Hold-switch slider — the bright part seated in its slot"
+		},
+		"device.bezel": {
+			"hex": "#0a0a0a",
+			"role": "device-chrome",
+			"family": "black",
+			"note": "Screen bezel default surround"
+		},
+		"device.lcd.tint": {
+			"hex": "#c8d4c0",
+			"role": "device-chrome",
+			"family": "green",
+			"note": "LCD glass tint uniform (backlit panel cast)"
+		},
+		"device.brushed.base": {
+			"hex": "#7c7c7c",
+			"role": "device-chrome",
+			"family": "silver",
+			"note": "Procedural brushed-metal base grey (anodized grain seed)"
 		}
 	},
 

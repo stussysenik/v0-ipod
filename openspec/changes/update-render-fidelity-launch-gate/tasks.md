@@ -32,9 +32,21 @@
       Keep `toneMapped={false}` on the WYSIWYG surfaces (stage backdrop, baked screen).
       Rebalance rig intensities against the new shoulder; confirm live ≈ export on a dark
       and a mid finish.
-- [ ] 0.3 Centralize the device-render color path: audit (ast-grep) for hardcoded
+- [x] 0.3 Centralize the device-render color path: audit (ast-grep) for hardcoded
       hex in material definitions, route survivors through the manifest resolve,
-      add the coverage guard test
+      add the coverage guard test. DONE: the audit classified 15 hex hits into
+      comment/doc noise, procedural non-finish chrome, and the true-`#000000`/
+      `#ffffff` WYSIWYG sentinels (kept literal on purpose). The five genuine
+      device-chrome survivors — port recess (`#0a0b0c`), hold-switch slider
+      (`#c9cdd1`), screen bezel (`#0a0a0a`), LCD glass tint (`#c8d4c0`), brushed-
+      metal base grey (`#7c7c7c`) — are now `device.*` surface tokens in the
+      manifest, resolved through a single DOP module `lib/device-chrome.ts`
+      (`DEVICE_CHROME` / `deviceChromeColor`), and `three-d-ipod.tsx` reads them
+      from there (no inline hex left). Coverage guard `lib/device-chrome.test.ts`
+      (4 tests) asserts every token resolves from a real manifest entry (never the
+      `#808080` fallback), that the routed hex no longer appear as quoted literals
+      in the mesh source, and that the WYSIWYG sentinels stay untokenized. Green +
+      `tsc --noEmit` clean + `oxlint` 0/0.
 
 ## 1. Kill the seam (screen artifacts)
 
