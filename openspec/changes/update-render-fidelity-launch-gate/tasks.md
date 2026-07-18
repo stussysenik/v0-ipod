@@ -66,8 +66,14 @@
       sharpens roughness while holding a fixed `SEPARATION_EPSILON` 0.06 gap
       (wheel ‹ ring ‹ face) at every luminance. 33/33 across the full manifest corpus,
       red-probed (legacy flat 0.16/equal-roughness → 48 failing).
-- [ ] 3.2 Wire the table into `three-d-ipod.tsx` materials (replace the hardcoded
-      per-part constants); typecheck + oxlint clean
+- [x] 3.2 Wire the table into `three-d-ipod.tsx` materials (replace the hardcoded
+      per-part constants); typecheck + oxlint clean. DONE: `resolveFinishMaterial`
+      drives the three lit specular parts — touch ring (`ringMat`), select button
+      (`selectMat`), anodized face (`faceMat`) — each keyed on its own rendered
+      colour luminance, replacing the flat 0.16/0.18 envMapIntensity + fixed
+      roughness constants with the floor + dark-lift response. `roughnessMap` on the
+      face is kept (scalar swap only). typecheck + oxlint clean; 572 unit tests green.
+      Visual confirmation of the darks-clear-the-void behaviour rides the §6.2 session.
 
 ## 4. Per-pose light compositions
 

@@ -23,6 +23,7 @@ import * as THREE from "three";
 
 import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { deriveWheelColors, relativeLuminance } from "@/lib/color-manifest";
+import { resolveFinishMaterial } from "@/lib/finish-material-table";
 import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@/lib/screen-bake-guard";
 import { ColorResolvePass } from "@/lib/three-color-resolve";
 import { clampCaptureTarget, MOBILE_MAX_LONG_EDGE } from "@/lib/export-target";
@@ -797,6 +798,19 @@ function ClickWheel3D({
 		[centerColor, wheelColors.centerGradient.via],
 	);
 
+	// §3.2 — per-part material response comes from the finish table (env-response
+	// floor + dark-lift so a black wheel stops reading as a void), keyed on each
+	// part's own rendered colour luminance. The scalars below replace the former
+	// flat 0.16 envMapIntensity / fixed roughness constants.
+	const ringMat = useMemo(
+		() => resolveFinishMaterial(`#${ringPlastic.getHexString()}`, "ring"),
+		[ringPlastic],
+	);
+	const selectMat = useMemo(
+		() => resolveFinishMaterial(`#${centerPlastic.getHexString()}`, "wheel"),
+		[centerPlastic],
+	);
+
 	return (
 		<group position={[0, dims.wheelCenterY, 0]}>
 			{/* Wheel well floor — backs the whole bore so the body never peeks
@@ -828,12 +842,12 @@ function ClickWheel3D({
 					<FlatFinish color={ringPlastic} />
 				) : (
 					<meshPhysicalMaterial
-						clearcoat={0.15}
-						clearcoatRoughness={0.7}
+						clearcoat={ringMat.clearcoat}
+						clearcoatRoughness={ringMat.clearcoatRoughness}
 						color={ringPlastic}
-						envMapIntensity={0.16}
-						metalness={0.0}
-						roughness={0.55}
+						envMapIntensity={ringMat.envMapIntensity}
+						metalness={ringMat.metalness}
+						roughness={ringMat.roughness}
 					/>
 				)}
 			</mesh>
@@ -846,12 +860,12 @@ function ClickWheel3D({
 					<FlatFinish color={centerPlastic} />
 				) : (
 					<meshPhysicalMaterial
-						clearcoat={0.15}
-						clearcoatRoughness={0.62}
+						clearcoat={selectMat.clearcoat}
+						clearcoatRoughness={selectMat.clearcoatRoughness}
 						color={centerPlastic}
-						envMapIntensity={0.16}
-						metalness={0.0}
-						roughness={0.52}
+						envMapIntensity={selectMat.envMapIntensity}
+						metalness={selectMat.metalness}
+						roughness={selectMat.roughness}
 					/>
 				)}
 			</mesh>
@@ -1052,6 +1066,9 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, s
 		[lcdMaterial],
 	);
 	const brushedTexture = useMemo(() => createBrushedMetalTexture(), []);
+	// §3.2 — anodized face response from the finish table (env floor + dark-lift),
+	// keyed on the chosen skin colour. Replaces the former flat 0.18 env / 0.52 rough.
+	const faceMat = useMemo(() => resolveFinishMaterial(skinColor, "face"), [skinColor]);
 	const dims = useMemo(() => deriveIpod3DDimensions(preset), [preset]);
 	const z = useMemo(() => zLayers(dims.depth), [dims.depth]);
 
@@ -1452,12 +1469,12 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, s
 							<FlatFinish color={skinColor} />
 						) : (
 							<meshPhysicalMaterial
-								clearcoat={0.08}
-								clearcoatRoughness={0.55}
+								clearcoat={faceMat.clearcoat}
+								clearcoatRoughness={faceMat.clearcoatRoughness}
 								color={skinColor}
-								envMapIntensity={0.18}
-								metalness={0.08}
-								roughness={0.52}
+								envMapIntensity={faceMat.envMapIntensity}
+								metalness={faceMat.metalness}
+								roughness={faceMat.roughness}
 								roughnessMap={brushedTexture}
 							/>
 						)}
