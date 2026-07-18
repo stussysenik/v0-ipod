@@ -112,8 +112,19 @@
       fine-tunes the exact panels visually under the final colour transform.
 - [ ] 4.2 Shape the hero ¾, front, and back compositions in reflection space
       (chamfer rake / glass strip / horizon card); dials remain the override layer
-- [ ] 4.3 Surface the active composition in the lighting cockpit (read-only name +
-      reset-to-composition), reusing existing cockpit controls
+- [x] 4.3 Surface the active composition in the lighting cockpit (read-only name +
+      reset-to-composition), reusing existing cockpit controls. DONE: the lighting cockpit
+      polls the live camera handle (`getCameraPose`, 150ms, id-only `setState` so it
+      re-renders only when the framing crosses a named pose — the camera cockpit's poll
+      pattern), derives the active composition via `matchNamedPose → selectPoseComposition`,
+      and renders a read-only "Composition · <name>" row with a "Reset to composition"
+      button. Reset dispatches the existing `SET_LIGHTING` action with
+      `composeRigForPose(lighting, poseId)` — no new reducer verb — so the pose's reflected
+      softbox panels reapply over the current dials (dials stay the override layer, §4.1).
+      Row hides on free orbit / an unnamed pose. Both underlying fns are already red/green
+      tested (`composeRigForPose` 17 specs, `selectPoseComposition`/`matchNamedPose` covered);
+      the wiring is React glue verified by typecheck + `oxlint` 0-error + 594/594 unit green.
+      The composition-name readout's visual placement rides the §6.2 session.
 
 ## 5. Line-quality audit
 

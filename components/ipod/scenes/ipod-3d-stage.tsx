@@ -940,6 +940,7 @@ export function Ipod3DStage() {
 						index={6}
 						studio={studio}
 						dispatch={dispatch}
+						apiRef={ipodApiRef}
 						backRoughness={backRoughness}
 						onBackRoughnessChange={setBackRoughness}
 					/>

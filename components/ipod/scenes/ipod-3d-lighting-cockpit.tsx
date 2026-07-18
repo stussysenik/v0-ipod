@@ -1,13 +1,17 @@
 "use client";
 
-import { type Dispatch } from "react";
+import { type Dispatch, useEffect, useState } from "react";
 
+import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import type { IpodStudioState } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
+import { matchNamedPose } from "@/lib/studio-camera-poses";
 import {
 	ENVIRONMENT_PRESETS,
 	RIG_PRESETS,
 	cloneLightingConfig,
+	composeRigForPose,
+	selectPoseComposition,
 	type EnvironmentPreset,
 	type SpotRole,
 	type SpotSpec,
@@ -41,6 +45,8 @@ interface Ipod3DLightingCockpitProps {
 	/** Dev "Back finish" dial — polished-back roughness (mirror ↔ brushed). */
 	backRoughness?: number;
 	onBackRoughnessChange?: (value: number) => void;
+	/** Live camera handle — polled to surface the active pose's light composition. */
+	apiRef: React.MutableRefObject<ThreeDIpodHandle | null>;
 }
 
 /** The crawl-safe shipped default for the polished back (mirrors STEEL_ROUGHNESS_FLOOR). */
@@ -57,6 +63,7 @@ export function Ipod3DLightingCockpit({
 	index,
 	studio,
 	dispatch,
+	apiRef,
 	backRoughness = BACK_FINISH_DEFAULT,
 	onBackRoughnessChange,
 }: Ipod3DLightingCockpitProps) {
@@ -65,6 +72,22 @@ export function Ipod3DLightingCockpit({
 
 	// The named rig this config is based on — the source of truth for per-section "reset".
 	const defaults = RIG_PRESETS.find((p) => p.config.name === lighting.name)?.config ?? RIG_PRESETS[0].config;
+
+	// Mirror the live camera's named pose (polled; id-only so the panel re-renders only
+	// when the pose crosses into/out of a named framing). The pose is owned imperatively
+	// by OrbitRig — there is no reducer state to read, so we poll the handle like the
+	// camera cockpit does. `null` = free orbit / unknown = the rig's own softboxes.
+	const [activePoseId, setActivePoseId] = useState<string | null>(null);
+	useEffect(() => {
+		const id = window.setInterval(() => {
+			const next = matchNamedPose(apiRef.current?.getCameraPose() ?? null)?.id ?? null;
+			setActivePoseId((prev) => (prev === next ? prev : next));
+		}, 150);
+		return () => window.clearInterval(id);
+	}, [apiRef]);
+
+	// The shaped light composition this pose sits on (null on free orbit / unknown).
+	const composition = selectPoseComposition(activePoseId);
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -247,6 +270,23 @@ export function Ipod3DLightingCockpit({
 					/>
 				))}
 			</div>
+
+			{/* Active pose composition — the shaped softbox panels this framing sits on.
+			    Read-only name + a one-tap reset that reapplies the pose's reflected panels
+			    over the current dials (dials stay the override layer, per §4.1). Hidden on
+			    free orbit / an unnamed pose, where there is no composition to reset to. */}
+			{composition && (
+				<div className="flex items-center justify-between border-t border-black/[0.06] px-3.5 py-2.5">
+					<span className="text-[10px] font-medium text-black/35">Composition · {composition.name}</span>
+					<button
+						type="button"
+						onClick={() => dispatch({ type: "SET_LIGHTING", payload: composeRigForPose(lighting, activePoseId) })}
+						className="text-[11px] font-medium text-black/55 transition-colors hover:text-black"
+					>
+						Reset to composition
+					</button>
+				</div>
+			)}
 
 			{/* Reset to the named default rig */}
 			<div className="flex items-center justify-between border-t border-black/[0.06] px-3.5 py-2.5">
