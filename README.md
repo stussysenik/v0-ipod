@@ -602,6 +602,288 @@ detail:
 
 ---
 
+## 🗓️ Build Log
+
+A dated record of what actually shipped, oldest first. **This section is
+append-only** — never rewrite or delete a past entry, even when a later date
+reverses the decision. A reversal is itself a fact worth recording, and the
+value of this log is that it stays honest about the path rather than tidying
+it into a story that was never true.
+
+**Convention for new entries:** add a `### YYYY-MM-DD` heading at the bottom of
+the current month, one line naming the theme, then bullets for the substantive
+work. Cosmetic churn can be summarized in aggregate; anything that changed
+behavior, deleted a capability, or reversed an earlier decision gets its own
+bullet.
+
+`246 commits · 2026-01-05 → 2026-07-18`
+
+---
+
+### January 2026 — the 2D device
+
+**2026-01-05** — Repository initialized; the 2D iPod reaches a finished state.
+Draft passes on the shell, plus the dash detail on song length.
+
+**2026-01-17** — Editable track number, and the first E2E testing infrastructure.
+
+**2026-01-18** — First pass at export.
+
+**2026-01-19** — PWA support for home-screen installation; visual pass.
+
+**2026-01-20** — Export becomes predictable: context-aware button labels, and the
+3D model resets to front-facing before capture so exports stop depending on
+whatever angle the user happened to leave behind.
+
+---
+
+### February 2026 — export stops lying
+
+The month export went from "usually works" to deterministic. Most of the 23
+commits on the 18th are one problem: the exported image did not match the screen.
+
+**2026-02-18** — Mobile-first interaction and export flow stabilized; E2E coverage
+across desktop and mobile. Then the export campaign:
+- Blank-export detection with an `html2canvas` fallback.
+- Deterministic detached capture with export-safe shadows.
+- Three compositing artifacts chased in sequence — border-radius on the wrapper,
+  unbaked `bgColor`, and reduced export shadows — each fixed independently.
+- Stale deployed artwork traced to cache behavior; `vercel.json` plus
+  cache-busting headers and a forced clean `.next` build per deploy.
+- iOS Safari stopped opening a dead popup tab.
+- Tooling: ESLint flat config, Prettier, and a `ui/ipod/three` component split.
+- Hydration-safe `localStorage` persistence for song metadata.
+
+**2026-02-20** — Cross-platform editing input unified; collapsible mobile toolbox;
+export frame constrained; incremental export IDs.
+
+---
+
+### March 2026 — motion formats
+
+**2026-03-03** — Professional README with badges.
+
+**2026-03-09** — Color picker refactored to inline native inputs, hex editor, and
+an eyedropper.
+
+**2026-03-10** — Editing flow and test tooling updated.
+
+**2026-03-11** — Marquee preview and GIF export land.
+
+**2026-03-12** — Unified export preview with a recording fallback.
+
+**2026-03-13** — npm lockfile removed to stop Next.js corruption; marquee
+converted to single-pass scrolling.
+
+**2026-03-14** — OKLCH grey palette, ASCII mode, and GIF export merged to main.
+
+---
+
+### April 2026 — the engineering foundation
+
+**2026-04-01** — Demo GIF added and embedded.
+
+**2026-04-03** — iPod Classic preset state and export fidelity.
+
+**2026-04-04** — Codebase structure reorganized.
+
+**2026-04-05** — RE:MIX polish and iPod-OS fidelity spec written, then rewritten
+using the agent-skills frameworks. Center-button click fixed; edit toggle on Now
+Playing.
+
+**2026-04-10** — Menu button behavior unified across interaction models; museum
+fidelity mode added.
+
+**2026-04-13** — Portless dev by default, with an auto free-port probe.
+
+**2026-04-14** — The full design-engineering stack: Storybook, Figma bridge,
+tokens, CI, hooks — plus the C1 research and spec for atomic foundations.
+
+**2026-04-15** — Ten commits paying down the CI the previous day created: ESLint 10
+crash, test-runner confusion, TruffleHog `BASE==HEAD`, full-history fetch for
+secret scanning, Storybook built and served for E2E smoke tests, and E2E failures
+resolved across suites. `semantic-release` added with changelog and GitHub
+release plugins.
+
+**2026-04-22** — iPod OS Original option in the UI; stray shadow and text-bubble
+opacity cleanup.
+
+**2026-04-29** — Sixteen commits consolidating the architecture. Bun and oxlint
+adopted as defaults; the workbench split into assembly state modules; a local
+design-system foundation established; component taxonomy finalized; the committed
+Playwright harness removed as a breaking change; two long-lived branches
+(`classic-museum-fidelity`, upstream `main`) reconciled.
+
+**2026-04-30** — Extra progress handle removed.
+
+---
+
+### May 2026 — hardware fidelity, to the millimeter
+
+The month the device stopped looking like a drawing of an iPod.
+
+**2026-05-01 – 05-02** — Animated export workflow; pipelined optimization; battery
+discharge cycle integrated into the state orchestrator.
+
+**2026-05-08** — Archive backup before desktop cleanup.
+
+**2026-05-09** — Organic seamless marquee with staggered registration and
+high-fidelity edge fade. Export extended to 60s and tuned for Instagram
+(30FPS, 24Mbps, 1080p). Quality and layout choices added to the export dialog.
+Device form realism and hardware proportions refined.
+
+**2026-05-10** — Shell chamfer, artwork reflection, click-wheel material system
+with case-coherent lighting. Wheel labels repositioned toward the outer radius to
+match original proportions — the methodology written up in this README. Package
+manager migrated bun → pnpm. Nix dev shell repaired; `forgit` and `gh-repo-fzf`
+added. Precise 3D glass battery geometry.
+
+**2026-05-11** — Twenty-one commits of sub-pixel calibration. Authentic 6th-gen
+proportions restored via a mathematical radius relationship. The dent design
+system finalized (concave center button, flat display frame, stripped wheel
+overlays) with shadow ratios proportional to `centerSize` so it scales across
+presets. Progress-bar alignment iterated to symmetric padding. Cold digital
+blacks replaced with warm organic darks. Optional UI gated behind feature flags,
+keeping only 6th-gen Black as default.
+
+**2026-05-15** — Inner ring color control; snapshot UI cleanup; hex input
+click-to-focus.
+
+**2026-05-18** — Adaptive gasket, product-angle export camera, responsive lock,
+and **CIEDE2000 shade proximity** — the first appearance of the perceptual color
+metric this project keeps returning to. Assembly clipping on small viewports
+fixed by aligning scale reserve with container constraints.
+
+**2026-05-24** — Architecture evolution: UnoCSS, XState, CVA, Vanilla Extract,
+Effect.ts.
+
+**2026-05-25** — Mobile export routed through a prompt overlay for Cloudflare
+tunnel compatibility.
+
+---
+
+### June 2026 — the 3D studio
+
+**2026-06-06** — `/3d` ships: a focused R3F iPod render with CNC-correct geometry,
+black anodized aluminum material, and true click-wheel topology.
+
+**2026-06-07** — Export-pop studio scene, hero framing, lockable perspective, and
+the portfolio surface.
+
+**2026-06-08** — Eleven commits building the studio. WYSIWYG exports with absolute
+color fidelity; a framework-free studio lighting data model; the lighting cockpit;
+owned-finish guaranteeing clean exports across colour × motion, with a
+keyframe-diff harness pinning its invariants; curated looks and a
+compatible-shades randomizer; boomerang, speed, and motion-free Hold export.
+
+**2026-06-09** — Eleven commits on export correctness and IA. The export song clock
+driven by clip-time, then every export loop unified onto **one bake-time
+clip-clock**. Now Playing animates during clip exports. SSR hydration mismatch
+killed by rendering the studio client-only. Cockpits numbered and reordered into a
+shoot-pipeline IA; Lighting and Export decluttered via progressive disclosure.
+Multi-format colour input, combinations strip, independent edge colour. Mobile
+on-canvas touch camera controls. MKBHD-style robotic crane motion preset.
+
+**2026-06-10** — XState export machine landed with reliability and responsive
+guards; screen bakes guarded against blank `foreignObject` rasterizations;
+export-debugging session lessons captured.
+
+**2026-06-12** — Architecture-evolution conflicts resolved; portfolio, studio
+themes, and 3D stage refinements.
+
+**2026-06-13** — Ten commits. Face geometry **derived from Apple's mm drawing**
+with dimensional QC tests; wheel labels seated on the machined annulus midline
+with light-evidence QC; headphone jack, hold switch, and 30-pin dock modeled flush
+from the drawing. Theatre.js keyframe engine, with a pure sampler driving export
+as a parity oracle. Content-addressed proof cache and debounced editors. Stale
+E2E retargeted to current UI truth.
+
+**2026-06-16 – 06-17** — Floating tool panels and the ⌘K command palette, with
+mobile responsive stability. Colors and device Settings migrated into store-backed
+floating panels. Two-tier palette triage with a navigate action.
+
+**2026-06-24** — Center button reworked twice — first to read as a concave seat
+rather than a raised dome, then as a flat face cut by a recessed groove. Live
+self-discharging battery, and boot to the Shuffle Songs menu.
+
+**2026-06-26** — Eight commits: iPod feed browser, whitelabel embed, and the
+`/3d-portfolio` page; feed schema, nav state machine, and layout keepout zones;
+the portfolio feed surface and data layer; web-component package scaffold.
+
+**2026-06-27** — Range/selection invariant enforced at load and reset boundaries —
+two paths (`loadUiState`, `RESET_MODEL`) were bypassing normalization, letting a
+stale range resurrect after a hard refresh.
+
+**2026-06-29** — Styling engine migrated Tailwind → UnoCSS. Native canvas camera
+gestures with zoom-out default. **`deriveOwnedRig` removed**: studio lighting
+becomes a pure function of the rig dials, never reshaped by device or stage
+colours, so the export fingerprint fully determines the rig. Deterministic studio
+control language, plus a hydration-race desync fix — restore moved to a pre-paint
+isomorphic layout effect so edits landing during the restore window are no longer
+wiped.
+
+---
+
+### July 2026 — reachability, colour authority, and the spec ledger
+
+**2026-07-03** — PostHog provider with semantic 3D events; opt-in `?perf` StatsGl
+HUD. Finish-customizer-experience proposed.
+
+**2026-07-14** — Fourteen commits, and the month's most consequential finding.
+The app shipped with **exactly two navigation edges** (`/ ⇄ /3d`): `/portfolio`,
+`/3d-portfolio`, and `/whitelabel` had no inbound link and no way back. Every
+per-page test had passed the whole time — they are structurally blind to the
+difference between a page that renders and a page a visitor can *find*. The fix
+made the graph data (`SURFACE_EDGES` in `lib/nav/routes.ts`) so a BFS test could
+assert reachability; reverted against the old graph it fails naming both orphans.
+Also: the eleven canonical works derived from `data.ts` (they had linked
+nowhere); the device-is-product cut removing chrome around the device; unified
+camera pose model with six angle presets; machined corner radius replacing
+stadium pills; "one tap back to factory" made testable; the unfurl card became a
+render rather than a screenshot; and the deployed app was caught calling the
+visitor's own localhost.
+
+**2026-07-17** — The Khronos **Neutral display transform** ported as the shared
+colour authority (§0.1).
+
+**2026-07-18** — Twenty commits across render fidelity, export reliability, and
+spec hygiene.
+- **Colour:** CPU Neutral port pinned against three.js GLSL as the parity anchor
+  (§0.2a). Device-chrome hex routed through the manifest (§0.3) — five genuine
+  survivors promoted to `device.*` tokens, with the true-`#000000`/`#ffffff`
+  WYSIWYG sentinels deliberately left literal.
+- **Finish:** finish-aware material table so black stops reading as a void
+  (§3.1), then wired into the lit materials (§3.2) — touch ring, select button,
+  anodized face.
+- **Lighting:** per-pose light compositions as pure data (§4.1), surfaced in the
+  cockpit with a reset-to-composition action (§4.3).
+- **Export reliability:** mobile delivery routed through the app's iOS-aware
+  channel (§7.1); still capture clamped to device GPU/memory with context-loss
+  guards (§7.2–7.3); a clip codec fallback ladder stepping down resolution and
+  profile so phones degrade instead of hard-failing (§7.4).
+- **Screen:** pure camera→glass-sweep function so the DOM screen reads glazed
+  (§2.1).
+- **OpenSpec:** `openspec archive` run for the first time in the repo's history —
+  17 completed changes folded into `specs/`, bootstrapping 21 capability specs as
+  the source of truth, with `Purpose` backfilled for all 21. Active changes
+  triaged 31 → 18 → 7. Checkbox drift resolved on the theme-toggle ledger
+  (5/24 → 22/24), each tick re-verified against source with a file:line citation
+  and two items annotated `SUPERSEDED` rather than silently ticked.
+- **Theme:** luminance-adaptive `IconButton` chrome — pure core with tests, then
+  wired into the toolbar.
+- Proposed `add-color-fidelity-verification`: the ΔE2000 gate behind the
+  product's central colour promise. The spec has required exported colour to
+  match live colour since §0.1, but nothing tests it — no assertion that an
+  exported pixel equals a token colour, and a full CIEDE2000 implementation
+  shipping at `lib/color-proximity.ts:122` with zero direct coverage.
+
+**State at this entry:** lint 0 errors · type-check clean · 601/601 unit tests
+green · production live on `3008f92`. Eight OpenSpec changes remain active and
+incomplete — see `openspec/changes/` for the live ledger, which is the
+authoritative backlog; this log records what shipped, not what is planned.
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these steps:
