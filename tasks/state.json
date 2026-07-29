@@ -1,5 +1,11 @@
 {
-  "updated": "2026-07-29",
+  "updated": "2026-07-29T13:15+0200",
+  "wave": 1,
+  "change": [
+    "add-color-fidelity-verification",
+    "update-studio-theme-authoring"
+  ],
+  "task": "fix(3d): archive mobile menu toggle, controls always visible",
   "focus": "Colour fidelity is measured, not asserted: the metric is conformant, the envelope is exhaustive, live-vs-export parity is gated, and presented finishes are attested.",
   "blocked": false,
   "blocked_reason": null,
@@ -59,6 +65,16 @@
     "pnpm validate": "2026-07-29 PASS end to end (board:check + oxlint + tsc --noEmit); 22 warnings, 0 errors",
     "vitest storybook": "2026-07-29 CANNOT RUN — Playwright chromium headless shell not installed (`pnpm exec playwright install`). Environment gap, not a code failure; the unit project is unaffected."
   },
+  "research": "active — CIEDE2000 conformance, real-device finish measurements, tone mapping literature. Recorded in active change tasks.md and lib/ module doc-comments. No formal DOCS/READINGS.md corpus yet.",
+  "archived": [],
+  "notes": "Factory pattern adopted from valoric. docs/FACTORY.md is the operating manual. tasks/state.json expanded to the fuller record format (wave, change, task, research, archived, branch, runner, parked, accounting).",
+  "branch": "main",
+  "runner": "npm run dev (attended); unattended runner not yet set up",
+  "parked": [
+    "USER — visual review of /3d, /3d cockpit, theme shelf, wheel label derivation. All visual gates require the user looking.",
+    "USER — commit signing (git %G? = N on all history; SSH signing setup is 3 lines of git config)",
+    "USER — deploy from GitHub triggers Vercel auto-deploy. No release process written yet."
+  ],
   "carry": [
     "RESOLVED, was a spec violation: a saved theme discarded a hand-tuned rig. `StudioTheme.rig` is now `{ name, overrides }` — the preset name plus a top-level sparse diff — so the preset stays the single definition of itself AND the tuning is the theme's own data. `overrides: {}` is the untouched case and still tracks future revisions of the preset. v1 records carrying a bare `rigName` migrate on read, no write required. The subtle one: `sanitizeSpot` writes `castShadow: undefined`, so a stored config carries keys a preset literal does not — a naive equality reads that as a deviation and would pin every reloaded theme's rig, ending preset tracking after the first reload. Measured and pinned in that change's tasks.md.",
     "The /3d boot no longer matches Noir by coincidence. `createBootedWorkbenchModel` resolves a single stored default-theme pointer and applies its actions over the factory model, so the booted look and the theme the shelf marks default cannot disagree. Deleting the default deliberately leaves the pointer dangling — `resolveDefaultTheme` is the one place that heals it, to Noir. NOTE: this wires `/3d` only; `/` still boots through the app-wide `ipodCentralMachine`, which is the two-folds-of-one-model item already on this list.",
@@ -73,5 +89,23 @@
     "WIP LIMIT BREACHED: the limit is 3 changes strictly between 0% and 100%; 7 are. Rank by CLAUDE.md 'Priority' — finish before starting. The four new changes are homework, deliberately at 0%, and do not count against attention until one is picked up.",
     "Two folds of one model, on two routes: ipodCentralMachine is mounted app-wide (app/layout.tsx:126) and drives / and the floating panels; /3d runs its own useReducer(ipodWorkbenchReducer) (ipod-3d-stage.tsx:112). They do not conflict today because they sit on different routes — but add-customizer-decision-log wraps the reducer, so as specified it gives /3d a log and leaves / without one. Measured in add-motion-authoring-system/design.md §Findings F3-F5, along with the duplicate export lifecycle. No proposal owns it yet.",
     "Commits are unsigned (git log %G? = N on all history). No commit.gpgsign, no gpg.format, no user.signingkey. In a repo whose proposition is attestation, the authorship of every attestation is unverifiable. Owner's call; three lines of git config with SSH signing."
-  ]
+  ],
+  "accounting": {
+    "measured": "2026-07-29",
+    "implementable_open": 7,
+    "by_change": {
+      "add-color-fidelity-verification": 1,
+      "update-studio-theme-authoring": 1,
+      "add-customizer-decision-log": 0,
+      "add-workspace-storage-registry": 0,
+      "add-finish-rig-pairing": 0,
+      "add-motion-authoring-system": 0,
+      "add-community-state-gallery": 0
+    },
+    "done": 0,
+    "user_owned_open": {
+      "visual-review": 3
+    },
+    "note": "Rough counts based on tasks.md checkboxes. Board is the derived source of truth; accounting is context, not a ledger."
+  }
 }

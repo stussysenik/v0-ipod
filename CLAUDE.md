@@ -1,3 +1,31 @@
+## Session Start (mandatory)
+
+- **Read `docs/FACTORY.md` first** — the factory operating manual: roles, records, the
+  provenance trace, gate rules. This file is the law (what must be true); FACTORY.md is
+  the mechanism (how it is executed and verified). Where they disagree, this file wins
+  and FACTORY.md is the bug.
+- Then review `tasks/state.json` — determines current arc, active changes, blockers.
+  Run `make board` to see the full derived horizon.
+- Review `docs/DECISIONS.md` statuses before proposing anything new.
+
+## Reading the Factory
+
+```sh
+cat tasks/state.json   # raw state — wave, arc, next, gates, carry
+npm run board          # derived board from state.json + openspec tasks
+git log --oneline -10  # recent commits
+```
+
+After any work (teacher or student):
+- Update `tasks/state.json` with results
+- Append one line to `tasks/session.log`: `YYYY-MM-DDThh:mm+TZ ROLE summary`
+- Run `pnpm validate` and record gate results in `state.json.gates`
+- Run `npm run board:check` to confirm zero drift
+
+A "continue" instruction means: read state, check gates, dispatch the next eligible
+task, and record the result. The system self-heals through state.json — no manual
+hand-holding required between sessions.
+
 <!-- OPENSPEC:START -->
 # OpenSpec Instructions
 
