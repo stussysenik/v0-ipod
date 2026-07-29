@@ -4,15 +4,21 @@
  * Validates the canonical color manifest against:
  * 1. Structural integrity (all tokens present, hex format valid)
  * 2. WCAG 2.1 contrast ratios (AA and AA-large)
- * 3. Perceptual distance rules (deltaE approximation using CIE76)
+ * 3. Perceptual distance rules (CIEDE2000, the metric the manifest declares)
  *
- * For authoritative CIEDE2000 analysis, use dcal-audit.
+ * The deltaE authority is lib/color-proximity.ts, verified against the Sharma,
+ * Wu & Dalal (2005) reference pairs in lib/color-proximity.test.ts. This script
+ * computed CIE76 while the manifest declared "metric": "deltaE00", so it
+ * reported a number the manifest never asked for — on the one failing rule that
+ * overstated the miss by 31% (dE76 4.296 vs dE00 3.276).
  *
  * Usage: npx tsx scripts/validate-color-manifest.ts
  */
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
+
+import { deltaE00Undertone, deltaECIEDE2000 } from "../lib/color-proximity";
 
 // ── Hex parsing ──
 
@@ -54,55 +60,9 @@ function contrastRatio(hex1: string, hex2: string, opacity1 = 1): number {
 	return (lighter + 0.05) / (darker + 0.05);
 }
 
-// ── CIE XYZ conversion (D65 illuminant) ──
-
-function srgbToXyz(hex: string): [number, number, number] {
-	const [r, g, b] = parseHex(hex);
-	const rl = sRGBLinearize(r);
-	const gl = sRGBLinearize(g);
-	const bl = sRGBLinearize(b);
-	// sRGB to XYZ matrix (D65)
-	const x = 0.4124564 * rl + 0.3575761 * gl + 0.1804375 * bl;
-	const y = 0.2126729 * rl + 0.7151522 * gl + 0.072175 * bl;
-	const z = 0.0193339 * rl + 0.119192 * gl + 0.9503041 * bl;
-	return [x, y, z];
-}
-
-// ── CIE Lab conversion (D65 reference white) ──
-
-const D65_WHITE: [number, number, number] = [0.95047, 1.0, 1.08883];
-
-function xyzToLab(xyz: [number, number, number]): [number, number, number] {
-	const [x, y, z] = xyz;
-	const [xn, yn, zn] = D65_WHITE;
-
-	const f = (t: number): number => {
-		const delta = 6 / 29;
-		return t > delta ** 3 ? Math.cbrt(t) : t / (3 * delta ** 2) + 4 / 29;
-	};
-
-	const fx = f(x / xn);
-	const fy = f(y / yn);
-	const fz = f(z / zn);
-
-	const L = 116 * fy - 16;
-	const a = 500 * (fx - fy);
-	const b = 200 * (fy - fz);
-	return [L, a, b];
-}
-
-function hexToLab(hex: string): [number, number, number] {
-	return xyzToLab(srgbToXyz(hex));
-}
-
-// ── CIE76 deltaE (simple Euclidean) ──
-// Note: For authoritative CIEDE2000, use dcal-audit
-
-function deltaE76(hex1: string, hex2: string): number {
-	const [L1, a1, b1] = hexToLab(hex1);
-	const [L2, a2, b2] = hexToLab(hex2);
-	return Math.sqrt((L1 - L2) ** 2 + (a1 - a2) ** 2 + (b1 - b2) ** 2);
-}
+// Lab conversion and deltaE live in lib/color-proximity.ts — one authority, not a
+// fourth private copy. WCAG contrast above is a different physical question and
+// stays local.
 
 // ── Manifest types ──
 
@@ -252,18 +212,23 @@ function validateManifest(manifest: Manifest): ValidationResult[] {
 			continue;
 		}
 
-		if (rule.metric === "deltaE00") {
-			// Use CIE76 as approximation; dcal-audit provides authoritative CIEDE2000
-			const dE = deltaE76(tokenA.hex, tokenB.hex);
+		if (rule.metric === "deltaE00" || rule.metric === "deltaE00Undertone") {
+			// Undertone rules suppress the lightness term: two parts moulded from one
+			// pigment are meant to differ in lightness and not in hue/chroma.
+			const undertone = rule.metric === "deltaE00Undertone";
+			const dE = undertone
+				? deltaE00Undertone(tokenA.hex, tokenB.hex)
+				: deltaECIEDE2000(tokenA.hex, tokenB.hex);
+			const unit = undertone ? "dE00-undertone" : "dE00";
 			let pass: boolean;
 			let threshold: string;
 
 			if (rule.minValue !== undefined) {
 				pass = dE >= rule.minValue;
-				threshold = `dE76 >= ${rule.minValue}`;
+				threshold = `${unit} >= ${rule.minValue}`;
 			} else if (rule.maxValue !== undefined) {
 				pass = dE <= rule.maxValue;
-				threshold = `dE76 <= ${rule.maxValue}`;
+				threshold = `${unit} <= ${rule.maxValue}`;
 			} else {
 				pass = true;
 				threshold = "no threshold";
@@ -272,8 +237,8 @@ function validateManifest(manifest: Manifest): ValidationResult[] {
 			results.push({
 				pass,
 				category: "perceptual",
-				description: `${rule.description} (CIE76 approx, dcal-audit for CIEDE2000)`,
-				actual: `dE76 = ${dE.toFixed(2)}`,
+				description: rule.description,
+				actual: `${unit} = ${dE.toFixed(2)}`,
 				threshold,
 			});
 		} else if (rule.metric === "contrastRatio") {
@@ -333,8 +298,6 @@ function main() {
 	console.log(`TOTAL: ${passes.length}/${results.length} pass, ${failures.length} fail`);
 
 	if (failures.length > 0) {
-		console.log("\nNote: CIE76 is used as an approximation.");
-		console.log("Run dcal-audit for authoritative CIEDE2000 analysis.");
 		process.exit(1);
 	} else {
 		console.log("\nAll color validation checks passed.");

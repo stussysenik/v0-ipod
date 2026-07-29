@@ -2,34 +2,38 @@
 
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
 
+import { getSurfaceToken, IPOD_5G_BLACK } from "@/lib/color-manifest";
 import type { IpodHardwarePresetId } from "@/types/ipod-state";
 
-// iPod 6th Generation Color Tokens
-// Based on reference: ipod-6th-classic-gen.png
+/**
+ * Theme colours, read from the manifest rather than transcribed.
+ *
+ * This was a hand-typed fourth copy of the wheel colorway and had already
+ * drifted from it — the dark border and centre carried #2c2a2b/#3a3838 against
+ * the manifest's #2C2C2E/#3A3A3C, and the light label carried the #8E8E93
+ * anchor that measures 2.99:1 against the 3:1 floor the manifest sets. Reading
+ * the tokens means a colour can only be changed where it is attested.
+ */
+const wheelBand = (band: "dark" | "light") => ({
+	surface: getSurfaceToken(`wheel.${band}.surface`),
+	border: getSurfaceToken(`wheel.${band}.border`),
+	label: getSurfaceToken(`wheel.${band}.label`),
+	center: getSurfaceToken(`wheel.${band}.center`),
+	centerBorder: getSurfaceToken(`wheel.${band}.center_border`),
+});
+
 export const IPOD_6G_COLORS = {
 	case: {
-		black: "#1b1818",
-		white: "#F5F5F7",
+		black: IPOD_5G_BLACK,
+		white: getSurfaceToken("wheel.light.surface"),
 	},
 	background: {
 		white: "#FFFFFF",
 		dark: "#000000",
 	},
 	wheel: {
-		dark: {
-			surface: "#1c1a1b",
-			border: "#2c2a2b",
-			label: "#FFFFFF",
-			center: "#2c2a2b",
-			centerBorder: "#3a3838",
-		},
-		light: {
-			surface: "#F5F5F7",
-			border: "#D1D1D6",
-			label: "#8E8E93",
-			center: "#E5E5EA",
-			centerBorder: "#D1D1D6",
-		},
+		dark: wheelBand("dark"),
+		light: wheelBand("light"),
 	},
 } as const;
 

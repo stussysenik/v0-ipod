@@ -1,7 +1,7 @@
 # Makefile for v0-ipod
 # IPO-Ready Development Workflow
 
-.PHONY: help install dev build test lint format clean ci deploy
+.PHONY: help install dev build test lint format clean ci deploy board board-check
 
 # Colors for output
 BLUE := \033[36m
@@ -67,6 +67,18 @@ type-check: ## Run TypeScript type checking
 validate: ## Run all validation (lint + type-check)
 	@echo "$(BLUE)Running full validation...$(NC)"
 	bun run validate
+
+board: ## Show the board — active changes, focus, gates as last observed
+	@bun run scripts/board.ts
+
+board-check: ## Fail on board drift (completed-but-unarchived changes, dangling state refs, stale board)
+	@bun run scripts/board.ts --check
+
+archive: ## Archive a completed change — make archive CHANGE=add-color-fidelity-verification
+	@test -n "$(CHANGE)" || (echo "usage: make archive CHANGE=<change-id>" && exit 1)
+	openspec archive $(CHANGE) --yes
+	openspec validate --strict --no-interactive
+	@bun run scripts/board.ts --check
 
 ci: ## Run CI pipeline locally
 	@echo "$(BLUE)Running CI pipeline...$(NC)"

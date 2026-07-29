@@ -14,6 +14,11 @@ import {
 	RIG_PRESETS,
 	sanitizeLightingConfig,
 	selectPoseComposition,
+	applyOverrides,
+	DESIGNER_DARK_RIG,
+	diffFromPreset,
+	ENVIRONMENT_PRESETS,
+	type StudioLightingConfig,
 } from "./studio-lighting-config";
 
 /*
@@ -187,5 +192,136 @@ describe("per-pose light compositions (§4.1 — spec: 3d-shaped-light-compositi
 		expect(a).toEqual(b);
 		a.env.softboxes[0].intensity = 999;
 		expect(b.env.softboxes[0].intensity).not.toBe(999);
+	});
+});
+
+/*
+ * ── Rig deviation (spec: 3d-studio-presentation — "Savable Studio Themes") ────
+ *
+ * A saved theme records a preset NAME plus the fields that deviate from it,
+ * never a copy of the rig. Two properties carry that design, and every other
+ * guarantee in the change rests on them:
+ *
+ *  1. Round trip: `applyOverrides(name, diffFromPreset(c, name))` reconstructs
+ *     `c`. If this leaks, a saved look silently changes on reload.
+ *  2. Empty case: a config equal to its preset diffs to `{}`, so an untouched
+ *     theme still reaches a later revision of the preset it names.
+ */
+
+/** Deterministic LCG — a property test that only fails on some seeds is not a gate. */
+function makeRandom(seed: number) {
+	let state = seed >>> 0;
+	return () => {
+		state = (state * 1664525 + 1013904223) >>> 0;
+		return state / 0x100000000;
+	};
+}
+
+/**
+ * A randomised config that stays inside the sanitizer's clamps. Values above a
+ * ceiling are supposed to be pulled down on the way through storage, so feeding
+ * them here would test the clamp, not the round trip.
+ */
+function randomConfig(rand: () => number): StudioLightingConfig {
+	const spot = () => ({
+		color: `#${Math.floor(rand() * 0xffffff).toString(16).padStart(6, "0")}`,
+		intensity: rand() * MAX_SPOT_INTENSITY,
+		position: [rand() * 20 - 10, rand() * 20 - 10, rand() * 20 - 10] as [number, number, number],
+		angle: rand() * (Math.PI / 2),
+		penumbra: rand(),
+		castShadow: rand() > 0.5,
+	});
+	return {
+		name: `Rig ${Math.floor(rand() * 1000)}`,
+		ambient: {
+			color: `#${Math.floor(rand() * 0xffffff).toString(16).padStart(6, "0")}`,
+			intensity: rand() * MAX_AMBIENT_INTENSITY,
+		},
+		key: spot(),
+		fill: spot(),
+		rim: spot(),
+		env: {
+			preset: ENVIRONMENT_PRESETS[Math.floor(rand() * ENVIRONMENT_PRESETS.length)],
+			intensity: rand() * MAX_ENV_INTENSITY,
+			blur: rand(),
+			softboxes: Array.from({ length: 1 + Math.floor(rand() * 6) }, () => ({
+				color: `#${Math.floor(rand() * 0xffffff).toString(16).padStart(6, "0")}`,
+				intensity: rand() * MAX_SOFTBOX_INTENSITY,
+				position: [rand() * 20 - 10, rand() * 20 - 10, rand() * 20 - 10] as [number, number, number],
+				scale: [rand() * 30, rand() * 30, 1] as [number, number, number],
+			})),
+		},
+	};
+}
+
+describe("diffFromPreset / applyOverrides", () => {
+	it("round-trips any config through its deviation record", () => {
+		const rand = makeRandom(20260729);
+		for (let i = 0; i < 200; i++) {
+			const config = randomConfig(rand);
+			const presetName = RIG_PRESETS[i % RIG_PRESETS.length].config.name;
+			const rebuilt = applyOverrides(presetName, diffFromPreset(config, presetName));
+			expect(rebuilt, `round trip lost data against ${presetName} on iteration ${i}`).toEqual(
+				config,
+			);
+		}
+	});
+
+	it("records no deviation for a config equal to its preset", () => {
+		for (const preset of RIG_PRESETS) {
+			expect(
+				diffFromPreset(cloneLightingConfig(preset.config), preset.config.name),
+				`${preset.config.name} diffed against itself`,
+			).toEqual({});
+		}
+	});
+
+	it("still records nothing after the config has been through storage", () => {
+		// `sanitizeSpot` writes `castShadow: undefined` where a preset literal has
+		// no such key. If that counted as a deviation, every reloaded theme would
+		// pin its rig and stop tracking the preset — the empty case would hold
+		// only until the first reload.
+		for (const preset of RIG_PRESETS) {
+			const round = sanitizeLightingConfig(JSON.parse(JSON.stringify(preset.config)));
+			expect(diffFromPreset(round, preset.config.name)).toEqual({});
+		}
+	});
+
+	it("records only the field that moved", () => {
+		const tuned = cloneLightingConfig(DESIGNER_DARK_RIG);
+		tuned.key.intensity = 999;
+		const overrides = diffFromPreset(tuned, DESIGNER_DARK_RIG.name);
+		expect(Object.keys(overrides)).toEqual(["key"]);
+		expect(applyOverrides(DESIGNER_DARK_RIG.name, overrides).key.intensity).toBe(999);
+		// The untouched fields are the preset's, not the theme's own copies.
+		expect(applyOverrides(DESIGNER_DARK_RIG.name, overrides).env).toEqual(DESIGNER_DARK_RIG.env);
+	});
+
+	it("falls back to Designer Dark for an unknown preset, matching rigForTheme", () => {
+		expect(applyOverrides("Rig That Was Deleted", {}).name).toBe(DESIGNER_DARK_RIG.name);
+		expect(diffFromPreset(cloneLightingConfig(DESIGNER_DARK_RIG), "Rig That Was Deleted")).toEqual(
+			{},
+		);
+	});
+
+	it("degrades a malformed deviation record to no deviation instead of throwing", () => {
+		for (const junk of [null, undefined, "overrides", 42, [1, 2, 3]]) {
+			expect(
+				applyOverrides(DESIGNER_DARK_RIG.name, junk as never).name,
+				`applyOverrides threw or drifted on ${JSON.stringify(junk)}`,
+			).toBe(DESIGNER_DARK_RIG.name);
+		}
+		// A structurally wrong field heals to the default rather than propagating.
+		expect(applyOverrides(DESIGNER_DARK_RIG.name, { env: "bright" } as never).env.preset).toBe(
+			DESIGNER_DARK_RIG.env.preset,
+		);
+	});
+
+	it("hands back a detached config — editing the result cannot reach the preset", () => {
+		const rig = applyOverrides(DESIGNER_DARK_RIG.name, {});
+		rig.key.intensity = 1;
+		rig.env.softboxes[0].color = "#ff00ff";
+		expect(DESIGNER_DARK_RIG.key.intensity).not.toBe(1);
+		expect(DESIGNER_DARK_RIG.env.softboxes[0].color).not.toBe("#ff00ff");
 	});
 });

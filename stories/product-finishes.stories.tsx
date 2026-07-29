@@ -1,9 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import {
-	BACKGROUND_CURATED_FAVORITES,
-	CASE_CURATED_FAVORITES,
-	getAuthenticFinishes,
-} from "@/lib/color-manifest";
+import { CASE_CURATED_FAVORITES } from "@/lib/case-color-presets";
+import { BACKGROUND_CURATED_FAVORITES, getAuthenticFinishes } from "@/lib/color-manifest";
 
 function Swatch({ label, hex, note }: { label: string; hex: string; note?: string }) {
 	return (

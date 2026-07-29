@@ -29,8 +29,12 @@ if (requiredTypeArtifacts.some((artifactPath) => !existsSync(artifactPath))) {
 	const nextBin = fileURLToPath(
 		new URL("../node_modules/next/dist/bin/next", import.meta.url),
 	);
+	// --webpack matches package.json `build`. Without an explicit bundler flag the
+	// preflight dies on the Turbopack/webpack config conflict, which took the whole
+	// pre-commit gate (`validate`) down with it.
 	const preflightExitCode = runNodeScript(nextBin, [
 		"build",
+		"--webpack",
 		"--experimental-build-mode",
 		"compile",
 	]);

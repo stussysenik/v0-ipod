@@ -2,7 +2,6 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"version": "1.0.0",
 	"description": "Canonical color token manifest for iPod Classic anniversary tribute. All color decisions must be auditable through dcal.",
-
 	"authenticCaseColors": [
 		{
 			"label": "White (1st-3rd Gen)",
@@ -65,16 +64,15 @@
 			"generation": "special"
 		}
 	],
-
 	"authenticFinishes": [
 		{
 			"id": "white-1g",
 			"label": "White",
-			"generation": "1st–3rd Gen",
+			"generation": "1st\u20133rd Gen",
 			"year": 2001,
 			"hex": "#FFFFFF",
 			"wheelVariant": "light",
-			"notes": "Original polycarbonate white, 2001–2004"
+			"notes": "Original polycarbonate white, 2001\u20132004"
 		},
 		{
 			"id": "white-4g",
@@ -158,13 +156,18 @@
 			"notes": "AIDS charity edition, red anodized aluminum"
 		}
 	],
-
 	"surfaceTokens": {
 		"shell.default": {
 			"hex": "#1b1818",
 			"role": "shell",
 			"family": "black",
-			"note": "iPod 6G Black case"
+			"note": "iPod 5G Black case (finish black-5g, 2005). The default dark shell reference; the note previously claimed 6G, which this hex has never been."
+		},
+		"shell.black6g": {
+			"hex": "#1c1a1b",
+			"role": "shell",
+			"family": "black",
+			"note": "iPod Classic 6G Black case (finish black-6g, 2007). The generation the wheel.gradient.* colorway was measured from."
 		},
 		"shell.silver": {
 			"hex": "#C8C9CB",
@@ -178,7 +181,6 @@
 			"family": "neutral",
 			"note": "Stage background"
 		},
-
 		"wheel.dark.surface": {
 			"hex": "#1c1a1b",
 			"role": "wheel",
@@ -209,7 +211,6 @@
 			"family": "black",
 			"note": "Dark center border"
 		},
-
 		"wheel.light.surface": {
 			"hex": "#F5F5F7",
 			"role": "wheel",
@@ -223,10 +224,10 @@
 			"note": "Light wheel border"
 		},
 		"wheel.light.label": {
-			"hex": "#8E8E93",
+			"hex": "#7a7a7a",
 			"role": "text",
 			"family": "silver",
-			"note": "Light wheel labels"
+			"note": "Light wheel labels. Solved from the #8E8E93 anchor - Apple's systemGray, never sourced to hardware here - which measured 2.99:1 on this surface and 2.38:1 over the colorway's darkest stop, under the 3:1 floor this manifest sets for wheel labels. The moulded values around it are untouched."
 		},
 		"wheel.light.center": {
 			"hex": "#E5E5EA",
@@ -240,7 +241,6 @@
 			"family": "silver",
 			"note": "Light center border"
 		},
-
 		"wheel.border": {
 			"hex": "#2C2C2E",
 			"role": "wheel",
@@ -295,7 +295,6 @@
 			"family": "cool",
 			"note": "Default wheel labels (legacy)"
 		},
-
 		"screen.surround.top": {
 			"hex": "#5A5A5D",
 			"role": "screen-surround",
@@ -311,8 +310,11 @@
 			"role": "screen-surround",
 			"family": "neutral"
 		},
-		"screen.border": { "hex": "#525252", "role": "border", "family": "neutral" },
-
+		"screen.border": {
+			"hex": "#525252",
+			"role": "border",
+			"family": "neutral"
+		},
 		"screen.statusbar.bg.from": {
 			"hex": "#F1F1F1",
 			"role": "screen-content",
@@ -332,13 +334,13 @@
 			"hex": "#0a0b0c",
 			"role": "device-chrome",
 			"family": "black",
-			"note": "Matte machined port recess — near-black, light-absorbing"
+			"note": "Matte machined port recess \u2014 near-black, light-absorbing"
 		},
 		"device.port.slider": {
 			"hex": "#c9cdd1",
 			"role": "device-chrome",
 			"family": "silver",
-			"note": "Hold-switch slider — the bright part seated in its slot"
+			"note": "Hold-switch slider \u2014 the bright part seated in its slot"
 		},
 		"device.bezel": {
 			"hex": "#0a0a0a",
@@ -359,7 +361,6 @@
 			"note": "Procedural brushed-metal base grey (anodized grain seed)"
 		}
 	},
-
 	"textTokens": {
 		"screen.title": {
 			"hex": "#000000",
@@ -388,7 +389,6 @@
 			"opacity": 0.85
 		}
 	},
-
 	"greyFamilies": {
 		"neutral": {
 			"label": "Neutral",
@@ -427,12 +427,31 @@
 			"description": "Blue-violet undertone"
 		}
 	},
-
 	"greyLightnessStops": [
-		1.0, 0.975, 0.95, 0.925, 0.9, 0.88, 0.84, 0.8, 0.76, 0.72, 0.68, 0.63, 0.58, 0.53,
-		0.48, 0.42, 0.37, 0.32, 0.27, 0.22, 0.15, 0.08, 0.0
+		1.0,
+		0.975,
+		0.95,
+		0.925,
+		0.9,
+		0.88,
+		0.84,
+		0.8,
+		0.76,
+		0.72,
+		0.68,
+		0.63,
+		0.58,
+		0.53,
+		0.48,
+		0.42,
+		0.37,
+		0.32,
+		0.27,
+		0.22,
+		0.15,
+		0.08,
+		0.0
 	],
-
 	"oklchPalettes": {
 		"case": {
 			"lightness": 0.72,
@@ -447,25 +466,30 @@
 			"hueOffset": 30
 		}
 	},
-
 	"curatedFavorites": {
-		"case": [
-			{ "label": "Bright White", "hex": "#FBFBF8" },
-			{ "label": "Pearl Gray", "hex": "#E4E4E6" },
-			{ "label": "Silver", "hex": "#D9DADC" },
-			{ "label": "Brushed Steel", "hex": "#C7C9CD" },
-			{ "label": "Gunmetal", "hex": "#535861" },
-			{ "label": "Black", "hex": "#1B1B1F" }
-		],
 		"background": [
-			{ "label": "Paper White", "hex": "#F3F3EE" },
-			{ "label": "Studio Warm", "hex": "#E5E5E5" },
-			{ "label": "Cloud Gray", "hex": "#DBDCDD" },
-			{ "label": "Slate", "hex": "#A9AFB6" },
-			{ "label": "Night Graphite", "hex": "#5F6772" }
+			{
+				"label": "Paper White",
+				"hex": "#F3F3EE"
+			},
+			{
+				"label": "Studio Warm",
+				"hex": "#E5E5E5"
+			},
+			{
+				"label": "Cloud Gray",
+				"hex": "#DBDCDD"
+			},
+			{
+				"label": "Slate",
+				"hex": "#A9AFB6"
+			},
+			{
+				"label": "Night Graphite",
+				"hex": "#5F6772"
+			}
 		]
 	},
-
 	"relationships": {
 		"contrastPairs": [
 			{
@@ -504,6 +528,20 @@
 				"level": "AA-large"
 			},
 			{
+				"description": "Light wheel label on light wheel surface",
+				"fg": "wheel.light.label",
+				"bg": "wheel.light.surface",
+				"minRatio": 3.0,
+				"level": "AA-large"
+			},
+			{
+				"description": "Dark wheel label on dark wheel surface",
+				"fg": "wheel.dark.label",
+				"bg": "wheel.dark.surface",
+				"minRatio": 3.0,
+				"level": "AA-large"
+			},
+			{
 				"description": "Status bar text on status bg",
 				"fg": "screen.statusbar.text",
 				"bg": "screen.statusbar.bg.from",
@@ -520,11 +558,12 @@
 				"minValue": 3.0
 			},
 			{
-				"description": "Shell-to-wheel coherence",
-				"a": "shell.default",
+				"description": "Shell and wheel share an undertone",
+				"a": "shell.black6g",
 				"b": "wheel.gradient.via",
-				"metric": "deltaE00",
-				"maxValue": 3.0
+				"metric": "deltaE00Undertone",
+				"maxValue": 2.5,
+				"rationale": "The wheel is the same moulded plastic as the shell, recessed, so it must differ in lightness and must not differ in undertone. A plain deltaE00 ceiling cannot say that: it folds the intended lightness step in with the pigment, so it fails correct shading and passes a wrong-pigment match at equal lightness. Measured with lightness suppressed (CIEDE2000 at kL=1e9). Both sides are now the 6G generation, so the reading is a pigment statement and nothing else: 1.42. Against shell.default - the 5G black - the same rule read 2.28, and that gap was a generation difference being scored as a pigment difference."
 			},
 			{
 				"description": "Screen surround contrast to shell",

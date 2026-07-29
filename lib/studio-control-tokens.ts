@@ -13,6 +13,8 @@
  * intentional, never mechanical (design decision §4).
  */
 
+import { contrastRatio, relativeLuminance } from "./color-engine";
+
 export interface ControlTokens {
 	/** Resting control surface — stage-tinted neutral, elevated chrome. */
 	surface: string;
@@ -63,21 +65,19 @@ function toHex([r, g, b]: Rgb): string {
 	return `#${((1 << 24) + (c(r) << 16) + (c(g) << 8) + c(b)).toString(16).slice(1).toUpperCase()}`;
 }
 
-/** WCAG relative luminance from sRGB. */
-function luminance([r, g, b]: Rgb): number {
-	const lin = (c: number) => {
-		const s = c / 255;
-		return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-	};
-	return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-}
+/**
+ * WCAG contrast ratio between two hex colors (≥ 1).
+ *
+ * Re-exported from lib/color-engine.ts rather than solved here. The solver is a
+ * consumer of the contrast model, not a second definition of it — and
+ * `shared-ui-tokens` reaches the model through this name, so it stays exported
+ * from this module.
+ */
+export { contrastRatio, relativeLuminance };
 
-/** WCAG contrast ratio between two hex colors (≥ 1). */
-export function contrastRatio(a: string, b: string): number {
-	const la = luminance(parseHex(a));
-	const lb = luminance(parseHex(b));
-	const [hi, lo] = la >= lb ? [la, lb] : [lb, la];
-	return (hi + 0.05) / (lo + 0.05);
+/** WCAG relative luminance of an already-parsed triple, for the solver's internals. */
+function luminance(rgb: Rgb): number {
+	return relativeLuminance(toHex(rgb));
 }
 
 /** Linear sRGB channel mix of `from` toward `to` by `t` (0..1). */

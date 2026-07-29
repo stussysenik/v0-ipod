@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type Dispatch } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type Dispatch } from "react";
 
-import {
-	CASE_CURATED_FAVORITES,
-	deriveWheelColors,
-	IPOD_6G_BLACK,
-	IPOD_6G_SILVER,
-} from "@/lib/color-manifest";
+import { AUTHENTIC_PRESETS, HOUSE_PRESETS } from "@/lib/case-color-presets";
+import { deriveWheelColors, IPOD_5G_BLACK, IPOD_6G_SILVER } from "@/lib/color-manifest";
+import { judgeCaseColor, verdictHeadline, type DirectionWord, type Grade } from "@/lib/color-verdict";
 import { parseColor } from "@/lib/color-format";
 import {
 	DEFAULT_BACK_COLOR,
@@ -15,13 +12,21 @@ import {
 	type IpodPresentationState,
 } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
+import { DESIGNER_DARK_RIG, type StudioLightingConfig } from "@/lib/studio-lighting-config";
 import {
 	BUILT_IN_THEMES,
+	loadDefaultThemeId,
 	loadSavedThemes,
+	resolveDefaultTheme,
 	nextThemeLabel,
+	overwriteTheme,
+	persistDefaultThemeId,
 	persistSavedThemes,
+	renameTheme,
 	themeActions,
+	themeRigFromConfig,
 	type StudioTheme,
+	type StudioThemeColors,
 } from "@/lib/studio-themes";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
@@ -53,30 +58,23 @@ interface FinishAsset {
 	backColor: string;
 	bezelColor: string;
 	bgColor: string;
-	/** Curated wheel override — wins over `deriveWheelColors(skinColor)`. */
-	ringColor?: string;
-	centerColor?: string;
 }
 
 const PRELOADED_FINISHES: readonly FinishAsset[] = [
 	{
 		id: "black",
 		label: "Black",
-		swatch: IPOD_6G_BLACK,
-		skinColor: IPOD_6G_BLACK, // black anodized aluminum face
+		swatch: IPOD_5G_BLACK,
+		skinColor: IPOD_5G_BLACK, // black anodized aluminum face
 		backColor: DEFAULT_BACK_COLOR, // mirror steel back
 		bezelColor: DEFAULT_BEZEL_COLOR,
-		// The Noir factory stage + hand-tuned wheel: derivation gives #242020,
-		// one step too close to the case — the curated ring keeps the wheel a part.
-		bgColor: "#0048FF",
-		ringColor: "#313030",
-		centerColor: "#141212",
+		bgColor: "#0048FF", // Noir factory stage
 	},
 	{
 		id: "silver",
 		label: "Silver",
-		swatch: "#D6D8DA",
-		// The 2008 Classic's light finish was silver anodized ALUMINUM, never
+		swatch: IPOD_6G_SILVER,
+		// The Classic's light finish was silver anodized ALUMINUM, never
 		// paper-white — a cool neutral gray whose brightness comes from the metal
 		// reflecting the studio env, not a white albedo.
 		skinColor: IPOD_6G_SILVER,
@@ -176,18 +174,24 @@ interface DeviceLook {
 }
 
 /**
- * My curated /3d looks — full coordinated combinations, not just a case colour. Each pairs an
- * anodized case with a bezel that's a deep shade of the SAME hue, the factory steel back, and a
- * stage chosen to separate the silhouette (light case → dark-ish stage and vice-versa). Picking
- * one sets the whole device in a tap; the wheel re-derives from the case.
+ * House looks — full coordinated combinations, not just a case colour. Each pairs a case with a
+ * bezel that's a deep shade of the SAME hue, the factory steel back, and a stage chosen to
+ * separate the silhouette (light case → dark-ish stage and vice-versa). Picking one sets the
+ * whole device in a tap; the wheel re-derives from the case.
+ *
+ * These are house colours, and the naming says so. Two of them used to be called "Graphite" and
+ * "Bondi" — Apple product names (Power Mac G4, iMac G3) attached to invented hexes, on a device
+ * that shipped in neither. Sitting beside the attested finishes they read as one catalogue, and
+ * only half of it was true. `claimsAppleHeritage` in lib/case-color-presets.ts is the guard, and
+ * `color-verdict.test.ts` fails if a heritage name reappears here.
  */
 const CURATED_LOOKS: readonly DeviceLook[] = [
-	{ id: "graphite", label: "Graphite", skinColor: "#2A2D31", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070809", bgColor: "#0B0D12" },
-	{ id: "bondi", label: "Bondi", skinColor: "#0E7C9B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#06171D", bgColor: "#F2F6F7" },
+	{ id: "slate", label: "Slate", skinColor: "#2A2D31", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070809", bgColor: "#0B0D12" },
+	{ id: "teal", label: "Teal", skinColor: "#0E7C9B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#06171D", bgColor: "#F2F6F7" },
 	{ id: "crimson", label: "Crimson", skinColor: "#B5121B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A0606", bgColor: "#FBEDED" },
-	{ id: "gold", label: "Gold", skinColor: "#C9A86A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A1408", bgColor: "#FAF6EE" },
+	{ id: "brass", label: "Brass", skinColor: "#C9A86A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A1408", bgColor: "#FAF6EE" },
 	{ id: "cobalt", label: "Cobalt", skinColor: "#2B4C8C", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070B16", bgColor: "#EEF1F8" },
-	{ id: "sage", label: "Sage", skinColor: "#7E8C6A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#10130C", bgColor: "#F2F4ED" },
+	{ id: "moss", label: "Moss", skinColor: "#7E8C6A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#10130C", bgColor: "#F2F4ED" },
 ] as const;
 
 /**
@@ -308,60 +312,110 @@ interface Ipod3DColorCockpitProps {
 	index: number;
 	presentation: IpodPresentationState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
-	/** Name of the live lighting rig — captured into saved themes. */
-	lightingName?: string;
+	/**
+	 * The live lighting rig, by VALUE — a saved theme records how the rig deviates
+	 * from the preset it names, which the name alone cannot express. Passing only
+	 * the name is what discarded a hand-tuned rig on save.
+	 */
+	lighting?: StudioLightingConfig;
 }
 
 export function Ipod3DColorCockpit({
 	index,
 	presentation,
 	dispatch,
-	lightingName,
+	lighting,
 }: Ipod3DColorCockpitProps) {
 	const derived = useMemo(
 		() => deriveWheelColors(presentation.skinColor),
 		[presentation.skinColor],
 	);
 
-	// Saved themes hydrate from localStorage after mount (SSR-safe), then every
-	// mutation writes through — the shelf is always the persisted truth.
+	// The colour the current one replaced, so the readout can state a direction and
+	// not only a state. Held here rather than in the reducer: it is a fact about
+	// this editing session, not about the device.
+	const [previousCase, setPreviousCase] = useState<string | undefined>(undefined);
+	const lastCase = useRef(presentation.skinColor);
+	useEffect(() => {
+		if (lastCase.current !== presentation.skinColor) {
+			setPreviousCase(lastCase.current);
+			lastCase.current = presentation.skinColor;
+		}
+	}, [presentation.skinColor]);
+
+	// Saved themes and the default pointer hydrate from localStorage after mount
+	// (SSR-safe), then every mutation writes through — the shelf is always the
+	// persisted truth.
 	const [savedThemes, setSavedThemes] = useState<StudioTheme[]>([]);
+	const [defaultThemeId, setDefaultThemeId] = useState<string | null>(null);
+	const [renamingId, setRenamingId] = useState<string | null>(null);
 	useEffect(() => {
 		setSavedThemes(loadSavedThemes());
+		setDefaultThemeId(loadDefaultThemeId());
 	}, []);
+
+	const commitThemes = (next: StudioTheme[]) => {
+		setSavedThemes(next);
+		persistSavedThemes(next);
+	};
 
 	const applyTheme = (theme: StudioTheme) => {
 		for (const action of themeActions(theme)) dispatch(action);
 	};
 
-	const saveCurrentTheme = () => {
-		const theme: StudioTheme = {
-			id: `theme-${Date.now().toString(36)}`,
-			label: nextThemeLabel([...BUILT_IN_THEMES, ...savedThemes]),
-			colors: {
-				skinColor: presentation.skinColor,
-				ringColor: presentation.ringColor || derived.gradient.via,
-				centerColor: presentation.centerColor || derived.centerGradient.via,
-				backColor: presentation.backColor,
-				edgeColor: presentation.edgeColor || presentation.backColor,
-				bezelColor: presentation.bezelColor,
-				bgColor: presentation.bgColor,
-			},
-			rigName: lightingName ?? "Designer Dark",
-		};
-		const next = [...savedThemes, theme];
-		setSavedThemes(next);
-		persistSavedThemes(next);
+	/** The look on stage right now, as a theme records it. */
+	const currentColors = (): StudioThemeColors => ({
+		skinColor: presentation.skinColor,
+		ringColor: presentation.ringColor || derived.gradient.via,
+		centerColor: presentation.centerColor || derived.centerGradient.via,
+		backColor: presentation.backColor,
+		edgeColor: presentation.edgeColor || presentation.backColor,
+		bezelColor: presentation.bezelColor,
+		bgColor: presentation.bgColor,
+	});
+
+	const currentRig = () => {
+		const rig = lighting ?? DESIGNER_DARK_RIG;
+		return themeRigFromConfig(rig, rig.name);
 	};
 
-	const deleteTheme = (id: string) => {
-		const next = savedThemes.filter((t) => t.id !== id);
-		setSavedThemes(next);
-		persistSavedThemes(next);
+	const saveCurrentTheme = () => {
+		commitThemes([
+			...savedThemes,
+			{
+				id: `theme-${Date.now().toString(36)}`,
+				label: nextThemeLabel([...BUILT_IN_THEMES, ...savedThemes]),
+				colors: currentColors(),
+				rig: currentRig(),
+			},
+		]);
 	};
+
+	// Delete leaves the default pointer alone on purpose: a dangling pointer
+	// resolves to Noir in exactly one place, so nothing here has to heal it.
+	const deleteTheme = (id: string) => commitThemes(savedThemes.filter((t) => t.id !== id));
+
+	const setDefault = (id: string) => {
+		setDefaultThemeId(id);
+		persistDefaultThemeId(id);
+	};
+
+	const commitRename = (id: string, label: string) => {
+		commitThemes(renameTheme(savedThemes, id, label));
+		setRenamingId(null);
+	};
+
+	const saveOver = (id: string) =>
+		commitThemes(overwriteTheme(savedThemes, id, currentColors(), currentRig()));
 
 	// The full resolved palette feeds the deterministic shade strips below each row.
 	const palette = useMemo(() => paletteOf(presentation, derived), [presentation, derived]);
+
+	// The shelf marks what boot RESOLVES, not what the pointer literally holds —
+	// a dangling pointer boots Noir, so the shelf must mark Noir or the two
+	// disagree about the default, which is the drift this change removes.
+	const allThemes = [...BUILT_IN_THEMES, ...savedThemes];
+	const resolvedDefaultId = resolveDefaultTheme(allThemes, defaultThemeId).id;
 
 	const activeFinish = PRELOADED_FINISHES.find(
 		(f) => normalizeHex(f.skinColor) === normalizeHex(presentation.skinColor),
@@ -374,11 +428,12 @@ export function Ipod3DColorCockpit({
 		dispatch({ type: "SET_EDGE_COLOR", payload: f.backColor });
 		dispatch({ type: "SET_BEZEL_COLOR", payload: f.bezelColor });
 		dispatch({ type: "SET_BG_COLOR", payload: f.bgColor });
-		// Curated wheel override wins; otherwise re-derive from the new case so
-		// the look stays coherent.
+		// The wheel is re-derived from the new case, never pinned. On the attested
+		// 6G black the hardware separation between wheel and case is ΔE00 2.27; the
+		// derivation lands at 2.51, so a hand-tuned ring has nothing to correct.
 		const d = deriveWheelColors(f.skinColor);
-		dispatch({ type: "SET_RING_COLOR", payload: f.ringColor ?? d.gradient.via });
-		dispatch({ type: "SET_CENTER_COLOR", payload: f.centerColor ?? d.centerGradient.via });
+		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
+		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
 	};
 
 	// Apply a complete coordinated look (curated or random): every surface + stage + a wheel
@@ -397,6 +452,14 @@ export function Ipod3DColorCockpit({
 	const deriveWheelFromCase = () => {
 		dispatch({ type: "SET_RING_COLOR", payload: derived.gradient.via });
 		dispatch({ type: "SET_CENTER_COLOR", payload: derived.centerGradient.via });
+	};
+
+	/** Set the case and re-derive the wheel from it — the one path every swatch takes. */
+	const applyCase = (hex: string) => {
+		dispatch({ type: "SET_SKIN_COLOR", payload: hex });
+		const d = deriveWheelColors(hex);
+		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
+		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
 	};
 
 	const shuffle = () => {
@@ -435,59 +498,102 @@ export function Ipod3DColorCockpit({
 				</div>
 			</div>
 
-			{/* Themes — complete saved looks (all seven surfaces + the rig). "Noir" is
-			    the factory black; Save snapshots whatever is on stage right now. One
-			    tap restores everything, so dialing in a look is never a one-way door. */}
+			{/* Themes — complete saved looks (all seven surfaces + the rig, tuning and
+			    all). "Noir" is the factory black; Save snapshots whatever is on stage
+			    right now. One tap restores everything, so dialing in a look is never a
+			    one-way door.
+
+			    Rows, not chips: a saved theme carries five actions (apply, set default,
+			    rename, save over, delete) and each one has to read as a word, not a
+			    glyph. The three edit commands sit in an overlay that is transparent at
+			    rest, so the label keeps the full row width until the pointer or the
+			    keyboard arrives — and stays reachable by tab either way. */}
 			<div className="border-b border-black/[0.06] px-3.5 py-2.5">
 				<div className="flex items-center justify-between">
 					<Label>Themes</Label>
 					<HelperButton onClick={saveCurrentTheme}>+ Save</HelperButton>
 				</div>
-				<div className="mt-2 flex flex-wrap gap-1.5">
-					{[...BUILT_IN_THEMES, ...savedThemes].map((theme) => {
+				<div className="mt-1.5">
+					{allThemes.map((theme) => {
 						const active =
 							normalizeHex(theme.colors.skinColor) === normalizeHex(palette.case) &&
 							normalizeHex(theme.colors.bgColor) === normalizeHex(palette.stage) &&
 							normalizeHex(theme.colors.ringColor) === normalizeHex(palette.ring);
+						const isDefault = theme.id === resolvedDefaultId;
 						return (
-							<span key={theme.id} className="group/theme relative">
-								<button
-									type="button"
-									onClick={() => applyTheme(theme)}
-									aria-pressed={active}
-									aria-label={`Apply ${theme.label} theme`}
-									className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
-										active
-											? "border-black/80 text-black"
-											: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
-									}`}
-								>
-									<span className="flex">
-										{[
-											theme.colors.skinColor,
-											theme.colors.ringColor,
-											theme.colors.bgColor,
-										].map((c, i) => (
-											<span
-												key={`${theme.id}-dot-${i}`}
-												className="-ml-0.5 h-2.5 w-2.5 rounded-full border border-black/15 first:ml-0"
-												style={{ backgroundColor: c }}
-											/>
-										))}
-									</span>
-									{theme.label}
-								</button>
-								{!theme.builtIn && (
-									<button
-										type="button"
-										onClick={() => deleteTheme(theme.id)}
-										aria-label={`Delete ${theme.label} theme`}
-										className="absolute -right-1 -top-1 hidden h-3.5 w-3.5 items-center justify-center rounded-full border border-black/15 bg-white text-[8px] leading-none text-black/50 hover:text-black group-hover/theme:flex"
-									>
-										×
-									</button>
+							<div key={theme.id} className="group/theme relative flex h-6 items-center">
+								{renamingId === theme.id ? (
+									<input
+										// Focused imperatively rather than with `autoFocus`: this input
+										// mounts in response to the Rename command, so taking focus is
+										// finishing the gesture, not seizing it on page load.
+										ref={(el) => {
+											el?.focus();
+											el?.select();
+										}}
+										defaultValue={theme.label}
+										aria-label={`Rename ${theme.label} theme`}
+										onBlur={(e) => commitRename(theme.id, e.currentTarget.value)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") commitRename(theme.id, e.currentTarget.value);
+											if (e.key === "Escape") setRenamingId(null);
+										}}
+										className="h-5 w-full rounded border border-black/20 px-1 text-[11px] font-medium text-black outline-none"
+									/>
+								) : (
+									<>
+										<button
+											type="button"
+											onClick={() => applyTheme(theme)}
+											aria-pressed={active}
+											aria-label={`Apply ${theme.label} theme`}
+											className={`flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded px-1 text-[11px] font-medium transition-colors ${
+												active ? "text-black" : "text-black/55 hover:text-black"
+											}`}
+										>
+											<span className="flex shrink-0">
+												{[
+													theme.colors.skinColor,
+													theme.colors.ringColor,
+													theme.colors.bgColor,
+												].map((c, i) => (
+													<span
+														key={`${theme.id}-dot-${i}`}
+														className="-ml-0.5 h-2.5 w-2.5 rounded-full border border-black/15 first:ml-0"
+														style={{ backgroundColor: c }}
+													/>
+												))}
+											</span>
+											<span className="truncate">{theme.label}</span>
+											{/* The default is state, so it is a mark and it is always on. */}
+											{isDefault && (
+												<span
+													role="img"
+													aria-label="Default theme"
+													className="ml-auto mr-1 h-1 w-1 shrink-0 rounded-full bg-black/70"
+												/>
+											)}
+										</button>
+										{!theme.builtIn && (
+											<span className="absolute right-0 top-0 flex h-6 items-center gap-0.5 bg-white pl-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover/theme:opacity-100">
+												<RowCommand onClick={() => setDefault(theme.id)}>
+													Set default
+												</RowCommand>
+												<RowCommand onClick={() => setRenamingId(theme.id)}>Rename</RowCommand>
+												<RowCommand onClick={() => saveOver(theme.id)}>Save over</RowCommand>
+												<button
+													type="button"
+													onClick={() => deleteTheme(theme.id)}
+													aria-label={`Delete ${theme.label} theme`}
+													className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-black/15 text-[8px] leading-none text-black/50 hover:text-black"
+												>
+													×
+												</button>
+											</span>
+										)}
+									</>
 								)}
-							</span>
+							</div>
 						);
 					})}
 				</div>
@@ -587,32 +693,51 @@ export function Ipod3DColorCockpit({
 				</div>
 			</div>
 
-			{/* Quick favorites — one-tap case swaps */}
+			{/* Shipped finishes — every swatch is manifest-attested, with its own provenance */}
 			<div className="border-t border-black/[0.06] px-3.5 py-2.5">
-				<Label>Quick</Label>
+				<Label>Shipped</Label>
 				<div className="mt-2 flex flex-wrap gap-1.5">
-					{CASE_CURATED_FAVORITES.slice(0, 8).map((fav) => (
+					{AUTHENTIC_PRESETS.map((preset) => (
 						<button
-							key={fav.value}
+							key={preset.id}
 							type="button"
-							title={fav.label}
-							aria-label={`Case ${fav.label}`}
-							onClick={() => {
-								dispatch({ type: "SET_SKIN_COLOR", payload: fav.value });
-								const d = deriveWheelColors(fav.value);
-								dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
-								dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
-							}}
+							title={`${preset.label} · ${preset.generation} · ${preset.year}\n${preset.hex}\n${preset.notes}`}
+							aria-label={`${preset.label}, ${preset.generation}, ${preset.year}`}
+							onClick={() => applyCase(preset.hex)}
 							className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
-								normalizeHex(fav.value) === normalizeHex(presentation.skinColor)
+								normalizeHex(preset.hex) === normalizeHex(presentation.skinColor)
 									? "border-black/70"
 									: "border-black/15"
 							}`}
-							style={{ backgroundColor: fav.value }}
+							style={{ backgroundColor: preset.hex }}
 						/>
 					))}
 				</div>
 			</div>
+
+			{/* House colours — invented, and separated so the row above stays a factual set */}
+			<div className="border-t border-black/[0.06] px-3.5 py-2.5">
+				<Label>House</Label>
+				<div className="mt-2 flex flex-wrap gap-1.5">
+					{HOUSE_PRESETS.map((preset) => (
+						<button
+							key={preset.id}
+							type="button"
+							title={`${preset.label} · house colour\n${preset.hex}\n${preset.notes}`}
+							aria-label={`${preset.label}, house colour`}
+							onClick={() => applyCase(preset.hex)}
+							className={`h-5 w-5 rounded-sm border transition-transform hover:scale-110 ${
+								normalizeHex(preset.hex) === normalizeHex(presentation.skinColor)
+									? "border-black/70"
+									: "border-black/15"
+							}`}
+							style={{ backgroundColor: preset.hex }}
+						/>
+					))}
+				</div>
+			</div>
+
+			<CaseColorReadout hex={presentation.skinColor} previous={previousCase} />
 
 			{/* Helper actions */}
 			<div className="flex items-center gap-3 border-t border-black/[0.06] px-3.5 py-2.5">
@@ -622,6 +747,72 @@ export function Ipod3DColorCockpit({
 				<span className="h-3 w-px bg-black/10" />
 				<HelperButton onClick={() => applyLook(randomCompatibleLook())}>Random look</HelperButton>
 			</div>
+		</div>
+	);
+}
+
+/**
+ * Case colour readout — the four measurements that decide whether a shell works,
+ * and which way the last change moved each one.
+ *
+ * Why it is always on rather than a warning that appears when something is wrong:
+ * a control that only speaks up on failure teaches nothing about the space being
+ * explored, and leaves "is this better?" unanswerable for every change that does
+ * not trip a threshold. Every value is present every time; the only thing that
+ * changes is the number.
+ *
+ * All copy is a noun, a value, or a measured clause — the grade words are values
+ * of the axis, not praise.
+ *
+ * Exported so the four grades can be pinned in a story. It is pure in its props
+ * — `judgeCaseColor` takes no clock, no randomness, no I/O — so a story renders
+ * exactly what the cockpit renders, without the scene.
+ */
+export function CaseColorReadout({ hex, previous }: { hex: string; previous?: string }) {
+	const verdict = useMemo(() => judgeCaseColor(hex, previous), [hex, previous]);
+
+	/** Monochrome by default; a single accent marks the binding constraint only. */
+	const gradeTone: Record<Grade, string> = {
+		exact: "text-black/75",
+		strong: "text-black/60",
+		workable: "text-black/45",
+		poor: "text-[#B5121B]",
+	};
+	const arrow: Record<DirectionWord, string> = {
+		improved: "↑",
+		degraded: "↓",
+		unchanged: "",
+	};
+
+	return (
+		<div className="border-t border-black/[0.06] px-3.5 py-2.5">
+			<div className="flex items-baseline justify-between">
+				<Label>Reading</Label>
+				{verdict.direction && verdict.direction.overall !== "unchanged" ? (
+					<span className="text-[10px] tabular-nums text-black/45">
+						{arrow[verdict.direction.overall]} {verdict.direction.overall}
+					</span>
+				) : null}
+			</div>
+
+			<div className="mt-1.5 text-[11px] leading-tight text-black/70">
+				{verdictHeadline(verdict)}
+			</div>
+
+			<dl className="mt-2 grid grid-cols-[auto_1fr_auto] items-baseline gap-x-2 gap-y-1">
+				{verdict.axes.map((axis) => {
+					const moved = verdict.direction?.byAxis[axis.id].direction ?? "unchanged";
+					return (
+						<Fragment key={axis.id}>
+							<dt className="text-[10px] text-black/40" title={axis.detail}>
+								{axis.label}
+							</dt>
+							<dd className={`text-[11px] tabular-nums ${gradeTone[axis.grade]}`}>{axis.value}</dd>
+							<dd className="w-3 text-right text-[10px] text-black/35">{arrow[moved]}</dd>
+						</Fragment>
+					);
+				})}
+			</dl>
 		</div>
 	);
 }
@@ -734,6 +925,25 @@ function Label({ children }: { children: React.ReactNode }) {
 		<span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-black/35">
 			{children}
 		</span>
+	);
+}
+
+/** A command inside a theme row — a word, never a bare glyph. */
+function RowCommand({
+	onClick,
+	children,
+}: {
+	onClick: () => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className="rounded px-1 py-0.5 text-[10px] font-medium text-black/45 transition-colors hover:bg-black/[0.06] hover:text-black"
+		>
+			{children}
+		</button>
 	);
 }
 

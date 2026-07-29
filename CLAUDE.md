@@ -16,3 +16,109 @@ Use `@/openspec/AGENTS.md` to learn:
 Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
+
+## Start here
+
+`make board` — one screen: the five-act arc, every active change with derived progress,
+the current focus, what is next, what each gate printed when it was last observed, and what
+carries forward. Read it before reading anything else. Nothing on it is hand-counted.
+
+- **Derived, never stored:** task counts come from `openspec/changes/<change>/tasks.md` at
+  read time. Checkboxes are the only ledger — a summary that disagrees with them cannot
+  exist, because there is no summary.
+- **Hand-maintained, exactly one file:** `tasks/state.json` — the act ordering, focus,
+  blocked, next, gates-as-observed, carry. Update it in the same commit as the work.
+- **Enforced, not remembered:** `pnpm validate` runs `board:check` and the pre-commit hook
+  runs `pnpm validate`. It fails on a completed-but-unarchived change (printing the exact
+  `openspec archive` command), a dangling change reference in `next` or `arc`, a change
+  directory missing `proposal.md`/`tasks.md`, and on the board going stale — `openspec/changes`
+  edited without `tasks/state.json` moving with it.
+- **Archiving is a gate, not a chore.** When a change reaches 100%, the next commit fails
+  until it is archived. `openspec archive <change-id> --yes`.
+
+## Ready state — when the project is clear
+
+**Clear** when all five hold. Each is answered by a command, never from memory.
+
+| Condition | Answered by |
+|---|---|
+| Working tree committed | `git status --porcelain` prints nothing |
+| Gates green | `pnpm validate` exits 0 |
+| Nothing complete-but-unarchived | `pnpm board:check` |
+| Board not stale | `pnpm board:check` |
+| No owner-gated item outstanding | `make board` NEXT contains no `USER:` line |
+
+Clear means *ready to accept new work*. It does not mean the arc is finished — it means
+nothing already started is waiting on anyone.
+
+Anything less than all five is **carrying**. Name the failing condition in the first line of
+the reply. Do not call the project done, clean, safe, or ready while one fails.
+
+## Priority — what gets worked next
+
+New work does not displace work in flight. Rank by first match:
+
+1. **Defect against a ratified requirement** — shipped code contradicts an accepted spec in
+   `openspec/specs/`. Preempts everything, including the arc. A spec the code disagrees with
+   is worse than a missing feature: every downstream claim inherits the disagreement, and the
+   spec stops being evidence of anything.
+2. **Owner-gated item** — only the owner can close it. It goes to them immediately, and other
+   work continues around it. Never a reason to stall.
+3. **Act blocker** — the change that unblocks the next act on the arc.
+4. **Nearest to done** — the in-flight change with the highest derived percentage. Finishing
+   beats starting.
+5. **New work** — enters at the back.
+
+**WIP limit: 3.** At most three changes may sit strictly between 0% and 100%. Above that,
+finish before proposing. This is a statement about attention, not capacity: a change at 42%
+that nobody is reading is indistinguishable from an unwritten one, except that it looks like
+progress on the board.
+
+## Where decisions live
+
+Reasoning is written where the thing it governs lives, so a cold session reads one file
+rather than reconstructing intent from a diff.
+
+- **Module docs carry the mechanism and the constraint.** `lib/color-manifest.ts`,
+  `lib/color-verdict.ts`, `lib/color-fidelity.ts` and `lib/case-color-presets.ts` each open
+  with the rule they enforce and the defect that motivated it. Read those before changing a
+  colour constant.
+- **The active change's `tasks.md` carries the measurements.** Numbers already derived are
+  recorded there so they are never re-derived — the fidelity envelope, the 16.7M-colour
+  sweep, the per-follow-up rulings. Check it before running a long measurement.
+- **Tests carry the invariant, with the failure in the docstring.** A test that pins a
+  colour states what shipped broken and what it measured.
+
+## Documentation layout
+
+One fact, one home. A document that restates a fact owned elsewhere is drift, and drift is
+what makes a session repeat itself.
+
+- **`README.md` is the table of contents.** It links; it does not explain. Every document is
+  one hop away. Feature prose belongs in the document that owns the feature.
+- **Prose documentation is MDX under `docs/`**, so a rendered example can sit beside the rule
+  it states. Plain `.md` is for documents with nothing to render.
+- **Mechanism and constraint stay in the module doc-comment**, next to the code they govern.
+  MDX links to the module; it does not paraphrase it.
+- **Measurements stay in the active change's `tasks.md`.**
+- **No status file.** Progress, roadmap, and next-task documents are derived at read time by
+  `make board` or they do not exist. `docs/PROGRESS.md`, `docs/ROADMAP.md` and
+  `docs/NEXT-TASK.md` are that drift class — hand-checked boxes competing with the change
+  ledgers, stale since April and May. They are scheduled for deletion, not for updating.
+- **A count never appears in prose.** Write "see `make board`".
+
+## Colour work — the rules that already cost a session to learn
+
+- **Attestation is a factual claim.** The manifest attests hardware. A constant whose name
+  asserts a generation must read its hex from `authenticFinishes` (`finishHex`), never a
+  typed literal — two shipped constants had drifted onto the wrong generation's value.
+  House colours are not attested and do not belong in the manifest; they live in
+  `lib/case-color-presets.ts`.
+- **Never nudge a measured value to make a check pass.** Change the check, or rule the value
+  house and say so with its reading. Both moves are on the record in
+  `add-color-fidelity-verification`; the distinction is the whole point of the change.
+- **A gate that checks only the passing case is not a gate.** The wheel-label contrast pair
+  covered the dark wheel and not the light one; the label solver checked the gradient
+  midpoint and not the ends. Both passed while shipping the defect they existed to catch.
+- **Anything that moves a pixel gates on the owner's review**, however well measured. State
+  the ΔE00 and what moved, then stop.

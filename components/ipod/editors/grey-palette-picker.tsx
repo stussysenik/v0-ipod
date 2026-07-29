@@ -3,11 +3,8 @@
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-	BACKGROUND_CURATED_FAVORITES,
-	CASE_CURATED_FAVORITES,
-	colorManifest,
-} from "@/lib/color-manifest";
+import { CASE_CURATED_FAVORITES } from "@/lib/case-color-presets";
+import { BACKGROUND_CURATED_FAVORITES, colorManifest } from "@/lib/color-manifest";
 
 // --- Data Model ---
 

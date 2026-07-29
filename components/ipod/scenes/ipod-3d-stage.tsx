@@ -13,8 +13,13 @@ import { setCaptureElapsedMs } from "@/lib/capture-clock";
 import { clipMarqueeElapsedMs, clipSongSecond } from "@/lib/export-clock";
 import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { playClickAudio } from "@/lib/ipod-state/effects";
-import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
+import {
+	BUILT_IN_THEMES,
+	createBootedWorkbenchModel,
+	loadDefaultThemeId,
+	loadSavedThemes,
+} from "@/lib/studio-themes";
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { createDebouncer } from "@/lib/debounce";
 import { ClipCodecUnavailableError } from "@/lib/export/clip-codec-ladder";
@@ -116,7 +121,15 @@ export function Ipod3DStage() {
 		// valid `?s=` share link wins over local persistence for this load only —
 		// the param is consumed — and panel geometry stays device-local.
 		() => {
-			const persisted = loadWorkbenchModel() ?? createInitialIpodWorkbenchModel();
+			// No persisted snapshot means a fresh visitor, and a fresh visitor boots
+			// the theme the default pointer names — not a second set of colour
+			// literals that happens to match it.
+			const persisted =
+				loadWorkbenchModel() ??
+				createBootedWorkbenchModel(
+					[...BUILT_IN_THEMES, ...loadSavedThemes()],
+					loadDefaultThemeId(),
+				);
 			const shared = consumePortableStateFromUrl();
 			return shared ? { ...shared, panelLayout: persisted.panelLayout } : persisted;
 		},
@@ -201,7 +214,6 @@ export function Ipod3DStage() {
 	// Mobile control drawer. Desktop ignores this (the panels float at the corners);
 	// on narrow viewports the controls collapse into a bottom sheet so they never
 	// overlap the device.
-	const [controlsOpen, setControlsOpen] = useState(false);
 
 	// Short-landscape phones: the floating chrome must reflow to the screen edges so
 	// the centered model stays visible. Below `lg` the cockpit sheet is hidden anyway;
@@ -839,31 +851,27 @@ export function Ipod3DStage() {
 						</StudioButton>
 					</StudioControlScope>
 
-					{/* Shell Nav Button — a high-performance anchor for the creation flow. */}
-					<span>
-						<button
-							type="button"
-							onClick={() => setControlsOpen((o) => !o)}
-							// Same machined corner as the 2D control beside it — the header reads as
-							// one instrument, not a stadium pill next to a rectangle.
-							style={{ borderRadius: SURFACE_RADIUS }}
-							className={`group relative flex h-10 items-center gap-3 border px-4 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.94] ${
-								controlsOpen 
-									? "border-black/20 bg-black text-white shadow-2xl" 
-									: "border-black/10 bg-white/70 text-black/80 backdrop-blur-xl hover:border-black/30 hover:bg-white/90"
-							}`}
-							aria-expanded={controlsOpen}
-						>
-							<span className="text-[10px] font-black uppercase tracking-[0.2em]">
-								{controlsOpen ? "Close" : "Menu"}
-							</span>
-							<div className="relative flex h-3 w-4 flex-col justify-between overflow-hidden">
-								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "bg-white rotate-45 translate-y-[5.25px]" : "bg-current"}`} />
-								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "translate-x-6 opacity-0" : "bg-current"}`} />
-								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "bg-white -rotate-45 -translate-y-[5.25px]" : "bg-current"}`} />
-							</div>
-						</button>
-					</span>
+					{/* ── archived: mobile menu toggle ────────────────────────────────────────────
+				    The Menu/Close hamburger that slid a control drawer up from the bottom on
+				    narrow viewports is archived here. The controls are now always visible,
+				    matching the desktop behaviour at every breakpoint.
+
+				    <span>
+				      <button
+				        type="button"
+				        style={{ borderRadius: SURFACE_RADIUS }}
+				        className="group relative flex h-10 items-center gap-3 border px-4 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.94] border-black/20 bg-black text-white shadow-2xl"
+				        aria-expanded
+				      >
+				        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Close</span>
+				        <div className="relative flex h-3 w-4 flex-col justify-between overflow-hidden">
+				          <span className="h-[1.5px] w-full rounded-full bg-white rotate-45 translate-y-[5.25px]" />
+				          <span className="h-[1.5px] w-full rounded-full translate-x-6 opacity-0" />
+				          <span className="h-[1.5px] w-full rounded-full bg-white -rotate-45 -translate-y-[5.25px]" />
+				        </div>
+				      </button>
+				    </span>
+				─────────────────────────────────────────────────────────────────────── */}
 				</nav>
 			</header>
 
@@ -897,9 +905,7 @@ export function Ipod3DStage() {
 
 			{/* Responsive control surface — one DOM tree, two layouts. */}
 			<div
-				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) lg:contents ${
-					controlsOpen ? "translate-y-0 shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)]" : "translate-y-full lg:translate-y-0"
-				}`}
+				className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)] transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) lg:contents"
 			>
 				{/* Left group — the "subject": how you interact (01), what the device looks
 				    like (02), what's on screen (03), its charge state (04), your angle (05).
@@ -910,7 +916,7 @@ export function Ipod3DStage() {
 						index={2}
 						presentation={presentation}
 						dispatch={dispatch}
-						lightingName={studio.lighting.name}
+						lighting={studio.lighting}
 					/>
 					<Ipod3DNowPlayingCockpit index={3} metadata={model.metadata} dispatch={dispatch} />
 					{/* Battery lives with the screen state it drives (the status-bar cell),

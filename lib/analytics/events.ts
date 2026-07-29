@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import { getAnalyticsClient } from "./client";
 
 /**
  * Centralized, vendor-neutral analytics surface.
@@ -8,6 +8,10 @@ import posthog from "posthog-js";
  * one-file change. `track` no-ops cleanly until the client is initialized (e.g.
  * local dev with no key), so adding a `track()` call can never throw or block an
  * interaction.
+ *
+ * The client is read from the registry rather than imported: this module is
+ * reachable from client components on every route, and a static vendor import
+ * here would pull 67 KB gz into the shared chunk. See `./client`.
  *
  * Autocapture already records DOM clicks/taps (the click wheel, menu items). Use
  * these named events for semantic signals autocapture can't infer — canvas
@@ -32,6 +36,7 @@ export function track(
 	props?: Record<string, unknown>,
 ): void {
 	if (typeof window === "undefined") return;
-	if (!posthog.__loaded) return;
-	posthog.capture(event, props);
+	const client = getAnalyticsClient();
+	if (!client) return;
+	client.capture(event, props);
 }

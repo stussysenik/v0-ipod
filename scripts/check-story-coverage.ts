@@ -87,12 +87,20 @@ function main(): void {
 	const expected = new Set(
 		IN_SCOPE_COMPONENTS.map((c) => basename(c).replace(".tsx", ".stories.tsx")),
 	);
-	// Allow extra stories for compositions (e.g. now-playing)
+	// Stories with no 1:1 in-scope component. Two kinds, both legitimate:
+	// compositions assembled from several components, and showcases that render
+	// token or palette data rather than a component at all.
 	const allowed = new Set([
 		...expected,
 		"now-playing.stories.tsx",
 		"ipod-classic.stories.tsx",
 		"image-upload.stories.tsx",
+		"product-screen-chrome.stories.tsx",
+		// Data showcases: swatches and token tables, no component under test.
+		"product-finishes.stories.tsx",
+		"shared-ui-tokens.stories.tsx",
+		// Authoring surfaces: no Figma counterpart, states still need pinning.
+		"case-color-readout.stories.tsx",
 	]);
 	for (const f of storyFiles) {
 		if (!allowed.has(f)) {

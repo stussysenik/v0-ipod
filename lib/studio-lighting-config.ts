@@ -333,6 +333,104 @@ export function cloneLightingConfig(config: StudioLightingConfig): StudioLightin
 	};
 }
 
+// ─── Rig deviation — a theme records the delta, never a copy ────────────────
+
+/**
+ * The fields a saved theme may override on top of a named preset.
+ *
+ * Granularity is the top level: tuning `key.intensity` records the whole `key`
+ * spec, not a leaf path. That is deliberate. A leaf-path diff needs a nested
+ * partial type and a merge that can half-apply a `position` triple; a top-level
+ * diff needs neither, and the property it has to hold — an untouched field keeps
+ * tracking future revisions of its preset — is satisfied at either granularity.
+ */
+export type RigOverrides = Partial<StudioLightingConfig>;
+
+const RIG_FIELDS = [
+	"name",
+	"ambient",
+	"key",
+	"fill",
+	"rim",
+	"env",
+] as const satisfies readonly (keyof StudioLightingConfig)[];
+
+/** Own keys carrying a defined value — `{ castShadow: undefined }` reads as absent. */
+function definedKeys(value: object): string[] {
+	return Object.keys(value).filter(
+		(k) => (value as Record<string, unknown>)[k] !== undefined,
+	);
+}
+
+/**
+ * Structural equality over the JSON shapes this module holds.
+ *
+ * `sanitizeSpot` writes `castShadow: undefined` when neither the stored value
+ * nor the fallback is a boolean, so a config that has been through storage
+ * carries explicit-undefined keys a preset literal does not. Treating those as
+ * absent is what keeps an untouched rig diffing to `{}` after a reload — the
+ * whole basis of "an untouched theme tracks its preset".
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	if (Array.isArray(a) || Array.isArray(b)) {
+		if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+		return a.every((v, i) => sameValue(v, b[i]));
+	}
+	if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+	const ka = definedKeys(a);
+	const kb = definedKeys(b);
+	if (ka.length !== kb.length) return false;
+	return ka.every((k) =>
+		sameValue((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+	);
+}
+
+/** The named preset's config, or Designer Dark when the name is unknown. */
+function presetConfig(presetName: string): StudioLightingConfig {
+	return RIG_PRESETS.find((p) => p.config.name === presetName)?.config ?? DESIGNER_DARK_RIG;
+}
+
+/**
+ * The sparse record of how `config` deviates from the named preset. A config
+ * equal to its preset yields `{}` — the empty case is what lets an untouched
+ * theme inherit a later revision of the preset it names.
+ *
+ * Implemented as clone-then-delete rather than build-up because assigning
+ * `overrides[field]` under a union-typed key widens to a union of value types
+ * that no single field accepts. Deleting from a full clone types cleanly and
+ * hands back values already detached from the caller's config.
+ */
+export function diffFromPreset(config: StudioLightingConfig, presetName: string): RigOverrides {
+	const preset = presetConfig(presetName);
+	const overrides: RigOverrides = cloneLightingConfig(config);
+	for (const field of RIG_FIELDS) {
+		if (sameValue(config[field], preset[field])) delete overrides[field];
+	}
+	return overrides;
+}
+
+/**
+ * Rebuild a full config from a preset name plus its deviations — the inverse of
+ * `diffFromPreset`. An unknown preset falls back to Designer Dark, matching
+ * `rigForTheme`'s existing contract.
+ *
+ * The merge runs through `sanitizeLightingConfig` because `overrides` reaches
+ * here straight off localStorage: the sanitizer is total, so a malformed field
+ * heals instead of throwing, and every intensity lands inside the clamps that
+ * keep a NoToneMapping render from clipping to white.
+ */
+export function applyOverrides(
+	presetName: string,
+	overrides: RigOverrides | undefined | null,
+): StudioLightingConfig {
+	const preset = cloneLightingConfig(presetConfig(presetName));
+	if (typeof overrides !== "object" || overrides === null || Array.isArray(overrides)) {
+		return preset;
+	}
+	return sanitizeLightingConfig({ ...preset, ...overrides });
+}
+
 /**
  * Per-pose light compositions — the softbox arrangement a named camera pose is
  * *shaped against*, in reflection space.

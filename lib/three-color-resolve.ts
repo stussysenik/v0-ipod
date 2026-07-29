@@ -94,10 +94,66 @@ void main() {
 }
 `;
 
-const RESOLVE_FRAG = /* glsl */ `
+/**
+ * The operator the resolve pass applies before encoding.
+ *
+ * WHY THIS IS A PARAMETER AND NOT A CONSTANT
+ *
+ * three decides tone mapping per render target, not per renderer. From
+ * `getParameters` in r182:
+ *
+ *   let toneMapping = NoToneMapping;
+ *   if ( material.toneMapped ) {
+ *     if ( currentRenderTarget === null || currentRenderTarget.isXRRenderTarget === true ) {
+ *       toneMapping = renderer.toneMapping;
+ *     }
+ *   }
+ *
+ * The live canvas renders to `null`, so it receives `renderer.toneMapping`. The
+ * export renders to a plain `WebGLRenderTarget`, which is neither null nor an XR
+ * target — so it receives `NoToneMapping` no matter how the renderer is
+ * configured. The operator is therefore something the export path has to reapply
+ * itself, and `RESOLVE_TONE_MAPPING` is where it says which one.
+ *
+ * Today the renderer is `NoToneMapping` and this is `"none"`, so the two agree
+ * and exports are faithful. They agree *by coincidence of both being off*, which
+ * is not a property anything was checking. `resolveMatchesRenderer` below is the
+ * check; `three-color-resolve.test.ts` fails if the pair ever drifts apart.
+ */
+export type ResolveToneMapping = "none" | "neutral";
+
+/** The operator the export resolve applies. Must track the renderer's. */
+export const RESOLVE_TONE_MAPPING: ResolveToneMapping = "none";
+
+const TONE_MAP_GLSL: Record<ResolveToneMapping, string> = {
+	none: "vec3 applyToneMap(vec3 c) { return c; }",
+	// Khronos PBR Neutral, transcribed from three's `tonemapping_pars_fragment`.
+	// Kept here rather than imported so the export path never silently picks up a
+	// different revision of the operator than the one it was verified against.
+	neutral: /* glsl */ `
+vec3 applyToneMap(vec3 color) {
+	const float StartCompression = 0.8 - 0.04;
+	const float Desaturation = 0.15;
+	float x = min(color.r, min(color.g, color.b));
+	float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+	color -= offset;
+	float peak = max(color.r, max(color.g, color.b));
+	if (peak < StartCompression) return color;
+	float d = 1.0 - StartCompression;
+	float newPeak = 1.0 - d * d / (peak + d - StartCompression);
+	color *= newPeak / peak;
+	float g = 1.0 - 1.0 / (Desaturation * (peak - newPeak) + 1.0);
+	return mix(color, vec3(newPeak), g);
+}
+`,
+};
+
+const resolveFrag = (toneMapping: ResolveToneMapping) => /* glsl */ `
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D tDiffuse;
+
+${TONE_MAP_GLSL[toneMapping]}
 
 // IEC 61966-2-1 linear → sRGB, matching three's getLinearToSRGB output encode.
 vec3 linearToSRGB(vec3 c) {
@@ -108,12 +164,37 @@ vec3 linearToSRGB(vec3 c) {
 
 void main() {
 	vec4 src = texture2D(tDiffuse, vUv);
-	// Straight linear → sRGB encode. No vignette: a product plate wants a clean, uniform
-	// field, so the live canvas carries no darkening and neither does the export.
-	vec3 color = linearToSRGB(src.rgb);
+	// Operator first, then encode — the order three uses on the live canvas, where
+	// tone mapping happens in linear light and the colorspace fragment runs after.
+	// No vignette: a product plate wants a clean, uniform field, so the live canvas
+	// carries no darkening and neither does the export.
+	vec3 color = linearToSRGB(applyToneMap(src.rgb));
 	gl_FragColor = vec4(color, src.a);
 }
 `;
+
+/**
+ * Does the export resolve reapply what the renderer applies? The one question
+ * that decides whether an exported PNG matches the screen.
+ *
+ * Takes the renderer's constant rather than importing it so the check has no
+ * opinion about where the renderer lives, and so a test can drive both sides.
+ */
+export function resolveMatchesRenderer(
+	rendererToneMapping: number,
+	resolveToneMapping: ResolveToneMapping = RESOLVE_TONE_MAPPING,
+): boolean {
+	// Widened past ResolveToneMapping on purpose: any other operator (ACES, AgX,
+	// Reinhard, Cineon) has no port here, so the export cannot match it. That case
+	// reports a mismatch rather than silently passing through as "none".
+	const expected: ResolveToneMapping | "unsupported" =
+		rendererToneMapping === THREE.NeutralToneMapping
+			? "neutral"
+			: rendererToneMapping === THREE.NoToneMapping
+				? "none"
+				: "unsupported";
+	return expected === resolveToneMapping;
+}
 
 export class ColorResolvePass {
 	private readonly scene = new THREE.Scene();
@@ -121,11 +202,13 @@ export class ColorResolvePass {
 	private readonly material: THREE.ShaderMaterial;
 	private readonly quad: THREE.Mesh;
 	private outRT: THREE.WebGLRenderTarget | null = null;
+	readonly toneMapping: ResolveToneMapping;
 
-	constructor() {
+	constructor(toneMapping: ResolveToneMapping = RESOLVE_TONE_MAPPING) {
+		this.toneMapping = toneMapping;
 		this.material = new THREE.ShaderMaterial({
 			vertexShader: RESOLVE_VERT,
-			fragmentShader: RESOLVE_FRAG,
+			fragmentShader: resolveFrag(toneMapping),
 			uniforms: {
 				tDiffuse: { value: null },
 			},

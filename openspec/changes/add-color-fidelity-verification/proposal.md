@@ -83,8 +83,10 @@ This change adds the instrument. It ships no new render features.
   The export-parity read-back needs a WebGL context; see `design.md` for the headless
   strategy and its fallback, noting a measured environment limitation — Playwright cannot see
   the canvas in this environment, so this must not be built as a Playwright spec.
-- Open question for review: `3d-product-fidelity` requires materials be "albedo-dominant
+- Open question, now ruled: `3d-product-fidelity` requires materials be "albedo-dominant
   (low metalness and low environment-reflection intensity)", but the back cap and edge band
   ship `metalness={1.0}` (`three-d-ipod.tsx:1431`, `:1441`) — deliberately, as anodized
-  steel. Spec and code contradict. Resolving it is out of scope here but should be settled
-  before the launch gate archives; `design.md` records the options.
+  steel. Ruled as a per-zone material contract; measurement and argument in `tasks.md` §7.8.
+  The spec text itself belongs to `update-render-fidelity-launch-gate`.
+- Outstanding before archive: §7.7 visual review (three on-screen changes need the owner's
+  eyes) and §7.6 AgX A/B, which belongs to the launch-gate change.

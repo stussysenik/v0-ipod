@@ -1,0 +1,77 @@
+{
+  "updated": "2026-07-29",
+  "focus": "Colour fidelity is measured, not asserted: the metric is conformant, the envelope is exhaustive, live-vs-export parity is gated, and presented finishes are attested.",
+  "blocked": false,
+  "blocked_reason": null,
+  "arc": [
+    {
+      "act": 1,
+      "claim": "The object is faithful",
+      "change": "add-color-fidelity-verification",
+      "note": "also restore-finish-provenance, update-render-fidelity-launch-gate"
+    },
+    {
+      "act": 2,
+      "claim": "The instrument is legible",
+      "change": "refactor-3d-control-surface-to-inspector",
+      "note": "blocked on adopt-studio-control-language; retires 7 cockpit cards + duplicate panel-registry"
+    },
+    {
+      "act": 3,
+      "claim": "Every choice is remembered",
+      "change": "add-customizer-decision-log",
+      "note": "keystone — ships no pixels, makes 4 and 5 possible"
+    },
+    {
+      "act": 4,
+      "claim": "The document travels",
+      "change": null,
+      "note": "half-shipped — lib/portable-state.ts encodes the look, not the log"
+    },
+    {
+      "act": 5,
+      "claim": "The community is the gallery",
+      "change": "add-community-state-gallery",
+      "note": "local library first; storage is the last decision, not the first"
+    }
+  ],
+  "next": [
+    "add-color-fidelity-verification §7.1-7.8 — follow-ups written up self-contained in that change's tasks.md. Start there; do not re-derive the measurements, they are recorded.",
+    "USER: visual check of /3d — the cockpit gained Shipped/House swatch rows and a Reading panel; wheel derivation and label tone changed for every non-neutral and every light case (§7.7).",
+    "update-ipod-theme-black-white-toggle 8.2/8.3 — USER: in-browser theme flip + PNG export in both themes. Visual gate, not self-certifiable.",
+    "add-pi-research-agent 3.1/3.4/4.3 — research-only contract, refusal path, missing-key tests. Mechanical.",
+    "USER: visual review of the Themes shelf in /3d — update-studio-theme-authoring is 28/29 and only §9 is open. The shelf moved from a chip grid to 24px rows: each saved theme now carries a default mark plus Set default / Rename / Save over in an overlay that is transparent at rest. The rig defect is closed and covered — a hand-tuned rig now survives save, reload and re-apply.",
+    "add-workspace-storage-registry — 21 keys across 7 files, three naming conventions, no reset and no fresh-boot test. Inventory recorded in that change's tasks.md; do not re-derive it.",
+    "add-finish-rig-pairing — carries the cross-registry rule. Blocked on add-color-fidelity-verification hitting 100%; two of its three floors must be measured, not chosen (design.md D3).",
+    "add-motion-authoring-system — motion becomes an authored document (custom beziers, authored repeat count, per-axis phase, timeline proof). Spec'd, not started. Section 2 is measurement homework: the procedural-to-keyframe port is ruled by reading, not assertion. Section 6 moves pixels and gates on the owner.",
+    "SHORT-TERM FIX, no proposal: WHEEL_LABEL_CONTRAST_FLOOR declared twice — lib/color-manifest.ts:256 and lib/color-verdict.ts:159, which already imports that module. Make it a re-export.",
+    "SHORT-TERM FIX, no proposal: delete docs/PROGRESS.md, docs/ROADMAP.md, docs/NEXT-TASK.md (hand-maintained status, stale since April/May) and cut README.md from 950 lines to a table of contents."
+  ],
+  "gates": {
+    "validate-color-manifest": "2026-07-29 PASS 58/58 — the shell-to-wheel miss was a mis-specified rule, not a bad token; now measured as undertone (CIEDE2000 at kL=1e9), which is the physically true question",
+    "vitest unit": "2026-07-29 PASS 929/929 across 59 files (+28: rig deviation round trip, v1 theme migration, default pointer, boot resolution, theme editing)",
+    "tsc --noEmit": "2026-07-29 PASS 0 errors",
+    "oxlint": "2026-07-29 PASS 0 errors, 7 warnings (pre-existing)",
+    "openspec validate --strict": "2026-07-29 PASS add-color-fidelity-verification, update-studio-theme-authoring",
+    "fidelity:measure": "2026-07-29 PASS published envelope holds against the exhaustive 16.7M-colour sweep",
+    "scripts/type-check.mjs": "2026-07-29 PASS — was FAIL: the preflight `next build` had no bundler flag and died on the Turbopack/webpack conflict, taking the whole pre-commit gate down. Now passes --webpack, matching package.json `build`.",
+    "board:check": "2026-07-29 PASS no drift — now first in `pnpm validate`, so the pre-commit hook gates on board freshness",
+    "pnpm validate": "2026-07-29 PASS end to end (board:check + oxlint + tsc --noEmit); 22 warnings, 0 errors",
+    "vitest storybook": "2026-07-29 CANNOT RUN — Playwright chromium headless shell not installed (`pnpm exec playwright install`). Environment gap, not a code failure; the unit project is unaffected."
+  },
+  "carry": [
+    "RESOLVED, was a spec violation: a saved theme discarded a hand-tuned rig. `StudioTheme.rig` is now `{ name, overrides }` — the preset name plus a top-level sparse diff — so the preset stays the single definition of itself AND the tuning is the theme's own data. `overrides: {}` is the untouched case and still tracks future revisions of the preset. v1 records carrying a bare `rigName` migrate on read, no write required. The subtle one: `sanitizeSpot` writes `castShadow: undefined`, so a stored config carries keys a preset literal does not — a naive equality reads that as a deviation and would pin every reloaded theme's rig, ending preset tracking after the first reload. Measured and pinned in that change's tasks.md.",
+    "The /3d boot no longer matches Noir by coincidence. `createBootedWorkbenchModel` resolves a single stored default-theme pointer and applies its actions over the factory model, so the booted look and the theme the shelf marks default cannot disagree. Deleting the default deliberately leaves the pointer dangling — `resolveDefaultTheme` is the one place that heals it, to Noir. NOTE: this wires `/3d` only; `/` still boots through the app-wide `ipodCentralMachine`, which is the two-folds-of-one-model item already on this list.",
+    "The board is now self-enforcing: `pnpm validate` runs board:check, husky pre-commit runs validate. Drift classes gated — completed-but-unarchived (prints the archive command), dangling next/arc refs, change dir missing proposal/tasks, and staleness (openspec/changes edited without tasks/state.json, or a state date behind the last openspec commit). Update tasks/state.json in the same commit as the work; nothing else is hand-maintained.",
+    "RESOLVED: the CIEDE2000 hue-average branch. Now conformant to Sharma eq. 14 (all four cases, incl. the h1+h2>=360 branch the 34 reference pairs never reach). The pre-fix error was measured at <2e-4 dE over 400k random Lab pairs — real but four orders below any threshold, because the branches only differ where the RT rotation term is vanishing.",
+    "RESOLVED: relativeLuminance duplication. lib/color-engine.ts is now the sole implementation; color-manifest and studio-control-tokens re-export it. The WCAG-vs-IEC knee difference is provably unobservable for 8-bit input (no code falls between 0.03928 and 0.04045), so the collapse is a verified no-op, not a judgement call.",
+    "LATENT DEFECT, now gated: three picks tone mapping per render target, so the export path never inherits renderer.toneMapping. update-render-fidelity-launch-gate MUST set RESOLVE_TONE_MAPPING when it swaps the operator, or exports diverge from the screen by up to dE00 11.46. resolveMatchesRenderer fails on mismatch.",
+    "FIXED, was shipping: captureFrame read the linear render target raw with no resolve pass — the '~2.2 gamma dark export' bug, live on the interaction-recording path via lib/export/effect-pipeline.ts.",
+    "Under NoToneMapping fidelity is EXACT (dE00 = 0 across the whole gamut), not 'within 1.0' as design.md D2 proposed. Any nonzero reading is a defect, not a tolerance question.",
+    "Colour and lighting are still separate registries. Nothing expresses 'this rig suits this finish'. add-finish-rig-pairing now carries this; the line stays until that change lands.",
+    "NOT CLEAR. Failing conditions, per CLAUDE.md 'Ready state': working tree uncommitted, and owner-gated items outstanding in next. Gates are green (pnpm validate exit 0) and the board is fresh.",
+    "WIP LIMIT BREACHED: the limit is 3 changes strictly between 0% and 100%; 7 are. Rank by CLAUDE.md 'Priority' — finish before starting. The four new changes are homework, deliberately at 0%, and do not count against attention until one is picked up.",
+    "Two folds of one model, on two routes: ipodCentralMachine is mounted app-wide (app/layout.tsx:126) and drives / and the floating panels; /3d runs its own useReducer(ipodWorkbenchReducer) (ipod-3d-stage.tsx:112). They do not conflict today because they sit on different routes — but add-customizer-decision-log wraps the reducer, so as specified it gives /3d a log and leaves / without one. Measured in add-motion-authoring-system/design.md §Findings F3-F5, along with the duplicate export lifecycle. No proposal owns it yet.",
+    "Commits are unsigned (git log %G? = N on all history). No commit.gpgsign, no gpg.format, no user.signingkey. In a repo whose proposition is attestation, the authorship of every attestation is unverifiable. Owner's call; three lines of git config with SSH signing."
+  ]
+}

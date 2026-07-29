@@ -137,14 +137,17 @@ by regime and a single global threshold would either be vacuous or permanently r
 Thresholds are proposed in the tasks, not fixed here; they get pinned to measured values
 once §2 produces numbers, so the table records reality rather than aspiration.
 
-## Open question (out of scope, needs a ruling)
+## Open question — ruled (option ii, per-zone material contract)
 
 `3d-product-fidelity` requires materials be "albedo-dominant (low metalness and low
 environment-reflection intensity)", but the back cap and edge band ship `metalness={1.0}`
 (`three-d-ipod.tsx:1431`, `:1441`) as deliberate anodized steel — and a separate
 requirement in that same spec, "Edge color composes with finishes and lighting", explicitly
-calls for "a real metal zone under the env-first rig". The spec contradicts itself and the
-code. Options: (i) narrow the albedo-dominant requirement to the plastic zones it was
-written for; (ii) restate it as a *per-zone* material contract. (ii) is likely right, but
-it is a fidelity ruling, not a verification one, so it belongs to whoever lands the launch
-gate. Recorded here so it is not lost.
+calls for "a real metal zone under the env-first rig".
+
+Ruled as (ii). The zones already partition cleanly, so the requirement is true everywhere
+it was written about and false only where another requirement in the same spec demands
+metal. Full measurement and the argument that both black-preservation scenarios survive
+metal unchanged are in `tasks.md` §7.8. Spec text belongs to
+`update-render-fidelity-launch-gate`; the ruling is settled so that change need not
+re-derive it.

@@ -1,5 +1,4 @@
 import { createMachine, assign } from "xstate";
-import { Effect, Console } from "effect";
 import type { 
 	IpodWorkbenchModel, 
 	IpodViewMode, 
@@ -441,8 +440,11 @@ export const ipodCentralMachine = createMachine(
 	{
 		actions: {
 			logPlay: () => {
-				const program = Console.log("iPod state updated");
-				Effect.runSync(program);
+				// Was `Effect.runSync(Console.log(...))`. This machine is mounted
+				// app-wide from the root layout, so that import placed the whole
+				// Effect runtime (218 KB raw / 71 KB gz) in the shared chunk to
+				// emit one synchronous log line.
+				console.log("iPod state updated");
 			},
 			togglePlaying: assign(({ context }) => normalizeModel({
 				...context,

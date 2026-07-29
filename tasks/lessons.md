@@ -161,3 +161,54 @@
 - **/3d cold-compiles for >60s on dev; a canvas-visible wait inside that window
   fails spuriously.** Warm the route (curl until 200) before timing-sensitive
   3D specs.
+- **Budget context up front and hand off before it forces the issue.** Cap
+  execution sessions at ~200k and planning at ~300k, decided at the START of the
+  work, not when the window runs short. On the colour-fidelity change I ran one
+  long session that fixed the metric, measured the envelope, gated the parity,
+  consolidated luminance, fixed the wheel derivation AND rebuilt the presets —
+  each justified on its own, but the total was two sessions of work. The user had
+  to stop me to get a handoff written. Symptom to watch for: a task list that
+  keeps growing because measurement keeps surfacing real defects. That is a
+  *good* signal about the code and a *bad* reason to keep going — write the
+  finding into the change's tasks.md as a self-contained follow-up and stop.
+- **Record measurements in the change, not just in the reply.** A number that
+  cost a 16.7M-colour sweep to produce must land in `tasks.md`/`design.md` the
+  moment it exists, so a fresh session never re-derives it. Reply text is lost;
+  the change file is the artifact.
+- **A rule that fails is not automatically a token that is wrong.** The
+  shell-to-wheel ΔE miss looked like a bad colour and was a mis-specified rule
+  comparing cross-generation parts under a metric that folds in intended
+  lightness. First ask what the rule is actually measuring and whether that is
+  the physical question. Never nudge a *measured authentic* value to turn a gate
+  green — fix the gate.
+- **Test your own expectations before trusting them.** Three separate times a new
+  test failed because the assertion encoded an assumption, not a fact (short-arc
+  hue midpoints, silver's headroom grade, an undertone ceiling that ignored the
+  sRGB gamut boundary). Each failure was the test doing its job. Write the
+  expected value from the mechanism, not from intuition.
+- **On this repo the OpenSpec change is the deliverable, not a plan file.** Asked to
+  design the customizer arc, I explored well, wrote `.claude/plans/*.md`, and reached
+  for `ExitPlanMode`. The user stopped it: "specs are our ticketing lists of what's
+  relevant and worked on." `openspec list` is the board they read. A plan file is
+  scaffolding for me; `proposal.md` / `design.md` / `tasks.md` / spec deltas are the
+  artifact. An existing memory already said the terminal state of planning here is
+  `openspec:proposal` — I had it and went the default route anyway. When a repo has a
+  house planning format, plan mode's plan file is an intermediate, never the hand-off.
+- **`openspec validate --strict` only scans a requirement's FIRST line for SHALL/MUST.**
+  Two requirements failed with the SHALL present but sitting on line two behind an
+  em-dash lead-in. Lead with the normative clause; put the enumeration after it.
+- **A convention nobody enforces is a convention that has already drifted.** The board
+  (`make board`) was correct and derived, and still could not stay true, because
+  nothing failed when it went stale. The fix was not more discipline: `board:check`
+  now runs first in `pnpm validate`, which the husky pre-commit hook already runs, and
+  it fails on completed-but-unarchived changes, dangling `next`/`arc` references, a
+  change dir missing `proposal.md`/`tasks.md`, and `openspec/changes` moving without
+  `tasks/state.json` moving with it. Staleness is measured against git, not file mtime
+  — a fresh clone rewrites every mtime, which would make staleness a property of when
+  you cloned.
+- **Check whether the gate you are attaching to actually runs.** Wiring `board:check`
+  into `pnpm validate` exposed that `validate` had been failing outright: the
+  `scripts/type-check.mjs` preflight ran `next build` with no bundler flag and died on
+  the Turbopack/webpack conflict, so the pre-commit hook could only be passed by
+  bypassing it. A gate hung off a command nobody can run is decoration. Fixed by
+  passing `--webpack`, matching `package.json` `build`.

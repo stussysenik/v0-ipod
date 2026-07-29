@@ -2404,10 +2404,15 @@ function SceneCapture({
 			try {
 				gl.setRenderTarget(renderTarget);
 				gl.render(scene, camera);
-
-				const buffer = new Uint8Array(width * height * 4);
-				gl.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
 				gl.setRenderTarget(null);
+
+				// Resolve linear scene → sRGB bytes, same as the still and clip paths.
+				// Reading the target directly returns raw linear light: three forces
+				// LinearSRGBColorSpace + NoToneMapping for any non-XR render target, so a
+				// straight read-back is the "~2.2 gamma darker than the screen" bug that
+				// ColorResolvePass exists to prevent.
+				const buffer = new Uint8Array(width * height * 4);
+				colorResolveRef.current!.resolve(gl, renderTarget, width, height, buffer);
 
 				const canvas = document.createElement("canvas");
 				canvas.width = width;

@@ -1,0 +1,68 @@
+# Tasks — add-workspace-storage-registry
+
+Read `proposal.md` first. The inventory is recorded there and in this file — **do not re-derive
+it.** All 21 keys, their files and their current values are listed in task 1.
+
+The rule that shapes this change: **a registry without a gate rots.** Task 6 is not a nicety;
+without it the registry is accurate for one month and misleading afterwards, which is worse
+than no registry at all.
+
+- [ ] 1. `lib/workspace-storage.ts` — declare all 21 keys. Inventory as measured on
+      2026-07-29, with proposed class:
+
+  | Key | Declared in | Class |
+  |---|---|---|
+  | `ipodStudioThemes` | `lib/studio-themes.ts:106` | settings |
+  | `ipod-theme` | `hooks/use-ipod-theme.tsx:53` | settings |
+  | `ipod-3d-camera.v1` | `lib/studio-camera-store.ts:13` | content |
+  | `ipod-3d-locked-pose` | `lib/studio-camera-store.ts:15` | legacy |
+  | `ipod-3d-studio-shots` | `lib/studio-camera-store.ts:16` | legacy |
+  | `ipod-3d-camera-presets` | `lib/studio-camera-store.ts:17` | legacy |
+  | `ipodSnapshotMetadata.v2` | `lib/ipod-state/storage.ts:45` | content |
+  | `ipodSnapshotUiState` | `lib/ipod-state/storage.ts:46` | content |
+  | `ipodSnapshotSongSnapshot` | `lib/ipod-state/storage.ts:47` | content |
+  | `ipodSnapshotExportCounter` | `lib/ipod-state/storage.ts:48` | cache |
+  | `ipodSnapshotLastBattery` | `lib/ipod-state/storage.ts:49` | cache |
+  | `ipodBatteryBirth` | `lib/ipod-state/storage.ts:53` | cache |
+  | `ipodSnapshotStudio` | `lib/ipod-state/storage.ts:56` | content |
+  | `ipodSnapshotPanelLayout` | `lib/ipod-state/storage.ts:59` | content |
+  | `ipodSnapshotCaseCustomColors` | `lib/ipod-state/storage.ts:63` | settings |
+  | `ipodSnapshotBgCustomColors` | `lib/ipod-state/storage.ts:63` | settings |
+  | `ipodSnapshotRingCustomColors` | `lib/ipod-state/storage.ts:63` | settings |
+  | `ipodSnapshotCenterCustomColors` | `lib/ipod-state/storage.ts:63` | settings |
+  | `ipod-3d-gesture-coached` | `components/ipod/scenes/ipod-3d-coach-hint.tsx:5` | cache |
+  | `ipodSnapshotGreyFamily` | `components/ipod/editors/grey-palette-picker.tsx:57` | settings |
+  | `ipodSnapshotDeployVersion` | `components/service-worker-cleanup.tsx:47` | cache |
+
+  - [ ] 1.1 **Key strings are preserved verbatim.** Renaming a key silently discards every
+        existing user's data. The three naming conventions stay; the registry records the
+        inconsistency rather than fixing it. A rename is a migration, and it is not this change.
+  - [ ] 1.2 Class is a closed union, not a string.
+  - [ ] 1.3 Test: no duplicate key string; every entry has owner and class.
+- [ ] 2. Move each literal into the registry and import it at the eight call sites. Behaviour
+      change: none. Verify by running the existing suite before and after — same result.
+- [ ] 3. `resetWorkspace(scope)`:
+  - [ ] 3.1 Clears `content` + `cache`, sweeps `legacy`, clears `settings` only when the scope
+        asks. Returns the cleared key list.
+  - [ ] 3.2 Test against a seeded storage double: every content/cache key gone, settings intact
+        under the default scope, and the returned list matches what was removed.
+  - [ ] 3.3 Test the wide scope clears settings too.
+- [ ] 4. Legacy sweep in `lib/studio-camera-store.ts` — remove each legacy key after its value
+      migrates. Test both the present and absent cases; absence must not throw.
+- [ ] 5. Named state fixtures — `fresh`, the default look, one per hardware preset, one with a
+      hand-tuned rig. Declared as data in one list.
+  - [ ] 5.1 A state-matrix story renders every entry. It reads the list; it does not enumerate
+        states itself.
+  - [ ] 5.2 Test: `fresh` contains no registry-declared `content` or `cache` key.
+  - [ ] 5.3 Test that the matrix covers the list — adding an entry must not require touching
+        the story or the test.
+- [ ] 6. **The gate.** Unit test scanning `lib/`, `components/`, `hooks/`, `app/` for browser
+      storage key literals; fails on any key the registry does not declare, naming file and key.
+  - [ ] 6.1 Prove it fails: add a stray key literal in a fixture, confirm the failure names it,
+        remove it. A gate never observed failing is not known to be a gate.
+  - [ ] 6.2 The registry module itself is the only exemption.
+- [ ] 7. Reset command on the surface. Confirms before clearing, and the confirmation names the
+      scope. Command label ≤2 words; icon carries a text label.
+- [ ] 8. Gates: `pnpm vitest run --project unit`, `pnpm validate` exit 0,
+      `openspec validate add-workspace-storage-registry --strict --no-interactive`.
+- [ ] 9. **USER:** visual review — the surface gains a reset command and its confirmation.

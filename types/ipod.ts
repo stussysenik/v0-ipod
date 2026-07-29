@@ -1,18 +1,27 @@
-import { Schema } from "effect";
-
-export const SongMetadataSchema = Schema.Struct({
-	title: Schema.String,
-	artist: Schema.String,
-	album: Schema.String,
-	artwork: Schema.String,
-	duration: Schema.Number,
-	currentTime: Schema.Number,
-	rating: Schema.Number,
-	trackNumber: Schema.Number,
-	totalTracks: Schema.Number,
-});
-
-export type SongMetadata = Schema.Schema.Type<typeof SongMetadataSchema>;
+/**
+ * Declared as a plain interface, not an Effect `Schema.Struct`.
+ *
+ * The struct was a runtime value with no consumer — nothing decoded or encoded
+ * through it, and the only reference was `Schema.Schema.Type` deriving this type
+ * from it. Because the value shared a module with the types, all 18 importers of
+ * `@/types/ipod` pulled the Effect runtime into their chunk, which put 218 KB raw
+ * / 71 KB gz in the shared layout bundle to describe nine primitive fields.
+ *
+ * Reintroduce a schema here only alongside a caller that validates. Effect is
+ * still used where it earns its weight: `lib/export/effect-pipeline.ts`, behind
+ * a dynamic import on the export path.
+ */
+export interface SongMetadata {
+	title: string;
+	artist: string;
+	album: string;
+	artwork: string;
+	duration: number;
+	currentTime: number;
+	rating: number;
+	trackNumber: number;
+	totalTracks: number;
+}
 
 export type IpodViewMode = "flat" | "3d" | "focus" | "preview" | "ascii";
 export type IpodInteractionModel = "direct" | "ipod-os" | "ipod-os-original";
