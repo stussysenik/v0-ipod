@@ -2,7 +2,6 @@ import type { IpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { IPOD_CLASSIC_PRESETS, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { DESIGNER_DARK_RIG, cloneLightingConfig } from "@/lib/studio-lighting-config";
-import { DEFAULT_MOTION_STATE } from "@/lib/motion/motion-state";
 import type { IpodHardwarePresetId } from "@/types/ipod-state";
 import { NOIR_THEME, rigForTheme } from "@/lib/studio-themes";
 

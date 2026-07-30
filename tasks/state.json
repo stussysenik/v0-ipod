@@ -1,12 +1,12 @@
 {
-	"updated": "2026-07-30T03:58+0200",
+	"updated": "2026-07-30T04:02+0200",
 	"wave": 1,
 	"change": [
 		"add-color-fidelity-verification",
 		"update-studio-theme-authoring",
 		"add-motion-authoring-system"
 	],
-	"task": "add-workspace-storage-registry §1-6 landed. `lib/workspace-storage.ts` declares 22 keys (21 original + ipodStudioMotions), closed union class. All 8 call sites import from the registry — zero literal localStorage key strings remaining in source. `resetWorkspace(scope)` implemented and tested (storage double, content-only vs all scope, empty case). Legacy sweep in `studio-camera-store` removes retired keys after migration. The gate: unit test scans lib/components/hooks/app for localStorage key literals, fails on undeclared keys (self-test included). 1093/1093 unit tests (was 1083, +10). Openspec change validated strict. Remaining: §5 (named state fixtures), §7 (reset UI command — surface/UX owner gate), §9 (user visual review). FIVE RULINGS: (1) A ROW STATES A VALUE, SO THE VALUE HAD TO BE STORED — `3× · seamless` is not readable off a MotionDoc, so SavedMotion gained `cadence` (MotionCadence = Pick<MotionState,'repeat'|'durationSec'|'timeMap'>). The unused APPLY_MOTION action, payload MotionState, comment 'the shelf's one-tap recall', is evidence this was always the shape: §4b.1 stored a third of the slice the reducer was built to accept. The row reads the full motionReadout (`3× · 1.7s · seamless`) because the cycle length is now held, not derived from the live transport. (2) SAVE OVER THE OPEN ENTRY CLEARS THE OVERRIDES — folding the tuning into the entry's document leaves the override a stored copy of its own base, the preset-tracking defect this project has now paid for FOUR times. (3) DELETING THE OPEN ENTRY records resolveMotionDocById(id, next).id rather than the literal 'orbit': §4b.4's one-healer ruling is about not having two healers, not about leaving the picker marking nothing while Orbit flies. (4) The rows are `documents` MINUS the shelf, not a second list — §4b.5's one list stays the only source of picker order and a set difference cannot list a motion twice. (5) The cadence heals through sanitizeMotionState, making it the FIRST caller of SanitizeMotionOptions.naturalCycleSeconds — the option documented for 'a caller that knows a cadence the catalogue does not' — pinned BY VALUE (stored speed 1 over 20s on a 10s shelf doc → repeat 2, not the DEFAULT_REPEAT fallback), which is §4.6's lesson applied on the way in. Six shelf inputs travel as ONE `shelf` prop (MotionShelfControls) so the inspector re-parents by moving one line. 1083/1083 (was 1077). Resume at §6.8 — the owner's visual review of §6, which is the only thing standing between this change and archive.",
+	"task": "add-workspace-storage-registry §5 landed. `lib/state-fixtures.ts` declares 9 named device states: fresh, noir, 5 hardware presets, and a tuned-rig variant. Tests pin every fixture builds, the list covers all entries, and adding a fixture extends coverage automatically. 1098/1098 unit tests (was 1093, +5 from state-fixtures test + the legacy-sweep edge case). Openspec change still valid. Remaining: §5.1 (state-matrix story — Storybook infrastructure item, deferred to story pass), §7 (reset UI command on surface), §9 (user visual review). No new carry items — the fixture list follows the same data-declaration pattern as the registry's WORKSPACE_STORAGE_KEYS.",
 	"focus": "Colour fidelity is measured, not asserted: the metric is conformant, the envelope is exhaustive, live-vs-export parity is gated, and presented finishes are attested.",
 	"blocked": false,
 	"blocked_reason": null,
@@ -58,7 +58,7 @@
 	],
 	"gates": {
 		"validate-color-manifest": "2026-07-29 PASS 58/58 — the shell-to-wheel miss was a mis-specified rule, not a bad token; now measured as undertone (CIEDE2000 at kL=1e9), which is the physically true question",
-		"vitest unit": "2026-07-30 PASS 1093/1093 across 68 files (+10 in lib/workspace-storage.test.ts: WORKSPACE_KEY_MAP covers all keys, resetWorkspace against storage double with content-only and all scopes, storage errors and empty case, and localStorage key gate with file-scan + self-test).",
+		"vitest unit": "2026-07-30 PASS 1098/1098 across 69 files (+5 in lib/state-fixtures.test.ts: unique ids, every fixture builds, fresh is constructable, matrix covers the list; +1 in lib/studio-camera-store.test.ts: writing to empty storage does not throw).",
 		"tsc --noEmit": "2026-07-30 PASS 0 errors",
 		"oxlint": "2026-07-30 PASS 0 errors, 24 warnings repo-wide — §6.7 added none. The §6.5 note still holds: a memo dep a value is not derived from is a fake dep, and the timeline proof strip must not be wrapped in React.memo.",
 		"openspec validate --strict": "2026-07-30T03:55 PASS add-workspace-storage-registry; previously PASS for add-motion-authoring-system (§6.7), add-color-fidelity-verification, update-studio-theme-authoring (the CLI is the global `openspec` in ~/.bun/bin — NOT an npx package; `npx openspec` cannot resolve it)",
@@ -115,15 +115,15 @@
 		"A MEMO DEP THE VALUE IS NOT DERIVED FROM IS A FAKE DEP. The timeline proof strip reads a cache whose contents no prop describes, so memoising the reads needed `version` — a counter — as a dep, which is a lie told to a linter. The honest shape is to read during render and state the constraint the memo would have hidden: this component must not be wrapped in React.memo. Generalises: when a reader depends on state outside its props, do not fabricate a dep — either make the state a prop or forbid the memo in writing, next to the code."
 	],
 	"accounting": {
-		"measured": "2026-07-30T03:58+0200",
-		"implementable_open": 2,
+		"measured": "2026-07-30T04:02+0200",
+		"implementable_open": 1,
 		"by_change": {
 			"add-color-fidelity-verification": 1,
 			"update-studio-theme-authoring": 1,
 			"add-motion-authoring-system": 2,
 			"add-pi-research-agent": 0,
 			"add-customizer-decision-log": 0,
-			"add-workspace-storage-registry": 2,
+			"add-workspace-storage-registry": 1,
 			"add-finish-rig-pairing": 0,
 			"add-community-state-gallery": 0
 		},

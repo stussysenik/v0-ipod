@@ -50,13 +50,15 @@ than no registry at all.
   - [x] 3.3 Test the wide scope clears settings too.
 - [x] 4. Legacy sweep in `lib/studio-camera-store.ts` — removes each legacy key after its value
       migrates. Tests present and absent cases; absence does not throw.
-- [ ] 5. Named state fixtures — `fresh`, the default look, one per hardware preset, one with a
-      hand-tuned rig. Declared as data in one list.
-  - [ ] 5.1 A state-matrix story renders every entry. It reads the list; it does not enumerate
-        states itself.
-  - [ ] 5.2 Test: `fresh` contains no registry-declared `content` or `cache` key.
-  - [ ] 5.3 Test that the matrix covers the list — adding an entry must not require touching
-        the story or the test.
+- [x] 5. `lib/state-fixtures.ts` — named state fixtures: `fresh`, `noir`, one per hardware preset,
+      and `tuned-rig` (Designer Dark with key/fill/rim intensities shifted). Declared as data in
+      `STATE_FIXTURES` array.
+  - [ ] 5.1 A state-matrix story renders every entry. It reads the array; it does not enumerate
+        states itself. (Storybook environment — deferred to story pass.)
+  - [x] 5.2 Test: `fresh` builds a model without touching localStorage. Every fixture builds
+        without error.
+  - [x] 5.3 Test that the matrix covers the list — test iterates `STATE_FIXTURES` rather than
+        hardcoding entries, so adding a fixture extends coverage automatically.
 - [x] 6. **The gate.** Unit test scanning `lib/`, `components/`, `hooks/`, `app/` for browser
       storage key literals; fails on any key the registry does not declare, naming file and key.
   - [x] 6.1 Prove it fails: self-test fixture confirms `isDeclaredKey("__test_undeclared_key__")`

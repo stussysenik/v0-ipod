@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { STATE_FIXTURES, type StateFixture } from "./state-fixtures";
-import { WORKSPACE_STORAGE_KEYS } from "./workspace-storage";
+import { STATE_FIXTURES } from "./state-fixtures";
 
 describe("state fixtures", () => {
 	it("every fixture has a unique id", () => {
