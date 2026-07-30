@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { DEPLOY_VERSION_STORAGE_KEY } from "@/lib/workspace-storage";
 
 interface ServiceWorkerCleanupProps {
 	deployVersion?: string;
@@ -44,7 +45,7 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 			const effectiveDeployVersion = resolveDeployVersion(deployVersion);
 
 			try {
-				const storageKey = "ipodSnapshotDeployVersion";
+				const storageKey = DEPLOY_VERSION_STORAGE_KEY;
 				const previousVersion = localStorage.getItem(storageKey);
 				versionChanged =
 					!!previousVersion &&

@@ -1,11 +1,13 @@
 ## Session Start (mandatory)
 
+- **Identify your role.** You are Agent A (Architect), B (Builder), or C (Validator). See
+  "Multi-Agent Tandem" below. Your role determines what you read and write in this session.
 - **Read `docs/FACTORY.md` first** — the factory operating manual: roles, records, the
   provenance trace, gate rules. This file is the law (what must be true); FACTORY.md is
   the mechanism (how it is executed and verified). Where they disagree, this file wins
   and FACTORY.md is the bug.
-- Then review `tasks/state.json` — determines current arc, active changes, blockers.
-  Run `make board` to see the full derived horizon.
+- Then review `tasks/state.json` — determines current arc, active changes, blockers, and
+  your agent slot's assignment. Run `make board` to see the full derived horizon.
 - Review `docs/DECISIONS.md` statuses before proposing anything new.
 
 ## Context budget — a session ends before it forgets
@@ -100,6 +102,41 @@ nothing already started is waiting on anyone.
 
 Anything less than all five is **carrying**. Name the failing condition in the first line of
 the reply. Do not call the project done, clean, safe, or ready while one fails.
+
+## Multi-Agent Tandem — A·B·C
+
+Three agents coordinate through `tasks/state.json`. Zero conversation cross-contamination,
+because there is no conversation — only disk reads and writes.
+
+| Agent | Role | Reads | Writes |
+|---|---|---|---|
+| **A** | Architect | requirements, specs, C's verdicts | task slices, assignments in `state.json` |
+| **B** | Builder | A's task slices | code commits, local gate results |
+| **C** | Validator | B's commits, A's specs | measurements, gate verdicts |
+| **Human** | Supervisor | `make board`, diffs, C's reports | merge, promote decisions to `agreed` |
+
+### The handoff cycle
+
+```
+A: write → state.json.next[idx] = "B:&lt;spec-path&gt; &lt;criteria&gt;"
+B: read → implement → validate (tsc, lint, test) → commit → write → state.json.gates += {commit, results}
+C: read → review → measure → gate → write → state.json.next[idx] = "A:&lt;ship|rework|escalate&gt;"
+A: read → decide → write next slice or flag human
+```
+
+Three slots in `state.json.next` (0=A, 1=B, 2=C). Each agent owns one slot. An empty slot
+means the agent is idle. `make board` renders each agent's current item and who they are
+waiting on. The bottleneck is always in the file, never in a chat log.
+
+### Supervisor cold-start
+
+1. `cat CLAUDE.md` — law
+2. `make board` — arc, agents, gates, blockage
+3. `git log --oneline -10` — landscape
+4. `tasks/state.json` — raw, when board raises a question
+
+The answer to "where are we stuck" is in slot 0, 1, or 2. If none are occupied, the project
+is ready for new work.
 
 ## Priority — what gets worked next
 

@@ -15,9 +15,9 @@ import {
 	MIN_DURATION_SEC,
 	type MotionCadence,
 } from "./motion-state";
+import { MOTION_SHELF_STORAGE_KEY } from "@/lib/workspace-storage";
 import {
 	MAX_SAVED_MOTIONS,
-	MOTION_SHELF_STORAGE_KEY,
 	deleteMotion,
 	findMotionDoc,
 	flownMotionDoc,

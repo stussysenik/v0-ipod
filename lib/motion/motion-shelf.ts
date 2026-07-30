@@ -7,6 +7,7 @@ import {
 	type MotionCadence,
 	type MotionState,
 } from "./motion-state";
+import { MOTION_SHELF_STORAGE_KEY } from "@/lib/workspace-storage";
 
 /**
  * THE MOTION SHELF — a tuned motion becomes yours.
@@ -41,8 +42,6 @@ export interface SavedMotion {
 	 */
 	cadence: MotionCadence;
 }
-
-export const MOTION_SHELF_STORAGE_KEY = "ipodStudioMotions";
 
 /** Keep the shelf a shelf: past this it is a file browser, and it needs a different surface. */
 export const MAX_SAVED_MOTIONS = 50;

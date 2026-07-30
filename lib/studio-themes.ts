@@ -29,6 +29,7 @@ import {
 	type RigOverrides,
 	type StudioLightingConfig,
 } from "@/lib/studio-lighting-config";
+import { STUDIO_THEMES_STORAGE_KEY, STUDIO_DEFAULT_THEME_STORAGE_KEY } from "@/lib/workspace-storage";
 
 // ─── Model ──────────────────────────────────────────────────────────────────
 
@@ -129,8 +130,6 @@ export function themeActions(theme: StudioTheme): IpodWorkbenchAction[] {
 
 // ─── Persistence ────────────────────────────────────────────────────────────
 
-export const STUDIO_THEMES_STORAGE_KEY = "ipodStudioThemes";
-
 const HEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 /**
@@ -225,8 +224,6 @@ export function nextThemeLabel(existing: readonly StudioTheme[]): string {
  * admits a state where two themes claim the default and one where none does, and
  * both will happen. A pointer cannot express either.
  */
-export const STUDIO_DEFAULT_THEME_STORAGE_KEY = "ipodStudioDefaultTheme";
-
 export function loadDefaultThemeId(): string | null {
 	if (typeof window === "undefined") return null;
 	try {

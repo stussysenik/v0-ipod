@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CASE_CURATED_FAVORITES } from "@/lib/case-color-presets";
 import { BACKGROUND_CURATED_FAVORITES, colorManifest } from "@/lib/color-manifest";
+import { GREY_FAMILY_STORAGE_KEY } from "@/lib/workspace-storage";
 
 // --- Data Model ---
 
@@ -53,8 +54,6 @@ const FAMILY_IDS: GreyFamilyId[] = ["neutral", "warm", "cool", "greige", "sage",
 
 // 23 perceptually-spaced lightness stops: denser in the mid-range
 const LIGHTNESS_STOPS = colorManifest.greyLightnessStops;
-
-const GREY_FAMILY_STORAGE_KEY = "ipodSnapshotGreyFamily";
 
 function isGreyFamilyId(value: unknown): value is GreyFamilyId {
 	return typeof value === "string" && FAMILY_IDS.includes(value as GreyFamilyId);

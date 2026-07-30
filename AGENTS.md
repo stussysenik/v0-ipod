@@ -2,6 +2,10 @@
 
 This document configures AI assistants working on this project with the complete toolchain: Aiden Bai React skills, Portless, Vercel MCPs, Swift MCP, Impeccable, and Grill Me mode.
 
+**Multi-agent tandem:** Agents work in parallel as A (Architect), B (Builder), or C (Validator)
+through `tasks/state.json`. See `CLAUDE.md § Multi-Agent Tandem` for the protocol. The board
+(`make board`) shows each agent's current assignment and handoff state.
+
 ## Default Mode: GRILL ME
 
 **Unless explicitly stated otherwise, always operate in "Grill Me" mode.**

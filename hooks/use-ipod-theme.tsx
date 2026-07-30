@@ -50,7 +50,9 @@ export interface UseIPodThemeReturn {
 	setTheme: (theme: IPodTheme) => void;
 }
 
-const STORAGE_KEY = "ipod-theme";
+import { IPOD_THEME_STORAGE_KEY } from "@/lib/workspace-storage";
+
+const STORAGE_KEY = IPOD_THEME_STORAGE_KEY;
 
 function readStoredTheme(): IPodTheme | null {
 	if (typeof window === "undefined") return null;

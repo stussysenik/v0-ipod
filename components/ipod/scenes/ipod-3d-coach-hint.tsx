@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { GESTURE_COACHED_KEY } from "@/lib/workspace-storage";
 
-const SEEN_KEY = "ipod-3d-gesture-coached";
+const SEEN_KEY = GESTURE_COACHED_KEY;
 
 /**
  * First-run coach for the /3d camera model on touch devices. The native gesture —

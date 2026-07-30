@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { matchNamedPose, NAMED_POSES } from "./studio-camera-poses";
+import { CAMERA_STORE_KEY } from "./workspace-storage";
 import {
-	CAMERA_STORE_KEY,
 	EMPTY_CAMERA_STORE,
 	LEGACY_CAMERA_KEYS,
 	readCameraStore,
@@ -90,6 +90,12 @@ describe("camera store migration", () => {
 			"ipod-3d-camera-presets": JSON.stringify([{ id: "STALE", pose: POSE }]),
 		});
 		expect(readCameraStore(storage).presets).toEqual([{ id: "P9", pose: POSE }]);
+	});
+
+	it("writing to empty storage does not throw", () => {
+		const storage = fakeStorage();
+		expect(() => writeCameraStore(storage, EMPTY_CAMERA_STORE)).not.toThrow();
+		expect(storage.map.has(CAMERA_STORE_KEY)).toBe(true);
 	});
 
 	it("treats malformed storage as empty rather than throwing", () => {

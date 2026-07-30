@@ -1,5 +1,11 @@
 import type { StudioPose } from "@/lib/studio-camera";
 import type { PoseFraming, SavedPose, ShotLook, StudioShot } from "@/lib/studio-camera-poses";
+import {
+	CAMERA_STORE_KEY,
+	LEGACY_LOCKED_POSE_KEY,
+	LEGACY_SHOTS_KEY,
+	LEGACY_PRESETS_KEY,
+} from "@/lib/workspace-storage";
 
 /**
  * One versioned home for everything the /3d camera remembers — the locked hero pose,
@@ -9,12 +15,6 @@ import type { PoseFraming, SavedPose, ShotLook, StudioShot } from "@/lib/studio-
  * is what let three camera surfaces drift apart. The store is a plain value; the three
  * legacy keys are read once and folded in, then retired.
  */
-
-export const CAMERA_STORE_KEY = "ipod-3d-camera.v1";
-
-const LEGACY_LOCKED_POSE_KEY = "ipod-3d-locked-pose";
-const LEGACY_SHOTS_KEY = "ipod-3d-studio-shots";
-const LEGACY_PRESETS_KEY = "ipod-3d-camera-presets";
 
 export const LEGACY_CAMERA_KEYS = [
 	LEGACY_LOCKED_POSE_KEY,

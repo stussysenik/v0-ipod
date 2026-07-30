@@ -16,6 +16,20 @@ import { BATTERY_BOOT_OFFSET_MS } from "@/lib/ipod-state/battery-cycle";
 import { sanitizeMotionState, withoutTransport } from "@/lib/motion/motion-state";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
+	METADATA_STORAGE_KEY,
+	UI_STORAGE_KEY,
+	SNAPSHOT_STORAGE_KEY,
+	EXPORT_COUNTER_STORAGE_KEY,
+	LAST_EXPORTED_BATTERY_KEY,
+	BATTERY_BIRTH_KEY,
+	STUDIO_STORAGE_KEY,
+	PANEL_LAYOUT_STORAGE_KEY,
+	SAVED_COLORS_CASE_KEY,
+	SAVED_COLORS_BG_KEY,
+	SAVED_COLORS_RING_KEY,
+	SAVED_COLORS_CENTER_KEY,
+} from "@/lib/workspace-storage";
+import {
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
 	DEFAULT_INTERACTION_MODEL,
@@ -39,33 +53,14 @@ import {
 } from "@/types/ipod-state";
 import { DEFAULT_HARDWARE_PRESET_ID, IPOD_CLASSIC_PRESETS } from "@/lib/ipod-classic-presets";
 
-// Bumped to .v2 so the refreshed default song (Frank Ocean — "In My Room") actually
-// surfaces for returning sessions. Persisted metadata is spread on top of the fallback
-// in loadPersistedWorkbenchModel(), so without a key bump the previously-saved song would
-// keep masking the new default. Old key is orphaned (harmless) and re-seeds on first save.
-const METADATA_STORAGE_KEY = "ipodSnapshotMetadata.v2";
-const UI_STORAGE_KEY = "ipodSnapshotUiState";
-const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
-const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
-const LAST_EXPORTED_BATTERY_KEY = "ipodSnapshotLastBattery";
-// The moment the live (self-discharging) battery cycle was "born". Stamped once on
-// first visit; every later load derives the current charge from `now - birth`, so the
-// cycle is continuous across reloads/closures with no stored level to flicker.
-const BATTERY_BIRTH_KEY = "ipodBatteryBirth";
-// The /3d studio slice (lighting rig, flat/lock/marquee toggles, camera pose) rides its own
-// key rather than the whitelisted SongSnapshot.ui, since it carries a nested lighting record.
-const STUDIO_STORAGE_KEY = "ipodSnapshotStudio";
-// Floating tool-panel layout (spec: floating-panel-system) is editor-local, per-mode
-// chrome — not song/finish — so it rides its own key rather than the shared SongSnapshot.
-const PANEL_LAYOUT_STORAGE_KEY = "ipodSnapshotPanelLayout";
 // "Recent Custom" color history, one localStorage key per target. These pre-date the
 // model-lift and are kept verbatim so a user's existing swatches survive the migration
 // into `model.savedColors` (spec: floating-panel-system §6 — colors panel).
 const SAVED_COLORS_KEYS: Record<ColorTarget, string> = {
-	case: "ipodSnapshotCaseCustomColors",
-	bg: "ipodSnapshotBgCustomColors",
-	ring: "ipodSnapshotRingCustomColors",
-	center: "ipodSnapshotCenterCustomColors",
+	case: SAVED_COLORS_CASE_KEY,
+	bg: SAVED_COLORS_BG_KEY,
+	ring: SAVED_COLORS_RING_KEY,
+	center: SAVED_COLORS_CENTER_KEY,
 };
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 

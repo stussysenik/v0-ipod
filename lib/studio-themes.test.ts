@@ -17,11 +17,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createInitialIpodWorkbenchModel } from "@/lib/ipod-state/model";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
+import { STUDIO_THEMES_STORAGE_KEY } from "@/lib/workspace-storage";
 import { DESIGNER_DARK_RIG, cloneLightingConfig } from "@/lib/studio-lighting-config";
 import {
 	BUILT_IN_THEMES,
 	NOIR_THEME,
-	STUDIO_THEMES_STORAGE_KEY,
 	createBootedWorkbenchModel,
 	loadDefaultThemeId,
 	loadSavedThemes,
