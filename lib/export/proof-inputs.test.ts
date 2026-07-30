@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { CATALOGUE_DOCS } from "@/lib/motion/catalogue";
+import { motionDocHash } from "@/lib/motion/doc";
+
 import { exportFingerprint, proofFingerprint } from "./export-fingerprint";
 import {
 	selectExportSnapshot,
@@ -29,10 +32,15 @@ const model: ProofModelSlice = {
 const options: ProofExportOptions = {
 	aspect: "portrait",
 	quality: "pro",
-	move: "orbit",
-	loop: "loop",
-	speed: 1,
-	durationSec: 4,
+	motion: {
+		docId: "orbit",
+		repeat: 1,
+		durationSec: 4,
+		timeMap: { kind: "loop" },
+		playhead: 0,
+		playing: false,
+	},
+	doc: CATALOGUE_DOCS.orbit,
 };
 
 describe("selectProofInputs", () => {
@@ -64,12 +72,37 @@ describe("selectProofInputs", () => {
 });
 
 describe("selectExportSnapshot", () => {
-	it("adds motion fields to the proof inputs", () => {
+	it("adds the motion identity to the proof inputs", () => {
 		const snap = selectExportSnapshot(model, pose, options);
-		expect(snap.move).toBe("orbit");
-		expect(snap.loop).toBe("loop");
-		expect(snap.speed).toBe(1);
-		expect(snap.durationSec).toBe(4);
+		expect(snap.motion.docId).toBe("orbit");
+		expect(snap.motion.repeat).toBe(1);
+		expect(snap.motion.durationSec).toBe(4);
+		expect(snap.motion.timeMap).toEqual({ kind: "loop" });
+		expect(snap.motion.docHash).toBe(motionDocHash(CATALOGUE_DOCS.orbit));
+	});
+
+	it("hashes the RESOLVED document, so a sparse override reaches the identity", () => {
+		const tuned: ProofExportOptions = {
+			...options,
+			motion: {
+				...options.motion,
+				overrides: {
+					tracks: {
+						azimuth: {
+							keyframes: [
+								{ at: 0, value: 0 },
+								{ at: 1, value: 40 },
+							],
+						},
+					},
+				},
+			},
+		};
+		const base = selectExportSnapshot(model, pose, options);
+		const edited = selectExportSnapshot(model, pose, tuned);
+		expect(edited.motion.docHash).not.toBe(base.motion.docHash);
+		// …and the tuning is retained for re-open, not merely hashed away.
+		expect(edited.motion.overrides).toBeDefined();
 	});
 
 	it("the snapshot's proof key equals the standalone proof key (one source of truth)", () => {
@@ -80,7 +113,11 @@ describe("selectExportSnapshot", () => {
 
 	it("motion-only changes move the export fingerprint but NOT the proof key", () => {
 		const a = selectExportSnapshot(model, pose, options);
-		const b = selectExportSnapshot(model, pose, { ...options, move: "turntable", speed: 2 });
+		const b = selectExportSnapshot(model, pose, {
+			...options,
+			motion: { ...options.motion, docId: "turntable", repeat: 2 },
+			doc: CATALOGUE_DOCS.turntable,
+		});
 		expect(exportFingerprint(a)).not.toBe(exportFingerprint(b));
 		expect(proofFingerprint(a)).toBe(proofFingerprint(b));
 	});

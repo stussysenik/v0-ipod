@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { MotionTrack } from "@/lib/motion/doc";
+import { resolveFlownDoc } from "@/lib/motion/motion-shelf";
+import { DEFAULT_MOTION_STATE } from "@/lib/motion/motion-state";
+import { createClipPoseSampler, documentClip } from "@/lib/studio-clip-presets";
+import type { StudioPose } from "@/lib/studio-camera";
+
 import { createInitialIpodWorkbenchModel, type IpodWorkbenchModel } from "./model";
 import {
 	PORTABLE_STATE_VERSION,
@@ -151,5 +157,162 @@ describe("portable state config file (JSON twin)", () => {
 		const viaJson = decodePortableStateJson(encodePortableStateJson(model));
 		const viaUrl = decodePortableState(encodePortableState(model));
 		expect(viaJson).toEqual(viaUrl);
+	});
+});
+
+/**
+ * MOTION TRAVELS AS A DOCUMENT, NOT AS A NAME.
+ *
+ * A share link that carried only `docId` would open a tuned look playing the untuned move —
+ * the same defect the export identity closes with a hash. So the sparse override rides the
+ * payload, and the only definition of "it survived" is that the decoded look SAMPLES the
+ * same poses. Names and structural equality are both weaker claims than that.
+ *
+ * The transport does not travel: a link copied at 40% opens composed, and encodes to the
+ * same string whether or not the preview happened to be running.
+ */
+
+const MOTION_HERO: StudioPose = { azimuth: 24, elevation: -8, reach: 2.6, target: [0, 0.05, 0] };
+const MOTION_PHASES = Array.from({ length: 33 }, (_, i) => i / 32);
+
+/** A curve only a document can express — a hand-dragged tuple and a shifted phase. */
+const TUNED_AZIMUTH: MotionTrack = {
+	keyframes: [
+		{ at: 0, value: 0, easing: [0.12, 0.83, 0.4, 0.97] },
+		{ at: 0.5, value: -9.5, easing: "easeInOutCubic" },
+		{ at: 1, value: 0 },
+	],
+	phase: 0.37,
+};
+
+function motionCycle(docId: string, overrides: unknown): StudioPose[] {
+	const doc = resolveFlownDoc(docId, overrides as never);
+	const sample = createClipPoseSampler(documentClip(doc), MOTION_HERO);
+	return MOTION_PHASES.map(sample);
+}
+
+function tunedModel(): IpodWorkbenchModel {
+	const model = createInitialIpodWorkbenchModel();
+	return {
+		...model,
+		studio: {
+			...model.studio,
+			motion: {
+				docId: "crane",
+				overrides: { tracks: { azimuth: TUNED_AZIMUTH }, naturalCycleSeconds: 9 },
+				repeat: 3,
+				durationSec: 12,
+				timeMap: { kind: "boomerang", turnaround: [0.2, 0, 0.8, 1] },
+				playhead: 0.4,
+				playing: true,
+			},
+		},
+	};
+}
+
+describe("motion round trip", () => {
+	it("a hand-authored curve decodes to the identical flown poses", () => {
+		const model = tunedModel();
+		const decoded = decodePortableState(encodePortableState(model));
+		const motion = decoded!.studio.motion;
+
+		expect(motion.docId).toBe("crane");
+		expect(motion.overrides?.tracks?.azimuth).toEqual(TUNED_AZIMUTH);
+		expect(motionCycle(motion.docId, motion.overrides)).toEqual(
+			motionCycle("crane", model.studio.motion.overrides),
+		);
+		// And the tuning is not decoration: it changes what flies.
+		expect(motionCycle(motion.docId, motion.overrides)).not.toEqual(
+			motionCycle("crane", undefined),
+		);
+	});
+
+	it("carries the transport SETTINGS and drops the transport POSITION", () => {
+		const decoded = decodePortableState(encodePortableState(tunedModel()))!;
+		expect(decoded.studio.motion.repeat).toBe(3);
+		expect(decoded.studio.motion.durationSec).toBe(12);
+		expect(decoded.studio.motion.timeMap).toEqual({ kind: "boomerang", turnaround: [0.2, 0, 0.8, 1] });
+		expect(decoded.studio.motion.playhead).toBe(0);
+		expect(decoded.studio.motion.playing).toBe(false);
+	});
+
+	it("encodes to the same string whether or not the preview was running", () => {
+		const composed = tunedModel();
+		const midFlight = {
+			...composed,
+			studio: { ...composed.studio, motion: { ...composed.studio.motion, playhead: 0.83, playing: true } },
+		};
+		expect(encodePortableState(midFlight)).toBe(encodePortableState(composed));
+	});
+});
+
+describe("motion decoded from a pre-motion payload", () => {
+	/** Everything a v1 look carried, with no `studio.motion` at all. */
+	function v1Envelope(studioMotion?: unknown): string {
+		const model = createInitialIpodWorkbenchModel();
+		const { motion: _motion, ...studio } = model.studio;
+		return encodeRaw({
+			v: PORTABLE_STATE_VERSION,
+			model: {
+				...normalizeModel(model),
+				studio: studioMotion === undefined ? studio : { ...studio, motion: studioMotion },
+			},
+		});
+	}
+
+	it("heals to the default document rather than refusing the link", () => {
+		const decoded = decodePortableState(v1Envelope());
+		expect(decoded).not.toBeNull();
+		expect(decoded!.studio.motion).toEqual(DEFAULT_MOTION_STATE);
+	});
+
+	it("converts a legacy speed into the repeat it was actually flying", () => {
+		// Turntable's natural cycle is 6s; a 12s clip at speed 1 was flying two cycles.
+		const decoded = decodePortableState(
+			v1Envelope({ move: "turntable", loop: "loop", speed: 1, durationSec: 12 }),
+		)!;
+		expect(decoded.studio.motion.docId).toBe("turntable");
+		expect(decoded.studio.motion.repeat).toBe(2);
+		expect(decoded.studio.motion.timeMap).toEqual({ kind: "loop" });
+	});
+
+	it("halves a boomerang once — an authored repeat counts round-trips", () => {
+		const decoded = decodePortableState(
+			v1Envelope({ move: "crane", loop: "boomerang", speed: 1, durationSec: 32 }),
+		)!;
+		// Crane's cycle is 8s: 4 cycles derived, 2 authored round-trips.
+		expect(decoded.studio.motion.repeat).toBe(2);
+		expect(decoded.studio.motion.timeMap).toEqual({ kind: "boomerang" });
+	});
+
+	it("reads a v1 hold as amplitude zero, however fast it claimed to be going", () => {
+		const decoded = decodePortableState(
+			v1Envelope({ move: "orbit", loop: "hold", speed: 2, durationSec: 10 }),
+		)!;
+		expect(decoded.studio.motion.repeat).toBe(0);
+		expect(decoded.studio.motion.timeMap).toEqual({ kind: "loop" });
+	});
+
+	it("never throws on hostile motion values — it heals every field", () => {
+		const decoded = decodePortableState(
+			v1Envelope({
+				docId: 42,
+				repeat: Number.NaN,
+				durationSec: "forever",
+				timeMap: { kind: "spiral" },
+				overrides: { tracks: { azimuth: { keyframes: [{ at: "x", value: null }] } } },
+				playhead: 99,
+			}),
+		)!;
+		expect(decoded.studio.motion.docId).toBe(DEFAULT_MOTION_STATE.docId);
+		expect(decoded.studio.motion.durationSec).toBe(DEFAULT_MOTION_STATE.durationSec);
+		expect(decoded.studio.motion.timeMap).toEqual({ kind: "loop" });
+		expect(decoded.studio.motion.overrides).toBeUndefined();
+		expect(decoded.studio.motion.playhead).toBe(0);
+	});
+
+	it("clamps a clip length to the range the dock can author", () => {
+		expect(decodePortableState(v1Envelope({ docId: "orbit", durationSec: 9999 }))!.studio.motion.durationSec).toBe(60);
+		expect(decodePortableState(v1Envelope({ docId: "orbit", durationSec: 0.1 }))!.studio.motion.durationSec).toBe(2);
 	});
 });

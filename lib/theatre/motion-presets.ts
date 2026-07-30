@@ -1,6 +1,6 @@
 import type { StudioPose } from "../studio-camera";
 import { buildTheatreState, type KeyframeSpec, type SheetSpec } from "./build-state";
-import type { EasingName } from "./easings";
+import type { Ease, EasingName } from "./easings";
 import type { TheatreProjectState } from "./keyframe-sampler";
 import {
 	CAMERA_OBJECT_KEY,
@@ -37,8 +37,12 @@ export interface PresetKeyframe {
 	dTargetX?: number;
 	dTargetY?: number;
 	dTargetZ?: number;
-	/** Easing leaving this keyframe (default `easeInOutSine` — a breathing curve). */
-	easing?: EasingName;
+	/**
+	 * Easing leaving this keyframe (default `easeInOutSine` — a breathing curve).
+	 * A name or a hand-authored curve: `buildTrack` already resolves both through
+	 * `easingHandles` (`build-state.ts:69`), so a custom tuple needs no other change.
+	 */
+	easing?: Ease;
 }
 
 export interface MotionPreset {

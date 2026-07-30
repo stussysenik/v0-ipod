@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	clipCyclesForDuration,
 	createClipPoseSampler,
+	documentClip,
 	isTheatreClip,
 	resolveClipPose,
 	STUDIO_CLIPS,
 	findStudioClip,
 } from "./studio-clip-presets";
-import { cyclesForDuration, poseForMove, type StudioPose } from "./studio-camera";
+import { CATALOGUE_DOCS } from "./motion/catalogue";
+import { poseForMove, type StudioPose } from "./studio-camera";
 
 const HERO: StudioPose = { azimuth: 18, elevation: 14, reach: 13, target: [0, 0, 0] };
 
@@ -97,26 +98,44 @@ describe("resolveClipPose", () => {
 	});
 });
 
-describe("clipCyclesForDuration", () => {
-	it("matches the legacy procedural cadence math for procedural clips", () => {
-		const clip = findStudioClip("turntable")!;
-		for (const loop of ["loop", "boomerang"] as const) {
-			for (const dur of [5, 12, 30, 60]) {
-				expect(clipCyclesForDuration(clip, dur, 1, loop)).toBe(
-					cyclesForDuration("turntable", dur, 1, loop),
-				);
-			}
+/**
+ * The document branch is what lets a SAVED motion be flown by the same picker, preview and
+ * export loop as a shipped move — one code path, no "custom motion" mode. It is additive:
+ * the procedural branch still owns the shipped catalogue until §2.9 is ruled on.
+ */
+describe("document clips", () => {
+	it("adds the document's offsets to the hero, so a move is portable across framings", () => {
+		const clip = documentClip(CATALOGUE_DOCS.orbit);
+		const other: StudioPose = { azimuth: -70, elevation: 3, reach: 9, target: [1, 2, 3] };
+		const fromHero = resolveClipPose(clip, 0.3, HERO);
+		const fromOther = resolveClipPose(clip, 0.3, other);
+		// The OFFSET is identical from either framing; only the anchor differs.
+		expect(fromOther.azimuth - other.azimuth).toBeCloseTo(fromHero.azimuth - HERO.azimuth, 12);
+		expect(fromOther.elevation - other.elevation).toBeCloseTo(
+			fromHero.elevation - HERO.elevation,
+			12,
+		);
+		expect(fromOther.reach - other.reach).toBeCloseTo(fromHero.reach - HERO.reach, 12);
+	});
+
+	it("reproduces the ported catalogue within the recorded port floor", () => {
+		// The port itself is measured in lib/motion/catalogue.test.ts; this pins that the
+		// CLIP wrapper does not add error of its own on top of it.
+		const clip = documentClip(CATALOGUE_DOCS.turntable);
+		for (const phase of [0, 0.2, 0.5, 0.8]) {
+			const viaDoc = resolveClipPose(clip, phase, HERO);
+			const viaGenerator = poseForMove("turntable", phase, HERO);
+			expect(azGap(viaDoc.azimuth, viaGenerator.azimuth)).toBeLessThan(0.25);
+			expect(Math.abs(viaDoc.elevation - viaGenerator.elevation)).toBeLessThan(0.25);
+			expect(Math.abs(viaDoc.reach - viaGenerator.reach)).toBeLessThan(0.01);
 		}
 	});
 
-	it("derives cycles from a theatre clip's natural cycle length", () => {
-		const clip = findStudioClip("float-bob")!; // 6s natural cycle
-		expect(clipCyclesForDuration(clip, 6, 1, "loop")).toBe(1);
-		expect(clipCyclesForDuration(clip, 30, 1, "loop")).toBe(5);
-	});
-
-	it("never returns fewer than one cycle", () => {
-		const clip = findStudioClip("crane-reveal")!;
-		expect(clipCyclesForDuration(clip, 0.1, 1, "loop")).toBe(1);
+	it("a cached document sampler agrees with resolveClipPose", () => {
+		const clip = documentClip(CATALOGUE_DOCS.crane);
+		const sample = createClipPoseSampler(clip, HERO);
+		for (const phase of [0, 0.25, 0.6, 0.9]) {
+			expect(sample(phase)).toEqual(resolveClipPose(clip, phase, HERO));
+		}
 	});
 });

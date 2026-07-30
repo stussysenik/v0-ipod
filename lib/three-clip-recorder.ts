@@ -5,7 +5,9 @@ import {
 	ClipCodecUnavailableError,
 	resolveClipCodec,
 } from "@/lib/export/clip-codec-ladder";
-import type { LoopStyle, StudioPose } from "@/lib/studio-camera";
+import type { StudioPose } from "@/lib/studio-camera";
+import type { MotionDoc, TimeMap } from "@/lib/motion/doc";
+import { DEFAULT_REPEAT, DEFAULT_TIME_MAP } from "@/lib/motion/transport";
 
 /**
  * Encode a high-fidelity MP4 of the 3D iPod.
@@ -35,10 +37,16 @@ export interface ClipRecorderOptions {
 	supersample?: number;
 	/** Which clip to fly (procedural move id or Theatre moment-card id). Defaults to orbit. */
 	move?: string;
-	/** Cadence multiplier (1 = natural); matches the live preview. */
-	speed?: number;
-	/** loop / boomerang / hold — `hold` renders a motion-free held angle. */
-	loop?: LoopStyle;
+	/**
+	 * The document to fly instead of `move`'s generator — present when the motion is tuned or
+	 * saved (`flownMotionDoc`). Forwarded untouched to `renderClipFrames`, which owns the
+	 * document-wins rule; the recorder never decides which engine flies a motion.
+	 */
+	doc?: MotionDoc;
+	/** Whole cycles across the clip; `0` renders a motion-free held angle. */
+	repeat?: number;
+	/** loop / boomerang, carrying the boomerang's authored turnaround. */
+	timeMap?: TimeMap;
 	/** Hero framing the move is anchored on (the composed pose). */
 	anchor?: StudioPose;
 	/** Temporal-AA sub-frames averaged per output frame for motion blur (1 = off). */
@@ -75,8 +83,9 @@ export async function recordIpodClip(
 		height = 1920,
 		supersample = 1,
 		move = "orbit",
-		speed = 1,
-		loop = "loop",
+		doc,
+		repeat = DEFAULT_REPEAT,
+		timeMap = DEFAULT_TIME_MAP,
 		anchor,
 		motionBlurSamples,
 		shutterAngle,
@@ -122,7 +131,7 @@ export async function recordIpodClip(
 
 	try {
 		await handle.renderClipFrames(
-			{ width: outWidth, height: outHeight, supersample, durationMs, fps, move, speed, loop, anchor, motionBlurSamples, shutterAngle, onClipProgress },
+			{ width: outWidth, height: outHeight, supersample, durationMs, fps, move, doc, repeat, timeMap, anchor, motionBlurSamples, shutterAngle, onClipProgress },
 			async (frameCanvas, index, total) => {
 				if (encodeError) throw encodeError;
 

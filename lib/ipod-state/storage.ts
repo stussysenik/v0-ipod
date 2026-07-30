@@ -13,6 +13,7 @@ import {
 	type SavedColorHistory,
 } from "@/lib/ipod-state/model";
 import { BATTERY_BOOT_OFFSET_MS } from "@/lib/ipod-state/battery-cycle";
+import { sanitizeMotionState, withoutTransport } from "@/lib/motion/motion-state";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
 	DEFAULT_BACK_COLOR,
@@ -613,6 +614,9 @@ export function loadStudioState(): IpodStudioState | null {
 			layoutMode: typeof c.layoutMode === "boolean" ? c.layoutMode : base.layoutMode,
 			theatreStudio:
 				typeof c.theatreStudio === "boolean" ? c.theatreStudio : base.theatreStudio,
+			// Motion heals field-by-field like the rig, and converts a legacy `speed`. A
+			// reload opens composed: the transport position does not survive the boundary.
+			motion: withoutTransport(sanitizeMotionState(c.motion)),
 		};
 	} catch {
 		return null;

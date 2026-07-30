@@ -5,24 +5,33 @@
  * So a frame can be CONTENT-ADDRESSED: hash the inputs, and a frame stored under that hash
  * *is* the export for those inputs, not a preview of it. This module computes that hash.
  *
- * Two related keys, because two questions are being answered:
+ * Three related keys, because three questions are being answered:
  *
- *   • `proofFingerprint` keys the proof CACHE. It covers only the inputs that change the
- *     ANCHOR FRAME (phase 0 = the composed angle). Every camera move starts at the hero
- *     pose, so `move`/`loop`/`speed`/`duration` do NOT change frame 0 — including them
- *     would re-render byte-identical frames while you browse moves. They are deliberately
- *     excluded from the cache key.
+ *   • `proofFingerprint` keys the ANCHOR proof cache. It covers only the inputs that change
+ *     frame 0 (the composed angle). Motion cannot change frame 0 — every move is authored
+ *     as offsets from the hero and a held clip is the hero — so motion is deliberately
+ *     excluded; including it would re-render byte-identical frames while you browse moves.
+ *
+ *   • `timelineFingerprint` keys a SET of frames: the same proof inputs PLUS the motion
+ *     identity and the positions sampled. One key for the set, one derived key per frame.
+ *     This is the key that changes when you drag a curve, and the anchor key that does not
+ *     is why switching documents does not re-render the anchor.
  *
  *   • `exportFingerprint` is the full export IDENTITY for provenance ("what did I export?").
- *     It is the proof inputs PLUS `move`/`loop`/`speed`/`durationSec`, so two exports that
- *     differ only in motion are distinct records and each restores its exact setup.
+ *     It is the proof inputs PLUS the motion identity, so two exports that differ only in
+ *     motion are distinct records and each restores its exact setup.
  *
- * Both are pure: canonical key-sorted JSON → FNV-1a. No `Date`/random/wall-clock, so they
- * reproduce across reloads and are unit-testable in the node project. `FINGERPRINT_VERSION`
- * is folded in so changing the input set busts every prior entry.
+ * All three are pure: canonical key-sorted JSON → FNV-1a. No `Date`/random/wall-clock, so
+ * they reproduce across reloads and are unit-testable in the node project.
+ * `FINGERPRINT_VERSION` is folded in so changing the input set busts every prior entry.
  */
 
-export const FINGERPRINT_VERSION = 1;
+/**
+ * v2 — the motion fields became a motion IDENTITY. `move`/`loop`/`speed`/`durationSec`
+ * could not name an authored document: two looks with the same `move` and different curves
+ * hashed alike, which would have served a stale timeline proof for edited motion.
+ */
+export const FINGERPRINT_VERSION = 2;
 
 export interface FingerprintPose {
 	azimuth: number;
@@ -60,12 +69,34 @@ export interface ProofInputs {
 	lighting: unknown;
 }
 
+/**
+ * What the camera does, as an identity.
+ *
+ * `docHash` is the load-bearing field: the canonical hash of the RESOLVED document's
+ * sampled behaviour (`motionDocHash`), so a tuned Orbit and a pristine Orbit are different
+ * motions even though both name `orbit`. `docId` rides along for provenance and re-open —
+ * it answers "which document was this" where the hash answers "did the camera move
+ * differently". A rename changes neither, which is why `motionDocHash` excludes labels.
+ */
+export interface MotionIdentity {
+	docId: string;
+	docHash: string;
+	repeat: number;
+	durationSec: number;
+	/** The time map, serialized structurally — same treatment as `lighting`. */
+	timeMap: unknown;
+	/**
+	 * The sparse edits, retained so a re-open restores the tuning and not just the
+	 * document it was tuned from. Deliberately NOT hashed: `docHash` is taken from the
+	 * RESOLVED document, so hashing the overrides as well would count the same difference
+	 * twice and make two encodings of one motion into two identities.
+	 */
+	overrides?: unknown;
+}
+
 /** The full export identity (proof inputs + motion) for provenance + re-open. */
 export interface ExportSnapshot extends ProofInputs {
-	move: string;
-	loop: string;
-	speed: number;
-	durationSec: number;
+	motion: MotionIdentity;
 }
 
 /**
@@ -165,20 +196,64 @@ export function proofFingerprint(inputs: ProofInputs): string {
 	return hashString(canonical);
 }
 
+// Pick the motion fields explicitly for the same reason the proof inputs are picked
+// explicitly: a superset must not leak extra keys into a hash.
+function normalizeMotion(motion: MotionIdentity): MotionIdentity {
+	return {
+		docId: motion.docId,
+		docHash: motion.docHash,
+		repeat: motion.repeat,
+		durationSec: motion.durationSec,
+		timeMap: motion.timeMap,
+	};
+}
+
 /** Provenance identity: the full export setup, motion included. */
 export function exportFingerprint(snapshot: ExportSnapshot): string {
-	const { move, loop, speed, durationSec, ...proof } = snapshot;
+	const { motion, ...proof } = snapshot;
 	const canonical = stableStringify({
 		v: FINGERPRINT_VERSION,
 		kind: "export",
-		motion: { move, loop, speed, durationSec },
+		motion: normalizeMotion(motion),
 		inputs: normalizeProofInputs(proof),
 	});
 	return hashString(canonical);
 }
 
+/**
+ * Timeline key: ONE key for the whole set of proof frames.
+ *
+ * Positions are folded in, so asking for more marks is a different set rather than a
+ * partially-filled one — a cache that answered "hit" for a four-frame set when five were
+ * requested would show a strip with a hole in it and no way to tell that from a frame still
+ * computing.
+ */
+export function timelineFingerprint(
+	inputs: ProofInputs,
+	motion: MotionIdentity,
+	positions: readonly number[],
+): string {
+	const canonical = stableStringify({
+		v: FINGERPRINT_VERSION,
+		kind: "timeline",
+		motion: normalizeMotion(motion),
+		positions: [...positions],
+		inputs: normalizeProofInputs(inputs),
+	});
+	return hashString(canonical);
+}
+
+/**
+ * The cache key for one frame within a timeline set. Derived rather than hashed again: the
+ * set key already covers every input, so the index is all that distinguishes its members,
+ * and a readable suffix keeps a cache dump legible.
+ */
+export function timelineFrameKey(timelineKey: string, index: number): string {
+	return `${timelineKey}:${index}`;
+}
+
 /** Narrow a full snapshot to just its proof inputs (so an export's proof key is derivable). */
 export function toProofInputs(snapshot: ExportSnapshot): ProofInputs {
-	const { move: _m, loop: _l, speed: _s, durationSec: _d, ...proof } = snapshot;
+	const { motion: _motion, ...proof } = snapshot;
 	return proof;
 }

@@ -1,4 +1,12 @@
 import { getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import type { MotionOverrides, MotionTrack, TimeMap } from "@/lib/motion/doc";
+import {
+	MAX_REPEAT,
+	MAX_DURATION_SEC,
+	MIN_DURATION_SEC,
+	sanitizeMotionState,
+	type MotionState,
+} from "@/lib/motion/motion-state";
 import {
 	DESIGNER_DARK_RIG,
 	cloneLightingConfig,
@@ -100,7 +108,30 @@ export type IpodWorkbenchAction =
 	| { type: "SET_LAYOUT_MODE"; payload: boolean }
 	| { type: "TOGGLE_LAYOUT_MODE" }
 	| { type: "SET_THEATRE_STUDIO"; payload: boolean }
-	| { type: "TOGGLE_THEATRE_STUDIO" };
+	| { type: "TOGGLE_THEATRE_STUDIO" }
+	// ── Motion (spec: motion-authoring) ──
+	// One action per AUTHORED field rather than a single SET_MOTION patch, so
+	// `add-customizer-decision-log`'s coalescing has something to coalesce: a drag on the
+	// repeat stepper is fifty SET_MOTION_REPEATs that fold to one entry, while a repeat
+	// edit and a curve edit stay two decisions because they are two.
+	| { type: "SET_MOTION_DOC"; payload: string }
+	| { type: "SET_MOTION_TRACK"; payload: { trackKey: string; track: MotionTrack } }
+	/**
+	 * Drop one track's override so it tracks the catalogue again. Distinct from setting it
+	 * back to the shipped values: a stored copy of the base pins the look to today's
+	 * revision of the document, which is the defect `update-studio-theme-authoring`
+	 * measured on a saved theme's rig.
+	 */
+	| { type: "CLEAR_MOTION_TRACK"; payload: string }
+	| { type: "CLEAR_MOTION_OVERRIDES" }
+	| { type: "SET_MOTION_REPEAT"; payload: number }
+	| { type: "SET_MOTION_DURATION"; payload: number }
+	| { type: "SET_MOTION_TIME_MAP"; payload: TimeMap }
+	| { type: "SET_MOTION_PLAYHEAD"; payload: number }
+	| { type: "SET_MOTION_PLAYING"; payload: boolean }
+	| { type: "TOGGLE_MOTION_PLAYING" }
+	/** Apply a whole saved motion (the shelf's one-tap recall). */
+	| { type: "APPLY_MOTION"; payload: MotionState };
 
 export function clampSnapshotTime(value: number | null, duration: number): number | null {
 	if (value === null) {
@@ -187,8 +218,12 @@ export function normalizeModel(model: IpodWorkbenchModel): IpodWorkbenchModel {
 			),
 		},
 		// Studio is plain data; pass it straight through. The `??` guards a legacy model
-		// restored from storage before this slice existed.
-		studio: model.studio ?? createInitialStudioState(),
+		// restored from storage before this slice existed. Motion is the one field with a
+		// migration (`speed → repeat`) and a heal, so it goes through its sanitizer here —
+		// the same fold every other slice's clamps run in.
+		studio: model.studio
+			? { ...model.studio, motion: sanitizeMotionState(model.studio.motion) }
+			: createInitialStudioState(),
 		// Panel layout is sparse plain data; default an absent/old snapshot to empty so the
 		// host resolves every panel to its registry default (spec: floating-panel-system).
 		panelLayout: model.panelLayout ?? DEFAULT_PANEL_LAYOUT,
@@ -612,6 +647,47 @@ export function ipodWorkbenchReducer(
 		case "TOGGLE_THEATRE_STUDIO":
 			return patchStudio(state, { theatreStudio: !state.studio.theatreStudio });
 
+		// ── Studio: motion ───────────────────────────────────────────────────────────────
+		// Selecting a document CLEARS the overrides. An override is a diff against a
+		// specific base, so carrying it onto a different document would apply an azimuth
+		// curve authored for Orbit to Crane's azimuth and call the result "Crane".
+		case "SET_MOTION_DOC":
+			return patchMotion(state, { docId: action.payload, overrides: undefined });
+		case "SET_MOTION_TRACK":
+			return patchMotion(state, {
+				overrides: withTrack(state.studio.motion.overrides, action.payload.trackKey, action.payload.track),
+			});
+		case "CLEAR_MOTION_TRACK":
+			return patchMotion(state, {
+				overrides: withoutTrack(state.studio.motion.overrides, action.payload),
+			});
+		case "CLEAR_MOTION_OVERRIDES":
+			return patchMotion(state, { overrides: undefined });
+		case "SET_MOTION_REPEAT":
+			// Fractional is legal and reported as `open`; negative and NaN are not values.
+			return patchMotion(state, {
+				repeat: Number.isFinite(action.payload) ? clampNumber(action.payload, 0, MAX_REPEAT) : 0,
+			});
+		case "SET_MOTION_DURATION":
+			return patchMotion(state, {
+				durationSec: Number.isFinite(action.payload)
+					? clampNumber(action.payload, MIN_DURATION_SEC, MAX_DURATION_SEC)
+					: state.studio.motion.durationSec,
+			});
+		case "SET_MOTION_TIME_MAP":
+			return patchMotion(state, { timeMap: action.payload });
+		case "SET_MOTION_PLAYHEAD":
+			return patchMotion(state, {
+				playhead: Number.isFinite(action.payload) ? clampNumber(action.payload, 0, 1) : 0,
+			});
+		case "SET_MOTION_PLAYING":
+			return patchMotion(state, { playing: action.payload });
+		case "TOGGLE_MOTION_PLAYING":
+			return patchMotion(state, { playing: !state.studio.motion.playing });
+		case "APPLY_MOTION":
+			// Heal on the way in: a shelf entry is stored data like any other.
+			return patchStudio(state, { motion: sanitizeMotionState(action.payload) });
+
 		default:
 			return state;
 	}
@@ -627,4 +703,50 @@ function patchStudio(
 	patch: Partial<IpodStudioState>,
 ): IpodWorkbenchModel {
 	return { ...state, studio: { ...state.studio, ...patch } };
+}
+
+function clampNumber(value: number, lo: number, hi: number): number {
+	return value < lo ? lo : value > hi ? hi : value;
+}
+
+/**
+ * Immutably merge a partial motion slice. `overrides: undefined` is an explicit CLEAR
+ * rather than "leave it alone", which is why this spreads the key rather than using a
+ * spread of `patch` alone — the two cases have to be distinguishable.
+ */
+function patchMotion(
+	state: IpodWorkbenchModel,
+	patch: Partial<MotionState>,
+): IpodWorkbenchModel {
+	const next: MotionState = { ...state.studio.motion, ...patch };
+	if ("overrides" in patch && patch.overrides === undefined) delete next.overrides;
+	return patchStudio(state, { motion: next });
+}
+
+/** Replace one track in a sparse override, creating the override map on first edit. */
+function withTrack(
+	overrides: MotionOverrides | undefined,
+	trackKey: string,
+	track: MotionTrack,
+): MotionOverrides {
+	return { ...overrides, tracks: { ...overrides?.tracks, [trackKey]: track } };
+}
+
+/**
+ * Remove one track from a sparse override, collapsing to `undefined` once nothing is left.
+ * An empty `{ tracks: {} }` samples identically but is not pristine — it survives the
+ * codec, so a look that had been tuned and untuned would encode differently from one that
+ * never was.
+ */
+function withoutTrack(
+	overrides: MotionOverrides | undefined,
+	trackKey: string,
+): MotionOverrides | undefined {
+	if (!overrides?.tracks || !(trackKey in overrides.tracks)) return overrides;
+	const tracks = { ...overrides.tracks };
+	delete tracks[trackKey];
+	const next: MotionOverrides = { ...overrides };
+	if (Object.keys(tracks).length > 0) next.tracks = tracks;
+	else delete next.tracks;
+	return next.tracks || next.naturalCycleSeconds !== undefined ? next : undefined;
 }

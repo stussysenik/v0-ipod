@@ -1,4 +1,5 @@
-import { poseForMove, type CameraMove, type LoopStyle, type StudioPose } from "./studio-camera";
+import { createMotionSampler, type MotionDoc } from "./motion/doc";
+import { poseForMove, type CameraMove, type StudioPose } from "./studio-camera";
 import { createStateSampler } from "./theatre/keyframe-sampler";
 import { buildPresetState, type MotionPreset } from "./theatre/motion-presets";
 import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from "./theatre/studio-project";
@@ -14,9 +15,9 @@ import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from "./theatr
  * motion (procedural or keyframed) becomes available everywhere just by appearing
  * in the catalogue.
  *
- * Phase is the per-cycle position the caller already derived (`phaseForProgress` /
- * `pingPong` apply loop vs boomerang), so loop semantics live in exactly one place
- * for both engines.
+ * Phase is the per-cycle position the caller already derived — `lib/motion/transport.ts`
+ * owns clip-progress → phase for both engines, so loop semantics live in exactly one
+ * place and neither engine carries a copy.
  */
 
 export interface ProceduralClip {
@@ -40,10 +41,41 @@ export interface TheatreClip {
 	loopable: boolean;
 }
 
-export type StudioClip = ProceduralClip | TheatreClip;
+/**
+ * A clip that IS a document — the shape every clip becomes once §2.9 retires the
+ * generators, and today the shape a user-saved motion already has.
+ *
+ * Added rather than swapped in: deleting the procedural branch moves the camera (measured,
+ * owner-gated), while a third branch moves nothing and is what lets a saved document be
+ * flown by the same picker, the same preview and the same export loop as a shipped move.
+ */
+export interface DocumentClip {
+	kind: "document";
+	id: string;
+	label: string;
+	hint: string;
+	doc: MotionDoc;
+	naturalCycleSeconds: number;
+	loopable: boolean;
+}
+
+export type StudioClip = ProceduralClip | TheatreClip | DocumentClip;
 
 export function isTheatreClip(clip: StudioClip): clip is TheatreClip {
 	return clip.kind === "theatre";
+}
+
+/** Present a document as a clip the existing picker + sampler already understand. */
+export function documentClip(doc: MotionDoc): DocumentClip {
+	return {
+		kind: "document",
+		id: doc.id,
+		label: doc.label,
+		hint: doc.hint ?? "",
+		doc,
+		naturalCycleSeconds: doc.naturalCycleSeconds,
+		loopable: doc.loopable,
+	};
 }
 
 /**
@@ -60,6 +92,27 @@ export function createClipPoseSampler(
 		return (phase: number) => poseForMove(clip.move, phase, hero);
 	}
 
+	if (clip.kind === "document") {
+		// A document's tracks are OFFSETS from the hero, so the hero is added after the
+		// interpolation rather than before it. That ordering is what makes a document
+		// portable across framings — and it is why a ported card cannot be bit-identical
+		// to the card it came from (`lerp(h+a, h+b) ≠ h + lerp(a,b)`), measured at 5.68e-14.
+		const sampler = createMotionSampler(clip.doc);
+		return (phase: number) => {
+			const offsets = sampler.sampleAll(phase);
+			return {
+				azimuth: hero.azimuth + (offsets.azimuth ?? 0),
+				elevation: hero.elevation + (offsets.elevation ?? 0),
+				reach: hero.reach + (offsets.reach ?? 0),
+				target: [
+					hero.target[0] + (offsets.targetX ?? 0),
+					hero.target[1] + (offsets.targetY ?? 0),
+					hero.target[2] + (offsets.targetZ ?? 0),
+				],
+			};
+		};
+	}
+
 	// One cycle == one second of sequence time, so phase ∈ [0,1] is the position.
 	const state = buildPresetState(clip.preset, hero, 1);
 	const sampler = createStateSampler(state, CAMERA_SHEET_ID);
@@ -70,21 +123,4 @@ export function createClipPoseSampler(
 /** Convenience: resolve a single pose. Prefer `createClipPoseSampler` in loops. */
 export function resolveClipPose(clip: StudioClip, phase: number, hero: StudioPose): StudioPose {
 	return createClipPoseSampler(clip, hero)(phase);
-}
-
-/**
- * How many whole motion cycles fill a clip of `durationSec` — the engine-agnostic
- * version of `cyclesForDuration`, working off the clip's `naturalCycleSeconds`. A
- * whole-number count guarantees the clip closes on its loop seam; `boomerang`
- * halves it because one round-trip covers twice the path. Identical math to the
- * procedural cadence so procedural clips behave exactly as before.
- */
-export function clipCyclesForDuration(
-	clip: StudioClip,
-	durationSec: number,
-	speed = 1,
-	loop: LoopStyle = "loop",
-): number {
-	const raw = (durationSec * speed) / clip.naturalCycleSeconds;
-	return Math.max(1, Math.round(loop === "boomerang" ? raw / 2 : raw));
 }

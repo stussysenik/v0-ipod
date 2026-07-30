@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 import type { ExportFraming } from "@/components/three/three-d-ipod";
-import { type LoopStyle } from "@/lib/studio-camera";
-import {
-	clipCyclesForDuration,
-	findStudioClip,
-	isTheatreClip,
-	STUDIO_CLIPS,
-} from "@/lib/studio-clip-presets";
-import { MAX_ANIMATED_EXPORT_DURATION_SECONDS } from "@/lib/export/animated-export";
+import { useBlobUrl } from "@/lib/export/use-blob-url";
+import type { MotionDoc, MotionTrack, TimeMap } from "@/lib/motion/doc";
+import { seamState } from "@/lib/motion/transport";
 import { getExportVideoUrl, type ExportRecord } from "@/lib/pocketbase";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import {
+	Ipod3DMotionInspector,
+	type MotionShelfControls,
+} from "./ipod-3d-motion-inspector";
 
 /**
  * Export dock for the /3d now-playing stage.
@@ -41,20 +40,12 @@ export interface ClipExportOptions {
 	durationSec: number;
 	quality: ExportQuality;
 	aspect: ExportAspect;
-	/** Cadence multiplier (1 = natural). */
-	speed: number;
-	/** loop / boomerang / hold — `hold` exports the composed angle with no motion. */
-	loop: LoopStyle;
+	/** Whole cycles across the clip; `0` exports the composed angle with no motion. */
+	repeat: number;
+	/** loop / boomerang, carrying the boomerang's authored turnaround. */
+	timeMap: TimeMap;
 }
 
-const LOOP_STYLES: ReadonlyArray<{ id: LoopStyle; label: string; hint: string }> = [
-	{ id: "loop", label: "Loop", hint: "one-way seamless" },
-	{ id: "boomerang", label: "Boomerang", hint: "forward + back" },
-	{ id: "hold", label: "Hold", hint: "no motion" },
-];
-
-/** Speed multiplier stops — sub-1 slows the cadence, >1 quickens it. */
-const SPEED_STOPS = [0.5, 0.75, 1, 1.5, 2] as const;
 export interface StillExportOptions {
 	aspect: ExportAspect;
 }
@@ -67,9 +58,6 @@ const ASPECTS: ReadonlyArray<{ id: ExportAspect; label: string; hint: string }> 
 	{ id: "square", label: "1:1", hint: "Square" },
 ];
 
-const MIN_DURATION = 2;
-const MAX_DURATION = MAX_ANIMATED_EXPORT_DURATION_SECONDS;
-
 interface Ipod3DExportDockProps {
 	/** Position in the control surface, rendered as the header's number chip. */
 	index: number;
@@ -77,17 +65,17 @@ interface Ipod3DExportDockProps {
 	/** Clip length in seconds — lifted to the stage so the playhead cadence matches. */
 	durationSec: number;
 	onDurationChange: (sec: number) => void;
-	/** Playhead — selected clip + live transport (play/scrub), driven in the stage. */
+	/** Playhead — selected clip + live transport (play/scrub), driven by the model. */
 	previewMove: string;
 	previewPlaying: boolean;
 	/** Live playhead position over the full clip, t ∈ [0,1). */
 	previewT: number;
-	/** Cadence multiplier (1 = natural) — drives preview + export identically. */
-	speed: number;
-	onSpeedChange: (speed: number) => void;
-	/** loop / boomerang / hold — drives preview + export identically. */
-	loopStyle: LoopStyle;
-	onLoopStyleChange: (loop: LoopStyle) => void;
+	/** Whole cycles across the clip — drives preview + export identically. `0` holds. */
+	repeat: number;
+	onRepeatChange: (repeat: number) => void;
+	/** loop / boomerang — drives preview + export identically. */
+	timeMap: TimeMap;
+	onTimeMapChange: (timeMap: TimeMap) => void;
 	onPreviewMoveChange: (move: string) => void;
 	onTogglePlay: () => void;
 	onScrub: (t: number) => void;
@@ -95,7 +83,7 @@ interface Ipod3DExportDockProps {
 	onExportPng: (framing: ExportFraming, options: StillExportOptions) => void;
 	onExportClip: (move: string, options: ClipExportOptions) => void;
 	/**
-	 * Aspect + quality — lifted to the stage (like duration/speed/loop) so the proof
+	 * Aspect + quality — lifted to the stage (like the motion slice) so the proof
 	 * fingerprint and the proof panel read the SAME values the export bakes with.
 	 */
 	aspect: ExportAspect;
@@ -103,11 +91,27 @@ interface Ipod3DExportDockProps {
 	quality: ExportQuality;
 	onQualityChange: (quality: ExportQuality) => void;
 	/**
-	 * Surface the Theatre.js moment cards (the keyframed `·`-prefixed clips) in the
-	 * move picker. Off by default so the picker stays clean — they're authoring-stage
-	 * experiments gated behind the same dev toggle that mounts the Theatre timeline.
+	 * The motion inspector's inputs, forwarded verbatim. The dock resolves none of them:
+	 * which document is flown, and whether it is the shipped one or a tuned copy, is one
+	 * decision the stage already makes for the rig, the encoder and the proof
+	 * (`motionClipFor`). A fourth answer computed here is how those three came to disagree.
 	 */
-	showTheatreClips?: boolean;
+	documents: readonly MotionDoc[];
+	/** The document as flown — base with overrides applied. */
+	doc: MotionDoc;
+	/** The document as shipped, which an override is a diff against. */
+	baseDoc: MotionDoc;
+	onTrackChange: (trackKey: string, track: MotionTrack) => void;
+	onTrackClear: (trackKey: string) => void;
+	/** The motion shelf and its five commands, forwarded verbatim (§6.7). */
+	shelf: MotionShelfControls;
+	/**
+	 * The inspector's `belowScrubber` slot, forwarded verbatim (§6.5's timeline proof strip).
+	 * It arrives already composed because it reads the proof cache, which the stage owns — the
+	 * dock forwarding a node keeps that decision where the other three proof readers make it,
+	 * and the node re-parents with the inspector rather than needing to be rebuilt.
+	 */
+	belowScrubber?: ReactNode;
 	history?: ExportRecord[];
 	/**
 	 * Proof thumbnail source — the shared cache, looked up by the record's *proof* key
@@ -129,10 +133,10 @@ export function Ipod3DExportDock({
 	previewMove,
 	previewPlaying,
 	previewT,
-	speed,
-	onSpeedChange,
-	loopStyle,
-	onLoopStyleChange,
+	repeat,
+	onRepeatChange,
+	timeMap,
+	onTimeMapChange,
 	onPreviewMoveChange,
 	onTogglePlay,
 	onScrub,
@@ -143,7 +147,13 @@ export function Ipod3DExportDock({
 	onAspectChange,
 	quality,
 	onQualityChange,
-	showTheatreClips = false,
+	documents,
+	doc,
+	baseDoc,
+	onTrackChange,
+	onTrackClear,
+	shelf,
+	belowScrubber,
 	history = [],
 	peekProofBlob,
 	onReopen,
@@ -151,21 +161,11 @@ export function Ipod3DExportDock({
 }: Ipod3DExportDockProps) {
 	const busy = exportState !== "idle";
 
-	// Default picker = procedural moves only (the clean, battle-tested set). The
-	// `·`-prefixed Theatre moment cards only join the grid when the dev toggle is on.
-	const pickerClips = showTheatreClips
-		? STUDIO_CLIPS
-		: STUDIO_CLIPS.filter((m) => !isTheatreClip(m));
-
 	const still: StillExportOptions = { aspect };
-	const clip: ClipExportOptions = { durationSec, quality, aspect, speed, loop: loopStyle };
+	const clip: ClipExportOptions = { durationSec, quality, aspect, repeat, timeMap };
 
-	const hold = loopStyle === "hold";
-	const moveSpec = findStudioClip(previewMove) ?? STUDIO_CLIPS[0];
-	const cycles = clipCyclesForDuration(moveSpec, durationSec, speed, loopStyle);
-	const elapsed = previewT * durationSec;
-	// What the clip button promises: a held angle, or N× of the selected move.
-	const clipHint = hold ? "no motion" : `${cycles}× · ${moveSpec.label}`;
+	// What the clip button promises: a held angle, or N× of the selected document.
+	const clipHint = seamState(repeat) === "held" ? "no motion" : `${repeat}× · ${doc.label}`;
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -193,132 +193,40 @@ export function Ipod3DExportDock({
 						disabled={busy}
 					/>
 				</Row>
-				<div className="flex flex-col gap-1.5">
-					<div className="flex items-center justify-between">
-						<Label>Clip length</Label>
-						<span className="font-mono text-[12px] tabular-nums text-black/60">
-							{durationSec}s
-						</span>
-					</div>
-					<input
-						type="range"
-						min={MIN_DURATION}
-						max={MAX_DURATION}
-						step={1}
-						value={durationSec}
-						disabled={busy}
-						onChange={(e) => onDurationChange(Number(e.target.value))}
-						data-testid="clip-length-slider"
-						aria-label="Clip length (seconds)"
-						className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-black disabled:cursor-not-allowed disabled:opacity-40"
-					/>
-				</div>
 			</div>
 
 			{/*
-			 * Preview — the live transport, set off from the export settings above by
-			 * its own labelled header so it reads as "what you dial in" vs. "how it
-			 * renders." Pick a move + style, scrub/play it LIVE, then export the exact
-			 * loop you see (true WYSIWYG).
+			 * The motion inspector (spec: motion-authoring §6). It replaces what was the
+			 * Preview section — a picker, a style segment, a repeat row and a transport,
+			 * four controls that could set a motion and not one that could open it. The
+			 * dock owns the mount and nothing else here;
+			 * `refactor-3d-control-surface-to-inspector` re-parents the panel under the
+			 * Camera part by deleting these lines, not by rewriting the component.
 			 */}
-			<div className="flex flex-col gap-2.5 border-b border-black/[0.06] px-4 py-3.5">
-				<div className="flex items-center justify-between">
-					<Label>Preview</Label>
-					<span className="font-mono text-[10px] uppercase tracking-tight text-black/35">
-						{hold ? "still" : `${cycles}× · ${moveSpec.hint}`}
-					</span>
-				</div>
-
-				{/* Style — loop / boomerang / hold (hold freezes the composed angle) */}
-				<Segmented
-					options={LOOP_STYLES.map((s) => ({ id: s.id, label: s.label }))}
-					value={loopStyle}
-					onChange={(v) => onLoopStyleChange(v as LoopStyle)}
+			<div className="border-b border-black/[0.06] px-4 py-3.5">
+				<Ipod3DMotionInspector
+					documents={documents}
+					docId={previewMove}
+					onDocChange={onPreviewMoveChange}
+					doc={doc}
+					baseDoc={baseDoc}
+					onTrackChange={onTrackChange}
+					onTrackClear={onTrackClear}
+					shelf={shelf}
+					repeat={repeat}
+					onRepeatChange={onRepeatChange}
+					durationSec={durationSec}
+					onDurationChange={onDurationChange}
+					timeMap={timeMap}
+					onTimeMapChange={onTimeMapChange}
+					playing={previewPlaying}
+					onTogglePlay={onTogglePlay}
+					playhead={previewT}
+					onScrub={onScrub}
+					onResetPlayhead={onResetPlayhead}
 					disabled={busy}
+					belowScrubber={belowScrubber}
 				/>
-
-				{/* Move picker — procedural moves + Theatre moment cards. Irrelevant under
-				    Hold, so it dims out. A · prefix flags a keyframed moment card. */}
-				<div className="grid grid-cols-2 gap-1 rounded-lg bg-black/[0.04] p-0.5">
-					{pickerClips.map((m) => {
-						const active = m.id === previewMove;
-						return (
-							<button
-								key={m.id}
-								type="button"
-								disabled={busy || hold}
-								title={m.hint}
-								onClick={() => onPreviewMoveChange(m.id)}
-								className={`rounded-[7px] px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-									active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
-								}`}
-							>
-								{isTheatreClip(m) ? `· ${m.label}` : m.label}
-							</button>
-						);
-					})}
-				</div>
-
-				{/* Speed — cadence multiplier; also moot under Hold. */}
-				<div className="flex items-center justify-between gap-3">
-					<Label>Speed</Label>
-					<div className="flex gap-1 rounded-lg bg-black/[0.04] p-0.5">
-						{SPEED_STOPS.map((s) => {
-							const active = s === speed;
-							return (
-								<button
-									key={s}
-									type="button"
-									disabled={busy || hold}
-									onClick={() => onSpeedChange(s)}
-									className={`rounded-[7px] px-2 py-1.5 font-mono text-[10px] tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-										active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
-									}`}
-								>
-									{s}×
-								</button>
-							);
-						})}
-					</div>
-				</div>
-
-				{/* Transport — play/pause · scrub · reset · time readout */}
-				<div className="flex items-center gap-2.5">
-					<button
-						type="button"
-						disabled={busy}
-						onClick={onTogglePlay}
-						aria-label={previewPlaying ? "Pause preview" : "Play preview"}
-						className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-black/10 text-black/70 transition-colors hover:border-black/40 hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
-					>
-						{previewPlaying ? <PauseIcon /> : <PlayIcon />}
-					</button>
-					<input
-						type="range"
-						min={0}
-						max={1000}
-						step={1}
-						value={Math.round(previewT * 1000)}
-						disabled={busy}
-						onChange={(e) => onScrub(Number(e.target.value) / 1000)}
-						aria-label="Scrub preview"
-						className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-black disabled:cursor-not-allowed disabled:opacity-40"
-					/>
-					<button
-						type="button"
-						disabled={busy}
-						onClick={onResetPlayhead}
-						aria-label="Reset playhead"
-						className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-black/10 text-black/55 transition-colors hover:border-black/40 hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
-					>
-						<ResetIcon />
-					</button>
-				</div>
-				<div className="flex justify-end">
-					<span className="font-mono text-[11px] tabular-nums text-black/45">
-						{elapsed.toFixed(1)}s / {durationSec}s
-					</span>
-				</div>
 			</div>
 
 			<div className="flex flex-col gap-2 px-4 py-3.5">
@@ -503,16 +411,7 @@ function DockButton({
  * revokes it on change/unmount; renders a neutral placeholder for legacy records (no proof).
  */
 function ProofThumb({ blob }: { blob?: Blob }) {
-	const [url, setUrl] = useState<string | null>(null);
-	useEffect(() => {
-		if (!blob) {
-			setUrl(null);
-			return;
-		}
-		const next = URL.createObjectURL(blob);
-		setUrl(next);
-		return () => URL.revokeObjectURL(next);
-	}, [blob]);
+	const url = useBlobUrl(blob);
 
 	return (
 		<div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-black/[0.08] bg-[#fafafa]">
@@ -534,27 +433,3 @@ function Label({ children }: { children: React.ReactNode }) {
 	);
 }
 
-function PlayIcon() {
-	return (
-		<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-			<path d="M8 5v14l11-7z" />
-		</svg>
-	);
-}
-
-function PauseIcon() {
-	return (
-		<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-			<path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-		</svg>
-	);
-}
-
-function ResetIcon() {
-	return (
-		<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-			<path d="M3 12a9 9 0 1 0 3-6.7" />
-			<path d="M3 4v4h4" />
-		</svg>
-	);
-}

@@ -89,6 +89,13 @@ put through it.
   id plus sparse overrides), `repeat`, `durationSec`, time map, and playhead. Motion then
   persists, travels in `?s=` links, enters the decision log, and appears in the export
   snapshot for free, because those are all projections of the model.
+- **Give a tuned motion a shelf, so it becomes yours.** Save the authored document under a name,
+  rename it, save over it, delete it; saved documents sit in the picker beside the catalogue with
+  no second code path. The shelf entry stores the document **whole** — this is the one place the
+  identity-plus-overrides ruling deliberately does not apply, because a shelf entry *is* a
+  definition rather than a reference to one. Mirrors `lib/studio-themes.ts` rather than inventing
+  a second registry shape. No default-motion pointer: the model already persists the selected
+  document, so the boot needs no second one.
 - **Add a timeline proof.** Extend the proof cache from one anchor frame to N frames sampled
   at authored positions across the clip, keyed by a new `timelineFingerprint` that *does*
   include motion. The anchor `proofFingerprint` is unchanged and still excludes motion — the
@@ -108,7 +115,8 @@ put through it.
     identity rather than `move`/`loop`/`speed`; ADDED — the timeline proof).
   - `portable-customizer-state` (ADDED — motion travels in the payload).
   - `state-model` (ADDED — motion is a slice of the canonical model, not component state).
-- Affected code: `lib/motion/**` (new), `lib/theatre/motion-presets.ts`, `lib/theatre/easings.ts`,
+- Affected code: `lib/motion/**` (new, incl. `motion-shelf.ts`), `lib/theatre/motion-presets.ts`,
+  `lib/theatre/easings.ts`,
   `lib/studio-clip.ts`, `lib/studio-clip-presets.ts`, `lib/studio-camera.ts` (procedural
   generators retired on the parity ruling), `lib/ipod-state/model.ts`, `lib/ipod-state/update.ts`,
   `lib/ipod-state/portable-state.ts`, `lib/export/export-fingerprint.ts`,

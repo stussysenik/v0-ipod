@@ -28,7 +28,22 @@ import { deliverExportedBlob } from "@/lib/export-utils";
 import { consumePortableStateFromUrl, copyShareLink } from "@/lib/ipod-state/share";
 import { loadWorkbenchModel, saveWorkbenchModel } from "@/lib/ipod-state/storage";
 import { getExportHistory, saveExportToHistory, type ExportRecord } from "@/lib/pocketbase";
-import { type LoopStyle, type StudioPose } from "@/lib/studio-camera";
+import { type StudioPose } from "@/lib/studio-camera";
+import {
+	deleteMotion,
+	flownMotionDoc,
+	loadSavedMotions,
+	motionCatalogue,
+	motionClipFor,
+	openSavedMotion,
+	overwriteMotion,
+	persistSavedMotions,
+	renameMotion,
+	resolveFlownDoc,
+	resolveMotionDocById,
+	saveMotionAs,
+	type SavedMotion,
+} from "@/lib/motion/motion-shelf";
 import type { PoseFraming } from "@/lib/studio-camera-poses";
 import {
 	EMPTY_CAMERA_STORE,
@@ -63,6 +78,8 @@ import {
 	type StillExportOptions,
 } from "./ipod-3d-export-dock";
 import { Ipod3DExportProofPanel } from "./ipod-3d-export-proof-panel";
+import type { MotionShelfControls } from "./ipod-3d-motion-inspector";
+import { Ipod3DTimelineProofStrip } from "./ipod-3d-timeline-proof-strip";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DCoachHint } from "./ipod-3d-coach-hint";
 import { Ipod3DCameraBar, type PoseRequest } from "./ipod-3d-camera-bar";
@@ -171,17 +188,107 @@ export function Ipod3DStage() {
 		(exportJobOf(exportSnapshot) ?? "idle") as Ipod3DExportState;
 	// Export progress (0–1) for the loading veil; null = indeterminate (stills).
 	const exportProgress = exportProgressOf(exportSnapshot);
-	// Playhead — the selected move + live transport. `previewT` is the position over
-	// the full clip (0–1); the rig reports it back while playing so the scrubber
-	// tracks. Clip length is lifted here so the preview cadence matches the export.
-	const [durationSec, setDurationSec] = useState(5);
-	const [previewMove, setPreviewMove] = useState<string>(STUDIO_CLIPS[0].id);
-	const [previewPlaying, setPreviewPlaying] = useState(false);
-	const [previewT, setPreviewT] = useState(0);
-	// Motion shaping — cadence multiplier + time map (loop / boomerang / hold). Lifted
-	// here so the live preview and the export read the SAME values (WYSIWYG parity).
-	const [speed, setSpeed] = useState(1);
-	const [loopStyle, setLoopStyle] = useState<LoopStyle>("loop");
+	// Playhead + motion shaping — ONE modelled slice, not six local states. Which
+	// document flies, how it was tuned, how long the clip is, how many cycles, how time
+	// maps, where the playhead sits and whether it is running all live in
+	// `model.studio.motion`, so the live preview, the export, the proof fingerprint, the
+	// share link and the re-open path read the same value instead of being handed six
+	// (spec: motion-authoring §4).
+	const motion = model.studio.motion;
+	const { docId: previewMove, playing: previewPlaying, playhead: previewT, durationSec } = motion;
+	// The shelf's saved documents, loaded once — they join the catalogue as one list.
+	const [savedMotions, setSavedMotions] = useState<SavedMotion[]>([]);
+	useEffect(() => setSavedMotions(loadSavedMotions()), []);
+	// Mirrored into a ref so the export callback reads the live shelf without taking it as
+	// a dependency — re-creating the export handler on every shelf edit would drop an
+	// in-flight bake's identity.
+	const savedMotionsRef = useRef<SavedMotion[]>([]);
+	savedMotionsRef.current = savedMotions;
+	// The document the look actually flies — the named one plus its sparse edits. Resolved
+	// once here so the fingerprint, the proof and the export all hash the same thing.
+	const flownDoc = useMemo(
+		() => resolveFlownDoc(motion.docId, motion.overrides, savedMotions),
+		[motion.docId, motion.overrides, savedMotions],
+	);
+	// The single decision about WHICH engine flies this motion: an untouched preset keeps its
+	// generator, a tuned or saved one becomes its document. Resolved once here, ABOVE every
+	// consumer, so the live rig, the encoded clip and the timeline proof cannot each decide it
+	// — three answers to one question is how a tuned motion came to be proved tuned and flown
+	// untuned. `flownMotionDoc` is undefined for an untouched preset, which is what keeps the
+	// generator flying it until §2.9 is ruled on.
+	const flownClip = useMemo(
+		() => motionClipFor(motion.docId, motion.overrides, savedMotions),
+		[motion.docId, motion.overrides, savedMotions],
+	);
+	const flownDocForRig = useMemo(() => flownMotionDoc(flownClip), [flownClip]);
+	// The inspector's two other reads. `baseDoc` is what an override is a diff AGAINST, so it
+	// is resolved without the overrides on purpose — handing it `flownDoc` would make every
+	// edit measure itself against its own result and no track could ever read as tuned.
+	const baseDoc = useMemo(
+		() => resolveMotionDocById(motion.docId, savedMotions),
+		[motion.docId, savedMotions],
+	);
+	const motionDocuments = useMemo(
+		() => motionCatalogue(savedMotions, { includeMoments: model.studio.theatreStudio }),
+		[savedMotions, model.studio.theatreStudio],
+	);
+	// The shelf's five commands. Every mutation writes through to storage in the same
+	// statement it updates state, so the shelf on screen is always the persisted shelf —
+	// the discipline the Themes shelf keeps, for the same reason: a save that survives
+	// until reload and no further is worse than no save.
+	const commitMotions = (next: SavedMotion[]) => {
+		setSavedMotions(next);
+		persistSavedMotions(next);
+	};
+	const motionShelf: MotionShelfControls = {
+		saved: savedMotions,
+		onOpen: (entry) =>
+			dispatch({
+				type: "APPLY_MOTION",
+				payload: openSavedMotion(entry, {
+					playhead: motion.playhead,
+					playing: motion.playing,
+				}),
+			}),
+		// Saving does NOT switch to the new entry: one gesture, one effect. The copy flies
+		// identically to what is on stage, so switching would be a change of identity with
+		// nothing to show for it.
+		onSave: () =>
+			commitMotions(
+				saveMotionAs(
+					savedMotions,
+					flownDoc,
+					{ repeat: motion.repeat, durationSec: motion.durationSec, timeMap: motion.timeMap },
+					`motion-${Date.now().toString(36)}`,
+				),
+			),
+		onRename: (id, label) => commitMotions(renameMotion(savedMotions, id, label)),
+		// Save over the entry that is OPEN also drops the overrides, and that is the point:
+		// once the entry's document carries the tuned tracks, an override holding the same
+		// values is a stored copy of its own base — the preset-tracking defect this project
+		// has now paid for three times. Clearing keeps the look tracking the entry.
+		onSaveOver: (id) => {
+			commitMotions(
+				overwriteMotion(savedMotions, id, flownDoc, {
+					repeat: motion.repeat,
+					durationSec: motion.durationSec,
+					timeMap: motion.timeMap,
+				}),
+			);
+			if (id === motion.docId) dispatch({ type: "CLEAR_MOTION_OVERRIDES" });
+		},
+		// Deleting the OPEN entry records what the one healer would resolve to rather than
+		// naming Orbit here: `resolveMotionDocById` stays the only place that decides what a
+		// dangling id becomes, and the reducer stores its answer so the picker marks what is
+		// actually flying instead of nothing.
+		onDelete: (id) => {
+			const next = deleteMotion(savedMotions, id);
+			commitMotions(next);
+			if (id === motion.docId) {
+				dispatch({ type: "SET_MOTION_DOC", payload: resolveMotionDocById(id, next).id });
+			}
+		},
+	};
 	// Aspect + quality — lifted from the export dock so the proof fingerprint, the proof
 	// panel, and the export all read one source of truth (WYSIWYG parity).
 	const [aspect, setAspect] = useState<ExportAspect>("story");
@@ -192,7 +299,15 @@ export function Ipod3DStage() {
 	const previewEngaged = previewPlaying || previewT > 0.0001;
 	const preview: CameraPreviewState | null =
 		previewEngaged && !exporting
-			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec, speed, loop: loopStyle }
+			? {
+					move: previewMove,
+					doc: flownDocForRig,
+					playing: previewPlaying,
+					t: previewT,
+					durationSec,
+					repeat: motion.repeat,
+					timeMap: motion.timeMap,
+				}
 			: null;
 	// Canvas symbiosis (spec: floating-panel-system): inset the spatial canvas away from
 	// open floating panels so the model is never permanently occluded. Suspended during
@@ -361,11 +476,11 @@ export function Ipod3DStage() {
 	// picker would show no active button while the preview still flew a hidden clip.
 	useEffect(() => {
 		if (model.studio.theatreStudio) return;
-		setPreviewMove((current) => {
-			const clip = findStudioClip(current);
-			return clip && isTheatreClip(clip) ? STUDIO_CLIPS[0].id : current;
-		});
-	}, [model.studio.theatreStudio]);
+		const clip = findStudioClip(motion.docId);
+		if (clip && isTheatreClip(clip)) {
+			dispatch({ type: "SET_MOTION_DOC", payload: STUDIO_CLIPS[0].id });
+		}
+	}, [model.studio.theatreStudio, motion.docId]);
 	// Live playback clock: advance the now-playing time 1s per real second while the
 	// transport plays AND we're not exporting. During a clip export the clock is
 	// driven by CLIP-time instead (handleExportClip → onProgress), so the exported
@@ -417,31 +532,36 @@ export function Ipod3DStage() {
 		}
 	}, []);
 	const handleTogglePlay = useCallback(() => {
-		setPreviewPlaying((p) => {
-			if (!p) captureHeroIfNeeded(); // engaging
-			return !p;
-		});
-	}, [captureHeroIfNeeded]);
+		if (!previewPlaying) captureHeroIfNeeded(); // engaging
+		dispatch({ type: "TOGGLE_MOTION_PLAYING" });
+	}, [captureHeroIfNeeded, previewPlaying]);
 	const handleScrub = useCallback(
 		(t: number) => {
 			captureHeroIfNeeded();
-			setPreviewPlaying(false); // grabbing the scrubber pauses playback
-			setPreviewT(t);
+			dispatch({ type: "SET_MOTION_PLAYING", payload: false }); // grabbing pauses
+			dispatch({ type: "SET_MOTION_PLAYHEAD", payload: t });
 		},
 		[captureHeroIfNeeded],
 	);
 	const handleResetPlayhead = useCallback(() => {
-		setPreviewPlaying(false);
-		setPreviewT(0); // disengages preview → camera eases back to the composed hero
+		dispatch({ type: "SET_MOTION_PLAYING", payload: false });
+		// Disengages preview → camera eases back to the composed hero.
+		dispatch({ type: "SET_MOTION_PLAYHEAD", payload: 0 });
 	}, []);
 	// Drop the captured hero whenever the playhead fully disengages, so recomposing
 	// freely (drag) then re-engaging anchors on the NEW angle, not a stale one.
 	useEffect(() => {
 		if (!previewEngaged) heroAnchorRef.current = null;
 	}, [previewEngaged]);
-	const handlePreviewMoveChange = useCallback((move: string) => setPreviewMove(move), []);
+	const handlePreviewMoveChange = useCallback(
+		(move: string) => dispatch({ type: "SET_MOTION_DOC", payload: move }),
+		[],
+	);
 	// The rig reports the playing head position back so the scrubber tracks it.
-	const handlePreviewTick = useCallback((t: number) => setPreviewT(t), []);
+	const handlePreviewTick = useCallback(
+		(t: number) => dispatch({ type: "SET_MOTION_PLAYHEAD", payload: t }),
+		[],
+	);
 
 	// Yield two frames so React paints the loading veil BEFORE the heavy capture
 	// work (snap-to-rest, screen bake, offline render) mutates the live scene —
@@ -471,7 +591,7 @@ export function Ipod3DStage() {
 			// The machine also rejects EXPORT outside idle; this early return just
 			// skips the veil paint for a click that can't start anything.
 			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
-			setPreviewPlaying(false); // hand the camera back to the still framing
+			dispatch({ type: "SET_MOTION_PLAYING", payload: false }); // hand back the camera
 			sendExport({ type: "EXPORT", job: `png:${framing}`, progress: null });
 			await nextPaint(); // let the veil cover before the scene snaps for capture
 			try {
@@ -545,7 +665,8 @@ export function Ipod3DStage() {
 				showNotice("Clips need Chrome, Edge, or Safari 16.4+");
 				return;
 			}
-			setPreviewPlaying(false); // freeze the playhead; the offline render owns the camera
+			// Freeze the playhead; the offline render owns the camera.
+			dispatch({ type: "SET_MOTION_PLAYING", payload: false });
 			// Belt-and-suspenders: clips capture the R3F canvas, not the DOM, so the studio
 			// overlay can't appear in a frame — but force it hidden anyway so it never steals
 			// pointer/keyboard focus mid-bake. Restored in `finally` if it was on.
@@ -576,6 +697,17 @@ export function Ipod3DStage() {
 				// See lib/export-clock.ts for the (unit-tested) clock math.
 				let lastSecond = -1;
 				sendExport({ type: "PREPARED" });
+				// The engine decision, re-made here from the same inputs the snapshot's document
+				// reads rather than closed over: the shelf arrives through a ref precisely so a
+				// save cannot re-create this callback and drop an in-flight bake's identity.
+				// Same function as the rig's and the proof's, so the three cannot disagree.
+				const clipDoc = flownMotionDoc(
+					motionClipFor(
+						model.studio.motion.docId,
+						model.studio.motion.overrides,
+						savedMotionsRef.current,
+					),
+				);
 				const blob = await recordIpodClip(api, {
 					durationMs: Math.round(options.durationSec * 1000),
 					fps: q.fps,
@@ -584,8 +716,9 @@ export function Ipod3DStage() {
 					width,
 					height,
 					move,
-					speed: options.speed,
-					loop: options.loop,
+					doc: clipDoc,
+					repeat: options.repeat,
+					timeMap: options.timeMap,
 					anchor,
 					motionBlurSamples: q.motionBlurSamples,
 					onProgress: (encoded, total) => sendExport({ type: "PROGRESS", encoded, total }),
@@ -608,9 +741,13 @@ export function Ipod3DStage() {
 				});
 				if (!blob) throw new Error("recorder returned no clip");
 				sendExport({ type: "ENCODED" });
-				// Name by the motion that actually played — "hold" for a motion-free angle,
+				// Name by the motion that actually played — "hold" for a motion-free angle.
 				const motionTag =
-					options.loop === "hold" ? "hold" : options.loop === "boomerang" ? `${move}-boomerang` : move;
+					options.repeat === 0
+						? "hold"
+						: options.timeMap.kind === "boomerang"
+							? `${move}-boomerang`
+							: move;
 				const filename = `ipod-3d-${motionTag}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`;
 
 				// Same platform-correct hand-off as the still: phones get the share/save
@@ -623,10 +760,12 @@ export function Ipod3DStage() {
 					? selectExportSnapshot(model, anchor, {
 							aspect: options.aspect,
 							quality: options.quality,
-							move,
-							loop: options.loop,
-							speed: options.speed,
-							durationSec: options.durationSec,
+							motion: model.studio.motion,
+							doc: resolveFlownDoc(
+								model.studio.motion.docId,
+								model.studio.motion.overrides,
+								savedMotionsRef.current,
+							),
 						})
 					: undefined;
 				const fingerprint = snapshot ? exportFingerprint(snapshot) : undefined;
@@ -698,16 +837,18 @@ export function Ipod3DStage() {
 	// uses, then read instantly by the panel. The cache only OBSERVES the pipeline — it never
 	// changes export output. Pre-compute yields to a real export bake and to live playback.
 	const exportOptions = useMemo(
-		() => ({ aspect, quality, move: previewMove, loop: loopStyle, speed, durationSec }),
-		[aspect, quality, previewMove, loopStyle, speed, durationSec],
+		() => ({ aspect, quality, motion, doc: flownDoc }),
+		[aspect, quality, motion, flownDoc],
 	);
 	const renderProof = useCallback(
 		async (snapshot: ReturnType<typeof selectExportSnapshot>): Promise<Blob | null> => {
 			const api = ipodApiRef.current;
 			if (!api) return null;
 			const [w, h] = ASPECT_DIMS[snapshot.aspect as ExportAspect].still;
-			// The proof IS the anchor frame (phase 0 = the composed hero), so we capture the
-			// hero framing at the snapshot's pose — byte-identical to an export's frame 0.
+			// One capture path for both proofs: the anchor arrives with the composed hero pose
+			// (phase 0, byte-identical to an export's frame 0) and a timeline frame arrives with
+			// the pose the export flies at its position. The pose is the only difference, so
+			// there is nothing here to keep in sync.
 			return api.captureHighRes(w, h, "hero", {
 				azimuth: snapshot.pose.azimuth,
 				elevation: snapshot.pose.elevation,
@@ -721,6 +862,7 @@ export function Ipod3DStage() {
 		model,
 		options: exportOptions,
 		getPose: () => ipodApiRef.current?.getCameraPose() ?? null,
+		clip: flownClip,
 		render: renderProof,
 		isExporting: exporting,
 		// Only pre-compute when the camera is still (not flying the move) and no export is
@@ -737,20 +879,19 @@ export function Ipod3DStage() {
 	);
 
 	// Re-open: restore the exact setup a past export was made with — model state via
-	// RESTORE_MODEL, playhead/options via their lifted setters, pose via the camera goal.
+	// RESTORE_MODEL, aspect/quality via their lifted setters, pose via the camera goal.
+	// Motion rides the model now, so it needs no setter of its own: `sanitizeMotionState`
+	// is also the migration, which is what lets a v1 record (`move`/`loop`/`speed`) re-open
+	// into the authored shape without a second conversion living here.
 	const handleReopen = useCallback(
 		(record: ExportRecord) => {
 			const snap = record.snapshot;
 			if (!snap) return;
+			// One dispatch: `snapshotToModel` restores motion too, so re-open has one owner
+			// and a v1 record migrates in the same place a stored look does.
 			dispatch({ type: "RESTORE_MODEL", payload: snapshotToModel(model, snap) });
 			setAspect(snap.aspect as ExportAspect);
 			setQuality(snap.quality as ExportQuality);
-			setLoopStyle(snap.loop as LoopStyle);
-			setSpeed(snap.speed);
-			setDurationSec(snap.durationSec);
-			setPreviewMove(snap.move);
-			setPreviewPlaying(false);
-			setPreviewT(0);
 			heroAnchorRef.current = null;
 			ipodApiRef.current?.setCameraGoal({
 				azimuth: snap.pose.azimuth,
@@ -959,15 +1100,15 @@ export function Ipod3DStage() {
 						quality={quality}
 						fps={CLIP_QUALITY[quality].fps}
 						durationSec={durationSec}
-						hold={loopStyle === "hold"}
-						moveLabel={(findStudioClip(previewMove) ?? STUDIO_CLIPS[0]).label}
+						hold={motion.repeat === 0}
+						moveLabel={flownDoc.label}
 						onExport={() =>
 							handleExportClip(previewMove, {
 								durationSec,
 								quality,
 								aspect,
-								speed,
-								loop: loopStyle,
+								repeat: motion.repeat,
+								timeMap: motion.timeMap,
 							})
 						}
 						exportBusy={exporting}
@@ -976,14 +1117,14 @@ export function Ipod3DStage() {
 						index={8}
 						exportState={exportState}
 						durationSec={durationSec}
-						onDurationChange={setDurationSec}
+						onDurationChange={(sec) => dispatch({ type: "SET_MOTION_DURATION", payload: sec })}
 						previewMove={previewMove}
 						previewPlaying={previewPlaying}
 						previewT={previewT}
-						speed={speed}
-						onSpeedChange={setSpeed}
-						loopStyle={loopStyle}
-						onLoopStyleChange={setLoopStyle}
+						repeat={motion.repeat}
+						onRepeatChange={(n) => dispatch({ type: "SET_MOTION_REPEAT", payload: n })}
+						timeMap={motion.timeMap}
+						onTimeMapChange={(map) => dispatch({ type: "SET_MOTION_TIME_MAP", payload: map })}
 						aspect={aspect}
 						onAspectChange={setAspect}
 						quality={quality}
@@ -994,7 +1135,29 @@ export function Ipod3DStage() {
 						onResetPlayhead={handleResetPlayhead}
 						onExportPng={handleExportPng}
 						onExportClip={handleExportClip}
-						showTheatreClips={studio.theatreStudio}
+						documents={motionDocuments}
+						doc={flownDoc}
+						baseDoc={baseDoc}
+						onTrackChange={(trackKey, track) =>
+							dispatch({ type: "SET_MOTION_TRACK", payload: { trackKey, track } })
+						}
+						onTrackClear={(trackKey) =>
+							dispatch({ type: "CLEAR_MOTION_TRACK", payload: trackKey })
+						}
+						shelf={motionShelf}
+						// The proof strip is composed HERE, not in the dock: reading the proof cache
+						// is a stage decision already made three times over (panel, history
+						// thumbnails, timeline plan), and the dock owns the inspector's mount only.
+						belowScrubber={
+							<Ipod3DTimelineProofStrip
+								frames={proof.timelineFrames}
+								peek={proof.peek}
+								durationSec={durationSec}
+								playhead={previewT}
+								onScrub={handleScrub}
+								disabled={exporting}
+							/>
+						}
 						history={exportHistory}
 						peekProofBlob={peekProofBlob}
 						onReopen={handleReopen}

@@ -39,8 +39,6 @@ import {
 	DEFAULT_TARGET,
 	ELEVATION_RANGE,
 	finiteOr,
-	type LoopStyle,
-	phaseForProgress,
 	pinchSpread,
 	pinchZoomRadius,
 	poseToPosition,
@@ -48,9 +46,11 @@ import {
 	REACH_RANGE,
 	type StudioPose,
 } from "@/lib/studio-camera";
+import type { MotionDoc, TimeMap } from "@/lib/motion/doc";
+import { createPhaseMap, DEFAULT_REPEAT, DEFAULT_TIME_MAP, poseAtProgress } from "@/lib/motion/transport";
 import {
-	clipCyclesForDuration,
 	createClipPoseSampler,
+	documentClip,
 	findStudioClip,
 	type StudioClip,
 } from "@/lib/studio-clip-presets";
@@ -148,8 +148,18 @@ function FlatFinish({
  */
 export type ExportFraming = "front" | "hero";
 
-/** Resolve a clip id to a `StudioClip`, falling back to the gentle orbit. */
-function resolveClip(id: string): StudioClip {
+/**
+ * Resolve what to fly: the handed-in document if there is one, otherwise the clip the id
+ * names, falling back to the gentle orbit.
+ *
+ * The document wins because its PRESENCE already is the engine decision — `motionClipFor`
+ * made it upstream and the timeline proof planned poses from it. Re-deriving the choice from
+ * the id here would be a second place that can disagree with the proof, which is how a
+ * tuned motion came to be proved tuned and flown untuned. With no document the id path is
+ * untouched, so an untouched preset still keeps its generator (§2.9 stays gated).
+ */
+function resolveClip(id: string, doc?: MotionDoc): StudioClip {
+	if (doc) return documentClip(doc);
 	return findStudioClip(id) ?? findStudioClip("orbit")!;
 }
 
@@ -162,16 +172,24 @@ function resolveClip(id: string): StudioClip {
 export interface CameraPreviewState {
 	/** Which clip to fly — a procedural move id or a Theatre moment-card id. */
 	move: string;
+	/**
+	 * The document to fly instead of `move`'s generator — present when the motion is tuned or
+	 * saved (`flownMotionDoc`), absent for an untouched preset. REFERENTIAL STABILITY IS PART
+	 * OF THE CONTRACT: the rig re-bakes its pose sampler when this identity changes, so a
+	 * document rebuilt every render would rebuild the sampler every frame. The stage passes
+	 * `flownClip`'s, which is memoized on `(docId, overrides, savedMotions)`.
+	 */
+	doc?: MotionDoc;
 	/** True = advance the clock each frame; false = hold the scrubbed `t`. */
 	playing: boolean;
 	/** Scrub position over the FULL clip, t ∈ [0,1). Used while paused. */
 	t: number;
-	/** Clip length in seconds — sets the cadence (cycles) so preview === export. */
+	/** Clip length in seconds. With `repeat` it derives the cycle length. */
 	durationSec: number;
-	/** Cadence multiplier (1 = natural). Scales cycles identically in preview + export. */
-	speed: number;
-	/** loop / boomerang / hold — same time map the export uses, so preview === export. */
-	loop: LoopStyle;
+	/** Whole cycles across the clip; `0` holds the hero. Identical in preview + export. */
+	repeat: number;
+	/** loop / boomerang, with the boomerang's authored turnaround. Same map the export uses. */
+	timeMap: TimeMap;
 }
 
 export interface ThreeDIpodHandle {
@@ -222,10 +240,16 @@ export interface ClipRenderOptions {
 	fps: number;
 	/** Which clip to fly (procedural move id or moment-card id). Defaults to orbit. */
 	move?: string;
-	/** Cadence multiplier (1 = natural). Must match the preview's speed. */
-	speed?: number;
-	/** loop / boomerang / hold. `hold` pins the hero pose for a motion-free clip. */
-	loop?: LoopStyle;
+	/**
+	 * The document to fly instead of `move`'s generator — present when the motion is tuned or
+	 * saved (`flownMotionDoc`). The encoded clip and the timeline proof must resolve the same
+	 * way or the proof is not proving this export.
+	 */
+	doc?: MotionDoc;
+	/** Whole cycles across the clip; `0` pins the hero for a motion-free clip. */
+	repeat?: number;
+	/** loop / boomerang, carrying the boomerang's authored turnaround curve. */
+	timeMap?: TimeMap;
 	/**
 	 * Temporal-AA sub-frames averaged per output frame for buttery motion blur
 	 * (1 = off, the default — byte-identical to the legacy single-render path).
@@ -1654,8 +1678,18 @@ function OrbitRig({
 	const previewReport = useRef(0);
 	// Cached clip pose sampler — rebuilt only when the anchor is (re)captured or the
 	// chosen clip changes, so a Theatre moment card isn't re-baked 60×/second.
+	//
+	// The id alone does NOT identify the flown clip: dragging a curve keeps `docId` and
+	// changes the document, so the document's identity is part of the cache key. Comparing by
+	// reference is what `CameraPreviewState.doc`'s stability contract buys — a document rebuilt
+	// on every render would re-bake every frame instead of never.
 	const previewClipSampler = useRef<((phase: number) => StudioPose) | null>(null);
 	const previewClipMove = useRef<string | null>(null);
+	const previewClipDoc = useRef<MotionDoc | undefined>(undefined);
+	// Cached progress→phase map, for the same reason: a boomerang's turnaround builds a
+	// bezier solver, which must not be re-constructed 60×/second. Keyed by the two
+	// authored inputs that define it.
+	const previewPhaseMap = useRef<{ key: string; map: (progress: number) => number } | null>(null);
 
 	// Responsive framing — the minimum reach that keeps the whole device on screen for
 	// the current viewport aspect. On portrait/narrow viewports the horizontal field of
@@ -1879,12 +1913,19 @@ function OrbitRig({
 				};
 				previewPhase.current = pv.t;
 				// (Re)bake the clip sampler against the freshly captured hero anchor.
-				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move), previewAnchor.current);
+				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move, pv.doc), previewAnchor.current);
 				previewClipMove.current = pv.move;
-			} else if (previewClipMove.current !== pv.move || !previewClipSampler.current) {
-				// The user switched clips mid-preview — re-bake on the existing anchor.
-				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move), previewAnchor.current);
+				previewClipDoc.current = pv.doc;
+			} else if (
+				previewClipMove.current !== pv.move ||
+				previewClipDoc.current !== pv.doc ||
+				!previewClipSampler.current
+			) {
+				// The user switched clips — or tuned the one already flying — mid-preview. Re-bake
+				// on the existing anchor so the edit is visible without the camera jumping.
+				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move, pv.doc), previewAnchor.current);
 				previewClipMove.current = pv.move;
+				previewClipDoc.current = pv.doc;
 			}
 			if (pv.playing) {
 				const step = Math.min(delta, 0.05) / Math.max(0.1, pv.durationSec);
@@ -1899,18 +1940,25 @@ function OrbitRig({
 			} else {
 				previewPhase.current = pv.t; // parent-controlled scrub
 			}
-			// `hold` is motion-free: rest on the composed hero for the whole clip (the
-			// scrubber still advances so the transport reads, but the pose never moves).
-			// Otherwise fly the move with the SAME cadence + time map the export uses.
-			let pose: StudioPose;
-			if (pv.loop === "hold") {
-				pose = previewAnchor.current;
-			} else {
-				const clip = resolveClip(pv.move);
-				const cycles = clipCyclesForDuration(clip, pv.durationSec, pv.speed, pv.loop);
-				const phase = phaseForProgress(previewPhase.current, cycles, pv.loop);
-				pose = (previewClipSampler.current ?? createClipPoseSampler(clip, previewAnchor.current))(phase);
+			// One transport, shared with the export: authored repeat + time map in, pose
+			// out. `repeat: 0` resolves to the composed hero (amplitude zero) through the
+			// same call — the scrubber still advances so the transport reads, but nothing
+			// moves. No `hold` branch survives here.
+			const sampler =
+				previewClipSampler.current ??
+				createClipPoseSampler(resolveClip(pv.move, pv.doc), previewAnchor.current);
+			const phaseKey = `${pv.repeat}|${JSON.stringify(pv.timeMap)}`;
+			if (previewPhaseMap.current?.key !== phaseKey) {
+				previewPhaseMap.current = { key: phaseKey, map: createPhaseMap(pv.repeat, pv.timeMap) };
 			}
+			const pose = poseAtProgress(
+				sampler,
+				previewAnchor.current,
+				previewPhase.current,
+				pv.repeat,
+				pv.timeMap,
+				previewPhaseMap.current.map,
+			);
 			const p = poseToPosition(pose, previewVec.current);
 			camera.position.copy(p);
 			// Keep the orbit state synced to the live preview pose, so when preview
@@ -1926,6 +1974,7 @@ function OrbitRig({
 			previewAnchor.current = null;
 			previewClipSampler.current = null;
 			previewClipMove.current = null;
+			previewClipDoc.current = undefined;
 		}
 
 		const s = cur.current;
@@ -2199,7 +2248,18 @@ function SceneCapture({
 			opts: ClipRenderOptions,
 			onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
 		) => {
-			const { width, height, supersample = 1, durationMs, fps, move = "orbit", speed = 1, loop = "loop", anchor } = opts;
+			const {
+				width,
+				height,
+				supersample = 1,
+				durationMs,
+				fps,
+				move = "orbit",
+				doc,
+				repeat = DEFAULT_REPEAT,
+				timeMap = DEFAULT_TIME_MAP,
+				anchor,
+			} = opts;
 			const ssW = Math.round(width * supersample);
 			const ssH = Math.round(height * supersample);
 			const total = Math.max(1, Math.round((durationMs / 1000) * fps));
@@ -2286,14 +2346,13 @@ function SceneCapture({
 			const buffer = new Uint8ClampedArray(ssW * ssH * 4);
 			const imageData = rctx ? new ImageData(buffer, ssW, ssH) : null;
 
-			// Repeat the move's natural cycle a whole number of times across the clip
-			// so a long clip keeps a crisp constant cadence (a 60s turntable spins ~10×,
-			// not one sluggish rotation) while still closing seamlessly on the hero pose.
-			// `speed`/`loop` enter here exactly as they do in the preview, so the encoded
-			// clip flies the same cadence + boomerang the user dialed in live.
-			const clip = resolveClip(move);
-			const cycles = clipCyclesForDuration(clip, durationMs / 1000, speed, loop);
+			// The authored cadence, entering here exactly as it does in the preview — one
+			// transport, so the encoded clip flies what was dialed in live. A whole
+			// `repeat` closes on the hero seam; a fractional one is a legitimate one-shot
+			// and the surface reports it as `open` rather than refusing the value.
+			const clip = resolveClip(move, doc);
 			const sampleClipPose = createClipPoseSampler(clip, hero);
+			const phaseMap = createPhaseMap(repeat, timeMap);
 
 			const camPos = new THREE.Vector3();
 			const lookAt = new THREE.Vector3();
@@ -2318,16 +2377,18 @@ function SceneCapture({
 					}
 
 					// Render one sub-frame at a clip progress into `buffer`. Global clip
-					// progress → per-cycle phase, repeating `cycles` whole loops (fixed
-					// cadence at any length) yet still closing on the hero seam. `hold` is
-					// motion-free: every frame pins the composed hero pose, so the clip is a
-					// held angle (the studio-shot / locked perspective) as video. The unified
-					// clip sampler dispatches procedural moves and Theatre moment cards alike.
+					// progress → per-cycle phase through the shared transport, which resolves
+					// `repeat: 0` to the composed hero without a branch here. The unified clip
+					// sampler dispatches procedural moves and Theatre moment cards alike.
 					const renderProgress = (progress: number) => {
-						const pose =
-							loop === "hold"
-								? hero
-								: sampleClipPose(phaseForProgress(progress, cycles, loop));
+						const pose = poseAtProgress(
+							sampleClipPose,
+							hero,
+							progress,
+							repeat,
+							timeMap,
+							phaseMap,
+						);
 						poseToPosition(pose, camPos);
 						camera.position.copy(camPos);
 						camera.lookAt(lookAt.set(pose.target[0], pose.target[1], pose.target[2]));

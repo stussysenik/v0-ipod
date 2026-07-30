@@ -61,7 +61,12 @@ export function encodePropPath(path: string | readonly string[]): string {
 	return JSON.stringify(segments);
 }
 
-function buildTrack(spec: TrackSpec, debugName: string): TheatreTrack {
+/**
+ * Assemble one keyframed track. Exported because the motion format samples through
+ * the same assembly — a second copy of the handle-splitting rule below is exactly
+ * the kind of duplication that lets two curves drift apart.
+ */
+export function buildTrack(spec: TrackSpec, debugName: string): TheatreTrack {
 	const kfs = [...spec.keyframes].sort((a, b) => a.position - b.position);
 
 	const keyframes: TheatreKeyframe[] = kfs.map((kf, i) => {

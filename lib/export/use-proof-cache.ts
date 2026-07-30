@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { StudioClip } from "@/lib/studio-clip-presets";
+
 import type { FingerprintPose } from "./export-fingerprint";
 import { proofFingerprint } from "./export-fingerprint";
 import { createIdbProofPersistence } from "./proof-cache-idb";
 import { createProofStore, type ProofEntry, type ProofStore } from "./proof-cache";
 import { createProofRenderQueue } from "./proof-render-queue";
 import { createProofScheduler } from "./proof-scheduler";
+import { planTimelineProof, type TimelineProofFrame } from "./timeline-proof";
 import {
 	selectExportSnapshot,
 	type ProofExportOptions,
@@ -38,7 +41,16 @@ export interface UseProofCacheArgs {
 	options: ProofExportOptions;
 	/** Read the live camera pose; null until the orbit rig mounts. */
 	getPose: () => FingerprintPose | null;
-	/** Render the anchor frame for a snapshot (the stage's `captureHighRes` adapter). */
+	/**
+	 * The clip the stage flies, decided ONCE by `motionClipFor`. Passed in rather than resolved
+	 * here: which engine flies a motion is a single decision, and a proof that made it a second
+	 * time could plan poses the export never renders.
+	 */
+	clip: StudioClip;
+	/**
+	 * Render one frame for a snapshot (the stage's `captureHighRes` adapter). A timeline frame
+	 * arrives as the same snapshot with the frame's pose, so there is one capture path.
+	 */
 	render: (snapshot: ReturnType<typeof selectExportSnapshot>) => Promise<Blob | null>;
 	/** A real export bake is in flight — suspend speculative rendering. */
 	isExporting: boolean;
@@ -49,6 +61,13 @@ export interface UseProofCacheArgs {
 export interface ProofCacheHandle {
 	/** The fingerprint of the current composition (null until the first pose is read). */
 	currentFingerprint: string | null;
+	/**
+	 * The timeline set for the motion composed now — key, position and pose per frame, in the
+	 * document's order. The strip renders these rows and `peek`s each key; a miss is a frame
+	 * still computing, which is why the frame carries its position rather than the strip
+	 * re-deriving it.
+	 */
+	timelineFrames: readonly TimelineProofFrame[];
 	/** Synchronous, non-bumping cache read for the panel + history thumbnails. */
 	peek: (fingerprint: string) => ProofEntry | undefined;
 	/** Bumps whenever a frame is stored, so readers re-render to pick it up. */
@@ -59,6 +78,7 @@ export function useProofCache({
 	model,
 	options,
 	getPose,
+	clip,
 	render,
 	isExporting,
 	enabled,
@@ -72,6 +92,10 @@ export function useProofCache({
 
 	const [version, setVersion] = useState(0);
 	const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null);
+	const [timelinePlan, setTimelinePlan] = useState<{
+		key: string;
+		frames: readonly TimelineProofFrame[];
+	} | null>(null);
 
 	// Keep the latest inputs in refs so the polling effect reads fresh values without
 	// re-arming the interval every render.
@@ -81,6 +105,8 @@ export function useProofCache({
 	optionsRef.current = options;
 	const getPoseRef = useRef(getPose);
 	getPoseRef.current = getPose;
+	const clipRef = useRef(clip);
+	clipRef.current = clip;
 	const renderRef = useRef(render);
 	renderRef.current = render;
 	const isExportingRef = useRef(isExporting);
@@ -106,8 +132,10 @@ export function useProofCache({
 		else queueRef.current.resume();
 	}, [isExporting]);
 
-	// The idle clock. Every interval: read the pose, build the snapshot + fingerprint, surface
-	// the current key, and let the scheduler decide whether to render.
+	// The idle clock. Every interval: read the pose, build the snapshot + fingerprint, plan the
+	// timeline set, surface both keys, and let the scheduler decide whether to render. The plan
+	// is re-derived per tick because it depends on the live pose; only a CHANGED plan key reaches
+	// React state, so a still camera costs no re-render.
 	useEffect(() => {
 		if (!enabled) return;
 		const id = window.setInterval(() => {
@@ -115,13 +143,23 @@ export function useProofCache({
 			if (!pose) return;
 			const snapshot = selectExportSnapshot(modelRef.current, pose, optionsRef.current);
 			const key = proofFingerprint(snapshot);
+			const plan = planTimelineProof(snapshot, clipRef.current, optionsRef.current.doc);
 			setCurrentFingerprint((prev) => (prev === key ? prev : key));
-			schedulerRef.current?.tick(key, snapshot);
+			setTimelinePlan((prev) => (prev?.key === plan.key ? prev : plan));
+			schedulerRef.current?.tick(key, snapshot, plan);
 		}, IDLE_MS);
 		return () => window.clearInterval(id);
 	}, [enabled]);
 
 	const peek = useCallback((fingerprint: string) => storeRef.current?.peek(fingerprint), []);
 
-	return { currentFingerprint, peek, version };
+	return {
+		currentFingerprint,
+		timelineFrames: timelinePlan?.frames ?? EMPTY_FRAMES,
+		peek,
+		version,
+	};
 }
+
+/** Stable identity for the pre-first-tick case, so a consumer's deps do not churn. */
+const EMPTY_FRAMES: readonly TimelineProofFrame[] = [];

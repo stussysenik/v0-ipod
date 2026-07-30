@@ -52,7 +52,33 @@ export type EasingName = keyof typeof EASINGS;
 
 export const EASING_NAMES = Object.keys(EASINGS) as EasingName[];
 
+/**
+ * An easing value anywhere in the system: a name from the vocabulary above, or a
+ * hand-authored curve. The two are interchangeable — a named curve round-trips to
+ * a tuple and back — so "picked from a menu" and "dragged by hand" are the same
+ * kind of value rather than two parallel representations.
+ */
+export type Ease = EasingName | CubicBezierHandles;
+
 /** Resolve a named easing, or pass a raw `[c1x,c1y,c2x,c2y]` tuple straight through. */
-export function easingHandles(easing: EasingName | CubicBezierHandles): CubicBezierHandles {
+export function easingHandles(easing: Ease): CubicBezierHandles {
 	return typeof easing === "string" ? EASINGS[easing] : easing;
+}
+
+/**
+ * Clamp the two X control points into `[0,1]`, leaving Y untouched.
+ *
+ * ASYMMETRY IS THE POINT. Y carries expression: a control point above 1 or below 0
+ * makes the curve overshoot its keyframe range, which is anticipation and
+ * follow-through — `easeInOutBack` ships that way and it is a feature. X carries
+ * TIME, and `UnitBezier.solve` inverts x→t by Newton-Raphson over `[0,1]`
+ * (`unit-bezier.ts:53`). An X outside that domain makes the curve non-monotonic in
+ * time — the motion would run backwards mid-segment — and leaves the Newton solve
+ * ill-conditioned, falling through to bisection for a value that was never
+ * meaningful. So X is a domain constraint and Y is a design choice.
+ */
+export function clampHandlesX(handles: CubicBezierHandles): CubicBezierHandles {
+	const [c1x, c1y, c2x, c2y] = handles;
+	const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+	return [clamp(c1x), c1y, clamp(c2x), c2y];
 }

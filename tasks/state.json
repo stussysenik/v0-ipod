@@ -1,111 +1,136 @@
 {
-  "updated": "2026-07-29T13:15+0200",
-  "wave": 1,
-  "change": [
-    "add-color-fidelity-verification",
-    "update-studio-theme-authoring"
-  ],
-  "task": "fix(3d): archive mobile menu toggle, controls always visible",
-  "focus": "Colour fidelity is measured, not asserted: the metric is conformant, the envelope is exhaustive, live-vs-export parity is gated, and presented finishes are attested.",
-  "blocked": false,
-  "blocked_reason": null,
-  "arc": [
-    {
-      "act": 1,
-      "claim": "The object is faithful",
-      "change": "add-color-fidelity-verification",
-      "note": "also restore-finish-provenance, update-render-fidelity-launch-gate"
-    },
-    {
-      "act": 2,
-      "claim": "The instrument is legible",
-      "change": "refactor-3d-control-surface-to-inspector",
-      "note": "blocked on adopt-studio-control-language; retires 7 cockpit cards + duplicate panel-registry"
-    },
-    {
-      "act": 3,
-      "claim": "Every choice is remembered",
-      "change": "add-customizer-decision-log",
-      "note": "keystone — ships no pixels, makes 4 and 5 possible"
-    },
-    {
-      "act": 4,
-      "claim": "The document travels",
-      "change": null,
-      "note": "half-shipped — lib/portable-state.ts encodes the look, not the log"
-    },
-    {
-      "act": 5,
-      "claim": "The community is the gallery",
-      "change": "add-community-state-gallery",
-      "note": "local library first; storage is the last decision, not the first"
-    }
-  ],
-  "next": [
-    "add-color-fidelity-verification §7.1-7.8 — follow-ups written up self-contained in that change's tasks.md. Start there; do not re-derive the measurements, they are recorded.",
-    "USER: visual check of /3d — the cockpit gained Shipped/House swatch rows and a Reading panel; wheel derivation and label tone changed for every non-neutral and every light case (§7.7).",
-    "update-ipod-theme-black-white-toggle 8.2/8.3 — USER: in-browser theme flip + PNG export in both themes. Visual gate, not self-certifiable.",
-    "add-pi-research-agent 3.1/3.4/4.3 — research-only contract, refusal path, missing-key tests. Mechanical.",
-    "USER: visual review of the Themes shelf in /3d — update-studio-theme-authoring is 28/29 and only §9 is open. The shelf moved from a chip grid to 24px rows: each saved theme now carries a default mark plus Set default / Rename / Save over in an overlay that is transparent at rest. The rig defect is closed and covered — a hand-tuned rig now survives save, reload and re-apply.",
-    "add-workspace-storage-registry — 21 keys across 7 files, three naming conventions, no reset and no fresh-boot test. Inventory recorded in that change's tasks.md; do not re-derive it.",
-    "add-finish-rig-pairing — carries the cross-registry rule. Blocked on add-color-fidelity-verification hitting 100%; two of its three floors must be measured, not chosen (design.md D3).",
-    "add-motion-authoring-system — motion becomes an authored document (custom beziers, authored repeat count, per-axis phase, timeline proof). Spec'd, not started. Section 2 is measurement homework: the procedural-to-keyframe port is ruled by reading, not assertion. Section 6 moves pixels and gates on the owner.",
-    "SHORT-TERM FIX, no proposal: WHEEL_LABEL_CONTRAST_FLOOR declared twice — lib/color-manifest.ts:256 and lib/color-verdict.ts:159, which already imports that module. Make it a re-export.",
-    "SHORT-TERM FIX, no proposal: delete docs/PROGRESS.md, docs/ROADMAP.md, docs/NEXT-TASK.md (hand-maintained status, stale since April/May) and cut README.md from 950 lines to a table of contents."
-  ],
-  "gates": {
-    "validate-color-manifest": "2026-07-29 PASS 58/58 — the shell-to-wheel miss was a mis-specified rule, not a bad token; now measured as undertone (CIEDE2000 at kL=1e9), which is the physically true question",
-    "vitest unit": "2026-07-29 PASS 929/929 across 59 files (+28: rig deviation round trip, v1 theme migration, default pointer, boot resolution, theme editing)",
-    "tsc --noEmit": "2026-07-29 PASS 0 errors",
-    "oxlint": "2026-07-29 PASS 0 errors, 7 warnings (pre-existing)",
-    "openspec validate --strict": "2026-07-29 PASS add-color-fidelity-verification, update-studio-theme-authoring",
-    "fidelity:measure": "2026-07-29 PASS published envelope holds against the exhaustive 16.7M-colour sweep",
-    "scripts/type-check.mjs": "2026-07-29 PASS — was FAIL: the preflight `next build` had no bundler flag and died on the Turbopack/webpack conflict, taking the whole pre-commit gate down. Now passes --webpack, matching package.json `build`.",
-    "board:check": "2026-07-29 PASS no drift — now first in `pnpm validate`, so the pre-commit hook gates on board freshness",
-    "pnpm validate": "2026-07-29 PASS end to end (board:check + oxlint + tsc --noEmit); 22 warnings, 0 errors",
-    "vitest storybook": "2026-07-29 CANNOT RUN — Playwright chromium headless shell not installed (`pnpm exec playwright install`). Environment gap, not a code failure; the unit project is unaffected."
-  },
-  "research": "active — CIEDE2000 conformance, real-device finish measurements, tone mapping literature. Recorded in active change tasks.md and lib/ module doc-comments. No formal DOCS/READINGS.md corpus yet.",
-  "archived": [],
-  "notes": "Factory pattern adopted from valoric. docs/FACTORY.md is the operating manual. tasks/state.json expanded to the fuller record format (wave, change, task, research, archived, branch, runner, parked, accounting).",
-  "branch": "main",
-  "runner": "npm run dev (attended); unattended runner not yet set up",
-  "parked": [
-    "USER — visual review of /3d, /3d cockpit, theme shelf, wheel label derivation. All visual gates require the user looking.",
-    "USER — commit signing (git %G? = N on all history; SSH signing setup is 3 lines of git config)",
-    "USER — deploy from GitHub triggers Vercel auto-deploy. No release process written yet."
-  ],
-  "carry": [
-    "RESOLVED, was a spec violation: a saved theme discarded a hand-tuned rig. `StudioTheme.rig` is now `{ name, overrides }` — the preset name plus a top-level sparse diff — so the preset stays the single definition of itself AND the tuning is the theme's own data. `overrides: {}` is the untouched case and still tracks future revisions of the preset. v1 records carrying a bare `rigName` migrate on read, no write required. The subtle one: `sanitizeSpot` writes `castShadow: undefined`, so a stored config carries keys a preset literal does not — a naive equality reads that as a deviation and would pin every reloaded theme's rig, ending preset tracking after the first reload. Measured and pinned in that change's tasks.md.",
-    "The /3d boot no longer matches Noir by coincidence. `createBootedWorkbenchModel` resolves a single stored default-theme pointer and applies its actions over the factory model, so the booted look and the theme the shelf marks default cannot disagree. Deleting the default deliberately leaves the pointer dangling — `resolveDefaultTheme` is the one place that heals it, to Noir. NOTE: this wires `/3d` only; `/` still boots through the app-wide `ipodCentralMachine`, which is the two-folds-of-one-model item already on this list.",
-    "The board is now self-enforcing: `pnpm validate` runs board:check, husky pre-commit runs validate. Drift classes gated — completed-but-unarchived (prints the archive command), dangling next/arc refs, change dir missing proposal/tasks, and staleness (openspec/changes edited without tasks/state.json, or a state date behind the last openspec commit). Update tasks/state.json in the same commit as the work; nothing else is hand-maintained.",
-    "RESOLVED: the CIEDE2000 hue-average branch. Now conformant to Sharma eq. 14 (all four cases, incl. the h1+h2>=360 branch the 34 reference pairs never reach). The pre-fix error was measured at <2e-4 dE over 400k random Lab pairs — real but four orders below any threshold, because the branches only differ where the RT rotation term is vanishing.",
-    "RESOLVED: relativeLuminance duplication. lib/color-engine.ts is now the sole implementation; color-manifest and studio-control-tokens re-export it. The WCAG-vs-IEC knee difference is provably unobservable for 8-bit input (no code falls between 0.03928 and 0.04045), so the collapse is a verified no-op, not a judgement call.",
-    "LATENT DEFECT, now gated: three picks tone mapping per render target, so the export path never inherits renderer.toneMapping. update-render-fidelity-launch-gate MUST set RESOLVE_TONE_MAPPING when it swaps the operator, or exports diverge from the screen by up to dE00 11.46. resolveMatchesRenderer fails on mismatch.",
-    "FIXED, was shipping: captureFrame read the linear render target raw with no resolve pass — the '~2.2 gamma dark export' bug, live on the interaction-recording path via lib/export/effect-pipeline.ts.",
-    "Under NoToneMapping fidelity is EXACT (dE00 = 0 across the whole gamut), not 'within 1.0' as design.md D2 proposed. Any nonzero reading is a defect, not a tolerance question.",
-    "Colour and lighting are still separate registries. Nothing expresses 'this rig suits this finish'. add-finish-rig-pairing now carries this; the line stays until that change lands.",
-    "NOT CLEAR. Failing conditions, per CLAUDE.md 'Ready state': working tree uncommitted, and owner-gated items outstanding in next. Gates are green (pnpm validate exit 0) and the board is fresh.",
-    "WIP LIMIT BREACHED: the limit is 3 changes strictly between 0% and 100%; 7 are. Rank by CLAUDE.md 'Priority' — finish before starting. The four new changes are homework, deliberately at 0%, and do not count against attention until one is picked up.",
-    "Two folds of one model, on two routes: ipodCentralMachine is mounted app-wide (app/layout.tsx:126) and drives / and the floating panels; /3d runs its own useReducer(ipodWorkbenchReducer) (ipod-3d-stage.tsx:112). They do not conflict today because they sit on different routes — but add-customizer-decision-log wraps the reducer, so as specified it gives /3d a log and leaves / without one. Measured in add-motion-authoring-system/design.md §Findings F3-F5, along with the duplicate export lifecycle. No proposal owns it yet.",
-    "Commits are unsigned (git log %G? = N on all history). No commit.gpgsign, no gpg.format, no user.signingkey. In a repo whose proposition is attestation, the authorship of every attestation is unverifiable. Owner's call; three lines of git config with SSH signing."
-  ],
-  "accounting": {
-    "measured": "2026-07-29",
-    "implementable_open": 7,
-    "by_change": {
-      "add-color-fidelity-verification": 1,
-      "update-studio-theme-authoring": 1,
-      "add-customizer-decision-log": 0,
-      "add-workspace-storage-registry": 0,
-      "add-finish-rig-pairing": 0,
-      "add-motion-authoring-system": 0,
-      "add-community-state-gallery": 0
-    },
-    "done": 0,
-    "user_owned_open": {
-      "visual-review": 3
-    },
-    "note": "Rough counts based on tasks.md checkboxes. Board is the derived source of truth; accounting is context, not a ledger."
-  }
+	"updated": "2026-07-30T03:10+0200",
+	"wave": 1,
+	"change": [
+		"add-color-fidelity-verification",
+		"update-studio-theme-authoring",
+		"add-motion-authoring-system"
+	],
+	"task": "motion §6.7 landed — the shelf has rows, so a tuned motion can be saved, named, overwritten, re-opened and deleted from the surface. add-motion-authoring-system now has ZERO implementable tasks left: 52/55, and the three open boxes are §2.9, §3b.1 and §6.8, all owner gates. FIVE RULINGS: (1) A ROW STATES A VALUE, SO THE VALUE HAD TO BE STORED — `3× · seamless` is not readable off a MotionDoc, so SavedMotion gained `cadence` (MotionCadence = Pick<MotionState,'repeat'|'durationSec'|'timeMap'>). The unused APPLY_MOTION action, payload MotionState, comment 'the shelf's one-tap recall', is evidence this was always the shape: §4b.1 stored a third of the slice the reducer was built to accept. The row reads the full motionReadout (`3× · 1.7s · seamless`) because the cycle length is now held, not derived from the live transport. (2) SAVE OVER THE OPEN ENTRY CLEARS THE OVERRIDES — folding the tuning into the entry's document leaves the override a stored copy of its own base, the preset-tracking defect this project has now paid for FOUR times. (3) DELETING THE OPEN ENTRY records resolveMotionDocById(id, next).id rather than the literal 'orbit': §4b.4's one-healer ruling is about not having two healers, not about leaving the picker marking nothing while Orbit flies. (4) The rows are `documents` MINUS the shelf, not a second list — §4b.5's one list stays the only source of picker order and a set difference cannot list a motion twice. (5) The cadence heals through sanitizeMotionState, making it the FIRST caller of SanitizeMotionOptions.naturalCycleSeconds — the option documented for 'a caller that knows a cadence the catalogue does not' — pinned BY VALUE (stored speed 1 over 20s on a 10s shelf doc → repeat 2, not the DEFAULT_REPEAT fallback), which is §4.6's lesson applied on the way in. Six shelf inputs travel as ONE `shelf` prop (MotionShelfControls) so the inspector re-parents by moving one line. 1083/1083 (was 1077). Resume at §6.8 — the owner's visual review of §6, which is the only thing standing between this change and archive.",
+	"focus": "Colour fidelity is measured, not asserted: the metric is conformant, the envelope is exhaustive, live-vs-export parity is gated, and presented finishes are attested.",
+	"blocked": false,
+	"blocked_reason": null,
+	"arc": [
+		{
+			"act": 1,
+			"claim": "The object is faithful",
+			"change": "add-color-fidelity-verification",
+			"note": "also restore-finish-provenance, update-render-fidelity-launch-gate"
+		},
+		{
+			"act": 2,
+			"claim": "The instrument is legible",
+			"change": "refactor-3d-control-surface-to-inspector",
+			"note": "blocked on adopt-studio-control-language; retires 7 cockpit cards + duplicate panel-registry"
+		},
+		{
+			"act": 3,
+			"claim": "Every choice is remembered",
+			"change": "add-customizer-decision-log",
+			"note": "keystone — ships no pixels, makes 4 and 5 possible"
+		},
+		{
+			"act": 4,
+			"claim": "The document travels",
+			"change": null,
+			"note": "half-shipped — lib/portable-state.ts encodes the look, not the log"
+		},
+		{
+			"act": 5,
+			"claim": "The community is the gallery",
+			"change": "add-community-state-gallery",
+			"note": "local library first; storage is the last decision, not the first"
+		}
+	],
+	"next": [
+		"USER: visual review of add-motion-authoring-system §6 (task 6.8) — the export dock's Preview section is GONE and the motion inspector stands in its place: a document picker, per-track rows carrying their values, a curve pad with two draggable handles, repeat/length/style/turnaround rows, the transport, the timeline proof strip under the scrubber, and now the shelf (Save / Rename / Save over / Delete). The dock's own Clip length slider went with the section. One reading to rule on: with repeat 0 the strip shows five identical cells, because every planned position proves the hero. Collapsing it moves pixels, so it is the owner's call. This is the LAST non-owner-gated item in the change.",
+		"USER: gate on add-motion-authoring-system §3b.1 — the boomerang turnaround is now an authored bezier [0.5, 0, 0.5, 1]. MEASURED AND NOT A NO-OP: the shipped smootherstep is a quintic and no cubic bezier can be one. Worst deviation 3.1191 deg (turntable azimuth), 1.3675 (sweep elevation), 1.3356 (crane elevation). loop and held clips are bit-identical. Readings in that change's tasks.md §3.4; never re-derive.",
+		"USER: gate on add-motion-authoring-system §2.9 — deleting poseForMove swaps the flown camera engine from generators to documents. Worst axis 0.2116 deg (sweep elevation), under the export cache key's quantization but still a pixel move. NOTE: cyclesForDuration and clipCyclesForDuration already went with §3.1 (they took a speed argument); what remains gated is the engine swap alone, and motionClipFor is the single line that changes.",
+		"add-color-fidelity-verification §7.1-7.8 — follow-ups written up self-contained in that change's tasks.md. Do not re-derive the measurements, they are recorded.",
+		"USER: visual check of /3d — the cockpit gained Shipped/House swatch rows and a Reading panel; wheel derivation and label tone changed for every non-neutral and every light case (§7.7).",
+		"USER: visual review of the Themes shelf in /3d — update-studio-theme-authoring is 28/29 and only §9 is open.",
+		"update-ipod-theme-black-white-toggle 8.2/8.3 — USER: in-browser theme flip + PNG export in both themes. Visual gate, not self-certifiable.",
+		"add-pi-research-agent 3.1/3.4/4.3 — research-only contract, refusal path, missing-key tests. Mechanical.",
+		"add-workspace-storage-registry — now 22 keys, not 21: the motion shelf added `ipodStudioMotions`, named to the ipodStudioThemes convention on purpose. Inventory recorded in that change's tasks.md; do not re-derive it.",
+		"add-finish-rig-pairing — carries the cross-registry rule. Blocked on add-color-fidelity-verification hitting 100%.",
+		"SHORT-TERM FIX, no proposal: WHEEL_LABEL_CONTRAST_FLOOR declared twice — lib/color-manifest.ts:256 and lib/color-verdict.ts:159, which already imports that module. Make it a re-export.",
+		"SHORT-TERM FIX, no proposal: delete docs/PROGRESS.md, docs/ROADMAP.md, docs/NEXT-TASK.md (hand-maintained status, stale since April/May) and cut README.md from 950 lines to a table of contents."
+	],
+	"gates": {
+		"validate-color-manifest": "2026-07-29 PASS 58/58 — the shell-to-wheel miss was a mis-specified rule, not a bad token; now measured as undertone (CIEDE2000 at kL=1e9), which is the physically true question",
+		"vitest unit": "2026-07-30 PASS 1083/1083 across 67 files (+6 in lib/motion/motion-shelf.test.ts: the cadence stored and its time map copied rather than aliased, the cadence surviving a rename and being replaced by an overwrite, openSavedMotion dropping the outgoing overrides while taking playhead/playing from the caller, a missing cadence defaulting, hostile values clamping to MAX_REPEAT / MIN_DURATION_SEC, and a legacy `speed` converting against the ENTRY's cycle length rather than the catalogue's). What is still NOT proven: the panels themselves — unit is node over lib/**, so the shelf's rules live in lib/motion/motion-shelf.ts and the rows are the part no test covers.",
+		"tsc --noEmit": "2026-07-30 PASS 0 errors",
+		"oxlint": "2026-07-30 PASS 0 errors, 24 warnings repo-wide — §6.7 added none. The §6.5 note still holds: a memo dep a value is not derived from is a fake dep, and the timeline proof strip must not be wrapped in React.memo.",
+		"openspec validate --strict": "2026-07-30T03:08 PASS add-motion-authoring-system (§6.7) (the CLI is the global `openspec` in ~/.bun/bin — NOT an npx package; `npx openspec` cannot resolve it); 2026-07-29 PASS add-color-fidelity-verification, update-studio-theme-authoring",
+		"fidelity:measure": "2026-07-29 PASS published envelope holds against the exhaustive 16.7M-colour sweep",
+		"scripts/type-check.mjs": "2026-07-29 PASS — was FAIL: the preflight `next build` had no bundler flag and died on the Turbopack/webpack conflict, taking the whole pre-commit gate down. Now passes --webpack, matching package.json `build`.",
+		"board:check": "2026-07-30 PASS no drift — first in `pnpm validate`, so the pre-commit hook gates on board freshness",
+		"pnpm validate": "2026-07-30T02:20 PASS end to end, exit 0 (board:check no drift + oxlint + tsc --noEmit + scripts/type-check.mjs); 24 warnings, 0 errors",
+		"vitest storybook": "2026-07-29 CANNOT RUN — Playwright chromium headless shell not installed (`pnpm exec playwright install`). Environment gap, not a code failure; the unit project is unaffected."
+	},
+	"research": "active — CIEDE2000 conformance, real-device finish measurements, tone mapping literature. Recorded in active change tasks.md and lib/ module doc-comments. No formal DOCS/READINGS.md corpus yet.",
+	"archived": [],
+	"notes": "Factory pattern adopted from valoric. docs/FACTORY.md is the operating manual. tasks/state.json expanded to the fuller record format (wave, change, task, research, archived, branch, runner, parked, accounting).",
+	"branch": "main",
+	"runner": "npm run dev (attended); unattended runner not yet set up",
+	"parked": [
+		"USER — visual review of /3d, /3d cockpit, theme shelf, wheel label derivation. All visual gates require the user looking.",
+		"USER — commit signing (git %G? = N on all history; SSH signing setup is 3 lines of git config)",
+		"USER — deploy from GitHub triggers Vercel auto-deploy. No release process written yet."
+	],
+	"carry": [
+		"A ROW STATES A VALUE, SO THE VALUE HAS TO BE STORED — and the reducer already knew it. §6.7 asked for a shelf row reading `Orbit — slow · 3× · seamless`, which is not readable off a MotionDoc: repeat, clip length and time map live in MotionState, so the row as specified would have shown a value the entry did not hold. SavedMotion.cadence closes it, and the UNUSED APPLY_MOTION action — payload MotionState, comment 'the shelf's one-tap recall' — is the evidence the shape was decided in §4 and half-built in §4b.1. GENERALISES: when a task specifies a readout, the readout is a spec for the STORED shape, not for the formatting; and an action that was added with no caller is a design already ruled on, so read it before re-ruling.",
+		"SAVE OVER MUST CLEAR THE OVERRIDE IT JUST ABSORBED — fourth appearance. Writing the flown document into the open shelf entry makes the surviving override a stored copy of its own base, which samples identically today and stops tracking the entry forever after. Same defect as the saved theme's rig, the sanitizeSpot castShadow:undefined deviation and applyTrackEdit chaining. THE RULE, now four times paid for: whenever a BASE is rewritten to include a DIFF, the diff has to be dropped in the same gesture.",
+		"A CONTROL THAT STORES A DERIVED VALUE MUST DERIVE IT FROM THE BASE, AND MUST CLEAR RATHER THAN STORE AN IDENTITY. The inspector's sliders hold three scalars (gain, phase, curve) and the model stores a whole MotionTrack, so the projection runs both ways: applyTrackEdit ALWAYS starts at the shipped track, never at the previous result. Chaining would leave 17 x 0.4 x 2.5 = 16.999999999999996 after a drag away and back — permanently and invisibly off the catalogue, with no gesture that returns it. And an edit that lands back on the shipped values DROPS its override (CLEAR_MOTION_TRACK, withoutTrack collapsing {tracks:{}} to undefined) rather than storing a copy of the base: the copy samples identically today and stops tracking the catalogue document forever after. THIRD APPEARANCE of the preset-tracking defect — the saved theme's rig, the sanitizeSpot castShadow:undefined false deviation, now this. The comparison goes through canonicalTrack, extracted out of motionDocHash rather than written a second time.",
+		"THE CATALOGUE'S ALTERNATION IS WHY A PRISTINE TRACK HAS NO CURVE TO NAME. The shipped quarter-keyframe tracks alternate easeOutSine / easeInSine, and that alternation IS what makes them exact sines (§2). So the inspector's curve row reads `Mixed`, draws the first segment dashed, and unifies every segment on the first drag — a real change of character, which is exactly the spec's `linear toward easeInOutSine` axis rather than a rounding. The §2 port floor is unaffected because no edit mutates CATALOGUE_DOCS. GENERALISES: when a shipped value is a STRUCTURE and the control is a SCALAR, the honest readout is that they differ, not the scalar nearest to the structure.",
+		"THE MIGRATION WAS INERT AND ONLY A VALUE ASSERTION FOUND IT. `repeatFromSpeed` needs the document's natural cycle length; `SanitizeMotionOptions.naturalCycleSeconds` carried it; NOT ONE of the four boundaries (normalizeModel, loadStudioState, decodePortableState, snapshotToModel) passed it. Every legacy `speed` therefore converted to `repeat: 1` regardless of what it had been flying, while §3.2 claimed the conversion 'cannot be missed once'. Fixed inside sanitizeMotionState, the only place that knows the docId: the option defaults to CATALOGUE_DOCS[docId].naturalCycleSeconds, total for the legacy case because `speed` predates the shelf. GENERALISES: an option with a fallback is not a migration until a test asserts the converted VALUE — a test that only asserts 'does not throw' would have passed on the broken code.",
+		"THE §3.4 TURNAROUND READINGS ARE ENGINE-SPECIFIC, and the ledger did not say so. They reproduce EXACTLY on the procedural generators (turntable azimuth 3.1191, sweep elevation 1.3675, crane elevation 1.3356, crane reach 5.8340e-2) and SHIFT on the ported documents (3.1191 unmoved — its port is exact; 1.3627; 1.3225; 5.8687e-2), because the port residual displaces where the maximum sits. lib/motion/transport.test.ts measures the procedural clip and says so at the assertion. §2.9 moves these numbers by exactly that much when it swaps the engine.",
+		"MEASURED, and it killed the ledger's premise: §3.4 asked for 'a bezier that matches today's smootherstep, so the default is a no-op'. The shipped turnaround is a QUINTIC (x^3(6x^2-15x+10)) and a cubic bezier cannot be one — a degree mismatch, not a fitting failure. Best zero-end-slope bezier 8.1312e-3 phase error (a=0.49840); shipped pick [0.5,0,0.5,1] 8.6642e-3, +5.3e-4 for a readable tuple. The best UNCONSTRAINED bezier is 3.7x better (2.3380e-3) and was REJECTED ON MECHANISM: its end slopes are -0.119, so the camera backs up through the loop seam. Y overshoot is expression on a value track and a defect on a time map — that asymmetry is now load-bearing twice. A tangent-matched track clears the floor at 6 segments but a 7-keyframe time warp is not a curve anyone can drag. Ruled: the default moves the camera under boomerang and gates on the owner.",
+		"repeat:0 RETURNS THE HERO IN CLOSED FORM, and pinning phase 0 would have been wrong. D6 called hold 'amplitude zero' and that is exact: a document's tracks are offsets, so scaling by zero IS the hero. Sampling phase 0 is NOT — orbit's dolly is a raised cosine, so orbitPose(0) sits 0.15 units inside its hero and 2 deg below it. The closed form keeps a held clip byte-identical to what shipped.",
+		"THE MIGRATION DOES NOT LIVE IN healSlice, and the ledger was wrong to put it there. healSlice copies keys; it cannot turn `speed` into `repeat`. And `speed` appears in FOUR places — a stored studio slice, a share payload, an export record, a re-open. One sanitizer (sanitizeMotionState) used by normalizeModel, loadStudioState, decodePortableState and snapshotToModel is the only shape where the conversion cannot happen twice or be missed once. It also absorbs the v1 loop:'hold' -> repeat:0 case the ledger never named.",
+		"NEARLY SHIPPED AS A BUG: sanitizeMotionState is folded through normalizeModel, which runs on most reducer actions. If it also reset the playhead, editing the song title mid-playback would rewind the preview. The reset belongs to the BOUNDARY (withoutTransport at encode / storage load / decode / re-open), which is exactly how isNowPlayingEditable has always been written. Healing and excluding are different jobs.",
+		"THE EXPORT IDENTITY IS A HASH, NOT A NAME. `move: \"orbit\"` named both a pristine and a hand-tuned Orbit, so two visibly different exports carried one identity and the timeline proof would have served stale frames for edited motion. MotionIdentity.docHash is motionDocHash of the RESOLVED document. `overrides` rides along for re-open but is deliberately NOT hashed — docHash already covers it, and hashing both makes two encodings of one motion into two identities. FINGERPRINT_VERSION is now 2.",
+		"CLOSED at 25.9822 deg, and the closing move was to pass the DOCUMENT rather than the CLIP. One place decides which engine flies a motion (motionClipFor); §5.5 wired the proof and §5.8 wired the rig and the MP4, all three from one flownClip in ipod-3d-stage.tsx resolved above every consumer. The boundaries take doc?: MotionDoc, and flownMotionDoc(clip) is the single home of 'a document is present IFF the document engine flies it' — undefined for an untouched preset, which is the only reason §2.9's 0.2116 deg swap is still gated. Handing resolveFlownDoc to the rig instead would have performed that gated swap silently, because EVERY preset resolves to a document whether or not anything was tuned. GENERALISES: when a boundary takes the payload instead of the decision, the invariant tying payload-presence to the decision needs a named, tested home, or every caller re-derives it and one of them gets it wrong.",
+		"A NAME IS NOT AN IDENTITY FOR A CACHE KEY, and this is the second time that exact shape bit. The rig re-baked its pose sampler when `move` changed — correct while a move was only ever a preset id, wrong the moment a curve could be dragged, because tuning keeps docId and changes the document. A drag mid-preview would have held a stale sampler and shown a motion nobody authored. Fixed by making the document's REFERENCE part of the key, which is affordable only because flownClip is memoized on (docId, overrides, savedMotions) — so CameraPreviewState.doc now carries a referential-stability contract in its doc-comment, and violating it costs a sampler rebuild per frame rather than a wrong pose. Pairs with the §5.5 lesson: the key a cache or a debounce compares on is part of its contract, not an implementation detail.",
+		"STABILITY IS TRACKED ON THE PLAN KEY, NOT THE ANCHOR KEY, and the ledger's plan did not say which. timelineFingerprint folds in the proof inputs, so plan stability implies input stability — but NOT the reverse: switching documents moves the plan key and leaves proofFingerprint untouched, which is the whole reason browsing the catalogue does not re-render the anchor. Gating the timeline walk on anchor stability would therefore have warmed a whole set on the FIRST tick of every document, so a catalogue browse or a curve drag bursts one render per position with no idle debounce — the exact drag-storm the scheduler exists to absorb, reintroduced by reusing the wrong key. GENERALISES: when a debounce is reused for a second stream, the key it debounces on is part of the contract, not an implementation detail.",
+		"A PROOF FRAME'S PROVENANCE IS ITS OWN POSE. One warm(key, snapshot, priority) body serves the anchor and every timeline frame, and a frame is the anchor snapshot with frame.pose substituted — so captureHighRes needed no new parameter (it already reads snapshot.pose) and the stored ProofEntry restores the camera it actually proves. Storing the anchor snapshot against a mid-clip frame would have made re-open set the hero pose for a frame the hero never produced.",
+		"MEASURED, and it overturned a design decision: design.md D3 prescribed quarter keyframes plus easeInOutSine for the whole catalogue port. That curve has a FLAT TANGENT at both ends — right for motion resting at each keyframe, wrong for a smooth curve sampled mid-slope. A quarter of a sine is not approximated by a named curve, it IS one exactly (easeOutSine = sin(pi x/2) rising, easeInSine = 1-cos(pi x/2) falling), so sine tracks alternate those and cosine tracks use the same pair reversed. Crane's second harmonic still missed at 1.243 deg vs the 0.25 floor; fixed by tangent-matched beziers (lib/motion/fit.ts, cubic Hermite as an easing) which cut it 15.7x to 0.0792 deg while HALVING the keyframe count to 9 — the editability that made the port worth doing. All 5 moves now PASS all 3 axes. Readings recorded in that change's tasks.md §2; never re-derive them.",
+		"THE CATALOGUE RESIDUAL IS ONE CONSTANT: 7.5561e-3 x amplitude, identical for sine and cosine tracks (a cosine track is a phase-shifted sine over the same quarter shapes). All 15 readings are that number scaled. Headroom: angle tracks conform up to 33.09 deg amplitude (largest shipped 28, sweep elevation, 85% of budget), reach tracks up to 1.323 units (largest shipped 1.1, crane reach). Raising an amplitude past those breaks the port and fails lib/motion/catalogue.test.ts loudly.",
+		"AMENDED, was a hole in the ledger: add-motion-authoring-system asserted 'save it as yours' three times in prose (proposal.md:83, design.md:123, design.md:209) and had zero tasks building it — motion could be authored but never owned. Now §4b, mirroring lib/studio-themes.ts rather than inventing a second registry shape. Deliberately NO default-motion pointer: §4.1 already persists the selected doc, so the boot needs no second one, and add-workspace-storage-registry is open on 21 keys across 3 conventions already. A shelf entry stores the document WHOLE — the one place D7's identity-plus-overrides ruling does not apply, because a shelf entry is a definition rather than a reference to one.",
+		"WATCH the import direction in lib/motion/doc.ts: it reads stableStringify + hashString out of lib/export/export-fingerprint.ts (one-way today, per task 1.5's 'do not add a second hash implementation'). §5.2 makes export-fingerprint carry a motion identity. If that ever needs to import back from lib/motion, extract the two helpers to a neutral module — do not resolve the cycle in place.",
+		"NOT SPEC'D, deliberately deferred: the motion SHOWCASE — a compare surface putting two motion docs side by side on one playhead. It is the second half of what the owner asked for on 2026-07-29 and it is not in add-motion-authoring-system (zero hits for showcase/compare/A-B across that change). Proposed after §6's inspector exists, because comparing needs the thing being compared. The audience-facing variant (a motion reel) is Act 5 material, not this.",
+		"RESOLVED, was a spec violation: a saved theme discarded a hand-tuned rig. `StudioTheme.rig` is now `{ name, overrides }` — the preset name plus a top-level sparse diff — so the preset stays the single definition of itself AND the tuning is the theme's own data. `overrides: {}` is the untouched case and still tracks future revisions of the preset. v1 records carrying a bare `rigName` migrate on read, no write required. The subtle one: `sanitizeSpot` writes `castShadow: undefined`, so a stored config carries keys a preset literal does not — a naive equality reads that as a deviation and would pin every reloaded theme's rig, ending preset tracking after the first reload. Measured and pinned in that change's tasks.md.",
+		"The /3d boot no longer matches Noir by coincidence. `createBootedWorkbenchModel` resolves a single stored default-theme pointer and applies its actions over the factory model, so the booted look and the theme the shelf marks default cannot disagree. Deleting the default deliberately leaves the pointer dangling — `resolveDefaultTheme` is the one place that heals it, to Noir. NOTE: this wires `/3d` only; `/` still boots through the app-wide `ipodCentralMachine`, which is the two-folds-of-one-model item already on this list.",
+		"The board is now self-enforcing: `pnpm validate` runs board:check, husky pre-commit runs validate. Drift classes gated — completed-but-unarchived (prints the archive command), dangling next/arc refs, change dir missing proposal/tasks, and staleness (openspec/changes edited without tasks/state.json, or a state date behind the last openspec commit). Update tasks/state.json in the same commit as the work; nothing else is hand-maintained.",
+		"RESOLVED: the CIEDE2000 hue-average branch. Now conformant to Sharma eq. 14 (all four cases, incl. the h1+h2>=360 branch the 34 reference pairs never reach). The pre-fix error was measured at <2e-4 dE over 400k random Lab pairs — real but four orders below any threshold, because the branches only differ where the RT rotation term is vanishing.",
+		"RESOLVED: relativeLuminance duplication. lib/color-engine.ts is now the sole implementation; color-manifest and studio-control-tokens re-export it. The WCAG-vs-IEC knee difference is provably unobservable for 8-bit input (no code falls between 0.03928 and 0.04045), so the collapse is a verified no-op, not a judgement call.",
+		"LATENT DEFECT, now gated: three picks tone mapping per render target, so the export path never inherits renderer.toneMapping. update-render-fidelity-launch-gate MUST set RESOLVE_TONE_MAPPING when it swaps the operator, or exports diverge from the screen by up to dE00 11.46. resolveMatchesRenderer fails on mismatch.",
+		"FIXED, was shipping: captureFrame read the linear render target raw with no resolve pass — the '~2.2 gamma dark export' bug, live on the interaction-recording path via lib/export/effect-pipeline.ts.",
+		"Under NoToneMapping fidelity is EXACT (dE00 = 0 across the whole gamut), not 'within 1.0' as design.md D2 proposed. Any nonzero reading is a defect, not a tolerance question.",
+		"Colour and lighting are still separate registries. Nothing expresses 'this rig suits this finish'. add-finish-rig-pairing now carries this; the line stays until that change lands.",
+		"NOT CLEAR. Failing conditions, per CLAUDE.md 'Ready state': working tree uncommitted, and owner-gated items outstanding in next. Gates are green (pnpm validate exit 0) and the board is fresh.",
+		"WIP LIMIT BREACHED: the limit is 3 changes strictly between 0% and 100%; 7 are. Rank by CLAUDE.md 'Priority' — finish before starting. The four new changes are homework, deliberately at 0%, and do not count against attention until one is picked up.",
+		"Two folds of one model, on two routes: ipodCentralMachine is mounted app-wide (app/layout.tsx:126) and drives / and the floating panels; /3d runs its own useReducer(ipodWorkbenchReducer) (ipod-3d-stage.tsx:112). They do not conflict today because they sit on different routes — but add-customizer-decision-log wraps the reducer, so as specified it gives /3d a log and leaves / without one. Measured in add-motion-authoring-system/design.md §Findings F3-F5, along with the duplicate export lifecycle. No proposal owns it yet.",
+		"Commits are unsigned (git log %G? = N on all history). No commit.gpgsign, no gpg.format, no user.signingkey. In a repo whose proposition is attestation, the authorship of every attestation is unverifiable. Owner's call; three lines of git config with SSH signing.",
+		"A MEMO DEP THE VALUE IS NOT DERIVED FROM IS A FAKE DEP. The timeline proof strip reads a cache whose contents no prop describes, so memoising the reads needed `version` — a counter — as a dep, which is a lie told to a linter. The honest shape is to read during render and state the constraint the memo would have hidden: this component must not be wrapped in React.memo. Generalises: when a reader depends on state outside its props, do not fabricate a dep — either make the state a prop or forbid the memo in writing, next to the code."
+	],
+	"accounting": {
+		"measured": "2026-07-30T02:20+0200",
+		"implementable_open": 4,
+		"by_change": {
+			"add-color-fidelity-verification": 1,
+			"update-studio-theme-authoring": 1,
+			"add-motion-authoring-system": 2,
+			"add-customizer-decision-log": 0,
+			"add-workspace-storage-registry": 0,
+			"add-finish-rig-pairing": 0,
+			"add-community-state-gallery": 0
+		},
+		"done": 0,
+		"user_owned_open": {
+			"visual-review": 3,
+			"motion-gate": 2
+		},
+		"note": "Rough counts based on tasks.md checkboxes. Board is the derived source of truth; accounting is context, not a ledger."
+	}
 }

@@ -8,6 +8,25 @@
   Run `make board` to see the full derived horizon.
 - Review `docs/DECISIONS.md` statuses before proposing anything new.
 
+## Context budget — a session ends before it forgets
+
+A session is a working set, not a memory. It has a hard ceiling and the last thing it does
+before hitting it must be to write the work down, not to keep going.
+
+- **Ceiling 200k. Land at 150k.** Past 150k, stop starting; finish the unit in hand, write
+  the records, commit. A compacted summary is a lossy copy of a ledger that was never
+  written.
+- **The unit of work is one that fits.** If a task cannot be read, done, tested and
+  recorded inside the budget, it is two tasks. Split it in the ledger before starting it,
+  not in the middle of it.
+- **Write the ledger before the last edit, not after.** `tasks.md` checkboxes,
+  `tasks/state.json`, one `tasks/session.log` line. A finding that only exists in the
+  reply is lost the moment the session closes.
+- **Read narrowly.** Grep for the symbol, read the range. Reading a file twice is the
+  cheapest thing to eliminate; re-deriving a recorded measurement is the most expensive.
+- **The handoff is a §-numbered task, not prose.** "Resume at §5.5" beats a paragraph
+  describing where things stand, because the next session reads the ledger anyway.
+
 ## Reading the Factory
 
 ```sh

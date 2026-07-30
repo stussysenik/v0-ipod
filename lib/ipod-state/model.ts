@@ -1,5 +1,6 @@
 import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR, deriveWheelColors } from "@/lib/color-manifest";
 import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
+import { DEFAULT_MOTION_STATE, type MotionState } from "@/lib/motion/motion-state";
 import {
 	DESIGNER_DARK_RIG,
 	cloneLightingConfig,
@@ -162,6 +163,21 @@ export interface IpodPlaybackSnapshot {
 }
 
 /**
+ * The authored camera motion — which document is flying, how it was tuned, and how it
+ * threads clip time. Owned by `lib/motion/motion-state.ts` (with its healing and its
+ * `speed → repeat` migration) and re-exported here so the model is still one file to read.
+ *
+ * MODELLED RATHER THAN LOCAL, including the transport. Every "just keep it in a
+ * `useState`" call in this codebase produced a second owner: the stage held `speed`,
+ * `loopStyle`, `previewMove`, `previewT`, `previewPlaying` and `durationSec` as six local
+ * states that the export, the proof fingerprint and the re-open path each had to be handed
+ * separately, and a share link carried none of them. As one modelled slice, motion
+ * persists, travels in `?s=` links, enters the export snapshot and appears in the decision
+ * log — all four are already projections of `IpodWorkbenchModel`.
+ */
+export type { MotionState };
+
+/**
  * The `/3d` studio slice — everything about *how the device is presented and lit* in the
  * 3D focus view, as opposed to what song/finish it shows. Kept separate from `presentation`
  * (physical finish colours) and `interaction` (on-device OS state) because it is studio
@@ -197,11 +213,13 @@ export interface IpodStudioState {
 	 * during every export bake — it can never leak into a rendered clip.
 	 */
 	theatreStudio: boolean;
+	/** The authored camera motion (spec: motion-authoring). */
+	motion: MotionState;
 }
 // Camera framing already survives reload through the camera-lock persistence
 // (LOCKED_POSE_KEY in the stage), so it deliberately does NOT live in this slice.
 
-export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
+export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting" | "motion"> = {
 	technicalFlat: false,
 	interactionLocked: false,
 	marquee: true,
@@ -216,6 +234,7 @@ export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
 export function createInitialStudioState(): IpodStudioState {
 	return {
 		lighting: cloneLightingConfig(DESIGNER_DARK_RIG),
+		motion: { ...DEFAULT_MOTION_STATE },
 		...DEFAULT_STUDIO_STATE,
 	};
 }

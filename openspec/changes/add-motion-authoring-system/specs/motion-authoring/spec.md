@@ -128,6 +128,41 @@ interpreted.
 - **WHEN** the user drags one track's easing from `linear` toward `easeInOutSine`
 - **THEN** the motion moves continuously between mechanical and organic with no discrete step
 
+### Requirement: An authored motion SHALL be saveable as a named document
+
+A motion the user has tuned SHALL be saveable as a named document that persists independently of
+the look that selected it, and SHALL then appear in the picker beside the shipped catalogue with
+no distinction in how it is opened, applied, or edited. A saved document SHALL be renameable,
+overwritable in place, and deletable. Saving SHALL capture the authored document whole, so a
+saved motion cannot be invalidated by a later change to the catalogue document it was derived
+from.
+
+Deleting a saved document that the current look references SHALL leave the flown motion
+unchanged for the session and heal on the next read to the catalogue document, never to an empty
+or throwing state.
+
+#### Scenario: A tuned motion becomes the user's own
+
+- **WHEN** the user overrides a track's easing and saves the motion under a name
+- **THEN** the named document appears in the picker, and selecting it restores that easing
+
+#### Scenario: A saved motion is independent of its origin
+
+- **WHEN** a saved document was derived from a catalogue document, and that catalogue document is
+  later changed
+- **THEN** the saved document samples exactly as it did when it was saved
+
+#### Scenario: A saved motion is renamed and overwritten
+
+- **WHEN** the user renames a saved document, and separately saves new tuning over it
+- **THEN** the rename changes only the label, and the overwrite replaces only the document body,
+  and neither creates a second entry
+
+#### Scenario: Deleting a referenced document does not break the session
+
+- **WHEN** the user deletes the saved document the current look references
+- **THEN** the flown motion is unchanged for the session and the reference heals on the next read
+
 ### Requirement: The motion inspector SHALL edit by direct manipulation and show the value it holds
 
 The motion inspector SHALL present each track as a row carrying its name and its current value,

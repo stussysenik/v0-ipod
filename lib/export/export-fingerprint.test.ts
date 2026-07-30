@@ -37,7 +37,23 @@ function makeProofInputs(overrides: Partial<ProofInputs> = {}): ProofInputs {
 }
 
 function makeSnapshot(overrides: Partial<ExportSnapshot> = {}): ExportSnapshot {
-	return { ...makeProofInputs(), move: "orbit", loop: "loop", speed: 1, durationSec: 4, ...overrides };
+	return {
+		...makeProofInputs(),
+		motion: {
+			docId: "orbit",
+			docHash: "aaaa1111",
+			repeat: 1,
+			durationSec: 4,
+			timeMap: { kind: "loop" },
+		},
+		...overrides,
+	};
+}
+
+/** A snapshot differing from the base only in the named motion fields. */
+function withMotion(patch: Partial<ExportSnapshot["motion"]>): ExportSnapshot {
+	const base = makeSnapshot();
+	return { ...base, motion: { ...base.motion, ...patch } };
 }
 
 describe("stableStringify", () => {
@@ -82,11 +98,19 @@ describe("proofFingerprint", () => {
 		expect(jittered).toBe(base);
 	});
 
-	it("does NOT change with move/loop/speed/duration (anchor frame is move-independent)", () => {
-		// proofFingerprint takes ProofInputs which has no motion fields; prove via snapshots
+	it("does NOT change with the motion identity (anchor frame is move-independent)", () => {
+		// proofFingerprint takes ProofInputs which has no motion field; prove via snapshots
 		// narrowed to proof inputs that motion doesn't leak in.
-		const a = toProofInputs(makeSnapshot({ move: "orbit" }));
-		const b = toProofInputs(makeSnapshot({ move: "turntable", speed: 2, loop: "boomerang", durationSec: 30 }));
+		const a = toProofInputs(makeSnapshot());
+		const b = toProofInputs(
+			withMotion({
+				docId: "turntable",
+				docHash: "bbbb2222",
+				repeat: 6,
+				durationSec: 30,
+				timeMap: { kind: "boomerang" },
+			}),
+		);
 		expect(proofFingerprint(a)).toBe(proofFingerprint(b));
 	});
 });
@@ -94,10 +118,25 @@ describe("proofFingerprint", () => {
 describe("exportFingerprint", () => {
 	it("DOES change with motion (provenance distinguishes exports)", () => {
 		const base = exportFingerprint(makeSnapshot());
-		expect(exportFingerprint(makeSnapshot({ move: "turntable" }))).not.toBe(base);
-		expect(exportFingerprint(makeSnapshot({ speed: 2 }))).not.toBe(base);
-		expect(exportFingerprint(makeSnapshot({ loop: "hold" }))).not.toBe(base);
-		expect(exportFingerprint(makeSnapshot({ durationSec: 8 }))).not.toBe(base);
+		expect(exportFingerprint(withMotion({ docId: "turntable" }))).not.toBe(base);
+		expect(exportFingerprint(withMotion({ repeat: 2 }))).not.toBe(base);
+		expect(exportFingerprint(withMotion({ repeat: 0 }))).not.toBe(base);
+		expect(exportFingerprint(withMotion({ timeMap: { kind: "boomerang" } }))).not.toBe(base);
+		expect(exportFingerprint(withMotion({ durationSec: 8 }))).not.toBe(base);
+	});
+
+	it("a tuned document is a different export even under the same name", () => {
+		// The defect this closes: `move: "orbit"` named both a pristine and a hand-tuned
+		// Orbit, so two visibly different exports carried one identity.
+		expect(exportFingerprint(withMotion({ docHash: "cccc3333" }))).not.toBe(
+			exportFingerprint(makeSnapshot()),
+		);
+	});
+
+	it("the retained overrides do NOT move the identity — docHash already carries them", () => {
+		expect(
+			exportFingerprint(withMotion({ overrides: { tracks: { azimuth: { keyframes: [] } } } })),
+		).toBe(exportFingerprint(makeSnapshot()));
 	});
 
 	it("a snapshot's proof key is derivable and stable", () => {

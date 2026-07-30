@@ -9,7 +9,15 @@
  * Selectors take narrow slices (not the whole model) so they stay pure and cheaply testable.
  */
 
-import type { ExportSnapshot, FingerprintPose, ProofInputs } from "./export-fingerprint";
+import { motionDocHash, proofPositions, resolveMotionDoc, type MotionDoc } from "@/lib/motion/doc";
+import type { MotionState } from "@/lib/motion/motion-state";
+
+import type {
+	ExportSnapshot,
+	FingerprintPose,
+	MotionIdentity,
+	ProofInputs,
+} from "./export-fingerprint";
 
 /** The studio-state fields that affect the anchor frame's pixels. */
 export interface ProofModelSlice {
@@ -40,14 +48,41 @@ export interface ProofModelSlice {
 	};
 }
 
-/** The export-option fields. Proof uses aspect/quality; motion is for provenance. */
+/**
+ * The export-option fields. Proof uses aspect/quality; motion determines the timeline and
+ * the provenance identity, and enters here so it enters in exactly one place.
+ */
 export interface ProofExportOptions {
 	aspect: string;
 	quality: string;
-	move: string;
-	loop: string;
-	speed: number;
-	durationSec: number;
+	/** The authored motion slice, plus the document it resolves against. */
+	motion: MotionState;
+	/** The catalogue/shelf document `motion.docId` names, before overrides. */
+	doc: MotionDoc;
+}
+
+/**
+ * The motion identity for a snapshot: the resolved document hashed, plus the transport.
+ *
+ * Resolution happens HERE rather than at the call sites so the hash always covers the
+ * document that will actually fly — a sparse override that never reached the hash would
+ * produce a proof frame of untuned motion and label it proof of the tuned one.
+ */
+export function selectMotionIdentity(options: Pick<ProofExportOptions, "motion" | "doc">): MotionIdentity {
+	const resolved = resolveMotionDoc(options.doc, options.motion.overrides);
+	return {
+		docId: options.motion.docId,
+		docHash: motionDocHash(resolved),
+		repeat: options.motion.repeat,
+		durationSec: options.motion.durationSec,
+		timeMap: options.motion.timeMap,
+		...(options.motion.overrides ? { overrides: options.motion.overrides } : {}),
+	};
+}
+
+/** The clip positions this snapshot's timeline proof covers. */
+export function selectProofPositions(options: Pick<ProofExportOptions, "doc">): readonly number[] {
+	return proofPositions(options.doc);
 }
 
 export function selectProofInputs(
@@ -95,9 +130,6 @@ export function selectExportSnapshot(
 ): ExportSnapshot {
 	return {
 		...selectProofInputs(model, pose, options),
-		move: options.move,
-		loop: options.loop,
-		speed: options.speed,
-		durationSec: options.durationSec,
+		motion: selectMotionIdentity(options),
 	};
 }

@@ -1,4 +1,5 @@
 import { stableStringify } from "@/lib/export/export-fingerprint";
+import { sanitizeMotionState, withoutTransport } from "@/lib/motion/motion-state";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
 	COLOR_TARGETS,
@@ -89,10 +90,25 @@ function healSavedColors(candidate: unknown): SavedColorHistory {
 	return healed;
 }
 
-export function encodePortableState(model: IpodWorkbenchModel): string {
-	// Normalize first so the payload is canonical, then drop the device-local slice.
+/**
+ * Canonical, portable projection of a model: normalized, minus the device-local panel
+ * layout, minus the motion transport position.
+ *
+ * The playhead is EXCLUDED here rather than kept out of the model (design D7). A link
+ * copied while the preview is at 40% must open composed, not mid-flight — and it must
+ * encode to the same string whether or not the transport happened to be running, so that
+ * "the same look always encodes to the same string" stays true.
+ */
+function toPortable(model: IpodWorkbenchModel) {
 	const { panelLayout: _panelLayout, ...portable } = normalizeModel(model);
-	return toBase64Url(stableStringify({ v: PORTABLE_STATE_VERSION, model: portable }));
+	return {
+		...portable,
+		studio: { ...portable.studio, motion: withoutTransport(portable.studio.motion) },
+	};
+}
+
+export function encodePortableState(model: IpodWorkbenchModel): string {
+	return toBase64Url(stableStringify({ v: PORTABLE_STATE_VERSION, model: toPortable(model) }));
 }
 
 export function decodePortableState(input: string): IpodWorkbenchModel | null {
@@ -115,9 +131,8 @@ export function decodePortableStateJson(text: string): IpodWorkbenchModel | null
 
 /** Human-readable config-file body — the same canonical envelope, pretty-printed. */
 export function encodePortableStateJson(model: IpodWorkbenchModel): string {
-	const { panelLayout: _panelLayout, ...portable } = normalizeModel(model);
 	return JSON.stringify(
-		JSON.parse(stableStringify({ v: PORTABLE_STATE_VERSION, model: portable })),
+		JSON.parse(stableStringify({ v: PORTABLE_STATE_VERSION, model: toPortable(model) })),
 		null,
 		"\t",
 	);
@@ -150,6 +165,11 @@ function decodeEnvelope(parsed: unknown): IpodWorkbenchModel | null {
 				...healSlice(base.studio, studio),
 				// The rig feeds WebGL directly; heal it field-by-field like storage does.
 				lighting: sanitizeLightingConfig(studio?.lighting),
+				// Motion heals the same way and converts a legacy `speed` on the way in.
+				// `playhead`/`playing` are reset by the sanitizer, matching the
+				// `isNowPlayingEditable: false` rule two lines up: a shared link opens
+				// composed, never mid-playback.
+				motion: withoutTransport(sanitizeMotionState(studio?.motion)),
 			},
 			// Device-local window chrome never travels (see module note).
 			panelLayout: base.panelLayout,

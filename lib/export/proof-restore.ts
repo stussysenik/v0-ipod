@@ -14,6 +14,8 @@
 import type { StudioLightingConfig } from "@/lib/studio-lighting-config";
 import type { IpodOsScreen, IpodWorkbenchModel } from "@/lib/ipod-state/model";
 
+import { sanitizeMotionState, withoutTransport } from "@/lib/motion/motion-state";
+
 import type { ExportSnapshot } from "./export-fingerprint";
 
 export function snapshotToModel(
@@ -52,6 +54,14 @@ export function snapshotToModel(
 			...current.studio,
 			marquee: snapshot.marquee,
 			lighting: snapshot.lighting as StudioLightingConfig,
+			// Motion restores through its own sanitizer, which is ALSO the migration: a v1
+			// record carries `move`/`loop`/`speed`/`durationSec` at the top level and a v2
+			// one carries a `motion` identity, and both heal to the authored shape here
+			// rather than at each call site. The playhead is not restored — a re-opened
+			// setup opens composed, the same rule every other boundary keeps.
+			motion: withoutTransport(
+				sanitizeMotionState((snapshot as { motion?: unknown }).motion ?? snapshot),
+			),
 		},
 	};
 }
