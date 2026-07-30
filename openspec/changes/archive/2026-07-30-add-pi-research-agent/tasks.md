@@ -10,13 +10,13 @@
 - [x] 2.3 Document how `pi-research` supports `restore-finish-provenance` without bypassing review or tests.
 
 ## 3. Boundaries And Safety
-- [ ] 3.1 Enforce a research-only contract in prompts, docs, and user-visible runner behavior.
+- [x] 3.1 Enforce a research-only contract in prompts, docs, and user-visible runner behavior.
 - [x] 3.2 Ensure the agent fails clearly when `NIM_API_KEY` is missing or invalid.
 - [x] 3.3 Prevent secrets, generated prompts, or transient research output from being persisted in unsafe locations by default.
-- [ ] 3.4 Add an explicit redirect/refusal path for direct product-code mutation requests.
+- [x] 3.4 Add an explicit redirect/refusal path for direct product-code mutation requests.
 
 ## 4. Validation
 - [x] 4.1 Add a lightweight validation or smoke path for agent configuration and manifest integrity.
 - [x] 4.2 Verify the committed repo metadata is structurally valid without ignored local marketplace state.
-- [ ] 4.3 Add automated checks for missing-key failure and default stdout-only persistence behavior.
+- [x] 4.3 Add automated checks for missing-key failure and default stdout-only persistence behavior.
 - [x] 4.4 Run `openspec validate add-pi-research-agent --strict --no-interactive`.

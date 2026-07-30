@@ -1,5 +1,5 @@
 {
-	"updated": "2026-07-30T03:10+0200",
+	"updated": "2026-07-30T03:30+0200",
 	"wave": 1,
 	"change": [
 		"add-color-fidelity-verification",
@@ -50,11 +50,11 @@
 		"USER: visual check of /3d — the cockpit gained Shipped/House swatch rows and a Reading panel; wheel derivation and label tone changed for every non-neutral and every light case (§7.7).",
 		"USER: visual review of the Themes shelf in /3d — update-studio-theme-authoring is 28/29 and only §9 is open.",
 		"update-ipod-theme-black-white-toggle 8.2/8.3 — USER: in-browser theme flip + PNG export in both themes. Visual gate, not self-certifiable.",
-		"add-pi-research-agent 3.1/3.4/4.3 — research-only contract, refusal path, missing-key tests. Mechanical.",
+		"ARCHIVED: research-agent — runner enforces research-only contract with code-mutation detection + redirect; validation checks missing-key and stdout-default.",
 		"add-workspace-storage-registry — now 22 keys, not 21: the motion shelf added `ipodStudioMotions`, named to the ipodStudioThemes convention on purpose. Inventory recorded in that change's tasks.md; do not re-derive it.",
 		"add-finish-rig-pairing — carries the cross-registry rule. Blocked on add-color-fidelity-verification hitting 100%.",
-		"SHORT-TERM FIX, no proposal: WHEEL_LABEL_CONTRAST_FLOOR declared twice — lib/color-manifest.ts:256 and lib/color-verdict.ts:159, which already imports that module. Make it a re-export.",
-		"SHORT-TERM FIX, no proposal: delete docs/PROGRESS.md, docs/ROADMAP.md, docs/NEXT-TASK.md (hand-maintained status, stale since April/May) and cut README.md from 950 lines to a table of contents."
+		"DONE: WHEEL_LABEL_CONTRAST_FLOOR re-export (color-verdict → color-manifest)",
+		"DONE: deleted stale PROGRESS/ROADMAP/NEXT-TASK docs; trimmed README 950→71 lines"
 	],
 	"gates": {
 		"validate-color-manifest": "2026-07-29 PASS 58/58 — the shell-to-wheel miss was a mis-specified rule, not a bad token; now measured as undertone (CIEDE2000 at kL=1e9), which is the physically true question",
@@ -116,11 +116,12 @@
 	],
 	"accounting": {
 		"measured": "2026-07-30T02:20+0200",
-		"implementable_open": 4,
+		"implementable_open": 3,
 		"by_change": {
 			"add-color-fidelity-verification": 1,
 			"update-studio-theme-authoring": 1,
 			"add-motion-authoring-system": 2,
+			"add-pi-research-agent": 0,
 			"add-customizer-decision-log": 0,
 			"add-workspace-storage-registry": 0,
 			"add-finish-rig-pairing": 0,

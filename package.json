@@ -35,7 +35,11 @@
 		"figma:check-coverage": "bun run scripts/check-story-coverage.ts",
 		"og:render": "bun run scripts/render-og.ts",
 		"fidelity:measure": "bun run scripts/measure-fidelity.ts",
-		"fidelity:measure:quick": "bun run scripts/measure-fidelity.ts --quick"
+		"fidelity:measure:quick": "bun run scripts/measure-fidelity.ts --quick",
+		"pi-research": "python3 plugins/pi-research/scripts/pi_research.py",
+		"pi-research:smoke": "python3 plugins/pi-research/scripts/pi_research.py --smoke",
+		"pi-research:validate": "python3 plugins/pi-research/scripts/validate_pi_research.py",
+		"pi-research:validate:live": "python3 plugins/pi-research/scripts/validate_pi_research.py --live"
 	},
 	"dependencies": {
 		"@cloudflare/kumo": "^2.2.1",

@@ -122,6 +122,49 @@ RESEARCH_BOUNDARY = textwrap.dedent(
     """
 ).strip()
 
+CODE_MUTATION_PATTERNS = [
+    "write code",
+    "write a new",
+    "write an",
+    "implement",
+    "refactor",
+    "create a component",
+    "add a function",
+    "modify the",
+    "change the code",
+    "patch",
+    "fix the",
+    "add feature",
+    "commit",
+    "push",
+    "deploy",
+    "write a test for",
+    "create a pull request",
+]
+
+
+def detect_code_mutation(prompt: str) -> bool:
+    lower = prompt.lower()
+    return any(pattern in lower for pattern in CODE_MUTATION_PATTERNS)
+
+
+REDIRECT_MESSAGE = textwrap.dedent(
+    """\
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  Pi Research is a RESEARCH-ONLY agent.                      ║
+    ║  It does not write, modify, or patch product code.          ║
+    ║                                                              ║
+    ║  Instead, ask for:                                          ║
+    ║    • an implementation brief for a separate coding agent    ║
+    ║    • a visual fidelity critique to guide a fix              ║
+    ║    • a provenance audit to inform a design decision         ║
+    ║    • a reference pack for measurements or specifications    ║
+    ║                                                              ║
+    ║  Use --preset implementation-brief to prepare a handoff.    ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """
+).strip()
+
 
 def parse_env_file(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
@@ -341,6 +384,10 @@ def main() -> int:
 
     if args.smoke:
         return run_smoke(args)
+
+    if args.prompt and detect_code_mutation(args.prompt):
+        print(REDIRECT_MESSAGE, file=sys.stderr)
+        return 3
 
     api_key = resolve_setting("NIM_API_KEY")
     if not api_key:

@@ -38,6 +38,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Perform a minimal live smoke request through the pi-research runner.",
     )
+    parser.add_argument(
+        "--check-refusal",
+        action="store_true",
+        help="Verify the agent refuses a code-mutation prompt.",
+    )
+    parser.add_argument(
+        "--check-stdout-default",
+        action="store_true",
+        help="Verify output prints to stdout when --output is omitted.",
+    )
     return parser.parse_args()
 
 
@@ -96,6 +106,29 @@ def main() -> int:
         result = runner.run_smoke(smoke_args)
         if result != 0:
             raise SystemExit(result)
+
+    if args.check_refusal:
+        if not runner.detect_code_mutation("write a new component for the export dock"):
+            raise SystemExit("code-mutation detection failed: 'write a new' not caught")
+        if not runner.detect_code_mutation("fix the lighting bug in the 3D scene"):
+            raise SystemExit("code-mutation detection failed: 'fix the' not caught")
+        if not runner.detect_code_mutation("implement the export pipeline"):
+            raise SystemExit("code-mutation detection failed: 'implement' not caught")
+        if not runner.detect_code_mutation("refactor the color engine"):
+            raise SystemExit("code-mutation detection failed: 'refactor' not caught")
+        if not runner.detect_code_mutation("patch the reducer to add a new action"):
+            raise SystemExit("code-mutation detection failed: 'patch' not caught")
+        if runner.detect_code_mutation("what is the provenance of silver"):
+            raise SystemExit("code-mutation false positive on benign prompt")
+        if runner.detect_code_mutation("research the sweep elevation readings"):
+            raise SystemExit("code-mutation false positive on 'research'")
+        print("pi-research code-mutation refusal: PASS")
+
+    if args.check_stdout_default:
+        result = runner.render_preset_list()
+        if "provenance-audit" not in result:
+            raise SystemExit("stdout default check failed: expected preset listing on stdout")
+        print("pi-research stdout-default behavior: PASS")
 
     print("pi-research validation passed")
     return 0
