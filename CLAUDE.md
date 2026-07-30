@@ -158,6 +158,33 @@ finish before proposing. This is a statement about attention, not capacity: a ch
 that nobody is reading is indistinguishable from an unwritten one, except that it looks like
 progress on the board.
 
+## One world, five places
+
+The product is a world the visitor enters, not an app they operate. The five surfaces —
+customizer, gallery, tutorial, settings, dimensions — are places in that world, and each is
+designed from inside it: stand there, name what is at hand, name what answers the first
+gesture. A surface that cannot be described as a place is not designed yet.
+
+- **The reading of each place.** The customizer is the workbench — the object under hands
+  and light. The gallery is the exhibition floor — other people's objects, walkable. The
+  tutorial is the first walk through the workbench, played rather than read. Settings is
+  the back room — the world's machinery, plain and honest. Dimensions is the optics bench —
+  the same object through a different barrel. These readings are creative outcomes and gate
+  on the owner like any pixel.
+- **The metaphor lives in the vocabulary, not the copy.** Evocative code means domain names
+  drawn from the world — barrel, focus, diopter, shelf, rig, walkthrough are already in the
+  record — so a cold session reads the architecture as a scene. UI strings stay nouns,
+  values and commands; comments stay mechanism and constraint. A metaphor in a comment is
+  rhetoric; a metaphor in a type name is a map.
+- **Game means presence, not gamification.** The game quality is direct manipulation with
+  visible consequence — grab, drag, watch the value move — never points, streaks, badges or
+  progress theater. The tutorial is the first level: played in the real customizer on the
+  real object, and its proof of completion is the thing the player made.
+- **One object, everywhere.** The shared document is the world's one artifact; every place
+  projects it through the binocular shape (barrel, focus, diopter). The customizer edits
+  it, the gallery shows saved versions of it, the tutorial teaches it, settings governs it,
+  dimensions redraws it. A place holding its own copy of the object is two worlds.
+
 ## Determinism and recovery
 
 One law in two halves. Determinism is what makes a recovered version falsifiable; without it,
