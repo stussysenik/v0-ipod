@@ -66,6 +66,6 @@ than no registry at all.
   - [x] 6.2 The registry module itself is the only exemption.
 - [ ] 7. Reset command on the surface. Confirms before clearing, and the confirmation names the
       scope. Command label ≤2 words; icon carries a text label.
-- [ ] 8. Gates: `pnpm vitest run --project unit`, `pnpm validate` exit 0,
-      `openspec validate add-workspace-storage-registry --strict --no-interactive`.
+- [x] 8. Gates: `pnpm vitest run --project unit` (1098/1098), `pnpm validate` exit 0 (board ✓ lint ✓ tsc ✓),
+       `openspec validate add-workspace-storage-registry --strict --no-interactive` (valid).
 - [ ] 9. **USER:** visual review — the surface gains a reset command and its confirmation.
