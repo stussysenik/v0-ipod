@@ -49,5 +49,16 @@ see `design.md` for the full narrative. It ships no pixels; it makes the next tw
   `lib/export/export-fingerprint.ts`, `components/ipod/scenes/ipod-3d-stage.tsx` (host only).
 - Depends on: nothing. Deliberately first — it is pure library plus one host line, so it can
   land while `adopt-studio-control-language` is still in flight.
-- Blocks: `refactor-3d-control-surface-to-inspector`, `add-community-state-gallery`.
+- Blocks: `refactor-3d-control-surface-to-inspector`, `add-community-state-gallery`,
+  `add-customize-walkthrough`.
+- **`Decision` carries an optional node-path origin.** `add-surface-node-tree` makes a node path
+  (`customize/step:case/field:finish`) a stable address, and that is the name a decision needs to
+  say *where* it was made rather than only which action ran. Optional, so this change still depends
+  on nothing and still lands first; the walkthrough is what reads it. Adding a second address
+  scheme later would give one fact two homes.
+- **The log attaches to the shared document, not to one host.** As written, `useDecisionLog` is
+  swapped in at `ipod-3d-stage.tsx:112`, which logs `/3d` and leaves `/` without a history.
+  `add-binocular-dimension-machines` extracts the document both dimensions project; once it lands,
+  the log attaches there and covers both. Landing first is still correct — one host is a smaller
+  first step than none — but the host is temporary and this line is why.
 - **No visual change.** If a diff in this change moves a pixel, it belongs in change two.
