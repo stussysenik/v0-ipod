@@ -158,6 +158,60 @@ finish before proposing. This is a statement about attention, not capacity: a ch
 that nobody is reading is indistinguishable from an unwritten one, except that it looks like
 progress on the board.
 
+## Determinism and recovery
+
+One law in two halves. Determinism is what makes a recovered version falsifiable; without it,
+"recovered" cannot be checked, only asserted.
+
+- **The same document produces the same pixels and the same bytes.** Any machine, any day. No
+  wall clock, no `Math.random`, no ambient state on a render or an export path. A seed is a
+  stored value like any other. This is the reason an export fingerprint can be an identity.
+- **Every persisted shape carries a version.** A stored studio slice, a share payload, an
+  export record and a re-open are four boundaries — a version honoured at three of them is
+  not a version.
+- **A migration is not a migration until a test asserts the converted value.** A test that
+  only asserts "does not throw" passes on an inert migration. That has already happened here
+  once: an option's fallback was never passed by any of the four boundaries, so every legacy
+  value converted to the same constant while the ledger claimed the conversion could not be
+  missed.
+- **No gesture destroys a version that cannot be restored.** Save over, delete and reset
+  write a new version rather than replacing the last. Back to factory is a version, not an
+  erasure.
+- **A cited commit is immutable.** A SHA referenced by a ledger, an archive note or a spec is
+  part of the record; rewriting it deletes the evidence a claim rests on.
+
+## The machine we fit
+
+The target is a ThinkPad T480s on integrated graphics at 1080p, not a workstation. A budget is
+held, not recovered — one that is measured only after it is missed has never been met.
+
+- **Two numbers gate the artifact:** bytes over the wire for one route, and frames per second
+  on Intel UHD 620 at 1080p. Both belong in `pnpm validate` beside the colour envelope, and
+  both print their reading on pass.
+- **Content is generated, not shipped.** Geometry is parametric from `IPOD_CLASSIC_MM`, colour
+  is derived from the manifest, motion is documents rather than baked frames. A baked asset is
+  a withdrawal from the byte budget and has to state what it bought.
+- **Headroom is not a design input.** A surface that holds its frame rate only on the author's
+  machine is a defect on the target machine, and the target machine is the one that counts.
+
+## Before proposing
+
+Two checks. Both cheap, both skipped by default, and each has already cost a session.
+
+- **A new capability is the last resort.** `openspec/specs/` holds the ratified requirements,
+  and new work usually contradicts one rather than sitting beside it. Read the capability whose
+  name is nearest before scaffolding anything. If a ratified requirement disagrees with the
+  proposal, the delta is `MODIFIED` with the migration named — not `ADDED` under a new name that
+  leaves two requirements disagreeing in the same repo. A dimension axis was one command from
+  being built against `surface-mode-switching`, which ratifies `/3d` as the only 3D surface;
+  shipping that would have been the defect class this file ranks first, above the arc.
+- **A question is a cost, and most forks are already closed.** Before asking, check whether this
+  project's own law eliminates the options. Layered-parallax art was one of three readings of
+  2.5D until the attestation rule removed it: a finish is a material under light, so a flat fill
+  cannot carry one. What stays genuinely open is an **input** — a visual reference, a brand, a
+  price — and an input is asked for in one plain sentence. An option menu is the shape of a
+  decision that was not made.
+
 ## Where decisions live
 
 Reasoning is written where the thing it governs lives, so a cold session reads one file

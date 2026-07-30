@@ -212,3 +212,15 @@
   the Turbopack/webpack conflict, so the pre-commit hook could only be passed by
   bypassing it. A gate hung off a command nobody can run is decoration. Fixed by
   passing `--webpack`, matching `package.json` `build`.
+- **A three-option preview menu is the shape the owner has already vetoed.** Asked which of
+  three readings of "2.5D" was meant, with mockups, in a multiple-choice tool. The recorded
+  preference is first principles and a decision, not a menu — and two of the three options
+  were rulable from the project's own law (a flat fill cannot carry an attested finish, so
+  parallax forks the truth about colour). Only the part that is a *visual reference* was
+  genuinely unanswerable, and a reference is asked for in one plain sentence. Rule: before
+  asking, check whether the project's own law already eliminates the options; ask for the
+  input, never for the decision.
+- **Ask which record the owner means by "update your claude.md".** There are two — the global
+  `/Users/senik/CLAUDE.md` and the project one. Project-scoped invariants (the target machine,
+  determinism, recovery) belong in the project file; voice and workflow belong in the global.
+  Putting a project number in the global file is the same drift as two files stating one fact.
