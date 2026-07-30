@@ -19,7 +19,7 @@
  */
 
 import { contrastRatio } from "./color-engine";
-import { colorManifest, deriveWheelColors, type AuthenticFinish } from "./color-manifest";
+import { colorManifest, deriveWheelColors, WHEEL_LABEL_CONTRAST_FLOOR, type AuthenticFinish } from "./color-manifest";
 import { deltaE00Undertone, deltaECIEDE2000, hexToLab } from "./color-proximity";
 import { linearPeak, measureFidelity } from "./color-fidelity";
 import { RESOLVE_TONE_MAPPING } from "./three-color-resolve";
@@ -154,9 +154,6 @@ function undertoneGrade(drift: number): Grade {
 	if (drift <= 2.5) return "workable";
 	return "poor";
 }
-
-/** WCAG AA-large, the floor the manifest already sets for the wheel label. */
-export const WHEEL_LABEL_CONTRAST_FLOOR = 3;
 
 function legibilityGrade(ratio: number): Grade {
 	if (ratio >= 4.5) return "exact";
