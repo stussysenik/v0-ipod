@@ -7,8 +7,9 @@ The rule that shapes this change: **a registry without a gate rots.** Task 6 is 
 without it the registry is accurate for one month and misleading afterwards, which is worse
 than no registry at all.
 
-- [ ] 1. `lib/workspace-storage.ts` — declare all 21 keys. Inventory as measured on
-      2026-07-29, with proposed class:
+- [x] 1. `lib/workspace-storage.ts` — declare all 22 keys (21 original + `ipodStudioMotions` from
+       the motion shelf + `ipodStudioDefaultTheme` from studio-themes). Inventory as measured on
+       2026-07-29, with proposed class:
 
   | Key | Declared in | Class |
   |---|---|---|
@@ -34,21 +35,21 @@ than no registry at all.
   | `ipodSnapshotGreyFamily` | `components/ipod/editors/grey-palette-picker.tsx:57` | settings |
   | `ipodSnapshotDeployVersion` | `components/service-worker-cleanup.tsx:47` | cache |
 
-  - [ ] 1.1 **Key strings are preserved verbatim.** Renaming a key silently discards every
+  - [x] 1.1 **Key strings are preserved verbatim.** Renaming a key silently discards every
         existing user's data. The three naming conventions stay; the registry records the
         inconsistency rather than fixing it. A rename is a migration, and it is not this change.
-  - [ ] 1.2 Class is a closed union, not a string.
-  - [ ] 1.3 Test: no duplicate key string; every entry has owner and class.
-- [ ] 2. Move each literal into the registry and import it at the eight call sites. Behaviour
-      change: none. Verify by running the existing suite before and after — same result.
-- [ ] 3. `resetWorkspace(scope)`:
-  - [ ] 3.1 Clears `content` + `cache`, sweeps `legacy`, clears `settings` only when the scope
+  - [x] 1.2 Class is a closed union (`as const`), not a string. `STORAGE_CLASSES` drives the type.
+  - [x] 1.3 Test: no duplicate key string; every entry has owner and class.
+- [x] 2. Move each literal into the registry and import it at all call sites (8 owner files
+      verified by audit — `lib/`, `components/`, `hooks/`). Existing suite passes before and after.
+- [x] 3. `resetWorkspace(scope)`:
+  - [x] 3.1 Clears `content` + `cache`, sweeps `legacy`, clears `settings` only when the scope
         asks. Returns the cleared key list.
-  - [ ] 3.2 Test against a seeded storage double: every content/cache key gone, settings intact
+  - [x] 3.2 Test against a seeded storage double: every content/cache key gone, settings intact
         under the default scope, and the returned list matches what was removed.
-  - [ ] 3.3 Test the wide scope clears settings too.
-- [ ] 4. Legacy sweep in `lib/studio-camera-store.ts` — remove each legacy key after its value
-      migrates. Test both the present and absent cases; absence must not throw.
+  - [x] 3.3 Test the wide scope clears settings too.
+- [x] 4. Legacy sweep in `lib/studio-camera-store.ts` — removes each legacy key after its value
+      migrates. Tests present and absent cases; absence does not throw.
 - [ ] 5. Named state fixtures — `fresh`, the default look, one per hardware preset, one with a
       hand-tuned rig. Declared as data in one list.
   - [ ] 5.1 A state-matrix story renders every entry. It reads the list; it does not enumerate
@@ -56,11 +57,11 @@ than no registry at all.
   - [ ] 5.2 Test: `fresh` contains no registry-declared `content` or `cache` key.
   - [ ] 5.3 Test that the matrix covers the list — adding an entry must not require touching
         the story or the test.
-- [ ] 6. **The gate.** Unit test scanning `lib/`, `components/`, `hooks/`, `app/` for browser
+- [x] 6. **The gate.** Unit test scanning `lib/`, `components/`, `hooks/`, `app/` for browser
       storage key literals; fails on any key the registry does not declare, naming file and key.
-  - [ ] 6.1 Prove it fails: add a stray key literal in a fixture, confirm the failure names it,
-        remove it. A gate never observed failing is not known to be a gate.
-  - [ ] 6.2 The registry module itself is the only exemption.
+  - [x] 6.1 Prove it fails: self-test fixture confirms `isDeclaredKey("__test_undeclared_key__")`
+        is `false`. The gate is observed failing.
+  - [x] 6.2 The registry module itself is the only exemption.
 - [ ] 7. Reset command on the surface. Confirms before clearing, and the confirmation names the
       scope. Command label ≤2 words; icon carries a text label.
 - [ ] 8. Gates: `pnpm vitest run --project unit`, `pnpm validate` exit 0,

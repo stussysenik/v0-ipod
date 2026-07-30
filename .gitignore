@@ -51,3 +51,6 @@ storybook-static
 # Lit element build output
 packages/ipod-wc/dist/
 .env.local
+
+# Python
+__pycache__/
