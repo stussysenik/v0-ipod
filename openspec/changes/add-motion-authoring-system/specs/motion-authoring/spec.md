@@ -185,3 +185,60 @@ rewritten.
 
 - **WHEN** an authored tuple exactly matches a curve in the named vocabulary
 - **THEN** the readout shows that curve's name; otherwise it reads `Custom`
+
+### Requirement: Every selectable motion SHALL state the shape it draws
+
+A motion picker SHALL show, for each selectable document, a trace of the motion derived by
+sampling that document — not a name alone, and not a captured asset. The trace SHALL be a pure
+function of the document, so it cannot disagree with what the rig flies or what the encoder
+exports. Each track SHALL be normalised to its own sampled extent, because a document's tracks
+carry incommensurable units and one normaliser across degrees and world units states a
+comparison that was never made. The document currently flying SHALL mark its cycle phase on its
+own trace; the others SHALL NOT.
+
+#### Scenario: A move is recognised before it is flown
+
+- **WHEN** the motion picker is displayed
+- **THEN** each entry shows a trace of its own tracks and its natural cycle length, so a move is
+  chosen by its shape rather than by remembering which name went with it
+
+#### Scenario: The trace is generated, not captured
+
+- **WHEN** a document is tuned, saved, or opened from the shelf
+- **THEN** its trace is resampled from that document, and no rendered frame or stored image is
+  read to draw it
+
+#### Scenario: Two axes of one move are distinguishable
+
+- **WHEN** a document's tracks run at different rates or carry different phase offsets
+- **THEN** the trace draws one line per track, in the same order the track rows are listed, and
+  the lines differ
+
+#### Scenario: An axis contributing nothing says so
+
+- **WHEN** a track's sampled extent is zero, because it is held or dialled to zero amplitude
+- **THEN** its line is drawn down the middle of the frame and marked flat, rather than being
+  stretched to fill a range it does not cover
+
+### Requirement: Every command in the motion inspector SHALL be reachable without a hover
+
+Commands that are transparent at rest SHALL become visible on a device that cannot hover, and
+every state marker SHALL carry an accessible name rather than colour or position alone. A
+control's accessible name SHALL be the label printed beside it.
+
+#### Scenario: A shelf entry is edited on a touch device
+
+- **WHEN** the shelf is used on a device with a coarse pointer
+- **THEN** rename, overwrite and delete are present without a hover, because neither `:hover`
+  nor `:focus-within` can be produced there
+
+#### Scenario: A tuned axis is announced
+
+- **WHEN** a track carries an override
+- **THEN** the row's accessible name says so, and does not rely on a coloured dot alone
+
+#### Scenario: One command, one name
+
+- **WHEN** two commands would otherwise share a verb, one of which discards authored work
+- **THEN** they are named distinctly, and the accessible name of a control matches its visible
+  label

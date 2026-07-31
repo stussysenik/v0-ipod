@@ -467,6 +467,70 @@ than one context budget can read, write, test and record.
       `lib/motion/motion-shelf.test.ts` +6 (26), unit 1083/1083 across 67 files.
 - [ ] 6.8 **USER: visual review.** State what moved and stop. Nothing here hardens first.
 
+## 6b. The trace — a move you can see before you fly it
+
+The picker asks the user to choose between five words. `Orbit`, `Turntable`, `Sweep`, `Robo`
+and `Crane` are names for shapes, and a name for a shape is a thing you learn by trying all
+five and remembering. Every other control in this panel states the value it holds; the one
+control that picks WHAT IS BEING EDITED states only a label.
+
+**The trace is generated, never baked.** A rendered thumbnail per move is the obvious answer
+and the wrong one: five 3D renders of the real device is a withdrawal from the byte budget
+and a frame-rate cost on Intel UHD 620, to show a shape that `createMotionSampler` already
+knows exactly. The trace samples the document itself, so it cannot disagree with what flies
+or with what exports — the same claim the timeline proof makes, at none of the cost.
+
+- [x] 6b.1 `lib/motion/trace.ts` — `motionTrace(doc, samples)` returns one polyline per track
+      in `orderedTrackKeys` order, x = phase over `[0,1]` inclusive at both ends so the seam
+      is visible, y = the sampled value normalised to that track's own sampled extent.
+      **NORMALISED PER TRACK, NOT PER DOCUMENT.** A document's tracks carry incommensurable
+      units — a 360° turn and a 0.65-unit dolly — and one normaliser across both makes reach
+      vanish beside azimuth while claiming to compare them. Per-track normalisation states
+      SHAPE, which is unit-free; amplitude is already a value the Tracks rows carry (`±17°`).
+      **THE EXTENT IS THE SAMPLED ONE, NOT THE KEYFRAMES'.** `easeInOutBack` overshoots past
+      every keyframe it connects, so normalising by keyframe values would draw a curve leaving
+      its own frame. Sampling first makes `y ∈ [0,1]` a property rather than a hope.
+      A track whose sampled extent is zero (a held axis, or gain 0) is `flat` and draws down
+      the middle — the honest picture of an axis contributing nothing.
+- [x] 6b.2 `lib/motion/trace.test.ts` — turntable's azimuth is monotonically rising, orbit's
+      azimuth and elevation are not the same polyline, every `y` lies in `[0,1]`, the first and
+      last `x` are exactly 0 and 1, a zero-gain track reports `flat` at 0.5, and two calls on
+      one document are identical arrays.
+- [x] 6b.3 `components/ipod/scenes/ipod-3d-motion-trace.tsx` — the polylines as an inert SVG,
+      `aria-hidden` because it is a picture of values the row already states in text. The
+      active document draws its playhead as a vertical rule; the others do not, because a
+      playhead on a move that is not flying is a readout of someone else's clock.
+- [x] 6b.4 The catalogue grid becomes cards: trace above, name and natural cycle below
+      (`Turntable · 6.0s`). The shelf rows gain the same trace inline at 16px — one trace
+      vocabulary in two hosts, not two pictures of one kind of thing.
+
+## 6c. The neutral pass — what did not survive reading the panel as a stranger
+
+Five findings from re-reading §6 against the design law with no memory of building it. Each
+is a defect against a rule already written down, not a preference.
+
+- [x] 6c.1 **The time map's visible label and its accessible name are different words.** The row
+      reads `Style`; the segmented control announces `Time map`. A sighted user and a screen
+      reader user are naming two different controls, and `Style` is the one on the glass.
+- [x] 6c.2 **The tuned marker is announced to nobody.** `aria-label` on a non-interactive
+      `<span>` has no accessible name to attach to; the dot that says an axis has been tuned is
+      invisible to a screen reader. It belongs in the row button's accessible name.
+- [x] 6c.3 **Rename / Save over / Delete are unreachable on a touch device.** The overlay is
+      `opacity-0` until `:hover` or `:focus-within`, and a coarse pointer produces neither. A
+      shelf you can fill and cannot edit is worse than no shelf. Gate the transparent-at-rest
+      behaviour on `@media (hover: hover)`; where hover does not exist the commands are simply
+      present.
+- [x] 6c.4 **Two commands named `Reset` mean two things.** The transport's `Reset` returns the
+      playhead to zero; `Reset track` discards an override. Same verb, one destroys work and one
+      does not. The transport's becomes `Rewind` — one word, unambiguous, and the one of the two
+      that is not an erasure.
+- [x] 6c.5 **The pad's handles have no coarse-grain keyboard step and no bounds keys.** Arrow
+      nudges 0.01 / 0.10; `Home` and `End` should snap x to 0 and 1, which is how every named
+      curve in the vocabulary begins and ends. Cheap, and it makes the pad completable without
+      a pointer.
+- [ ] 6c.6 **USER: visual review of §6b + §6c.** Five traces, two renamed labels, and shelf
+      commands that no longer hide on touch. Nothing hardens first.
+
 ## 7. Gates
 
 - [x] 7.1 `pnpm validate` green.
@@ -477,19 +541,22 @@ than one context budget can read, write, test and record.
 
 ## 8. Resume here — the state of the work
 
-Rewritten at the end of the 2026-07-30 session that landed §6.7. `tsc --noEmit` exits 0,
-`vitest --project unit` is **1083/1083 across 67 files** (was 1077), `oxlint` adds no
+Rewritten at the end of the 2026-08-01 session that landed §6b and §6c. `tsc --noEmit` exits
+0, `vitest --project unit` is **1109/1109 across 70 files** (was 1098), `oxlint` adds no
 warnings (24, unchanged). Every implementable task in this change is done: a motion can be
 opened, its tracks read by value, its curves dragged, its edits cleared back to the
-catalogue, the frames the export will render sit under the scrubber that flies them, and a
-tuned motion can be saved, named, overwritten and re-opened at the cadence it was flying —
-all from the surface, none of it from TypeScript.
+catalogue, the frames the export will render sit under the scrubber that flies them, a tuned
+motion can be saved, named, overwritten and re-opened at the cadence it was flying, and every
+selectable move draws the shape it flies before it is picked — all from the surface, none of
+it from TypeScript.
 
-### What is left is three owner gates, and nothing else
+### What is left is four owner gates, and nothing else
 
 1. **§6.8**, the visual review of §6. Nothing hardens first.
-2. **§2.9**, the engine swap — the measured 0.2116° port floor, waiting on a veto.
-3. **§3b.1**, the boomerang turnaround — up to 3.1191° on turntable azimuth, measured and
+2. **§6c.6**, the visual review of §6b + §6c — traces on the picker and the shelf, `Rewind`
+   in place of the transport's `Reset`, shelf commands that stop hiding on touch.
+3. **§2.9**, the engine swap — the measured 0.2116° port floor, waiting on a veto.
+4. **§3b.1**, the boomerang turnaround — up to 3.1191° on turntable azimuth, measured and
    ruled, waiting on a veto.
 
 None of them can be closed by writing code, and none of them blocks the others.
@@ -539,6 +606,17 @@ None of them can be closed by writing code, and none of them blocks the others.
 - **`MOVE_CYCLE_SECONDS` is still read** by `studio-clip-presets.ts:20` for each procedural
   clip's `naturalCycleSeconds`. §2.9 deletes it, and the replacement is
   `CATALOGUE_DOCS[id].naturalCycleSeconds`, which already carries the same five numbers.
+- **The trace is the only picture in this change that is not a render.** `lib/motion/trace.ts`
+  samples the document; `lib/export/timeline-strip.ts` indexes real rendered frames. Both are
+  "what the motion looks like", and keeping them apart is deliberate — the trace is free and
+  says SHAPE, the proof costs a render and says PIXELS. A trace that ever needed a frame would
+  be the proof strip, not a second copy of it.
+- **`hint` is still authored on every catalogue document and still rendered nowhere.**
+  `"gentle 3/4 sway"`, `"Z-axis 360 spin"` — five sentences carried through
+  `presetToMotionDoc`, `motion-shelf.ts:191` and `studio-clip.ts:74` and shown to no one. The
+  card was the obvious place and the trace took the job: a picture of the move outranks a
+  phrase about it, and a phrase in chrome is not a noun, a value or a command. Either the field
+  earns a surface or it is deleted; it should not stay a plumbed-through blank.
 - **`repeat` no longer re-derives when `durationSec` changes.** That is D2 working as
   specified — three inputs collapsing through a `round()` was the defect — but it means
   dragging the clip length from 5s to 30s now stretches one cycle over 30s instead of

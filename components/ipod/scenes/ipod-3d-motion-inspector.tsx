@@ -36,8 +36,10 @@ import {
 	unifiedEase,
 	type TrackEdit,
 } from "@/lib/motion/track-edit";
-import { motionReadout, turnaroundOf } from "@/lib/motion/transport";
+import { motionReadout, phaseForProgress, turnaroundOf } from "@/lib/motion/transport";
 import type { CubicBezierHandles } from "@/lib/theatre/easings";
+
+import { Ipod3DMotionTrace } from "./ipod-3d-motion-trace";
 
 /**
  * THE MOTION INSPECTOR — the surface where a camera move stops being a preset and becomes a
@@ -166,6 +168,13 @@ export function Ipod3DMotionInspector({
 	// chip cannot carry a value or five commands.
 	const savedIds = new Set(shelf.saved.map((entry) => entry.id));
 	const catalogue = documents.filter((entry) => !savedIds.has(entry.id));
+	// A shelf entry IS a document — §4b.5 keeps one list — so its trace is looked up rather
+	// than passed a second time. A row whose document is missing draws no trace and still
+	// opens, because the healer decides what a dangling pointer resolves to, not this panel.
+	const docById = new Map(documents.map((entry) => [entry.id, entry]));
+	// Clip position is not cycle phase: at `3×` the playhead crosses the cycle three times, and
+	// a boomerang runs it backwards. The transport owns that mapping and is the only owner.
+	const cyclePhase = phaseForProgress(playhead, repeat, timeMap);
 
 	/**
 	 * Commit one track edit. The pristine branch is the whole reason this is a function and
@@ -194,17 +203,21 @@ export function Ipod3DMotionInspector({
 				<StudioField>{motionReadout(repeat, durationSec)}</StudioField>
 			</div>
 
+			{/*
+			 * Cards, not chips. A chip states a name for a shape, which is a thing the user
+			 * learns by trying all five and remembering; a card draws the shape and states the
+			 * cycle it takes. The trace is sampled from the same document the rig flies.
+			 */}
 			<div className="grid grid-cols-2 gap-1.5">
 				{catalogue.map((entry) => (
-					<StudioButton
+					<MotionCard
 						key={entry.id}
-						isActive={entry.id === docId}
-						isDisabled={disabled}
-						onPress={() => onDocChange(entry.id)}
-						fullWidth
-					>
-						{entry.label}
-					</StudioButton>
+						doc={entry}
+						active={entry.id === docId}
+						playhead={cyclePhase}
+						disabled={disabled}
+						onSelect={() => onDocChange(entry.id)}
+					/>
 				))}
 			</div>
 
@@ -232,7 +245,9 @@ export function Ipod3DMotionInspector({
 						<ShelfRow
 							key={entry.id}
 							entry={entry}
+							doc={docById.get(entry.id)}
 							active={entry.id === docId}
+							playhead={cyclePhase}
 							renaming={renaming === entry.id}
 							disabled={disabled}
 							onOpen={() => shelf.onOpen(entry)}
@@ -300,9 +315,10 @@ export function Ipod3DMotionInspector({
 				testId="clip-length-slider"
 				onChange={onDurationChange}
 			/>
+			{/* The accessible name is the visible label. Two words for one control is two controls. */}
 			<Row label="Style">
 				<StudioSegment
-					aria-label="Time map"
+					aria-label="Style"
 					options={LOOP_STYLES}
 					value={timeMap.kind}
 					onChange={(kind) =>
@@ -329,9 +345,14 @@ export function Ipod3DMotionInspector({
 						{playing ? <PauseGlyph /> : <PlayGlyph />}
 						{playing ? "Pause" : "Play"}
 					</StudioButton>
+					{/*
+					 * `Rewind`, not `Reset`: `Reset track` two rows up discards an override, and one
+					 * verb for a command that erases work and one that moves a playhead is a
+					 * collision the user only resolves by trying it.
+					 */}
 					<StudioButton isDisabled={disabled} onPress={onResetPlayhead}>
-						<ResetGlyph />
-						Reset
+						<RewindGlyph />
+						Rewind
 					</StudioButton>
 				</div>
 				<StudioField>
@@ -372,6 +393,52 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
+ * A selectable motion: the shape it draws, its name, and the cycle it takes.
+ *
+ * The card replaced a chip because a chip could only carry the label, and a label is a name
+ * for a shape — the one control in this panel that did not state the value it holds. The
+ * cycle length is the document's `naturalCycleSeconds`, which is what the Repeat row reads
+ * against, so the two numbers on screen are the same number.
+ */
+function MotionCard({
+	doc,
+	active,
+	playhead,
+	disabled,
+	onSelect,
+}: {
+	doc: MotionDoc;
+	active: boolean;
+	playhead: number;
+	disabled: boolean;
+	onSelect: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			disabled={disabled}
+			onClick={onSelect}
+			aria-pressed={active}
+			className="flex flex-col gap-1 p-1.5 text-left outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+			style={{
+				borderRadius: CONTROL_RADIUS,
+				border: "1px solid",
+				borderColor: active ? LABEL : HAIRLINE,
+				background: SURFACE,
+			}}
+		>
+			<Ipod3DMotionTrace doc={doc} playhead={active ? playhead : null} height={32} />
+			<span className="flex w-full items-center justify-between gap-2">
+				<span className="truncate text-[11px] font-semibold">{doc.label}</span>
+				<span className="shrink-0 font-mono text-[11px] tabular-nums opacity-70">
+					{doc.naturalCycleSeconds.toFixed(1)}s
+				</span>
+			</span>
+		</button>
+	);
+}
+
+/**
  * A track: its name AND the value it holds. A row that read `Azimuth` alone would make the
  * amplitude something you learn by dragging.
  */
@@ -404,13 +471,17 @@ function TrackRow({
 		>
 			<span className="flex items-center gap-1.5 text-[11px] font-semibold">
 				{name}
-				{/* Tuned marker: a dot, because a second word in an 11px row is a paragraph. */}
+				{/*
+				 * Tuned marker: a dot, because a second word in an 11px row is a paragraph — and
+				 * the word beside it, because `aria-label` on a plain `<span>` has no accessible
+				 * name to attach to and announces to nobody. The dot is the sighted half of one
+				 * marker, not the whole of it.
+				 */}
 				{tuned && (
-					<span
-						aria-label="tuned"
-						className="inline-block h-1 w-1 rounded-full"
-						style={{ background: ACCENT }}
-					/>
+					<>
+						<span className="inline-block h-1 w-1 rounded-full" style={{ background: ACCENT }} />
+						<span className="sr-only">tuned</span>
+					</>
 				)}
 			</span>
 			<span className="font-mono text-[11px] tabular-nums opacity-70">{value}</span>
@@ -428,7 +499,9 @@ function TrackRow({
  */
 function ShelfRow({
 	entry,
+	doc,
 	active,
+	playhead,
 	renaming,
 	disabled,
 	onOpen,
@@ -439,7 +512,10 @@ function ShelfRow({
 	onDelete,
 }: {
 	entry: SavedMotion;
+	/** The entry's document, looked up from the one list. Absent while a pointer is dangling. */
+	doc: MotionDoc | undefined;
 	active: boolean;
+	playhead: number;
 	renaming: boolean;
 	disabled: boolean;
 	onOpen: () => void;
@@ -486,19 +562,30 @@ function ShelfRow({
 				onClick={onOpen}
 				aria-pressed={active}
 				aria-label={`Open ${entry.label}`}
-				className="flex h-6 w-full items-center justify-between gap-3 px-1.5 text-left outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+				className="flex h-6 w-full items-center gap-2 px-1.5 text-left outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-40"
 				style={{
 					borderRadius: CONTROL_RADIUS,
 					background: active ? HAIRLINE : "transparent",
 				}}
 			>
+				{/* 16px of trace in a 24px row: the same shape vocabulary the cards use, at row scale. */}
+				{doc && (
+					<span className="w-7 shrink-0">
+						<Ipod3DMotionTrace doc={doc} playhead={active ? playhead : null} height={16} />
+					</span>
+				)}
 				<span className="truncate text-[11px] font-semibold">{entry.label}</span>
-				<span className="shrink-0 font-mono text-[11px] tabular-nums opacity-70">
+				<span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums opacity-70">
 					{motionReadout(entry.cadence.repeat, entry.cadence.durationSec)}
 				</span>
 			</button>
+			{/*
+			 * Transparent at rest, but only where a pointer can hover. A coarse pointer produces
+			 * neither `:hover` nor `:focus-within`, so the unconditional version left Rename, Save
+			 * over and Delete unreachable on touch — a shelf you can fill and cannot edit.
+			 */}
 			<span
-				className="absolute right-0 top-0 flex h-6 items-center gap-0.5 pl-3 opacity-0 transition-opacity focus-within:opacity-100 group-hover/motion:opacity-100"
+				className="absolute right-0 top-0 flex h-6 items-center gap-0.5 pl-3 transition-opacity focus-within:opacity-100 group-hover/motion:opacity-100 [@media(hover:hover)]:opacity-0"
 				style={{ background: active ? HAIRLINE : SURFACE }}
 			>
 				<RowCommand disabled={disabled} onClick={onRenameStart}>
@@ -836,9 +923,14 @@ function CurvePad({
 						: event.key === "ArrowDown"
 							? [0, -step]
 							: null;
-		if (!delta || disabled) return;
+		// `Home` / `End` snap x to the ends of the unit square, where every named curve in the
+		// vocabulary begins and ends — so the pad is completable without a pointer rather than
+		// merely nudgeable. They set an absolute x, which is why they cannot join the delta table.
+		const absoluteX = event.key === "Home" ? 0 : event.key === "End" ? 1 : null;
+		if (disabled || (!delta && absoluteX === null)) return;
 		event.preventDefault();
-		moveHandle(which, x + delta[0], y + delta[1]);
+		if (absoluteX !== null) moveHandle(which, absoluteX, y);
+		else if (delta) moveHandle(which, x + delta[0], y + delta[1]);
 	};
 
 	const path = `M ${toX(0)} ${toY(0)} C ${toX(c1x)} ${toY(c1y)}, ${toX(c2x)} ${toY(c2y)}, ${toX(1)} ${toY(1)}`;
@@ -1001,11 +1093,11 @@ function PauseGlyph() {
 	);
 }
 
-function ResetGlyph() {
+/** Playhead to the seam: the bar it lands on, and the direction it travels to get there. */
+function RewindGlyph() {
 	return (
-		<svg viewBox="0 0 10 10" style={glyph} fill="none" stroke="currentColor" strokeWidth={1.2} aria-hidden>
-			<path d="M8.5 5a3.5 3.5 0 1 1-1.1-2.5" />
-			<path d="M8.6 1v2.1H6.5" />
+		<svg viewBox="0 0 10 10" style={glyph} fill="currentColor" aria-hidden>
+			<path d="M1 1h1.4v8H1zM9 1L4 5l5 4z" />
 		</svg>
 	);
 }
