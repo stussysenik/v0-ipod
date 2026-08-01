@@ -1,7 +1,9 @@
 # Tasks — add-workspace-storage-registry
 
 Read `proposal.md` first. The inventory is recorded there and in this file — **do not re-derive
-it.** All 21 keys, their files and their current values are listed in task 1.
+it.** Task 1 lists the original keys; the registry has since grown to **24 declared keys** —
+task 1's table plus `ipodStudioDefaultTheme`, `ipodStudioMotions`, and `ipodWorkspaceRestore`
+(§7.2). The registry module (`lib/workspace-storage.ts`) is the source of truth.
 
 The rule that shapes this change: **a registry without a gate rots.** Task 6 is not a nicety;
 without it the registry is accurate for one month and misleading afterwards, which is worse
@@ -64,8 +66,26 @@ than no registry at all.
   - [x] 6.1 Prove it fails: self-test fixture confirms `isDeclaredKey("__test_undeclared_key__")`
         is `false`. The gate is observed failing.
   - [x] 6.2 The registry module itself is the only exemption.
-- [ ] 7. Reset command on the surface. Confirms before clearing, and the confirmation names the
+- [x] 7. Reset command on the surface. Confirms before clearing, and the confirmation names the
       scope. Command label ≤2 words; icon carries a text label.
-- [x] 8. Gates: `pnpm vitest run --project unit` (1098/1098), `pnpm validate` exit 0 (board ✓ lint ✓ tsc ✓),
-       `openspec validate add-workspace-storage-registry --strict --no-interactive` (valid).
+  - [x] 7.1 `components/ipod/scenes/ipod-3d-workspace-cockpit.tsx` — cockpit 09 "Workspace" on
+        /3d. Reads storage itself: the Stored row is `storedWorkspaceKeys().length` and the
+        confirmation names `pendingReset(scope).length` — the same filter the reset walks, so
+        the number shown and the number cleared cannot disagree. Two-step confirm in place of a
+        dialog: the command is replaced by the scope + Clear/Cancel. Reset / Reset all / Restore
+        buttons each carry a glyph + text label. Mounted in the stage with
+        `rehydrateFromStorage` (cancel the pending debounced write, then `RESTORE_MODEL` from
+        what storage now holds — fresh boot when empty, so the default look shows without a
+        reload) and `watch={model}` so the Stored row re-reads once persistence settles.
+  - [x] 7.2 A reset is a version, not an erasure: `resetWorkspace` writes a restore point to
+        the declared `restore`-class key `ipodWorkspaceRestore` before the first key is
+        removed; a capture that cannot be written throws and clears nothing. `restoreWorkspace`
+        reinstates the exact image (a declared key absent from the capture is removed) and
+        nests points, so consecutive resets walk back through every version. Spec delta gained
+        the `restore` class and "A reset is reversible" (5 scenarios); tests in
+        `lib/workspace-storage.test.ts` cover capture, exact restore, stowaway removal,
+        two-reset chains, empty-reset writes no point, and quota abort.
+- [x] 8. Gates: `pnpm vitest run --project unit` (1119/1119, was 1098), `pnpm validate` exit 0
+       (board ✓ lint ✓ tsc ✓), `openspec validate add-workspace-storage-registry --strict
+       --no-interactive` (valid). Registry now declares 24 keys (23 + `ipodWorkspaceRestore`).
 - [ ] 9. **USER:** visual review — the surface gains a reset command and its confirmation.

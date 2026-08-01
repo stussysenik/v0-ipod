@@ -1,6 +1,6 @@
 # workspace-storage-registry
 
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: One declaration per persisted key
 
@@ -10,7 +10,8 @@ string SHALL be written as a literal anywhere else in the codebase; owning modul
 their key from the registry.
 
 Each key SHALL be classed as `settings` (user intent that outlives a reset), `content` (the
-current document), `cache` (derived or advisory data), or `legacy` (read for migration only).
+current document), `cache` (derived or advisory data), `legacy` (read for migration only), or
+`restore` (the pre-reset image — the one class a reset writes instead of clearing).
 
 #### Scenario: A key literal outside the registry fails the build
 
@@ -20,12 +21,47 @@ current document), `cache` (derived or advisory data), or `legacy` (read for mig
 #### Scenario: Every declared key states its owner and class
 
 - **WHEN** the registry is read
-- **THEN** every entry carries a key string, an owning module, and one of the four classes
+- **THEN** every entry carries a key string, an owning module, and one of the five classes
 
 #### Scenario: No two entries share a key string
 
 - **WHEN** the registry is read
 - **THEN** every key string appears exactly once
+
+## ADDED Requirements
+
+### Requirement: A reset is reversible
+
+A reset SHALL capture the workspace to a declared `restore`-class key before the first key is
+removed, so the gesture can be undone. The surface SHALL offer a gesture that reinstates the
+capture. A reset whose capture cannot be written SHALL clear nothing. A restore SHALL be an
+exact image: a declared key absent from the capture SHALL be removed rather than left in
+place.
+
+#### Scenario: Reset writes its undo before anything is cleared
+
+- **WHEN** a reset removes keys
+- **THEN** a restore point holding every removed value exists before any key is gone
+
+#### Scenario: Restore reinstates the captured workspace
+
+- **WHEN** the restore gesture is invoked
+- **THEN** every key the capture holds carries its captured value
+
+#### Scenario: Restore removes keys that arrived after the reset
+
+- **WHEN** a declared key was written after the reset
+- **THEN** restoring removes that key rather than leaving it as a stowaway
+
+#### Scenario: A reset that cannot write its undo does not clear
+
+- **WHEN** the restore point cannot be written (for example, storage is full)
+- **THEN** no key is cleared and the operation reports the failure
+
+#### Scenario: Consecutive resets walk back through every version
+
+- **WHEN** a second reset runs before the first is restored
+- **THEN** undoing twice reaches the state before the first reset
 
 ### Requirement: The workspace can be returned to factory
 
