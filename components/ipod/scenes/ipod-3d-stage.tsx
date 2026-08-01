@@ -81,6 +81,7 @@ import { Ipod3DExportProofPanel } from "./ipod-3d-export-proof-panel";
 import type { MotionShelfControls } from "./ipod-3d-motion-inspector";
 import { Ipod3DTimelineProofStrip } from "./ipod-3d-timeline-proof-strip";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
+import { Ipod3DWorkspaceCockpit } from "./ipod-3d-workspace-cockpit";
 import { Ipod3DCoachHint } from "./ipod-3d-coach-hint";
 import { Ipod3DCameraBar, type PoseRequest } from "./ipod-3d-camera-bar";
 import { TheatreStudioDev } from "./theatre-studio-dev";
@@ -171,6 +172,24 @@ export function Ipod3DStage() {
 			flush(); // unmounting inside the debounce window must not drop the edit
 		};
 	}, [persistModel]);
+
+	// The workspace cockpit's reset/restore rewrites storage under this component. The
+	// in-memory model then has to follow storage, not the other way round: re-read what
+	// storage now holds and swap the model to match. The pending debounced write of the OLD
+	// model must not land on the cleared workspace — cancel it before the swap, or the
+	// pre-reset model repopulates the very keys the reset just removed.
+	const rehydrateFromStorage = useCallback(() => {
+		persistModel.cancel();
+		dispatch({
+			type: "RESTORE_MODEL",
+			payload:
+				loadWorkbenchModel() ??
+				createBootedWorkbenchModel(
+					[...BUILT_IN_THEMES, ...loadSavedThemes()],
+					loadDefaultThemeId(),
+				),
+		});
+	}, [dispatch, persistModel]);
 
 	const audioRef = useRef<HTMLAudioElement | null>(null);
 	const ipodApiRef = useRef<ThreeDIpodHandle | null>(null);
@@ -1162,6 +1181,14 @@ export function Ipod3DStage() {
 						peekProofBlob={peekProofBlob}
 						onReopen={handleReopen}
 						onShareLink={handleShareLink}
+					/>
+					{/* The back room (09) — not part of the shoot: it edits what survives the
+					    shoot. `watch` is the model, so the Stored row re-reads once the
+					    stage's debounced persistence settles after an edit. */}
+					<Ipod3DWorkspaceCockpit
+						index={9}
+						onRehydrate={rehydrateFromStorage}
+						watch={model}
 					/>
 				</div>
 			</div>

@@ -6,7 +6,14 @@ import {
 	WORKSPACE_KEY_MAP,
 	STORAGE_CLASSES,
 	resetWorkspace,
+	restoreWorkspace,
+	readRestorePoint,
+	pendingReset,
+	storedWorkspaceKeys,
 	isDeclaredKey,
+	STUDIO_STORAGE_KEY,
+	WORKSPACE_RESTORE_KEY,
+	type RestorePoint,
 } from "./workspace-storage";
 
 describe("workspace-storage", () => {
@@ -86,13 +93,13 @@ describe("resetWorkspace", () => {
 		]));
 	});
 
-	it("clears settings when scope is 'all'", () => {
+	it("clears settings when scope is 'all', except the restore point it just wrote", () => {
 		seedAll();
 
 		resetWorkspace("all");
 
 		for (const entry of WORKSPACE_STORAGE_KEYS) {
-			expect(map.has(entry.key)).toBe(false);
+			expect(map.has(entry.key)).toBe(entry.class === "restore");
 		}
 	});
 
@@ -101,7 +108,7 @@ describe("resetWorkspace", () => {
 
 		const removed = resetWorkspace();
 		const expected = WORKSPACE_STORAGE_KEYS.filter(
-			(e) => e.class !== "settings",
+			(e) => e.class !== "settings" && e.class !== "restore",
 		).map((e) => e.key);
 
 		expect(new Set(removed)).toEqual(new Set(expected));
@@ -110,6 +117,150 @@ describe("resetWorkspace", () => {
 	it("handles empty storage without error", () => {
 		const removed = resetWorkspace();
 		expect(removed).toEqual([]);
+	});
+
+	// The confirmation names a count. It reads pendingReset; the reset walks pendingReset.
+	// One filter, so the number shown and the number cleared cannot disagree.
+	it("clears exactly the keys the confirmation would name", () => {
+		seedAll();
+		const planned = pendingReset();
+
+		const removed = resetWorkspace();
+
+		expect(new Set(removed)).toEqual(new Set(planned));
+	});
+
+	it("reports only the declared keys that hold a value", () => {
+		map.set(STUDIO_STORAGE_KEY, "{}");
+		expect(storedWorkspaceKeys()).toEqual([STUDIO_STORAGE_KEY]);
+	});
+
+	// Nothing to clear means nothing was destroyed, so there is no version to write. A
+	// restore point produced by an empty reset would be an undo back to the same state.
+	it("writes no restore point when there is nothing to clear", () => {
+		resetWorkspace();
+		expect(readRestorePoint()).toBeNull();
+	});
+
+	it("names the scope in the restore point it writes", () => {
+		seedAll();
+		resetWorkspace("all");
+		expect(readRestorePoint()?.scope).toBe("all");
+	});
+
+	it("captures every stored key before clearing", () => {
+		seedAll();
+		const before = new Map(map);
+
+		resetWorkspace("all");
+
+		const point = readRestorePoint();
+		expect(point).not.toBeNull();
+		for (const [key, value] of before) {
+			expect(point?.entries[key]).toBe(value);
+		}
+	});
+});
+
+describe("restoreWorkspace", () => {
+	let map: Map<string, string>;
+
+	beforeAll(() => {
+		map = new Map();
+		const storage: Storage = {
+			getItem: (k: string) => map.get(k) ?? null,
+			setItem: (k: string, v: string) => void map.set(k, v),
+			removeItem: (k: string) => void map.delete(k),
+			clear: () => map.clear(),
+			key: (_: number) => null,
+			get length() { return map.size; },
+		};
+		vi.stubGlobal("localStorage", storage);
+	});
+
+	afterAll(() => vi.unstubAllGlobals());
+
+	beforeEach(() => map.clear());
+
+	function seedAll() {
+		for (const entry of WORKSPACE_STORAGE_KEYS) {
+			if (entry.class === "restore") continue;
+			map.set(entry.key, JSON.stringify({ value: entry.key }));
+		}
+	}
+
+	it("puts the pre-reset workspace back byte for byte", () => {
+		seedAll();
+		const before = new Map(map);
+
+		resetWorkspace("all");
+		restoreWorkspace();
+
+		for (const [key, value] of before) {
+			expect(map.get(key)).toBe(value);
+		}
+	});
+
+	// The image is exact: a key that arrived after the reset is not part of the version
+	// being restored, so restoring removes it rather than leaving a stowaway.
+	it("removes a declared key the restore point does not hold", () => {
+		seedAll();
+		resetWorkspace("all");
+		map.set(STUDIO_STORAGE_KEY, JSON.stringify({ value: "written after the reset" }));
+		map.delete(WORKSPACE_RESTORE_KEY);
+		map.set(
+			WORKSPACE_RESTORE_KEY,
+			JSON.stringify({ scope: "all", entries: {} } satisfies RestorePoint),
+		);
+
+		restoreWorkspace();
+
+		expect(map.has(STUDIO_STORAGE_KEY)).toBe(false);
+	});
+
+	/**
+	 * The reset chain: two resets, two versions. The restore key is declared like any other,
+	 * so the second capture nests the first — undoing twice reaches the state before the
+	 * first reset rather than dead-ending at the state between them.
+	 */
+	it("walks back through two resets", () => {
+		seedAll();
+		const original = new Map(map);
+
+		resetWorkspace("all");
+		map.set(STUDIO_STORAGE_KEY, JSON.stringify({ value: "second era" }));
+		const between = new Map(map);
+		resetWorkspace("all");
+
+		restoreWorkspace();
+		for (const [key, value] of between) {
+			expect(map.get(key)).toBe(value);
+		}
+
+		restoreWorkspace();
+		for (const [key, value] of original) {
+			expect(map.get(key)).toBe(value);
+		}
+	});
+
+	it("restores nothing when no reset has run", () => {
+		seedAll();
+		expect(restoreWorkspace()).toEqual([]);
+	});
+
+	// A reset that cannot write its undo does not clear: the throw is the guarantee, so the
+	// workspace has to be intact after it.
+	it("aborts the reset when the restore point cannot be written", () => {
+		seedAll();
+		const before = new Map(map);
+		const setItem = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
+			throw new Error("QuotaExceededError");
+		});
+
+		expect(() => resetWorkspace()).toThrow(/restore point/);
+		expect(map).toEqual(before);
+
+		setItem.mockRestore();
 	});
 });
 
