@@ -4,6 +4,7 @@ import { IPOD_6G_COLORS, type IPodTheme } from "@/hooks/use-ipod-theme";
 import { cn } from "@/lib/utils";
 
 import { Switch } from "./switch";
+import { POP_JOB } from "@/lib/motion-tokens";
 
 interface ThemeToggleProps {
 	theme: IPodTheme;
@@ -25,7 +26,7 @@ export function ThemeToggle({ theme, onToggle, className, showLabel = true }: Th
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-3 p-3 rounded-lg border transition-all duration-200",
+				`flex items-center gap-3 p-3 rounded-lg border transition-all ${POP_JOB.className}`,
 				"border-[#E0E0E0] bg-white hover:border-[#C6C6C6]",
 				className,
 			)}
@@ -34,7 +35,7 @@ export function ThemeToggle({ theme, onToggle, className, showLabel = true }: Th
 				{/* White indicator */}
 				<div
 					className={cn(
-						"w-8 h-8 rounded-full border-2 transition-all duration-200",
+						`w-8 h-8 rounded-full border-2 transition-all ${POP_JOB.className}`,
 						!isBlack
 							? "border-[#000000] scale-110"
 							: "border-[#C6C6C6]",
@@ -53,7 +54,7 @@ export function ThemeToggle({ theme, onToggle, className, showLabel = true }: Th
 				{/* Black indicator */}
 				<div
 					className={cn(
-						"w-8 h-8 rounded-full border-2 transition-all duration-200",
+						`w-8 h-8 rounded-full border-2 transition-all ${POP_JOB.className}`,
 						isBlack
 							? "border-[#000000] scale-110"
 							: "border-[#C6C6C6]",

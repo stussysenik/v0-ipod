@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CASE_CURATED_FAVORITES } from "@/lib/case-color-presets";
 import { BACKGROUND_CURATED_FAVORITES, colorManifest } from "@/lib/color-manifest";
+import { POP_JOB, PRESS_JOB } from "@/lib/motion-tokens";
 import { GREY_FAMILY_STORAGE_KEY } from "@/lib/workspace-storage";
 
 // --- Data Model ---
@@ -201,7 +202,7 @@ export function GreyPalettePicker({
 						<button
 							key={id}
 							aria-selected={isActive}
-							className={`flex min-h-11 items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold leading-none transition-colors duration-200 ${
+							className={`flex min-h-11 items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold leading-none transition-colors ${POP_JOB.className} ${
 								isActive
 									? "bg-[#111827] text-white"
 									: "bg-white/80 text-[#6B7280] hover:bg-white hover:text-[#374151]"
@@ -232,7 +233,7 @@ export function GreyPalettePicker({
 			{/* C. Swatch Grid */}
 			<div
 				key={activeFamily}
-				className="animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+				className={`animate-in fade-in slide-in-from-bottom-1 ${POP_JOB.className} motion-reduce:animate-none`}
 			>
 				<div
 					className={`grid ${isCase ? "grid-cols-7 sm:grid-cols-8" : "grid-cols-7 sm:grid-cols-8"} gap-1.5 mb-2`}
@@ -242,7 +243,7 @@ export function GreyPalettePicker({
 						return (
 							<button
 								key={swatch.hex}
-								className={`${swatchSize} rounded-full border transition-all duration-150 ease-out hover:scale-110 hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
+								className={`${swatchSize} rounded-full border transition-all ${PRESS_JOB.className} hover:scale-110 hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
 									isSelected
 										? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
 										: "border-[#B5BBC3]"
@@ -299,7 +300,7 @@ export function GreyPalettePicker({
 					return (
 						<button
 							key={c.value}
-							className={`${curatedSize} rounded-full border transition-all duration-150 ease-out hover:scale-110 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
+							className={`${curatedSize} rounded-full border transition-all ${PRESS_JOB.className} hover:scale-110 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
 								isSelected
 									? "border-[#111827] ring-2 ring-[#CDD1D6]"
 									: "border-[#B5BBC3]"

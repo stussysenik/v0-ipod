@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { deriveWheelColors, getSurfaceToken } from "@/lib/color-manifest";
 import { wheelLabelSeatPx } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
+import { PRESS_JOB } from "@/lib/motion-tokens";
 import { playMechanicalClick } from "@/lib/ipod-state/effects";
 import { liveTheme, captureTheme } from "@/lib/ipod-state/theme.css";
 
@@ -439,8 +440,8 @@ export function IpodClickWheel({
 			<div
 				className={`group absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full ${
 					FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK
-						? "transition-[transform,box-shadow] duration-[80ms] ease-out"
-						: "transition-all duration-100"
+						? `transition-[transform,box-shadow] ${PRESS_JOB.className}`
+						: `transition-all ${PRESS_JOB.className}`
 				} ${
 					disabled
 						? "cursor-default"
@@ -501,7 +502,7 @@ export function IpodClickWheel({
 					over the 3D mesh, restoring the satisfying mechanical press. */}
 				{chromeless && FEATURE_FLAGS.ENABLE_MECHANICAL_CENTER_CLICK && !disabled ? (
 					<span
-						className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity duration-75 ease-out group-active:opacity-100"
+						className={`pointer-events-none absolute inset-0 rounded-full opacity-0 transition-opacity ${PRESS_JOB.className} group-active:opacity-100`}
 						style={{
 							boxShadow: "inset 0 6px 12px -3px rgba(0,0,0,0.4), inset 0 -2px 4px rgba(255,255,255,0.18)",
 							background: "radial-gradient(circle at 50% 42%, rgba(0,0,0,0.14), rgba(0,0,0,0) 72%)",

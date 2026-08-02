@@ -17,6 +17,12 @@ import {
 } from "@/lib/studio-lighting-config";
 import type { SongMetadata } from "@/types/ipod";
 import {
+	type CockpitId,
+	type CockpitVisibility,
+	sanitizeCockpitVisibility,
+	toggleCockpit,
+} from "./cockpit-roster";
+import {
 	createInitialIpodWorkbenchModel,
 	createInitialStudioState,
 	DEFAULT_BACK_COLOR,
@@ -109,6 +115,12 @@ export type IpodWorkbenchAction =
 	| { type: "TOGGLE_LAYOUT_MODE" }
 	| { type: "SET_THEATRE_STUDIO"; payload: boolean }
 	| { type: "TOGGLE_THEATRE_STUDIO" }
+	// ── The cockpit roster (spec: the tool list) ──
+	// One panel at a time, or the whole set at once. `SET_COCKPITS` carries a total map
+	// rather than a mode name, so "Product view" and "All tools" are two values written
+	// through one action and neither is a state the reducer has to know about.
+	| { type: "TOGGLE_COCKPIT"; payload: CockpitId }
+	| { type: "SET_COCKPITS"; payload: CockpitVisibility }
 	// ── Motion (spec: motion-authoring) ──
 	// One action per AUTHORED field rather than a single SET_MOTION patch, so
 	// `add-customizer-decision-log`'s coalescing has something to coalesce: a drag on the
@@ -646,6 +658,14 @@ export function ipodWorkbenchReducer(
 			return patchStudio(state, { theatreStudio: action.payload });
 		case "TOGGLE_THEATRE_STUDIO":
 			return patchStudio(state, { theatreStudio: !state.studio.theatreStudio });
+
+		// ── Studio: the cockpit roster ───────────────────────────────────────────────────
+		case "TOGGLE_COCKPIT":
+			return patchStudio(state, {
+				cockpits: toggleCockpit(state.studio.cockpits, action.payload),
+			});
+		case "SET_COCKPITS":
+			return patchStudio(state, { cockpits: sanitizeCockpitVisibility(action.payload) });
 
 		// ── Studio: motion ───────────────────────────────────────────────────────────────
 		// Selecting a document CLEARS the overrides. An override is a diff against a

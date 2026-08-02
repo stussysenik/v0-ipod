@@ -13,6 +13,7 @@ import {
 	type SavedColorHistory,
 } from "@/lib/ipod-state/model";
 import { BATTERY_BOOT_OFFSET_MS } from "@/lib/ipod-state/battery-cycle";
+import { sanitizeCockpitVisibility } from "@/lib/ipod-state/cockpit-roster";
 import { sanitizeMotionState, withoutTransport } from "@/lib/motion/motion-state";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
 import {
@@ -612,6 +613,9 @@ export function loadStudioState(): IpodStudioState | null {
 			// Motion heals field-by-field like the rig, and converts a legacy `speed`. A
 			// reload opens composed: the transport position does not survive the boundary.
 			motion: withoutTransport(sanitizeMotionState(c.motion)),
+			// A record written before the roster existed has no `cockpits` at all, and every
+			// id heals to visible — a reload never opens with a panel the user did not hide.
+			cockpits: sanitizeCockpitVisibility(c.cockpits),
 		};
 	} catch {
 		return null;

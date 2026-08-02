@@ -3,6 +3,7 @@
 import { Switch as RACSwitch } from "react-aria-components";
 
 import { cn } from "@/lib/utils";
+import { POP_JOB } from "@/lib/motion-tokens";
 
 interface SwitchProps {
 	checked?: boolean;
@@ -26,8 +27,8 @@ function Switch({ checked, onCheckedChange, isDisabled, className, ...props }: S
 			onChange={onCheckedChange}
 			className={cn("group inline-flex shrink-0 cursor-pointer items-center", className)}
 		>
-			<span className="relative inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent bg-[#726F73] transition-colors duration-200 group-data-[selected]:bg-[color:var(--studio-accent,#0048FF)] group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-50 group-data-[focus-visible]:ring-2 group-data-[focus-visible]:ring-[color:var(--studio-focus-ring,#0048FF)] group-data-[focus-visible]:ring-offset-2 group-data-[focus-visible]:ring-offset-white">
-				<span className="pointer-events-none block h-5 w-5 translate-x-0 rounded-full bg-white shadow-lg transition-transform duration-200 group-data-[selected]:translate-x-5" />
+			<span className={`relative inline-flex h-6 w-11 items-center rounded-full border-2 border-transparent bg-[#726F73] transition-colors ${POP_JOB.className} group-data-[selected]:bg-[color:var(--studio-accent,#0048FF)] group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-50 group-data-[focus-visible]:ring-2 group-data-[focus-visible]:ring-[color:var(--studio-focus-ring,#0048FF)] group-data-[focus-visible]:ring-offset-2 group-data-[focus-visible]:ring-offset-white`}>
+				<span className={`pointer-events-none block h-5 w-5 translate-x-0 rounded-full bg-white shadow-lg transition-transform ${POP_JOB.className} group-data-[selected]:translate-x-5`} />
 			</span>
 		</RACSwitch>
 	);

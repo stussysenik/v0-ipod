@@ -14,6 +14,7 @@ import {
 } from "react-aria-components";
 import { Film, Video, X, Zap, Gauge, Maximize, Square } from "lucide-react";
 import { StudioButton, StudioControlScope, StudioLabel } from "@/components/ui/studio-controls";
+import { SHIFT_JOB } from "@/lib/motion-tokens";
 import type {
 	AnimatedExportFormat,
 	AnimatedExportQuality,
@@ -67,7 +68,9 @@ export function AnimatedExportDialog({
 			onOpenChange={(isOpen) => !isOpen && onClose()}
 			className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-sm"
 		>
-			<Modal className="w-full max-w-lg rounded-[32px] border border-white/25 bg-[#F2F1ED] p-7 shadow-[0_40px_100px_rgba(0,0,0,0.45)] outline-none animate-in zoom-in-95 slide-in-from-bottom-4 duration-500">
+			<Modal
+				className={`w-full max-w-lg rounded-[32px] border border-white/25 bg-[#F2F1ED] p-7 shadow-[0_40px_100px_rgba(0,0,0,0.45)] outline-none animate-in zoom-in-95 slide-in-from-bottom-4 ${SHIFT_JOB.className}`}
+			>
 				<Dialog className="outline-none">
 					{({ close }) => (
 						<StudioControlScope stageBackground="#F2F1ED">

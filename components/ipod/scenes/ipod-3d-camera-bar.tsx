@@ -11,6 +11,7 @@ import {
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
 import { haptic } from "@/lib/haptics";
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
+import type { CockpitVisibility } from "@/lib/ipod-state/cockpit-roster";
 import type { IpodPresentationState } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
 import {
@@ -21,6 +22,8 @@ import {
 	type ShotLook,
 	type StudioShot,
 } from "@/lib/studio-camera-poses";
+
+import { Ipod3DPanelsRoster } from "./ipod-3d-panels-roster";
 
 /**
  * The /3d bottom bar — the *only* quick camera control, on every viewport.
@@ -56,6 +59,8 @@ interface Ipod3DCameraBarProps {
 	presentation: IpodPresentationState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 	onNotice?: (message: string) => void;
+	/** Which tool panels are on screen — the roster's value, edited from this bar. */
+	cockpits: CockpitVisibility;
 	/** Short-landscape phones: dock bottom-left so the bar never crosses the model. */
 	landscape?: boolean;
 }
@@ -69,6 +74,7 @@ export function Ipod3DCameraBar({
 	presentation,
 	dispatch,
 	onNotice,
+	cockpits,
 	landscape = false,
 }: Ipod3DCameraBarProps) {
 	// Reflect the live (eased) pose so the bar can highlight the pose we're actually on.
@@ -156,6 +162,16 @@ export function Ipod3DCameraBar({
 				landscape ? "bottom-3 left-3" : "bottom-6 left-1/2 -translate-x-1/2"
 			}`}
 		>
+			{/* The tool list. It leads the bar because it governs what else is on screen —
+			    the poses aim the camera, this decides what surrounds it. */}
+			<Ipod3DPanelsRoster cockpits={cockpits} dispatch={dispatch} />
+
+			<span
+				className="mx-0.5 h-4 w-px shrink-0"
+				style={{ background: "var(--studio-hairline)" }}
+				aria-hidden
+			/>
+
 			{/* Named poses — angle *and* framing in one control. */}
 			{NAMED_POSES.map((pose) => (
 				<StudioButton

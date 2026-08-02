@@ -8,6 +8,7 @@ import type {
 	IpodStudioState,
 } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
+import { SETTLE_JOB } from "@/lib/motion-tokens";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
 
@@ -25,8 +26,6 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  */
 
 interface Ipod3DStudioCockpitProps {
-	/** Position in the control surface, rendered as the header's number chip. */
-	index: number;
 	interaction: IpodInteractionState;
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
@@ -39,14 +38,13 @@ const MODES: readonly { id: IpodInteractionModel; label: string }[] = [
 ] as const;
 
 export function Ipod3DStudioCockpit({
-	index,
 	interaction,
 	studio,
 	dispatch,
 }: Ipod3DStudioCockpitProps) {
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<Ipod3DCockpitHeader index={index} title="Studio" />
+			<Ipod3DCockpitHeader id="studio" />
 			{/* Interaction mode — segmented, mirrors the 2D workbench */}
 			<div className="border-b border-black/[0.06] px-3.5 pb-3 pt-3">
 				<Label>Interaction</Label>
@@ -146,12 +144,12 @@ function ToggleRow({
 			</span>
 			{/* A minimal iOS-style switch in the cockpit's monochrome palette. */}
 			<span
-				className={`relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-300 ${
+				className={`relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors ${SETTLE_JOB.className} ${
 					on ? "bg-black" : "bg-black/15"
 				}`}
 			>
 				<span
-					className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform duration-300 ${
+					className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform ${SETTLE_JOB.className} ${
 						on ? "translate-x-[14px]" : "translate-x-[2px]"
 					}`}
 				/>

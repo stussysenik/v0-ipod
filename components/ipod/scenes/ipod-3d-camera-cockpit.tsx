@@ -43,8 +43,6 @@ const AXES: readonly AxisDef[] = [
 ] as const;
 
 interface Ipod3DCameraCockpitProps {
-	/** Position in the control surface, rendered as the header's number chip. */
-	index: number;
 	apiRef: React.MutableRefObject<ThreeDIpodHandle | null>;
 	/** When true, the perspective is locked — drag/wheel are frozen and recompose is off. */
 	locked?: boolean;
@@ -62,7 +60,6 @@ interface Ipod3DCameraCockpitProps {
 }
 
 export function Ipod3DCameraCockpit({
-	index,
 	apiRef,
 	locked = false,
 	onToggleLock,
@@ -125,8 +122,7 @@ export function Ipod3DCameraCockpit({
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
 			<Ipod3DCockpitHeader
-				index={index}
-				title="Camera"
+				id="camera"
 				right={
 					onToggleLock ? (
 						<button

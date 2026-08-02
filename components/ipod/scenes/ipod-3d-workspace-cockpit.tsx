@@ -38,8 +38,6 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  */
 
 interface Ipod3DWorkspaceCockpitProps {
-	/** Position in the control surface, rendered as the header's number chip. */
-	index: number;
 	/**
 	 * Re-read persisted state into the live surface. Called after a reset or a restore so
 	 * the studio shows the resulting state without a reload.
@@ -62,7 +60,7 @@ const SCOPE_LABEL: Record<ResetScope, string> = {
 	all: "Everything",
 };
 
-export function Ipod3DWorkspaceCockpit({ index, onRehydrate, watch }: Ipod3DWorkspaceCockpitProps) {
+export function Ipod3DWorkspaceCockpit({ onRehydrate, watch }: Ipod3DWorkspaceCockpitProps) {
 	const [stored, setStored] = useState<number | null>(null);
 	const [restorable, setRestorable] = useState<number | null>(null);
 	const [confirming, setConfirming] = useState<ResetScope | null>(null);
@@ -111,7 +109,7 @@ export function Ipod3DWorkspaceCockpit({ index, onRehydrate, watch }: Ipod3DWork
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<Ipod3DCockpitHeader index={index} title="Workspace" />
+			<Ipod3DCockpitHeader id="workspace" />
 			<div className="px-3.5 pb-3 pt-1">
 				<StudioRow label="Stored">
 					<StudioField>{stored === null ? "—" : `${stored} keys`}</StudioField>

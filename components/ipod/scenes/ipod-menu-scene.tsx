@@ -1,6 +1,7 @@
 "use client";
 
 import { PLACEHOLDER_LOGO_SRC } from "@/lib/ipod-assets";
+import { POP_JOB } from "@/lib/motion-tokens";
 import type { SongMetadata } from "@/types/ipod";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 
@@ -25,7 +26,7 @@ export function IpodMenuScene({
 
 	return (
 		<div
-			className="grid animate-in slide-in-from-left-2 duration-200"
+			className={`grid animate-in slide-in-from-left-2 ${POP_JOB.className}`}
 			style={{
 				height: screenTokens.frameHeight - screenTokens.statusBarHeight - 2,
 				gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",

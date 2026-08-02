@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
+import { SHIFT_JOB } from "@/lib/motion-tokens";
 import { GESTURE_COACHED_KEY } from "@/lib/workspace-storage";
 
 const SEEN_KEY = GESTURE_COACHED_KEY;
@@ -50,7 +52,7 @@ export function Ipod3DCoachHint() {
 
 	return (
 		<div className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4 lg:hidden">
-			<div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-4 py-2 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-500">
+			<div className={`flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-4 py-2 text-[13px] font-medium text-white/90 shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-top-2 ${SHIFT_JOB.className}`}>
 				<span aria-hidden className="text-base leading-none">✌︎</span>
 				Two fingers to move the camera · tap a view to snap
 			</div>

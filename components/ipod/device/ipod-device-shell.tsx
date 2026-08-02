@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from "@/lib/export/export-scene";
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
 import { deriveGasketColor } from "@/lib/color-proximity";
+import { SETTLE_JOB } from "@/lib/motion-tokens";
 
 /**
  * Physical enclosure for the iPod device.
@@ -75,7 +76,7 @@ export function IPodDeviceShell({
 			/>
 			<div className="relative p-12">
 				<div
-					className="relative flex flex-col items-center overflow-hidden transition-all duration-300"
+					className={`relative flex flex-col items-center overflow-hidden transition-all ${SETTLE_JOB.className}`}
 					style={{
 						...shellSurfaceStyle,
 						width: preset.shell.width,

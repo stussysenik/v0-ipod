@@ -4,6 +4,7 @@ import {
 	planExportDelivery,
 	type ExportCapabilities,
 } from "@/lib/export-delivery";
+import { SETTLE_JOB, SHEET_JOB } from "@/lib/motion-tokens";
 import {
 	MAX_GIF_FRAME_COUNT,
 	MAX_MP4_FRAME_COUNT,
@@ -864,13 +865,13 @@ async function presentMobileExportPrompt(
 		overlay.style.cssText =
 			"position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.4);" +
 			"backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" +
-			"display:flex;align-items:flex-end;justify-content:center;padding:0;transition:opacity 0.3s ease";
+			"display:flex;align-items:flex-end;justify-content:center;padding:0;transition:opacity ${SETTLE_JOB.durationMs}ms ${SETTLE_JOB.easing}";
 		card.style.cssText =
 			"width:100%;max-width:540px;max-height:92vh;overflow:hidden;border-radius:24px 24px 0 0;" +
 			"background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(20px);" +
 			"-webkit-backdrop-filter:saturate(180%) blur(20px);" +
 			"color:#000;padding:24px 20px env(safe-area-inset-bottom, 20px);box-shadow:0 -8px 32px rgba(0,0,0,0.12);" +
-			"display:flex;flex-direction:column;gap:20px;transform:translateY(0);transition:transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
+			"display:flex;flex-direction:column;gap:20px;transform:translateY(0);transition:transform ${SHEET_JOB.durationMs}ms ${SHEET_JOB.easing}";
 		
 		const header = document.createElement("div");
 		header.style.cssText = "display:flex;flex-direction:column;gap:4px;text-align:center";

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { resolveIconButtonVariant, sharedIconButtonTokens } from "@/lib/shared-ui-tokens";
 import { cn } from "@/lib/utils";
+import { PRESS_JOB } from "@/lib/motion-tokens";
 
 /**
  * Whether IconButtons in this subtree render dark-device chrome. Scoped so only
@@ -23,7 +24,7 @@ export function IconButtonChromeProvider({
 }
 
 const iconButtonVariants = cva(
-	"relative group flex items-center justify-center border transition-all ease-out disabled:cursor-not-allowed disabled:opacity-60",
+	`relative group flex items-center justify-center border transition-all ${PRESS_JOB.className} disabled:cursor-not-allowed disabled:opacity-60`,
 	{
 		variants: {
 			variant: {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { ProofEntry } from "@/lib/export/proof-cache";
+import { SETTLE_JOB } from "@/lib/motion-tokens";
 
 import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
 
@@ -21,7 +22,6 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  */
 
 export interface Ipod3DExportProofPanelProps {
-	index: number;
 	/** Current composition's proof key; null until the first pose is read. */
 	fingerprint: string | null;
 	/** Non-bumping cache read (the hook's `peek`). */
@@ -41,7 +41,6 @@ export interface Ipod3DExportProofPanelProps {
 }
 
 export function Ipod3DExportProofPanel({
-	index,
 	fingerprint,
 	peek,
 	version,
@@ -83,7 +82,7 @@ export function Ipod3DExportProofPanel({
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<Ipod3DCockpitHeader index={index} title="Proof" />
+			<Ipod3DCockpitHeader id="proof" />
 
 			{/* The frame — the export's anchor, content-addressed and pre-rendered. */}
 			<div className="px-4 pt-3.5">
@@ -93,7 +92,7 @@ export function Ipod3DExportProofPanel({
 						<img
 							src={shownUrl}
 							alt="Export proof"
-							className={`h-full w-full object-contain transition-opacity duration-300 ${
+							className={`h-full w-full object-contain transition-opacity ${SETTLE_JOB.className} ${
 								pending ? "opacity-40" : "opacity-100"
 							}`}
 						/>

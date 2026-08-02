@@ -2,14 +2,35 @@
 
 ## 1. Name the motion
 
-- [ ] 1.1 `lib/motion-tokens.ts` — durations and easings named by job, not by length. Open with
+- [x] 1.1 `lib/motion-tokens.ts` — durations and easings named by job, not by length. Open with
   the mechanism and the defect: every transition in the repo is Tailwind's default by omission,
   so no surface can match another on purpose.
-- [ ] 1.2 Record the shipped reading before changing anything: the loved row's fade is the
+- [x] 1.2 Record the shipped reading before changing anything: the loved row's fade is the
   Tailwind default. Write the measured value into this file so no later task re-derives it.
-- [ ] 1.3 Gate: a duration or easing literal in application markup fails, naming file and value.
+- [x] 1.3 Gate: a duration or easing literal in application markup fails, naming file and value.
   The gate must fail on the pre-change tree — a gate that passes on the defect it exists to
   catch is not a gate.
+- [x] 1.4 **The gate was over-broad and it cost a red suite.** It listed `animate-in`/`animate-out`
+  as literals. Those are animation NAMES and state no duration and no curve — exactly like
+  `animate-spin`, which the same regex passes on purpose — so the gate failed on 22 call sites
+  that state no timing at all while `transition-opacity`, default-by-omission in precisely the
+  same way, passed. Narrowed to what is actually written down: `duration-*`, `ease-*`,
+  `animate-[…]` (a shorthand, duration included) and a bare `cubic-bezier(…)`. The timing an
+  enter animation runs at is the `duration-*` beside it, which the gate still catches — asserted
+  by a new self-test on `animate-in fade-in duration-500`.
+- [x] 1.5 The 19 real literals migrated to jobs, in 8 files. `duration-500` → `SHIFT_JOB`
+  (export dialog, progress overlay ×4, workbench stage cross-fade), `duration-300` → `SETTLE_JOB`
+  (toolbox), `duration-700` → `SWEEP_JOB` (workbench view cross-fade ×2), `duration-200` →
+  `POP_JOB` (switch ×2, theme toggle ×3), `duration-150` → `FADE_JOB` (checkbox).
+  TWO TIMINGS MOVED, and both were already the module's recorded consolidation rather than a new
+  ruling — the export progress fill 300ms → `PRESS_JOB` 100ms, and the icon button's bare
+  `ease-out` (Tailwind's default 150ms) → `PRESS_JOB` 100ms ease-out. §1.6 gates them.
+- [x] 1.6 `components/ui/studio-controls.tsx` held its OWN timing table — `HOVER_MS = 130`,
+  `SELECT_MS = 220`, `EASE = cubic-bezier(0.22, 1, 0.36, 1)` — which is the second copy the
+  module exists to prevent. The three constants now read `HOVER_JOB`/`SELECT_JOB`. Same values,
+  one home; no pixel moves.
+- [ ] 1.7 **USER** — the two timing moves in §1.5 are the only visible change in this batch:
+  the export progress bar and the icon-button hover both go from 150/300ms to 100ms.
 
 ## 2. The three primitives
 

@@ -1,7 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { SHIFT_JOB } from "@/lib/motion-tokens";
+
 export const ipodDeviceVariants = cva(
-	"relative flex flex-col items-center transition-all duration-500 ease-in-out", 
+	`relative flex flex-col items-center transition-all ${SHIFT_JOB.className}`, 
 	{
 		variants: {
 			preset: {

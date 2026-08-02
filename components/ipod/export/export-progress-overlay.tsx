@@ -3,6 +3,7 @@
 import React from "react";
 import { cva } from "class-variance-authority";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { PRESS_JOB, SHIFT_JOB } from "@/lib/motion-tokens";
 
 /*
  * Ported from feat/architecture-evolution. Stages mirror the export machine's
@@ -27,7 +28,7 @@ interface ExportProgressOverlayProps {
 }
 
 const overlayVariants = cva(
-	"fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-500",
+	`fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md transition-all ${SHIFT_JOB.className}`,
 	{
 		variants: {
 			visible: {
@@ -39,7 +40,7 @@ const overlayVariants = cva(
 );
 
 const cardVariants = cva(
-	"relative w-full max-w-sm rounded-[32px] border border-white/20 bg-[#F2F1ED]/95 p-8 shadow-[0_40px_100px_rgba(0,0,0,0.5)] transition-all duration-500 transform",
+	`relative w-full max-w-sm rounded-[32px] border border-white/20 bg-[#F2F1ED]/95 p-8 shadow-[0_40px_100px_rgba(0,0,0,0.5)] transition-all ${SHIFT_JOB.className} transform`,
 	{
 		variants: {
 			visible: {
@@ -85,10 +86,10 @@ export function ExportProgressOverlay({
 							</div>
 						)}
 						{isSuccess && (
-							<CheckCircle2 className="h-12 w-12 text-green-600 animate-in zoom-in duration-500" />
+							<CheckCircle2 className={`h-12 w-12 text-green-600 animate-in zoom-in ${SHIFT_JOB.className}`} />
 						)}
 						{isError && (
-							<AlertCircle className="h-12 w-12 text-red-600 animate-in shake duration-500" />
+							<AlertCircle className={`h-12 w-12 text-red-600 animate-in shake ${SHIFT_JOB.className}`} />
 						)}
 					</div>
 
@@ -104,7 +105,7 @@ export function ExportProgressOverlay({
 						<div className="mt-8 w-full">
 							<div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10">
 								<div
-									className="h-full bg-[#111827] transition-all duration-300 ease-out"
+									className={`h-full bg-[#111827] transition-all ${PRESS_JOB.className}`}
 									style={{ width: `${progress * 100}%` }}
 								/>
 							</div>

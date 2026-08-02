@@ -24,16 +24,14 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  */
 
 interface Ipod3DNowPlayingCockpitProps {
-	/** Position in the control surface, rendered as the header's number chip. */
-	index: number;
 	metadata: SongMetadata;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 }
 
-export function Ipod3DNowPlayingCockpit({ index, metadata, dispatch }: Ipod3DNowPlayingCockpitProps) {
+export function Ipod3DNowPlayingCockpit({ metadata, dispatch }: Ipod3DNowPlayingCockpitProps) {
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
-			<Ipod3DCockpitHeader index={index} title="Now Playing" />
+			<Ipod3DCockpitHeader id="nowplaying" />
 			<div className="border-b border-black/[0.06] px-4 pb-4 pt-3">
 				<div className="flex gap-3">
 					{/* Album cover — tap to upload */}

@@ -9,6 +9,7 @@ import {
 } from "react-aria-components";
 
 import { IPOD_CLASSIC_MM } from "@/lib/ipod-classic-presets";
+import { HOVER_JOB, SELECT_JOB } from "@/lib/motion-tokens";
 import {
 	type ControlTokens,
 	controlTokenVars,
@@ -47,11 +48,13 @@ export const CONTROL_RADIUS = Math.round(
 export const SURFACE_PAD = 4;
 export const SURFACE_RADIUS = CONTROL_RADIUS + SURFACE_PAD;
 
-// One timing table. Hover is a quick acknowledgement; selection is a deliberate state
-// change. Ease-out, no bounce — an instrument, not a toy.
-const HOVER_MS = 130;
-const SELECT_MS = 220;
-const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+// The instrument's timing, read from the one motion module rather than restated here.
+// Hover is a quick acknowledgement; selection is a deliberate state change. Ease-out, no
+// bounce — an instrument, not a toy. These three constants were this file's own copy of
+// that table, and a second copy of a timing is how two surfaces stop matching on purpose.
+const HOVER_MS = HOVER_JOB.durationMs;
+const SELECT_MS = SELECT_JOB.durationMs;
+const EASE = HOVER_JOB.easing;
 
 /** CSS var with a light-stage fallback so primitives render correctly outside a scope. */
 const v = (name: string, fallback: string) => `var(${name}, ${fallback})`;

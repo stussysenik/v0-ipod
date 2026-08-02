@@ -15,6 +15,17 @@ import { ANALYTICS_EVENTS, track } from "@/lib/analytics/events";
 import { playClickAudio } from "@/lib/ipod-state/effects";
 import { ipodWorkbenchReducer } from "@/lib/ipod-state/update";
 import {
+	PRESS_JOB,
+	SETTLE_JOB,
+	SHEET_JOB,
+	SHIFT_JOB,
+	SHUTTER_BLADE_JOB,
+	SHUTTER_BLADE_UP_JOB,
+	SHUTTER_FLASH_JOB,
+	SHUTTER_SCAN_JOB,
+	SWEEP_JOB,
+} from "@/lib/motion-tokens";
+import {
 	BUILT_IN_THEMES,
 	createBootedWorkbenchModel,
 	loadDefaultThemeId,
@@ -44,6 +55,7 @@ import {
 	saveMotionAs,
 	type SavedMotion,
 } from "@/lib/motion/motion-shelf";
+import type { MotionDoc } from "@/lib/motion/doc";
 import type { PoseFraming } from "@/lib/studio-camera-poses";
 import {
 	EMPTY_CAMERA_STORE,
@@ -83,6 +95,10 @@ import { Ipod3DTimelineProofStrip } from "./ipod-3d-timeline-proof-strip";
 import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
 import { Ipod3DWorkspaceCockpit } from "./ipod-3d-workspace-cockpit";
 import { Ipod3DCoachHint } from "./ipod-3d-coach-hint";
+import { GhostArc } from "../hud/ghost-arc";
+import { SummonWheel } from "../hud/summon-wheel";
+import { useSummonIntent } from "../hooks/use-summon-intent";
+import type { WheelItem } from "@/lib/hud/summon-wheel";
 import { Ipod3DCameraBar, type PoseRequest } from "./ipod-3d-camera-bar";
 import { TheatreStudioDev } from "./theatre-studio-dev";
 
@@ -333,6 +349,25 @@ export function Ipod3DStage() {
 	// export so capture framing is untouched. Insets read the same store the panel host does.
 	const symbiosisViewport = useViewportSize();
 	const safeInsets = useSafeInsets(symbiosisViewport);
+
+	// ── The summoned wheel and the held arc ──────────────────────────────────────────
+	// The wheel is a promotion of a press that stayed still, decided by the shipped reducer.
+	// The branch it commits to is state on the stage rather than a mode inside the wheel: the
+	// wheel is drawn where the hand is and then gone, and what it chose has to outlive it.
+	const summon = useSummonIntent();
+	const [wheelBranch, setWheelBranch] = useState<string | null>(null);
+	const handleWheelCommand = useCallback((item: WheelItem) => setWheelBranch(item.id), []);
+	// An arc edit is a whole document; the store holds per-track overrides, so it lands as one
+	// write per track through the action the inspector already uses. `isPristineTrack` clears
+	// an override that came back to the base, which is what makes a pull out and back free.
+	const handleArcChange = useCallback(
+		(next: MotionDoc) => {
+			for (const [trackKey, track] of Object.entries(next.tracks)) {
+				dispatch({ type: "SET_MOTION_TRACK", payload: { trackKey, track } });
+			}
+		},
+		[dispatch],
+	);
 	const stageStyle = useMemo<React.CSSProperties | undefined>(() => {
 		// Panel symbiosis is a DESKTOP affordance — panels only float at ≥lg. Below that the
 		// controls live in the bottom drawer, so insetting the canvas by their frames shoved
@@ -845,6 +880,9 @@ export function Ipod3DStage() {
 	});
 
 	const { presentation, interaction, studio } = model;
+	// Which tool panels are on screen. Every panel mount below reads this and nothing else:
+	// a hidden cockpit is unmounted, so a panel the user cannot see costs no render.
+	const cockpits = studio.cockpits;
 	const activePreset = useMemo(
 		() => getIpodClassicPreset(presentation.hardwarePreset),
 		[presentation.hardwarePreset],
@@ -976,7 +1014,7 @@ export function Ipod3DStage() {
 
 	return (
 		<div
-			className="relative h-dvh w-full overflow-hidden transition-colors duration-500"
+			className={`relative h-dvh w-full overflow-hidden transition-colors ${SHIFT_JOB.className}`}
 			style={{ backgroundColor: presentation.bgColor }}
 		>
 			{/* Theatre.js studio timeline GUI for camera authoring — dev only, renders nothing.
@@ -1061,135 +1099,162 @@ export function Ipod3DStage() {
 				wheel={wheelComponent}
 				stageClassName="bg-transparent"
 				stageStyle={stageStyle}
+				sceneOverlay={
+					<GhostArc
+						doc={flownDocForRig ?? null}
+						held={wheelBranch === "motion"}
+						onChange={handleArcChange}
+					/>
+				}
+			/>
+
+			{/* The wheel is summoned where the hand already is; nothing about it is permanent. */}
+			<SummonWheel
+				open={summon.phase === "summoning" && summon.origin !== null}
+				anchor={summon.origin ?? { x: 0, y: 0 }}
+				viewport={symbiosisViewport}
+				onCommand={handleWheelCommand}
+				onDismiss={() => setWheelBranch(null)}
 			/>
 
 			{/* Responsive control surface — one DOM tree, two layouts. */}
 			<div
-				className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)] transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) lg:contents"
+				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)] transition-transform ${SHEET_JOB.className} lg:contents`}
 			>
 				{/* Left group — the "subject": how you interact (01), what the device looks
 				    like (02), what's on screen (03), its charge state (04), your angle (05).
 				    Numbered 01→05 so the column reads top-to-bottom as a shoot pipeline. */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:left-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
-					<Ipod3DStudioCockpit index={1} interaction={interaction} studio={studio} dispatch={dispatch} />
-					<Ipod3DColorCockpit
-						index={2}
-						presentation={presentation}
-						dispatch={dispatch}
-						lighting={studio.lighting}
-					/>
-					<Ipod3DNowPlayingCockpit index={3} metadata={model.metadata} dispatch={dispatch} />
+					{cockpits.studio && (
+						<Ipod3DStudioCockpit interaction={interaction} studio={studio} dispatch={dispatch} />
+					)}
+					{cockpits.color && (
+						<Ipod3DColorCockpit
+							presentation={presentation}
+							dispatch={dispatch}
+							lighting={studio.lighting}
+						/>
+					)}
+					{cockpits.nowplaying && (
+						<Ipod3DNowPlayingCockpit metadata={model.metadata} dispatch={dispatch} />
+					)}
 					{/* Battery lives with the screen state it drives (the status-bar cell),
 					    not stranded between Light and Export as it was before. */}
-					<Ipod3DBatteryCockpit
-						index={4}
-						batteryLevel={interaction.batteryLevel}
-						batteryMode={interaction.batteryMode}
-						dispatch={dispatch}
-					/>
-					<Ipod3DCameraCockpit
-						index={5}
-						apiRef={ipodApiRef}
-						locked={cameraLocked}
-						onToggleLock={toggleCameraLock}
-						onResetCamera={() => ipodApiRef.current?.resetCamera()}
-						showOrigin={showOrigin}
-						onToggleOrigin={() => setShowOrigin((v) => !v)}
-						presets={camera?.presets ?? []}
-						onPresetsChange={(presets) => patchCamera({ presets })}
-					/>
+					{cockpits.battery && (
+						<Ipod3DBatteryCockpit
+							batteryLevel={interaction.batteryLevel}
+							batteryMode={interaction.batteryMode}
+							dispatch={dispatch}
+						/>
+					)}
+					{cockpits.camera && (
+						<Ipod3DCameraCockpit
+							apiRef={ipodApiRef}
+							locked={cameraLocked}
+							onToggleLock={toggleCameraLock}
+							onResetCamera={() => ipodApiRef.current?.resetCamera()}
+							showOrigin={showOrigin}
+							onToggleOrigin={() => setShowOrigin((v) => !v)}
+							presets={camera?.presets ?? []}
+							onPresetsChange={(presets) => patchCamera({ presets })}
+						/>
+					)}
 				</div>
 
 				{/* Right group — the "scene & capture": light it (06), then export it (07). */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:right-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
-					<Ipod3DLightingCockpit
-						index={6}
-						studio={studio}
-						dispatch={dispatch}
-						apiRef={ipodApiRef}
-						backRoughness={backRoughness}
-						onBackRoughnessChange={setBackRoughness}
-					/>
-					<Ipod3DExportProofPanel
-						index={7}
-						fingerprint={proof.currentFingerprint}
-						peek={proof.peek}
-						version={proof.version}
-						aspect={aspect}
-						quality={quality}
-						fps={CLIP_QUALITY[quality].fps}
-						durationSec={durationSec}
-						hold={motion.repeat === 0}
-						moveLabel={flownDoc.label}
-						onExport={() =>
-							handleExportClip(previewMove, {
-								durationSec,
-								quality,
-								aspect,
-								repeat: motion.repeat,
-								timeMap: motion.timeMap,
-							})
-						}
-						exportBusy={exporting}
-					/>
-					<Ipod3DExportDock
-						index={8}
-						exportState={exportState}
-						durationSec={durationSec}
-						onDurationChange={(sec) => dispatch({ type: "SET_MOTION_DURATION", payload: sec })}
-						previewMove={previewMove}
-						previewPlaying={previewPlaying}
-						previewT={previewT}
-						repeat={motion.repeat}
-						onRepeatChange={(n) => dispatch({ type: "SET_MOTION_REPEAT", payload: n })}
-						timeMap={motion.timeMap}
-						onTimeMapChange={(map) => dispatch({ type: "SET_MOTION_TIME_MAP", payload: map })}
-						aspect={aspect}
-						onAspectChange={setAspect}
-						quality={quality}
-						onQualityChange={setQuality}
-						onPreviewMoveChange={handlePreviewMoveChange}
-						onTogglePlay={handleTogglePlay}
-						onScrub={handleScrub}
-						onResetPlayhead={handleResetPlayhead}
-						onExportPng={handleExportPng}
-						onExportClip={handleExportClip}
-						documents={motionDocuments}
-						doc={flownDoc}
-						baseDoc={baseDoc}
-						onTrackChange={(trackKey, track) =>
-							dispatch({ type: "SET_MOTION_TRACK", payload: { trackKey, track } })
-						}
-						onTrackClear={(trackKey) =>
-							dispatch({ type: "CLEAR_MOTION_TRACK", payload: trackKey })
-						}
-						shelf={motionShelf}
-						// The proof strip is composed HERE, not in the dock: reading the proof cache
-						// is a stage decision already made three times over (panel, history
-						// thumbnails, timeline plan), and the dock owns the inspector's mount only.
-						belowScrubber={
-							<Ipod3DTimelineProofStrip
-								frames={proof.timelineFrames}
-								peek={proof.peek}
-								durationSec={durationSec}
-								playhead={previewT}
-								onScrub={handleScrub}
-								disabled={exporting}
-							/>
-						}
-						history={exportHistory}
-						peekProofBlob={peekProofBlob}
-						onReopen={handleReopen}
-						onShareLink={handleShareLink}
-					/>
+					{cockpits.light && (
+						<Ipod3DLightingCockpit
+							studio={studio}
+							dispatch={dispatch}
+							apiRef={ipodApiRef}
+							backRoughness={backRoughness}
+							onBackRoughnessChange={setBackRoughness}
+						/>
+					)}
+					{cockpits.proof && (
+						<Ipod3DExportProofPanel
+							fingerprint={proof.currentFingerprint}
+							peek={proof.peek}
+							version={proof.version}
+							aspect={aspect}
+							quality={quality}
+							fps={CLIP_QUALITY[quality].fps}
+							durationSec={durationSec}
+							hold={motion.repeat === 0}
+							moveLabel={flownDoc.label}
+							onExport={() =>
+								handleExportClip(previewMove, {
+									durationSec,
+									quality,
+									aspect,
+									repeat: motion.repeat,
+									timeMap: motion.timeMap,
+								})
+							}
+							exportBusy={exporting}
+						/>
+					)}
+					{cockpits.export && (
+						<Ipod3DExportDock
+							exportState={exportState}
+							durationSec={durationSec}
+							onDurationChange={(sec) => dispatch({ type: "SET_MOTION_DURATION", payload: sec })}
+							previewMove={previewMove}
+							previewPlaying={previewPlaying}
+							previewT={previewT}
+							repeat={motion.repeat}
+							onRepeatChange={(n) => dispatch({ type: "SET_MOTION_REPEAT", payload: n })}
+							timeMap={motion.timeMap}
+							onTimeMapChange={(map) => dispatch({ type: "SET_MOTION_TIME_MAP", payload: map })}
+							aspect={aspect}
+							onAspectChange={setAspect}
+							quality={quality}
+							onQualityChange={setQuality}
+							onPreviewMoveChange={handlePreviewMoveChange}
+							onTogglePlay={handleTogglePlay}
+							onScrub={handleScrub}
+							onResetPlayhead={handleResetPlayhead}
+							onExportPng={handleExportPng}
+							onExportClip={handleExportClip}
+							documents={motionDocuments}
+							doc={flownDoc}
+							baseDoc={baseDoc}
+							onTrackChange={(trackKey, track) =>
+								dispatch({ type: "SET_MOTION_TRACK", payload: { trackKey, track } })
+							}
+							onTrackClear={(trackKey) =>
+								dispatch({ type: "CLEAR_MOTION_TRACK", payload: trackKey })
+							}
+							shelf={motionShelf}
+							// The proof strip is composed HERE, not in the dock: reading the proof cache
+							// is a stage decision already made three times over (panel, history
+							// thumbnails, timeline plan), and the dock owns the inspector's mount only.
+							belowScrubber={
+								<Ipod3DTimelineProofStrip
+									frames={proof.timelineFrames}
+									peek={proof.peek}
+									durationSec={durationSec}
+									playhead={previewT}
+									onScrub={handleScrub}
+									disabled={exporting}
+								/>
+							}
+							history={exportHistory}
+							peekProofBlob={peekProofBlob}
+							onReopen={handleReopen}
+							onShareLink={handleShareLink}
+						/>
+					)}
 					{/* The back room (09) — not part of the shoot: it edits what survives the
 					    shoot. `watch` is the model, so the Stored row re-reads once the
 					    stage's debounced persistence settles after an edit. */}
-					<Ipod3DWorkspaceCockpit
-						index={9}
-						onRehydrate={rehydrateFromStorage}
-						watch={model}
-					/>
+					{cockpits.workspace && (
+						<Ipod3DWorkspaceCockpit
+							onRehydrate={rehydrateFromStorage}
+							watch={model}
+						/>
+					)}
 				</div>
 			</div>
 
@@ -1205,6 +1270,7 @@ export function Ipod3DStage() {
 				presentation={presentation}
 				dispatch={dispatch}
 				onNotice={showNotice}
+				cockpits={cockpits}
 				landscape={landscape}
 			/>
 
@@ -1216,19 +1282,19 @@ export function Ipod3DStage() {
 			    optic flash, then settling into a technical encoding state. */}
 			{exporting && (
 				<div
-					className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-8 backdrop-blur-3xl transition-all duration-300 animate-in fade-in"
+					className={`absolute inset-0 z-[100] flex flex-col items-center justify-center gap-8 backdrop-blur-3xl transition-all ${SETTLE_JOB.className} animate-in fade-in`}
 					style={{ backgroundColor: `${presentation.bgColor}F8` }}
 				>
 					{/* Optic Flash — eye-physics 'pop' at the instant of capture. */}
-					<div className="absolute inset-0 bg-white z-[110] animate-[shutterFlash_0.6s_ease-out_forwards] pointer-events-none" />
+					<div className={`absolute inset-0 bg-white z-[110] ${SHUTTER_FLASH_JOB.className} pointer-events-none`} />
 
 					{/* Shutter Blades — ultra-high-speed mechanical snap. */}
 					<div className="absolute inset-0 overflow-hidden pointer-events-none z-[105]">
-						<div className="absolute top-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeDown_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards]" />
-						<div className="absolute bottom-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeUp_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards]" />
+						<div className={`absolute top-0 left-0 w-full h-[50%] bg-black ${SHUTTER_BLADE_JOB.className}`} />
+						<div className={`absolute bottom-0 left-0 w-full h-[50%] bg-black ${SHUTTER_BLADE_UP_JOB.className}`} />
 					</div>
 
-					<div className="relative z-[120] flex flex-col items-center gap-8 animate-in slide-in-from-bottom-6 duration-700 delay-100 fill-mode-both">
+					<div className={`relative z-[120] flex flex-col items-center gap-8 animate-in slide-in-from-bottom-6 ${SWEEP_JOB.className} delay-100 fill-mode-both`}>
 						<div className="flex flex-col items-center gap-2">
 							<div className="text-[10px] font-black uppercase tracking-[0.45em] text-black/80">
 								{exportState.startsWith("clip:") ? "Cinematic Render" : "Optic Capture"}
@@ -1239,10 +1305,10 @@ export function Ipod3DStage() {
 						<div className="flex flex-col items-center gap-4">
 							<div className="relative h-[2px] w-80 overflow-hidden rounded-full bg-black/5">
 								{exportProgress === null ? (
-									<div className="h-full w-1/3 animate-[shutterScan_0.5s_infinite_linear] rounded-full bg-black/60" />
+									<div className={`h-full w-1/3 ${SHUTTER_SCAN_JOB.className} rounded-full bg-black/60`} />
 								) : (
 									<div
-										className="h-full bg-black/95 transition-all duration-100 ease-out"
+										className={`h-full bg-black/95 transition-all ${PRESS_JOB.className}`}
 										style={{ width: `${Math.max(1, Math.round(exportProgress * 100))}%` }}
 									/>
 								)}

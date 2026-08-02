@@ -5,6 +5,7 @@ import { type Dispatch, useEffect, useState } from "react";
 import type { ThreeDIpodHandle } from "@/components/three/three-d-ipod";
 import type { IpodStudioState } from "@/lib/ipod-state/model";
 import type { IpodWorkbenchAction } from "@/lib/ipod-state/update";
+import { SETTLE_JOB } from "@/lib/motion-tokens";
 import { matchNamedPose } from "@/lib/studio-camera-poses";
 import {
 	ENVIRONMENT_PRESETS,
@@ -38,8 +39,6 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  */
 
 interface Ipod3DLightingCockpitProps {
-	/** Position in the control surface, rendered as the header's number chip. */
-	index: number;
 	studio: IpodStudioState;
 	dispatch: Dispatch<IpodWorkbenchAction>;
 	/** Dev "Back finish" dial — polished-back roughness (mirror ↔ brushed). */
@@ -60,7 +59,6 @@ const SPOTS: readonly { role: SpotRole; label: string; hint: string }[] = [
 ] as const;
 
 export function Ipod3DLightingCockpit({
-	index,
 	studio,
 	dispatch,
 	apiRef,
@@ -93,15 +91,14 @@ export function Ipod3DLightingCockpit({
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
 			{/* Header — title + the one-tap Lights Off / Technical switch */}
 			<Ipod3DCockpitHeader
-				index={index}
-				title="Light"
+				id="light"
 				right={
 					<button
 						type="button"
 						onClick={() => dispatch({ type: "TOGGLE_TECHNICAL_FLAT" })}
 						aria-pressed={technicalFlat}
 						title="Flat, unlit technical view — no reflections or shadows"
-						className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-all duration-300 active:scale-[0.96] ${
+						className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-all ${SETTLE_JOB.className} active:scale-[0.96] ${
 							technicalFlat
 								? "border-black/80 bg-black text-white"
 								: "border-black/10 text-black/55 hover:border-black/30 hover:text-black/80"
@@ -119,7 +116,7 @@ export function Ipod3DLightingCockpit({
 
 			{/* Body — dimmed while flat/technical, since the rig is bypassed there */}
 			<div
-				className={`transition-opacity duration-300 ${dimmed ? "pointer-events-none opacity-40" : "opacity-100"}`}
+				className={`transition-opacity ${SETTLE_JOB.className} ${dimmed ? "pointer-events-none opacity-40" : "opacity-100"}`}
 				aria-hidden={dimmed}
 			>
 				{/* Rig presets — the named ends of the range, from clean Apple to Designer Dark */}

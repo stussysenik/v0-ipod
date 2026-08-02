@@ -1,6 +1,7 @@
 import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR, deriveWheelColors } from "@/lib/color-manifest";
 import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from "@/lib/ipod-classic-presets";
 import { DEFAULT_MOTION_STATE, type MotionState } from "@/lib/motion/motion-state";
+import { ALL_COCKPITS_VISIBLE, type CockpitVisibility } from "./cockpit-roster";
 import {
 	DESIGNER_DARK_RIG,
 	cloneLightingConfig,
@@ -213,13 +214,20 @@ export interface IpodStudioState {
 	 * during every export bake — it can never leak into a rendered clip.
 	 */
 	theatreStudio: boolean;
+	/**
+	 * Which tool panels are on screen (spec: the cockpit roster). Every roster id is
+	 * present, so the product view — every entry false — is a value of this type rather
+	 * than a mode the surface has to enter. Hidden is not deleted: the roster still lists
+	 * a hidden panel and one click brings it back.
+	 */
+	cockpits: CockpitVisibility;
 	/** The authored camera motion (spec: motion-authoring). */
 	motion: MotionState;
 }
 // Camera framing already survives reload through the camera-lock persistence
 // (LOCKED_POSE_KEY in the stage), so it deliberately does NOT live in this slice.
 
-export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting" | "motion"> = {
+export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting" | "motion" | "cockpits"> = {
 	technicalFlat: false,
 	interactionLocked: false,
 	marquee: true,
@@ -235,6 +243,7 @@ export function createInitialStudioState(): IpodStudioState {
 	return {
 		lighting: cloneLightingConfig(DESIGNER_DARK_RIG),
 		motion: { ...DEFAULT_MOTION_STATE },
+		cockpits: { ...ALL_COCKPITS_VISIBLE },
 		...DEFAULT_STUDIO_STATE,
 	};
 }

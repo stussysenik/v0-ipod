@@ -1,6 +1,7 @@
 "use client";
 
 import type { IpodClassicPresetDefinition } from "@/lib/ipod-classic-presets";
+import { POP_JOB } from "@/lib/motion-tokens";
 import type { SongMetadata } from "@/types/ipod";
 import { IpodArtworkPanel } from "@/components/ipod/panels/ipod-artwork-panel";
 import { IpodTrackMetaPanel } from "@/components/ipod/panels/ipod-track-meta-panel";
@@ -45,7 +46,7 @@ export function IpodNowPlayingScene({
 	return (
 		<>
 			<div
-				className="relative z-10 grid animate-in slide-in-from-right-2 duration-200"
+				className={`relative z-10 grid animate-in slide-in-from-right-2 ${POP_JOB.className}`}
 				style={{
 					height: `calc(100% - ${screenTokens.statusBarHeight + screenTokens.progressHeight + screenTokens.progressBottom + 2}px)`,
 					gridTemplateColumns: `${screenTokens.artworkColumnWidth}px minmax(0, 1fr)`,

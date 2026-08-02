@@ -4,6 +4,7 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { FADE_JOB } from "@/lib/motion-tokens";
 import { IpodStoreContext } from "@/lib/xstate/store";
 import { buildCommands, type PaletteCommand } from "./command-registry";
 
@@ -92,7 +93,7 @@ export function CommandPalette() {
 			open={open}
 			onOpenChange={onOpenChange}
 			label="Command palette"
-			overlayClassName="fixed inset-0 z-[190] bg-black/30 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in"
+			overlayClassName={`fixed inset-0 z-[190] bg-black/30 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in ${FADE_JOB.className}`}
 			contentClassName="fixed left-1/2 top-[18%] z-[200] w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-2xl border border-[#D0D4DA] bg-[#F4F4F2]/95 shadow-[0_28px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl"
 		>
 			<Command.Input

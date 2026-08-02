@@ -1,6 +1,7 @@
 import { stableStringify } from "@/lib/export/export-fingerprint";
 import { sanitizeMotionState, withoutTransport } from "@/lib/motion/motion-state";
 import { sanitizeLightingConfig } from "@/lib/studio-lighting-config";
+import { sanitizeCockpitVisibility } from "./cockpit-roster";
 import {
 	COLOR_TARGETS,
 	MAX_SAVED_COLORS,
@@ -170,6 +171,10 @@ function decodeEnvelope(parsed: unknown): IpodWorkbenchModel | null {
 				// `isNowPlayingEditable: false` rule two lines up: a shared link opens
 				// composed, never mid-playback.
 				motion: withoutTransport(sanitizeMotionState(studio?.motion)),
+				// The roster is a total record; `healSlice` would copy a partial object
+				// whole, and a missing id reads falsy — a panel hidden by a payload rather
+				// than by a gesture. Every unlisted id heals to visible.
+				cockpits: sanitizeCockpitVisibility(studio?.cockpits),
 			},
 			// Device-local window chrome never travels (see module note).
 			panelLayout: base.panelLayout,

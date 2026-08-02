@@ -5,6 +5,7 @@ import { Checkbox as RACCheckbox } from "react-aria-components";
 import { Check, Minus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { FADE_JOB } from "@/lib/motion-tokens";
 
 interface CheckboxProps {
 	isSelected?: boolean;
@@ -34,7 +35,7 @@ function Checkbox({ className, children, ...props }: CheckboxProps) {
 				<>
 					<span
 						className={cn(
-							"flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-all duration-150 outline-none",
+							`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-all ${FADE_JOB.className} outline-none`,
 							"border-[#726F73] bg-white",
 							"group-data-[focus-visible]:ring-2 group-data-[focus-visible]:ring-[color:var(--studio-focus-ring,#0048FF)] group-data-[focus-visible]:ring-offset-2",
 							"group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-50",

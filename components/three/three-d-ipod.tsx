@@ -344,6 +344,13 @@ export interface ThreeDIpodProps {
 	captureBackground?: string;
 	/** Show a small origin gizmo (centre crosshair) to help compose against centre. */
 	showOrigin?: boolean;
+	/**
+	 * In-scene HUD — the ghost arc and its beads. Mounted inside the Canvas because it is
+	 * drawn in world space against the object it edits; the DOM half of the HUD stays outside.
+	 * Hidden for the duration of every capture (see `HUD_OVERLAY_NAME`), so nothing here can
+	 * bake into a still, a clip frame or a proof.
+	 */
+	sceneOverlay?: React.ReactNode;
 	/** Polished-back roughness (dev "Back finish" dial: mirror ↔ brushed). */
 	backRoughness?: number;
 	onReady?: () => void;
@@ -1995,6 +2002,12 @@ function OrbitRig({
 	return null;
 }
 
+/**
+ * Scene-graph name of the in-scene HUD group. One name, so hiding chrome for a capture is a
+ * lookup rather than a prop threaded through every consumer of the canvas.
+ */
+export const HUD_OVERLAY_NAME = "hud-overlay";
+
 // ─── Scene Capture ───────────────────────────────────────────────────────────────
 
 function SceneCapture({
@@ -2047,6 +2060,14 @@ function SceneCapture({
 		onRegisterCanvas?.(gl.domElement);
 
 		const cam = camera as THREE.PerspectiveCamera;
+
+		// In-scene chrome is hidden for the whole of every capture. Bracketed at the same four
+		// points as `capturingRef`, because a designer aid that survives one export path is a
+		// defect that only shows up in the artifact — and the artifact is the record.
+		const setOverlayVisible = (visible: boolean) => {
+			const overlay = scene.getObjectByName(HUD_OVERLAY_NAME);
+			if (overlay) overlay.visible = visible;
+		};
 
 		// Vertical hero framing for the still — a TELEPHOTO, near-dead-on shot.
 		// A wide lens at a 3/4 angle keystones the body (converging edges, an
@@ -2117,6 +2138,7 @@ function SceneCapture({
 		const captureHighRes = async (width = 2160, height = 3840, framing: ExportFraming = "front", heroPose?: StudioPose | null): Promise<Blob | null> => {
 			// Snap to rest + bake the live screen onto the LCD plane.
 			await captureHooksRef?.current?.prepare();
+			setOverlayVisible(false);
 
 			const restoreBackground = applyBackground();
 			const savedPosition = camera.position.clone();
@@ -2150,9 +2172,11 @@ function SceneCapture({
 			});
 
 			try {
+				setOverlayVisible(false);
 				gl.setRenderTarget(renderTarget);
 				gl.render(scene, camera);
 				gl.setRenderTarget(null);
+				setOverlayVisible(true);
 
 				// A heavy mobile allocation can drop the context mid-render; a read-back then
 				// yields a black/garbage frame. Fail fast so the caller surfaces it cleanly
@@ -2201,6 +2225,7 @@ function SceneCapture({
 				cam.fov = savedFov;
 				camera.updateProjectionMatrix();
 				restoreBackground();
+				setOverlayVisible(true);
 				// Restore the live LCD shader.
 				captureHooksRef?.current?.restore();
 			}
@@ -2301,6 +2326,7 @@ function SceneCapture({
 			}
 
 			await captureHooksRef?.current?.prepare();
+			setOverlayVisible(false);
 			capturingRef.current = true;
 			// Stop the real-time frameloop: an offline deterministic render must be the
 			// ONLY thing touching the GL context. Left running, the post-processing
@@ -2444,6 +2470,7 @@ function SceneCapture({
 				cam.aspect = savedAspect;
 				camera.updateProjectionMatrix();
 				restoreBackground();
+				setOverlayVisible(true);
 				await captureHooksRef?.current?.restore();
 				// Resume the live loop and hand the camera back to the orbit rig.
 				setFrameloop("always");
@@ -2463,9 +2490,11 @@ function SceneCapture({
 			});
 
 			try {
+				setOverlayVisible(false);
 				gl.setRenderTarget(renderTarget);
 				gl.render(scene, camera);
 				gl.setRenderTarget(null);
+				setOverlayVisible(true);
 
 				// Resolve linear scene → sRGB bytes, same as the still and clip paths.
 				// Reading the target directly returns raw linear light: three forces
@@ -2572,8 +2601,9 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 			stageStyle,
 			apiRef,
 			captureBackground, 
-			showOrigin = false, 
-			focus: focusProp, 
+			showOrigin = false,
+			sceneOverlay,
+			focus: focusProp,
 			onFocusChange, 
 			cameraLocked = false, 
 			preview = null, 
@@ -2781,6 +2811,9 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
 					{/* Origin gizmo — a designer aid to see world centre while composing. Not
 					   captured: suppressed during export/preview so it never bakes into a frame. */}
 					{showOrigin && !preview && <OriginMarker />}
+
+					{/* In-scene HUD, named so every capture path can hide it in one call. */}
+					<group name={HUD_OVERLAY_NAME}>{sceneOverlay}</group>
 
 					<IpodModel
 						preset={preset}

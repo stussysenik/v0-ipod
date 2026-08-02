@@ -113,6 +113,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 import { OPEN_COMMAND_PALETTE_EVENT } from "../command/command-palette";
 import { useViewportSize } from "../panels/use-panel-layout";
 import { PanelSystem } from "../panels/panel-system";
+import { SETTLE_JOB, SHIFT_JOB, SWEEP_JOB } from "@/lib/motion-tokens";
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
 type ExportKind = "png" | AnimatedExportFormat;
@@ -742,7 +743,7 @@ export default function IpodClassicWorkbench() {
 		? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
 		: "fixed top-6 right-6";
 	const toolboxPanelClass = isCompactToolbox
-		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem-var(--safe-inset-top)-var(--safe-inset-bottom))] overflow-y-auto overscroll-contain flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
+		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem-var(--safe-inset-top)-var(--safe-inset-bottom))] overflow-y-auto overscroll-contain flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity ${SETTLE_JOB.className} ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
 		: "flex flex-col gap-3";
 
 	const screenComponent = isAsciiView ? (
@@ -876,7 +877,7 @@ export default function IpodClassicWorkbench() {
 		<FixedEditorProvider resetKey={editorResetKey}>
 			<div
 				ref={containerRef}
-				className={`relative min-h-dvh w-full flex flex-col items-center transition-colors duration-500 ${
+				className={`relative min-h-dvh w-full flex flex-col items-center transition-colors ${SHIFT_JOB.className} ${
 					isCompactToolbox
 						? "justify-start overflow-y-auto overscroll-contain"
 						: "justify-center overflow-hidden"
@@ -893,7 +894,7 @@ export default function IpodClassicWorkbench() {
 
 				<div
 					ref={toolsRef}
-					className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+					className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 ${SWEEP_JOB.className} ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
 				>
 					{isCompactToolbox && (
 						<IconButton
@@ -1140,7 +1141,7 @@ export default function IpodClassicWorkbench() {
 				/>
 
 				<div
-					className={`relative my-auto overflow-hidden transition-opacity duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
+					className={`relative my-auto overflow-hidden transition-opacity ${SWEEP_JOB.className} ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
 					style={{
 						width: `${scaledFrameWidth}px`,
 						height: `${scaledFrameHeight}px`,

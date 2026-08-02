@@ -16,8 +16,6 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  * state, forwards intent.
  */
 interface Ipod3DBatteryCockpitProps {
-	/** Position in the control surface, rendered as the header's number chip. */
-	index: number;
 	batteryLevel: number;
 	batteryMode: BatteryMode;
 	dispatch: Dispatch<IpodWorkbenchAction>;
@@ -29,7 +27,6 @@ const MODES: readonly { id: BatteryMode; label: string }[] = [
 ] as const;
 
 export function Ipod3DBatteryCockpit({
-	index,
 	batteryLevel,
 	batteryMode,
 	dispatch,
@@ -38,8 +35,7 @@ export function Ipod3DBatteryCockpit({
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
 			<Ipod3DCockpitHeader
-				index={index}
-				title="Battery"
+				id="battery"
 				right={<span className="font-mono text-[11px] tabular-nums text-black/55">{pct}%</span>}
 			/>
 

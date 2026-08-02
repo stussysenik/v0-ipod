@@ -20,6 +20,7 @@ import {
 import { IPOD_6G_COLORS } from "@/hooks/use-ipod-theme";
 import { IPOD_CLASSIC_PRESETS } from "@/lib/ipod-classic-presets";
 import { FEATURE_FLAGS } from "@/lib/feature-flags";
+import { POP_JOB } from "@/lib/motion-tokens";
 import type { BatteryMode, ColorTarget, IpodHardwarePresetId, IpodInteractionModel } from "@/lib/ipod-state/model";
 import { Settings, Check } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
@@ -133,7 +134,7 @@ export function KumaSettingsPanel({
 				<StudioControlScope
 					stageBackground={bgColor}
 					data-testid="theme-panel"
-					className="z-50 overflow-y-auto border border-[#D6D8DC] bg-[#F5F5F2]/95 backdrop-blur-xl shadow-[0_24px_50px_rgba(0,0,0,0.2)] p-5 animate-in fade-in zoom-in-95 duration-200"
+					className={`z-50 overflow-y-auto border border-[#D6D8DC] bg-[#F5F5F2]/95 backdrop-blur-xl shadow-[0_24px_50px_rgba(0,0,0,0.2)] p-5 animate-in fade-in zoom-in-95 ${POP_JOB.className}`}
 					style={{
 						viewTransitionName: "settings-panel",
 						overscrollBehavior: "contain",
