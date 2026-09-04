@@ -18,6 +18,7 @@ import {
 } from '@ipod/lib/studio-camera';
 import {
 	clipCyclesForDuration,
+	createClipLightingSampler,
 	createClipPoseSampler,
 	findStudioClip,
 	type StudioClip,
@@ -46,6 +47,10 @@ import {
 } from 'react';
 import * as THREE from 'three';
 import { inspectorStore } from './scene-inspector/inspector-store';
+import {
+	type LightingMultipliers,
+	lightingMultipliersStore,
+} from './scene-inspector/lighting-multipliers';
 import { SceneInspectorCore } from './scene-inspector/SceneInspectorCore';
 import { StudioBackdrop, StudioLighting } from './studio-lighting';
 
@@ -197,6 +202,12 @@ export interface ThreeDIpodHandle {
 			total: number,
 		) => Promise<void> | void,
 	) => Promise<void>;
+	/**
+	 * The device's root `THREE.Group` — the in-scene graph of `meshPhysicalMaterial`
+	 * meshes. The GLB exporter serializes this subtree to a `.glb`. Null until the
+	 * model mounts (the group ref resolves on first render).
+	 */
+	getModelGroup: () => THREE.Group | null;
 	/** Current composed camera pose in studio coordinates (null before the rig mounts). */
 	getCameraPose: () => StudioPose | null;
 	/** Ease the live camera toward a studio pose (partial — omitted dials hold). */
@@ -343,6 +354,8 @@ interface IpodModelProps {
 	/** Show the chassis-edge ports (jack, hold switch, dock). Default true. */
 	showPorts?: boolean;
 	onRegisterCapture?: (hooks: CaptureHooks) => void;
+	/** Receives the model's root THREE.Group so the GLB exporter can serialize it. */
+	onRegisterModelGroup?: (group: THREE.Group | null) => void;
 }
 
 // ─── CAD Profile Helpers ───────────────────────────────────────────────────────────
@@ -1079,6 +1092,7 @@ function IpodModel({
 	technicalFlat = false,
 	showPorts = true,
 	onRegisterCapture,
+	onRegisterModelGroup,
 }: IpodModelProps) {
 	// Edge defaults to the back colour so an un-edited device is pixel-identical
 	// to the single-material chassis (edge == back until the user sets it).
@@ -1465,6 +1479,13 @@ function IpodModel({
 		onRegisterCapture({ prepare, restore, refreshScreen });
 	}, [onRegisterCapture, dims]);
 
+	// Surface the model's root group to the GLB exporter. The group ref resolves on
+	// first render; report null on unmount so the handle never hands a stale graph.
+	useEffect(() => {
+		onRegisterModelGroup?.(groupRef.current ?? null);
+		return () => onRegisterModelGroup?.(null);
+	}, [onRegisterModelGroup]);
+
 	useFrame((state, delta) => {
 		lcdMaterial.uniforms.time.value = state.clock.elapsedTime;
 
@@ -1801,6 +1822,12 @@ function OrbitRig({
 	// Cached clip pose sampler — rebuilt only when the anchor is (re)captured or the
 	// chosen clip changes, so a Theatre moment card isn't re-baked 60×/second.
 	const previewClipSampler = useRef<((phase: number) => StudioPose) | null>(null);
+	// Cached clip lighting-cue sampler — rebuilt alongside the pose sampler. During
+	// preview it feeds the multiplier store each frame so the rig renders the
+	// authored lighting cue in lockstep with the camera move.
+	const previewLightingSampler = useRef<((phase: number) => LightingMultipliers) | null>(
+		null,
+	);
 	const previewClipMove = useRef<string | null>(null);
 
 	// Responsive framing — the minimum reach that keeps the whole device on screen for
@@ -1971,6 +1998,10 @@ function OrbitRig({
 					resolveClip(pv.move),
 					previewAnchor.current,
 				);
+				previewLightingSampler.current = createClipLightingSampler(
+					resolveClip(pv.move),
+					previewAnchor.current,
+				);
 				previewClipMove.current = pv.move;
 			} else if (
 				previewClipMove.current !== pv.move ||
@@ -1978,6 +2009,10 @@ function OrbitRig({
 			) {
 				// The user switched clips mid-preview — re-bake on the existing anchor.
 				previewClipSampler.current = createClipPoseSampler(
+					resolveClip(pv.move),
+					previewAnchor.current,
+				);
+				previewLightingSampler.current = createClipLightingSampler(
 					resolveClip(pv.move),
 					previewAnchor.current,
 				);
@@ -2028,13 +2063,34 @@ function OrbitRig({
 			cur.current.az = pose.azimuth * THREE.MathUtils.DEG2RAD;
 			cur.current.pol = Math.PI / 2 - pose.elevation * THREE.MathUtils.DEG2RAD;
 			camera.lookAt(pose.target[0], pose.target[1], pose.target[2]);
+			// Drive the lighting cue in lockstep with the camera move: sample the
+			// clip's keyframed multipliers at the same phase and push them onto the
+			// store the rig reads, so a preview shows the authored LOOK, not just the
+			// authored framing. Procedural clips fall through to identity (no cue).
+			// The store dedupes per-key, so a flat cue costs one no-op set per frame.
+			const lightingPhase = pv.loop === 'hold' ? 0 : previewPhase.current;
+			const lm = (
+				previewLightingSampler.current ??
+				createClipLightingSampler(
+					resolveClip(pv.move),
+					previewAnchor.current,
+				)
+			)(lightingPhase);
+			lightingMultipliersStore.set('ambient', lm.ambient);
+			lightingMultipliersStore.set('key', lm.key);
+			lightingMultipliersStore.set('fill', lm.fill);
+			lightingMultipliersStore.set('rim', lm.rim);
+			lightingMultipliersStore.set('env', lm.env);
 			return;
 		}
-		// Preview just ended — drop the anchor so the next engage re-captures the hero.
+		// Preview just ended — drop the anchor so the next engage re-captures the hero
+		// and clear the authored cue so the rig eases back to its authored intensity.
 		if (previewAnchor.current) {
 			previewAnchor.current = null;
 			previewClipSampler.current = null;
+			previewLightingSampler.current = null;
 			previewClipMove.current = null;
+			lightingMultipliersStore.reset();
 		}
 
 		const s = cur.current;
@@ -2773,6 +2829,8 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
 		((w: number, h: number) => Promise<ImageBitmap | null>) | null
 	>(null);
 	const modelResetRef = useRef<(() => void) | null>(null);
+	// The IpodModel subtree root — surfaced to the GLB exporter via getModelGroup().
+	const modelGroupRef = useRef<THREE.Group | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const captureHooksRef = useRef<CaptureHooks | null>(null);
 	const viewportRef = useRef<((w: number, h: number) => () => void) | null>(null);
@@ -2825,6 +2883,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
 			renderClipFrames: async (opts, onFrame) => {
 				if (clipRef.current) return clipRef.current(opts, onFrame);
 			},
+			getModelGroup: () => modelGroupRef.current,
 			getCameraPose: () => cameraApiRef.current?.getPose() ?? null,
 			setCameraGoal: (pose) => cameraApiRef.current?.setGoal(pose),
 			resetCamera: () => cameraApiRef.current?.resetCamera(),
@@ -2870,6 +2929,10 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
 
 	const handleRegisterCanvas = useCallback((el: HTMLCanvasElement) => {
 		canvasRef.current = el;
+	}, []);
+
+	const handleRegisterModelGroup = useCallback((group: THREE.Group | null) => {
+		modelGroupRef.current = group;
 	}, []);
 
 	const handleRegisterViewport = useCallback((fn: (w: number, h: number) => () => void) => {
@@ -2957,6 +3020,7 @@ export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, 
 					technicalFlat={technicalFlat}
 					{...modelProps}
 					onRegisterCapture={handleRegisterCapture}
+					onRegisterModelGroup={handleRegisterModelGroup}
 				/>
 
 				{/* Grounding contact shadow — suppressed in the Technical view, which is a

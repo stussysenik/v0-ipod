@@ -19,7 +19,7 @@ import { assign, type SnapshotFrom, setup } from 'xstate';
  */
 
 /** What's being exported — mirrors the veil's `Ipod3DExportState` minus "idle". */
-export type ExportJobId = `png:${string}` | `clip:${string}`;
+export type ExportJobId = `png:${string}` | `clip:${string}` | 'glb';
 
 export interface ExportMachineContext {
 	job: ExportJobId | null;
@@ -29,7 +29,7 @@ export interface ExportMachineContext {
 }
 
 export type ExportMachineEvent =
-	| { type: 'EXPORT'; job: ExportJobId; progress: number | null }
+	| { type: 'EXPORT'; job: ExportJobId; progress?: number | null }
 	| { type: 'PREPARED' }
 	| { type: 'PROGRESS'; encoded: number; total: number }
 	| { type: 'ENCODED' }
@@ -74,7 +74,7 @@ export const exportMachine = setup({
 					target: 'preparing',
 					actions: assign({
 						job: ({ event }) => event.job,
-						progress: ({ event }) => event.progress,
+						progress: ({ event }) => event.progress ?? null,
 						error: () => null,
 					}),
 				},

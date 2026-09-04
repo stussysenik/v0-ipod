@@ -58,7 +58,7 @@ export interface StillExportOptions {
 	aspect: ExportAspect;
 }
 
-export type Ipod3DExportState = 'idle' | `png:${ExportFraming}` | `clip:${string}`;
+export type Ipod3DExportState = 'idle' | `png:${ExportFraming}` | `clip:${string}` | 'glb';
 
 const ASPECTS: ReadonlyArray<{ id: ExportAspect; label: string; hint: string }> = [
 	{ id: 'story', label: '9:16', hint: 'Story' },
@@ -93,6 +93,8 @@ interface Ipod3DExportDockProps {
 	onResetPlayhead: () => void;
 	onExportPng: (framing: ExportFraming, options: StillExportOptions) => void;
 	onExportClip: (move: string, options: ClipExportOptions) => void;
+	/** Export the live device graph to a binary glTF (.glb) — near-instant, no encode. */
+	onExportGlb: () => void;
 	/**
 	 * Aspect + quality — lifted to the stage (like duration/speed/loop) so the proof
 	 * fingerprint and the proof panel read the SAME values the export bakes with.
@@ -136,6 +138,7 @@ export function Ipod3DExportDock({
 	onResetPlayhead,
 	onExportPng,
 	onExportClip,
+	onExportGlb,
 	aspect,
 	onAspectChange,
 	quality,
@@ -365,6 +368,16 @@ export function Ipod3DExportDock({
 					label="Still · Front"
 					onClick={() => onExportPng('front', still)}
 				/>
+				{/* 3D model export — serializes the live device graph to a .glb. No encode
+				    step (it's scene-graph, not pixels), so it lands near-instant. Opens in
+				    Blender, Spline, web, AR. */}
+				<DockButton
+					busy={exportState === 'glb'}
+					disabled={busy}
+					hint="glTF binary"
+					label="3D Model · GLB"
+					onClick={onExportGlb}
+				/>
 			</div>
 
 			{/* Export History — past 1080p clips saved to PocketBase. Collapsed by default so
@@ -455,8 +468,9 @@ export function Ipod3DExportDock({
 			)}
 
 			<p className="border-t border-black/[0.06] px-4 py-2.5 text-[10px] leading-snug text-black/35">
-				Stills export as PNG, clips as seamless MP4 up to 60s. The
-				now-playing screen is baked on at capture.
+				Stills export as PNG, clips as seamless MP4 up to 60s, and the
+				device as a .glb 3D model. The now-playing screen is baked on at
+				capture.
 			</p>
 		</div>
 	);

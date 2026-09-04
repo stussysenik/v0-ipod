@@ -504,6 +504,42 @@ export function Ipod3DStage() {
 		[exportActorRef, sendExport, showNotice, nextPaint],
 	);
 
+	// GLB export — serialize the live device graph to a binary gltf. This is NOT a
+	// render (no pixels): it walks the model's THREE.Group and round-trips the PBR
+	// materials into a .glb, so it's near-instant vs. the PNG/MP4 encode path. We
+	// still gate on `exporting` so a click can't double-fire while another job runs,
+	// and drive the machine through EXPORT→ENCODED→SAVED so the veil + proof state
+	// stay consistent with the other export surfaces.
+	const handleExportGlb = useCallback(async () => {
+		const api = ipodApiRef.current;
+		if (!api || exporting) return;
+		const group = api.getModelGroup();
+		if (!group) {
+			showNotice('Model not ready');
+			return;
+		}
+		sendExport({ type: 'EXPORT', job: 'glb', progress: null });
+		try {
+			const { exportObjectToGlb, downloadGlb } = await import(
+				'@ipod/lib/three-glb-export'
+			);
+			const { buffer, stats } = await exportObjectToGlb(group);
+			sendExport({ type: 'ENCODED' });
+			downloadGlb(buffer, `ipod-3d-${Date.now()}.glb`);
+			sendExport({ type: 'SAVED' });
+			showNotice(`Saved 3D Model · ${stats.meshes} parts`);
+		} catch (error) {
+			console.error('[3d-export] glb failed', error);
+			sendExport({
+				type: 'FAIL',
+				error: error instanceof Error ? error.message : String(error),
+			});
+			showNotice('3D export failed');
+		} finally {
+			sendExport({ type: 'RESET' });
+		}
+	}, [exporting, sendExport, showNotice]);
+
 	const handleExportClip = useCallback(
 		async (move: string, options: ClipExportOptions) => {
 			const api = ipodApiRef.current;
@@ -1006,6 +1042,7 @@ export function Ipod3DStage() {
 						onResetPlayhead={handleResetPlayhead}
 						onExportPng={handleExportPng}
 						onExportClip={handleExportClip}
+						onExportGlb={handleExportGlb}
 						showTheatreClips={studio.theatreStudio}
 						history={exportHistory}
 						peekProofBlob={peekProofBlob}
