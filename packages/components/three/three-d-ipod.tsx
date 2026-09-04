@@ -2076,11 +2076,7 @@ function OrbitRig({
 					previewAnchor.current,
 				)
 			)(lightingPhase);
-			lightingMultipliersStore.set('ambient', lm.ambient);
-			lightingMultipliersStore.set('key', lm.key);
-			lightingMultipliersStore.set('fill', lm.fill);
-			lightingMultipliersStore.set('rim', lm.rim);
-			lightingMultipliersStore.set('env', lm.env);
+			lightingMultipliersStore.setAll(lm);
 			return;
 		}
 		// Preview just ended — drop the anchor so the next engage re-captures the hero
@@ -2496,6 +2492,11 @@ function SceneCapture({
 			const clip = resolveClip(move);
 			const cycles = clipCyclesForDuration(clip, durationMs / 1000, speed, loop);
 			const sampleClipPose = createClipPoseSampler(clip, hero);
+			// The lighting cue rides the same cadence as the camera move, so a baked
+			// clip exports the authored LOOK, not just the framing. Written straight to
+			// the store the rig reads — same single-emit path the live preview uses —
+			// so preview and export stay pixel-parity. Procedural clips → identity.
+			const sampleClipLighting = createClipLightingSampler(clip, hero);
 
 			const camPos = new THREE.Vector3();
 			const lookAt = new THREE.Vector3();
@@ -2531,16 +2532,8 @@ function SceneCapture({
 					// held angle (the studio-shot / locked perspective) as video. The unified
 					// clip sampler dispatches procedural moves and Theatre moment cards alike.
 					const renderProgress = (progress: number) => {
-						const pose =
-							loop === 'hold'
-								? hero
-								: sampleClipPose(
-										phaseForProgress(
-											progress,
-											cycles,
-											loop,
-										),
-									);
+						const phase = loop === 'hold' ? 0 : phaseForProgress(progress, cycles, loop);
+						const pose = loop === 'hold' ? hero : sampleClipPose(phase);
 						poseToPosition(pose, camPos);
 						camera.position.copy(camPos);
 						camera.lookAt(
@@ -2550,6 +2543,10 @@ function SceneCapture({
 								pose.target[2],
 							),
 						);
+						// Apply the clip's keyframed lighting cue at the same phase so the
+						// bake matches the live preview. No-op (identity) for procedural
+						// clips and `hold`, which carry no lighting move.
+						lightingMultipliersStore.setAll(sampleClipLighting(phase));
 						// Pin the portrait projection EVERY frame. R3F's resize observer /
 						// drei's makeDefault camera otherwise reset cam.aspect back to the
 						// landscape canvas on the first event-loop yield (encoder backpressure

@@ -1,7 +1,14 @@
 import { type CameraMove, type LoopStyle, poseForMove, type StudioPose } from './studio-camera';
 import { createStateSampler } from './theatre/keyframe-sampler';
 import { buildPresetState, type MotionPreset } from './theatre/motion-presets';
-import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from './theatre/studio-project';
+import {
+	CAMERA_OBJECT_KEY,
+	CAMERA_SHEET_ID,
+	LIGHTING_OBJECT_KEY,
+	type LightingMultiplierValues,
+	lightingValuesToMultipliers,
+	studioValuesToPose,
+} from './theatre/studio-project';
 
 /**
  * The unified CLIP abstraction.
@@ -65,6 +72,27 @@ export function createClipPoseSampler(
 	const sampler = createStateSampler(state, CAMERA_SHEET_ID);
 	return (phase: number) =>
 		studioValuesToPose(sampler.sampleObject(CAMERA_OBJECT_KEY, phase));
+}
+
+/**
+ * Build a reusable LIGHTING sampler for a clip + hero. The complement of
+ * `createClipPoseSampler`: where that returns a camera pose for a phase, this
+ * returns the five relative lighting multipliers the clip's keyframed lighting
+ * cue resolves to at that same phase. Procedural clips carry no cue, so they
+ * fall through to the identity multipliers (the rig's own intensity, unchanged)
+ * — the same neutral default the multiplier store boots with.
+ */
+export function createClipLightingSampler(
+	clip: StudioClip,
+	hero: StudioPose,
+): (phase: number) => LightingMultiplierValues {
+	if (clip.kind === 'procedural') {
+		return () => ({ ambient: 1, key: 1, fill: 1, rim: 1, env: 1 });
+	}
+	const state = buildPresetState(clip.preset, hero, 1);
+	const sampler = createStateSampler(state, CAMERA_SHEET_ID);
+	return (phase: number) =>
+		lightingValuesToMultipliers(sampler.sampleObject(LIGHTING_OBJECT_KEY, phase));
 }
 
 /** Convenience: resolve a single pose. Prefer `createClipPoseSampler` in loops. */

@@ -5,6 +5,9 @@ import {
 	CAMERA_PROP_RANGES,
 	CAMERA_SHEET_ID,
 	defaultCameraProps,
+	defaultLightingProps,
+	LIGHTING_OBJECT_KEY,
+	LIGHTING_PROP_RANGES,
 	THEATRE_PROJECT_ID,
 } from './studio-project';
 
@@ -48,6 +51,29 @@ export function getCameraSheet() {
 	return { sheet, object };
 }
 
+/** Build the lighting object's animatable numeric props from the studio ranges. */
+export function lightingObjectProps() {
+	const d = defaultLightingProps();
+	const range = (name: keyof typeof LIGHTING_PROP_RANGES): [number, number] => [
+		LIGHTING_PROP_RANGES[name].min,
+		LIGHTING_PROP_RANGES[name].max,
+	];
+	return {
+		ambient: types.number(d.ambient, { range: range('ambient') }),
+		key: types.number(d.key, { range: range('key') }),
+		fill: types.number(d.fill, { range: range('fill') }),
+		rim: types.number(d.rim, { range: range('rim') }),
+		env: types.number(d.env, { range: range('env') }),
+	};
+}
+
+/** Get (or lazily create) the lighting sheet + object for the studio. */
+export function getLightingSheet() {
+	const sheet = getProject(THEATRE_PROJECT_ID).sheet(CAMERA_SHEET_ID);
+	const object = sheet.object(LIGHTING_OBJECT_KEY, lightingObjectProps());
+	return { sheet, object };
+}
+
 /**
  * The live studio instance, cached after the first successful init. Theatre's
  * `studio.initialize()` can only run once per page (it wires global listeners and a
@@ -72,8 +98,11 @@ export async function initTheatreStudioDev(): Promise<TheatreStudio | null> {
 		try {
 			const studio = (await import('@theatre/studio')).default;
 			studio.initialize();
-			// Register the camera object so it appears in the studio outline + timeline.
+			// Register the camera + lighting objects so they appear in the studio
+			// outline + timeline, side by side — a moment card can then carry both
+			// a camera move and a lighting cue on the same sheet.
 			getCameraSheet();
+			getLightingSheet();
 			studioInstance = studio;
 			return studio;
 		} catch (error) {

@@ -43,6 +43,24 @@ export const lightingMultipliersStore = {
 		state = { ...state, [key]: value };
 		emit();
 	},
+	/**
+	 * Apply a full multiplier set in ONE emit. The hot preview + export paths
+	 * update all five channels per frame; this keeps that to a single store
+	 * change (and a single React re-render) instead of five.
+	 */
+	setAll(values: Partial<LightingMultipliers>) {
+		const next = { ...state, ...values };
+		let changed = false;
+		for (const k of Object.keys(next) as LightingMultiplierKey[]) {
+			if (next[k] !== state[k]) {
+				changed = true;
+				break;
+			}
+		}
+		if (!changed) return;
+		state = next;
+		emit();
+	},
 	reset() {
 		if (state === IDENTITY) return;
 		state = { ...IDENTITY };

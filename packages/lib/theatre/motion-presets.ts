@@ -6,6 +6,8 @@ import {
 	CAMERA_OBJECT_KEY,
 	CAMERA_SHEET_ID,
 	type CameraPropName,
+	LIGHTING_OBJECT_KEY,
+	type LightingPropName,
 	poseToStudioValues,
 } from './studio-project';
 
@@ -37,6 +39,12 @@ export interface PresetKeyframe {
 	dTargetX?: number;
 	dTargetY?: number;
 	dTargetZ?: number;
+	/** Lighting-cue offsets (deltas from identity 1). Omitted → holds at the rig's own intensity. */
+	dAmbient?: number;
+	dKey?: number;
+	dFill?: number;
+	dRim?: number;
+	dEnv?: number;
 	/** Easing leaving this keyframe (default `easeInOutSine` — a breathing curve). */
 	easing?: EasingName;
 }
@@ -64,6 +72,24 @@ const OFFSET_FIELD: Record<CameraPropName, keyof PresetKeyframe> = {
 	targetZ: 'dTargetZ',
 };
 
+/** Map a lighting prop name to the matching per-keyframe offset field. */
+const LIGHTING_OFFSET_FIELD: Record<LightingPropName, keyof PresetKeyframe> = {
+	ambient: 'dAmbient',
+	key: 'dKey',
+	fill: 'dFill',
+	rim: 'dRim',
+	env: 'dEnv',
+};
+
+/** The lighting cue's anchor — relative multipliers are deltas from identity. */
+const LIGHTING_IDENTITY: Record<LightingPropName, number> = {
+	ambient: 1,
+	key: 1,
+	fill: 1,
+	rim: 1,
+	env: 1,
+};
+
 /**
  * Anchor a moment card onto a concrete `hero` pose and `cycleSeconds`, producing a
  * Theatre project state with one absolute numeric track per camera prop.
@@ -88,10 +114,31 @@ export function buildPresetState(
 		};
 	}
 
+	// The lighting cue: every channel emitted anchored on identity, so a card
+	// that doesn't touch lighting holds steady at the rig's own intensity, and a
+	// card that does rides its offsets on top. Same shape as the camera tracks.
+	const lightingPropNames = Object.keys(LIGHTING_IDENTITY) as LightingPropName[];
+	const lightingTracks: Record<string, { keyframes: KeyframeSpec[] }> = {};
+	for (const prop of lightingPropNames) {
+		const field = LIGHTING_OFFSET_FIELD[prop];
+		lightingTracks[prop] = {
+			keyframes: preset.keyframes.map((kf) => ({
+				position: kf.at * cycleSeconds,
+				value:
+					LIGHTING_IDENTITY[prop] +
+					((kf[field] as number | undefined) ?? 0),
+				easing: kf.easing ?? DEFAULT_PRESET_EASING,
+			})),
+		};
+	}
+
 	const spec: SheetSpec = {
 		sheetId: CAMERA_SHEET_ID,
 		length: cycleSeconds,
-		objects: [{ key: CAMERA_OBJECT_KEY, tracks }],
+		objects: [
+			{ key: CAMERA_OBJECT_KEY, tracks },
+			{ key: LIGHTING_OBJECT_KEY, tracks: lightingTracks },
+		],
 	};
 	return buildTheatreState(spec);
 }
