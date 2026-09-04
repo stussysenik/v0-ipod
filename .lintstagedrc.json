@@ -1,7 +1,6 @@
 {
 	"*.{ts,tsx,js,jsx}": [
-		"oxlint --fix --nextjs-plugin --react-plugin --jsx-a11y-plugin",
-		"eslint --fix"
+		"biome check --write --no-errors-on-warnings"
 	],
 	"tailwind.config.ts": ["pnpm exec tokens:extract", "git add design-tokens/tokens.json"],
 	"app/globals.css": ["pnpm exec tokens:extract", "git add design-tokens/tokens.json"]
