@@ -867,12 +867,9 @@ export function Ipod3DStage() {
 			    Dead-code eliminated in prod (see LevaScratchpad decl). */}
 			<LevaScratchpad />
 
-			{/* Shell Header — a high-performance navigation bar that bounds the experience.
-			    It holds the product identity and the primary menu toggle, ensuring the flow
-			    is consistent across mobile and desktop. */}
+			{/* Stage header — menu toggle. */}
 			<header className="absolute inset-x-0 top-0 z-[60] flex h-16 items-center justify-end px-6 pointer-events-none">
 				<nav className="shell-nav flex items-center gap-4 pointer-events-auto">
-					{/* Shell Nav Button — a high-performance anchor for the creation flow. */}
 					<span>
 						<button
 							type="button"
@@ -887,7 +884,7 @@ export function Ipod3DStage() {
 							<span className="text-[10px] font-black uppercase tracking-[0.2em]">
 								{controlsOpen ? 'Close' : 'Menu'}
 							</span>
-							<div className="relative flex h-3 w-4 flex-col justify-between overflow-hidden">
+							<div className="relative flex h-3 w-4 flex-col justify-between overflow-hidden will-change-transform">
 								<span
 									className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? 'bg-white rotate-45 translate-y-[5.25px]' : 'bg-current'}`}
 								/>
@@ -930,17 +927,15 @@ export function Ipod3DStage() {
 				stageStyle={stageStyle}
 			/>
 
-			{/* Responsive control surface — one DOM tree, two layouts. */}
+			{/* Control surface — one DOM tree, two layouts (sheet on mobile, docked on desktop). */}
 			<div
-				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) lg:contents ${
+				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) will-change-transform lg:contents ${
 					controlsOpen
 						? 'translate-y-0 shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)]'
 						: 'translate-y-full lg:translate-y-0'
 				}`}
 			>
-				{/* Left group — the "subject": how you interact (01), what the device looks
-				    like (02), what's on screen (03), its charge state (04), your angle (05).
-				    Numbered 01→05 so the column reads top-to-bottom as a shoot pipeline. */}
+				{/* Subject group (01–05): device, screen, battery, angle. */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:left-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
 					<Ipod3DStudioCockpit
 						index={1}
@@ -984,7 +979,7 @@ export function Ipod3DStage() {
 					/>
 				</div>
 
-				{/* Right group — the "scene & capture": light it (06), then export it (07). */}
+				{/* Scene & capture group (06–08): lighting, proof, export. */}
 				<div className="flex flex-col gap-4 lg:pointer-events-none lg:absolute lg:right-6 lg:top-24 lg:z-10 lg:max-h-[calc(100dvh-8rem)] lg:w-[280px] lg:overflow-y-auto lg:pb-8">
 					<Ipod3DLightingCockpit
 						index={6}
@@ -1069,21 +1064,19 @@ export function Ipod3DStage() {
 				<Ipod3DTouchControls apiRef={ipodApiRef} landscape={landscape} />
 			)}
 
-			{/* Export veil — a cinematic shutter that covers the canvas for the render.
-			    It uses 'shutter' optics: a high-speed blade snap followed by a white
-			    optic flash, then settling into a technical encoding state. */}
+			{/* Export veil — shutter snap + flash, then encoding state. */}
 			{exporting && (
 				<div
 					className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-8 backdrop-blur-3xl transition-all duration-300 animate-in fade-in"
 					style={{ backgroundColor: `${presentation.bgColor}F8` }}
 				>
-					{/* Optic Flash — eye-physics 'pop' at the instant of capture. */}
-					<div className="absolute inset-0 bg-white z-[110] animate-[shutterFlash_0.6s_ease-out_forwards] pointer-events-none" />
+					{/* Flash */}
+					<div className="absolute inset-0 bg-white z-[110] animate-[shutterFlash_0.6s_ease-out_forwards] pointer-events-none will-change-opacity" />
 
-					{/* Shutter Blades — ultra-high-speed mechanical snap. */}
+					{/* Shutter blades */}
 					<div className="absolute inset-0 overflow-hidden pointer-events-none z-[105]">
-						<div className="absolute top-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeDown_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards]" />
-						<div className="absolute bottom-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeUp_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards]" />
+						<div className="absolute top-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeDown_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards] will-change-transform" />
+						<div className="absolute bottom-0 left-0 w-full h-[50%] bg-black animate-[shutterBladeUp_0.6s_cubic-bezier(0.19,1,0.22,1)_forwards] will-change-transform" />
 					</div>
 
 					<div className="relative z-[120] flex flex-col items-center gap-8 animate-in slide-in-from-bottom-6 duration-700 delay-100 fill-mode-both">

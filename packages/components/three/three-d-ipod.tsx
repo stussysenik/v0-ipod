@@ -2532,8 +2532,18 @@ function SceneCapture({
 					// held angle (the studio-shot / locked perspective) as video. The unified
 					// clip sampler dispatches procedural moves and Theatre moment cards alike.
 					const renderProgress = (progress: number) => {
-						const phase = loop === 'hold' ? 0 : phaseForProgress(progress, cycles, loop);
-						const pose = loop === 'hold' ? hero : sampleClipPose(phase);
+						const phase =
+							loop === 'hold'
+								? 0
+								: phaseForProgress(
+										progress,
+										cycles,
+										loop,
+									);
+						const pose =
+							loop === 'hold'
+								? hero
+								: sampleClipPose(phase);
 						poseToPosition(pose, camPos);
 						camera.position.copy(camPos);
 						camera.lookAt(
@@ -2546,7 +2556,9 @@ function SceneCapture({
 						// Apply the clip's keyframed lighting cue at the same phase so the
 						// bake matches the live preview. No-op (identity) for procedural
 						// clips and `hold`, which carry no lighting move.
-						lightingMultipliersStore.setAll(sampleClipLighting(phase));
+						lightingMultipliersStore.setAll(
+							sampleClipLighting(phase),
+						);
 						// Pin the portrait projection EVERY frame. R3F's resize observer /
 						// drei's makeDefault camera otherwise reset cam.aspect back to the
 						// landscape canvas on the first event-loop yield (encoder backpressure
