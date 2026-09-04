@@ -4,7 +4,6 @@
 	"private": true,
 	"exports": {
 		"./tsconfig": "./tsconfig.base.json",
-		"./tailwind": "./tailwind.preset.ts",
-		"./eslint": "./eslint.base.mjs"
+		"./tailwind": "./tailwind.preset.ts"
 	}
 }
