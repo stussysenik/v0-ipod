@@ -2,6 +2,8 @@
 
 import { APPLE_PRODUCT_RIG, type StudioLightingConfig } from '@ipod/lib/studio-lighting-config';
 import { Backdrop, Environment, Lightformer } from '@react-three/drei';
+import { useSyncExternalStore } from 'react';
+import { lightingMultipliersStore } from './scene-inspector/lighting-multipliers';
 
 /**
  * studio-lighting — the *render* half of the `/3d` rig.
@@ -51,14 +53,23 @@ export function StudioBackdrop({ stageColor = '#ffffff' }: { stageColor?: string
  */
 export function StudioLighting({ config = APPLE_PRODUCT_RIG }: { config?: StudioLightingConfig }) {
 	const { ambient, key, fill, rim, env } = config;
+	// Relative multipliers from the dev scratchpad. Defaults to the identity, so
+	// production output (scratchpad never mounted) is bit-identical to the config.
+	const m = useSyncExternalStore(
+		lightingMultipliersStore.subscribe,
+		lightingMultipliersStore.getSnapshot,
+	);
 	return (
 		<>
-			<ambientLight color={ambient.color} intensity={ambient.intensity} />
+			<ambientLight
+				color={ambient.color}
+				intensity={ambient.intensity * m.ambient}
+			/>
 			<spotLight
 				castShadow={key.castShadow}
 				angle={key.angle}
 				color={key.color}
-				intensity={key.intensity}
+				intensity={key.intensity * m.key}
 				penumbra={key.penumbra}
 				position={key.position}
 				shadow-bias={-0.0001}
@@ -67,21 +78,21 @@ export function StudioLighting({ config = APPLE_PRODUCT_RIG }: { config?: Studio
 			<spotLight
 				angle={fill.angle}
 				color={fill.color}
-				intensity={fill.intensity}
+				intensity={fill.intensity * m.fill}
 				penumbra={fill.penumbra}
 				position={fill.position}
 			/>
 			<spotLight
 				angle={rim.angle}
 				color={rim.color}
-				intensity={rim.intensity}
+				intensity={rim.intensity * m.rim}
 				penumbra={rim.penumbra}
 				position={rim.position}
 			/>
 			<Environment
 				background={false}
 				blur={env.blur}
-				environmentIntensity={env.intensity}
+				environmentIntensity={env.intensity * m.env}
 				frames={1}
 				preset={env.preset}
 			>
@@ -89,7 +100,7 @@ export function StudioLighting({ config = APPLE_PRODUCT_RIG }: { config?: Studio
 					<Lightformer
 						key={i}
 						color={s.color}
-						intensity={s.intensity}
+						intensity={s.intensity * m.env}
 						position={s.position}
 						scale={s.scale}
 					/>

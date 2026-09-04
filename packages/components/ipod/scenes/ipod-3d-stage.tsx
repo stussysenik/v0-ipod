@@ -97,6 +97,22 @@ const ThreeDIpod = dynamic(
 	},
 );
 
+// Dev-only Leva scratchpad for relative lighting multipliers. The static NODE_ENV
+// gate means this import is dead-code-eliminated in production builds, so the Leva
+// dependency (and this component) never enter the production bundle.
+const LevaScratchpad =
+	process.env.NODE_ENV === 'development'
+		? dynamic(
+				() =>
+					import('../../three/scene-inspector/LevaScratchpad').then(
+						(m) => ({
+							default: m.LevaScratchpad,
+						}),
+					),
+				{ ssr: false },
+			)
+		: () => null;
+
 /**
  * Focused 3D stage — an isolated surface for dialing in the product render.
  *
@@ -810,6 +826,10 @@ export function Ipod3DStage() {
 			{process.env.NODE_ENV === 'development' && inspectorOpen && (
 				<SceneInspectorPanel />
 			)}
+
+			{/* Dev lighting scratchpad — relative intensity multipliers over the cockpit.
+			    Dead-code eliminated in prod (see LevaScratchpad decl). */}
+			<LevaScratchpad />
 
 			{/* Shell Header — a high-performance navigation bar that bounds the experience.
 			    It holds the product identity and the primary menu toggle, ensuring the flow
