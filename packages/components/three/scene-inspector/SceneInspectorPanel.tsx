@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { inspectorStore } from './inspector-store';
+import { inspectorStore, type TransformMode } from './inspector-store';
 import { PropertyEditor } from './PropertyEditor';
 import { SceneTree } from './SceneTree';
 import { StatsHud } from './StatsHud';
@@ -22,6 +22,16 @@ export function SceneInspectorPanel() {
 		inspectorStore.subscribe,
 		() => inspectorStore.getSnapshot().selected,
 	);
+	const transformMode = useSyncExternalStore(
+		inspectorStore.subscribe,
+		() => inspectorStore.getSnapshot().transformMode,
+	);
+
+	const MODE_LABELS: Record<TransformMode, string> = {
+		translate: 'Move',
+		rotate: 'Rotate',
+		scale: 'Scale',
+	};
 
 	return (
 		<div className="pointer-events-none fixed inset-0 z-[150] font-mono">
@@ -46,6 +56,32 @@ export function SceneInspectorPanel() {
 					/>
 					Pick
 				</button>
+				{/* Gizmo mode — only useful while something is selected (gizmo is shown). */}
+				{selected && (
+					<div className="flex overflow-hidden rounded-lg border border-white/10 bg-black/60">
+						{(['translate', 'rotate', 'scale'] as const).map(
+							(mode) => (
+								<button
+									key={mode}
+									type="button"
+									onClick={() =>
+										inspectorStore.setTransformMode(
+											mode,
+										)
+									}
+									className={`px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+										transformMode ===
+										mode
+											? 'bg-violet-500/30 text-violet-100'
+											: 'text-white/50 hover:text-white/90'
+									}`}
+								>
+									{MODE_LABELS[mode]}
+								</button>
+							),
+						)}
+					</div>
+				)}
 				{selected && (
 					<span className="max-w-[140px] truncate rounded-lg border border-white/10 bg-black/60 px-2 py-1.5 text-[10px] text-white/70">
 						{selected.name || selected.type}

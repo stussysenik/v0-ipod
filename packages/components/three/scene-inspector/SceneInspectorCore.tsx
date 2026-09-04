@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { highlight } from './highlight';
 import { inspectorStore } from './inspector-store';
+import { SelectionGizmo } from './SelectionGizmo';
 
 const STATS_INTERVAL = 0.25; // ~4 Hz HUD updates
 const DRAG_THRESHOLD = 6; // px — below this a pointerup is a "click" (pick), else a drag
@@ -89,7 +90,7 @@ export function SceneInspectorCore() {
 		};
 	}, [gl.domElement, size.width, size.height, camera]);
 
-	return null;
+	return <SelectionGizmo />;
 }
 
 function pickAt(clientX: number, clientY: number) {

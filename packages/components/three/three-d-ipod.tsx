@@ -45,6 +45,7 @@ import {
 	useState,
 } from 'react';
 import * as THREE from 'three';
+import { inspectorStore } from './scene-inspector/inspector-store';
 import { SceneInspectorCore } from './scene-inspector/SceneInspectorCore';
 import { StudioBackdrop, StudioLighting } from './studio-lighting';
 
@@ -1765,6 +1766,17 @@ function OrbitRig({
 	useEffect(() => {
 		lockedRef.current = locked;
 	}, [locked]);
+	// Mirror the inspector's `gizmoDragging` flag so orbit is suppressed while the
+	// TransformControls gizmo is being dragged — otherwise the two fight for the
+	// same pointer. Same shape as `lockedRef`: a store subscription keeps the ref
+	// current, and the persistent listeners read it instead of the store directly.
+	const gizmoDraggingRef = useRef(false);
+	useEffect(() => {
+		gizmoDraggingRef.current = inspectorStore.getSnapshot().gizmoDragging;
+		return inspectorStore.subscribe(() => {
+			gizmoDraggingRef.current = inspectorStore.getSnapshot().gizmoDragging;
+		});
+	}, []);
 	// Mirror `focus` so resetCamera (registered once) always homes to the CURRENT framing.
 	const focusRef = useRef(focus);
 	useEffect(() => {
@@ -1828,6 +1840,7 @@ function OrbitRig({
 		const el = gl.domElement;
 		const onDown = (e: PointerEvent) => {
 			if (lockedRef.current) return; // perspective locked — don't start an orbit drag
+			if (gizmoDraggingRef.current) return; // gizmo owns this pointer — don't orbit
 			dragging.current = true;
 			last.current = { x: e.clientX, y: e.clientY };
 		};
@@ -1848,6 +1861,7 @@ function OrbitRig({
 		};
 		const onWheel = (e: WheelEvent) => {
 			if (lockedRef.current) return; // perspective locked — don't zoom-dolly
+			if (gizmoDraggingRef.current) return; // gizmo owns the pointer — don't zoom
 			e.preventDefault();
 			goal.current.rad = THREE.MathUtils.clamp(
 				goal.current.rad + e.deltaY * 0.012,

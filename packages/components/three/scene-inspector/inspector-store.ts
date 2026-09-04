@@ -78,4 +78,14 @@ export const inspectorStore = {
 		state = { ...state, pickMode };
 		emit();
 	},
+	setTransformMode(transformMode: TransformMode) {
+		if (state.transformMode === transformMode) return;
+		state = { ...state, transformMode };
+		emit();
+	},
+	setGizmoDragging(gizmoDragging: boolean) {
+		if (state.gizmoDragging === gizmoDragging) return;
+		state = { ...state, gizmoDragging };
+		emit();
+	},
 };
