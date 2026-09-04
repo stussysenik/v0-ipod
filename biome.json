@@ -1,1 +1,119 @@
-{"$schema":"https://biomejs.dev/schemas/1.9.4/schema.json","vcs":{"enabled":true,"clientKind":"git","useIgnoreFile":true},"files":{"ignoreUnknown":false,"ignore":[]},"formatter":{"enabled":true,"indentStyle":"space","indentWidth":2},"organizeImports":{"enabled":true},"linter":{"enabled":true,"rules":{"recommended":true}},"javascript":{"formatter":{"quoteStyle":"single"}}}
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/.next",
+			"!**/.next-dev",
+			"!**/node_modules",
+			"!**/public",
+			"!**/scripts",
+			"!**/ipod-classic.tsx",
+			"!**/.claude"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"indentWidth": 8,
+		"lineWidth": 100
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"style": {
+				"useConst": "warn",
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "warn",
+				"noConsole": "warn"
+			},
+			"correctness": {
+				"noUnusedVariables": "warn"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		},
+		"linter": {
+			"enabled": true
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.css"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noImportantStyles": "off"
+					},
+					"suspicious": {
+						"noUnknownAtRules": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["packages/components/ipod/controls/ipod-click-wheel.tsx"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useSemanticElements": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"packages/components/ipod/editors/image-upload.tsx",
+				"packages/components/ipod/scenes/ipod-3d-color-cockpit.tsx",
+				"packages/components/ipod/editors/editable-text.tsx",
+				"packages/components/ipod/editors/editable-time.tsx",
+				"packages/components/ipod/editors/editable-track-number.tsx"
+			],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useSemanticElements": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"packages/components/ipod/portfolio/portfolio-screen.tsx",
+				"packages/components/ipod/workbench/ipod-classic-workbench.tsx"
+			],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useMediaCaption": "off"
+					}
+				}
+			}
+		}
+	]
+}

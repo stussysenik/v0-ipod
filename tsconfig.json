@@ -1,13 +1,6 @@
 {
 	"//": "Root solution config for editors/linters. The authoritative build type-check is apps/web (next plugin + .next type artifacts).",
 	"extends": "./tsconfig.base.json",
-	"include": [
-		"packages/**/*.ts",
-		"packages/**/*.tsx"
-	],
-	"exclude": [
-		"node_modules",
-		"**/node_modules",
-		"packages/components/ipod-form.tsx"
-	]
+	"include": ["packages/**/*.ts", "packages/**/*.tsx"],
+	"exclude": ["node_modules", "**/node_modules", "packages/components/ipod-form.tsx"]
 }

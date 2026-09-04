@@ -10,10 +10,9 @@
 		"start": "pnpm --filter @ipod/web run start",
 		"type-check": "turbo run type-check",
 		"cursor:harness": "node tools/scripts/cursor-harness.mjs",
-		"lint": "oxlint . --nextjs-plugin --react-plugin --jsx-a11y-plugin --ignore-pattern '**/.next/**' --ignore-pattern '**/.next-dev/**' --ignore-pattern '**/node_modules/**' --ignore-pattern '**/public/**' --ignore-pattern 'tools/scripts/**' --ignore-pattern '**/ipod-classic.tsx'",
-		"lint:fix": "oxlint . --fix --nextjs-plugin --react-plugin --jsx-a11y-plugin --ignore-pattern '**/.next/**' --ignore-pattern '**/.next-dev/**' --ignore-pattern '**/node_modules/**' --ignore-pattern '**/public/**' --ignore-pattern 'tools/scripts/**' --ignore-pattern '**/ipod-classic.tsx'",
-		"lint:eslint": "eslint . --ext .ts,.tsx",
-		"lint:eslint:fix": "eslint . --ext .ts,.tsx --fix",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
 		"validate": "pnpm lint && pnpm type-check",
 		"clean:next": "pnpm --filter @ipod/web run clean:next",
 		"storybook": "storybook dev -p 6006",
@@ -28,16 +27,24 @@
 		"prepare": "husky"
 	},
 	"pnpm": {
-		"onlyBuiltDependencies": ["esbuild", "sharp"],
+		"onlyBuiltDependencies": [
+			"esbuild",
+			"sharp"
+		],
 		"supportedArchitectures": {
-			"os": ["current"],
-			"cpu": ["current"]
+			"os": [
+				"current"
+			],
+			"cpu": [
+				"current"
+			]
 		}
 	},
 	"devDependencies": {
-		"@ipod/config": "workspace:*",
+		"@biomejs/biome": "^2.5.12",
 		"@chromatic-com/storybook": "^5.1.2",
 		"@eslint/eslintrc": "^3.3.3",
+		"@ipod/config": "workspace:*",
 		"@playwright/test": "^1.59.1",
 		"@storybook/addon-a11y": "^10.3.5",
 		"@storybook/addon-docs": "^10.3.5",
