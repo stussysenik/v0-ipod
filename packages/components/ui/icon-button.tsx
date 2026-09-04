@@ -1,28 +1,29 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { sharedIconButtonTokens } from "@ipod/lib/shared-ui-tokens";
-import { cn } from "@ipod/lib/utils";
+import { sharedIconButtonTokens } from '@ipod/lib/shared-ui-tokens';
+import { cn } from '@ipod/lib/utils';
+import { cva, type VariantProps } from 'class-variance-authority';
+import type React from 'react';
+import { useState } from 'react';
 
 const iconButtonVariants = cva(
-	"relative group flex items-center justify-center border transition-all ease-out disabled:cursor-not-allowed disabled:opacity-60",
+	'relative group flex items-center justify-center border transition-all ease-out disabled:cursor-not-allowed disabled:opacity-60',
 	{
 		variants: {
 			variant: {
-				default: "",
-				contrast: "",
-				active: "",
+				default: '',
+				contrast: '',
+				active: '',
 			},
 		},
 		defaultVariants: {
-			variant: "default",
+			variant: 'default',
 		},
-	}
+	},
 );
 
-interface IconButtonProps 
-	extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "icon">,
+interface IconButtonProps
+	extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'icon'>,
 		VariantProps<typeof iconButtonVariants> {
 	icon: React.ReactNode;
 	label?: string;
@@ -45,15 +46,18 @@ export function IconButton({
 	onPointerDown,
 	onPointerUp,
 	onPointerCancel,
-	type = "button",
+	type = 'button',
 	...buttonProps
 }: IconButtonProps) {
 	const [isHovered, setIsHovered] = useState(false);
 	const [isPressed, setIsPressed] = useState(false);
 
-	const variant = variantProp || (isActive ? "active" : contrast ? "contrast" : "default");
-	const variantTokens = sharedIconButtonTokens.variants[variant as keyof typeof sharedIconButtonTokens.variants];
-	
+	const variant = variantProp || (isActive ? 'active' : contrast ? 'contrast' : 'default');
+	const variantTokens =
+		sharedIconButtonTokens.variants[
+			variant as keyof typeof sharedIconButtonTokens.variants
+		];
+
 	const appearance =
 		!buttonProps.disabled && isHovered && variantTokens.hover
 			? variantTokens.hover
@@ -63,7 +67,7 @@ export function IconButton({
 		? 1
 		: isPressed
 			? sharedIconButtonTokens.motion.pressScale
-			: variant === "active"
+			: variant === 'active'
 				? sharedIconButtonTokens.motion.activeScale
 				: isHovered
 					? sharedIconButtonTokens.motion.hoverScale
@@ -72,7 +76,7 @@ export function IconButton({
 	return (
 		<button
 			type={type}
-			aria-label={buttonProps["aria-label"] ?? label}
+			aria-label={buttonProps['aria-label'] ?? label}
 			{...buttonProps}
 			className={cn(iconButtonVariants({ variant: variant as any }), className)}
 			style={{
@@ -128,7 +132,8 @@ export function IconButton({
 					className="pointer-events-none absolute right-full mr-2 hidden whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium opacity-0 shadow-[0_8px_16px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 sm:block"
 					style={{
 						borderColor: sharedIconButtonTokens.tooltip.border,
-						background: sharedIconButtonTokens.tooltip.background,
+						background: sharedIconButtonTokens.tooltip
+							.background,
 						color: sharedIconButtonTokens.tooltip.foreground,
 						boxShadow: sharedIconButtonTokens.tooltip.shadow,
 					}}

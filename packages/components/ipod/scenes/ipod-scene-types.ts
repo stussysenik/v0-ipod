@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
-import type { IpodNowPlayingLayoutElementId } from "@ipod/lib/ipod-state/model";
+import type { IpodNowPlayingLayoutElementId } from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
 
 export type IpodDisplayDispatch = React.Dispatch<IpodWorkbenchAction>;
 

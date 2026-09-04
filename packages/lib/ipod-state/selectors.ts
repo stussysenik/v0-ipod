@@ -1,28 +1,28 @@
-import type { IpodInteractionModel, IpodViewMode } from "./model";
+import type { IpodInteractionModel, IpodViewMode } from './model';
 
 export function isAuthenticInteractionModel(interactionModel: IpodInteractionModel): boolean {
-	return interactionModel !== "direct";
+	return interactionModel !== 'direct';
 }
 
 export function isStandardOsInteractionModel(interactionModel: IpodInteractionModel): boolean {
-	return interactionModel === "ipod-os" || interactionModel === "ipod-os-original";
+	return interactionModel === 'ipod-os' || interactionModel === 'ipod-os-original';
 }
 
 export function isPngExportViewMode(viewMode: IpodViewMode): boolean {
-	return viewMode === "flat" || viewMode === "focus" || viewMode === "3d";
+	return viewMode === 'flat' || viewMode === 'focus' || viewMode === '3d';
 }
 
 export function isPreviewViewMode(viewMode: IpodViewMode): boolean {
-	return viewMode === "preview";
+	return viewMode === 'preview';
 }
 
 export function isAsciiViewMode(viewMode: IpodViewMode): boolean {
-	return viewMode === "ascii";
+	return viewMode === 'ascii';
 }
 
 export function getExportScreenContext(
 	interactionModel: IpodInteractionModel,
-	osScreen: "menu" | "now-playing",
-): "menu" | "now-playing" {
-	return interactionModel === "direct" ? "now-playing" : osScreen;
+	osScreen: 'menu' | 'now-playing',
+): 'menu' | 'now-playing' {
+	return interactionModel === 'direct' ? 'now-playing' : osScreen;
 }

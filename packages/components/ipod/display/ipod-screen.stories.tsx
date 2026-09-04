@@ -1,39 +1,39 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { fn } from "storybook/test";
-import { IpodScreen } from "./ipod-screen";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
 import {
-	INITIAL_SONG_METADATA,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
+	INITIAL_SONG_METADATA,
 	type IpodNowPlayingLayoutState,
-} from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
+} from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { fn } from 'storybook/test';
+import { IpodScreen } from './ipod-screen';
 
-const classic2007 = getIpodClassicPreset("classic-2007");
+const classic2007 = getIpodClassicPreset('classic-2007');
 const noopDispatch: React.Dispatch<IpodWorkbenchAction> = () => undefined;
 const menuItems = [
-	{ id: "music", label: "Music" },
-	{ id: "videos", label: "Videos" },
-	{ id: "photos", label: "Photos" },
-	{ id: "podcasts", label: "Podcasts" },
-	{ id: "extras", label: "Extras" },
-	{ id: "settings", label: "Settings" },
-	{ id: "shuffle-songs", label: "Shuffle Songs" },
-	{ id: "now-playing", label: "Now Playing" },
-	{ id: "about", label: "About" },
+	{ id: 'music', label: 'Music' },
+	{ id: 'videos', label: 'Videos' },
+	{ id: 'photos', label: 'Photos' },
+	{ id: 'podcasts', label: 'Podcasts' },
+	{ id: 'extras', label: 'Extras' },
+	{ id: 'settings', label: 'Settings' },
+	{ id: 'shuffle-songs', label: 'Shuffle Songs' },
+	{ id: 'now-playing', label: 'Now Playing' },
+	{ id: 'about', label: 'About' },
 ] as const;
 
 const meta = {
-	title: "components/ipod/display/IpodScreen",
+	title: 'components/ipod/display/IpodScreen',
 	component: IpodScreen,
 	args: {
 		preset: classic2007,
-		skinColor: "#E2E2E4",
+		skinColor: '#E2E2E4',
 		state: INITIAL_SONG_METADATA,
 		dispatch: noopDispatch,
 		playClick: fn(),
-		interactionModel: "ipod-os",
-		osScreen: "menu",
+		interactionModel: 'ipod-os',
+		osScreen: 'menu',
 		osMenuItems: menuItems,
 		osMenuIndex: 0,
 		osOriginalMenuSplit: 0.54,
@@ -80,19 +80,19 @@ export const LightMenu: Story = {};
 
 export const BlackMenu: Story = {
 	args: {
-		skinColor: "#1C1C1E",
+		skinColor: '#1C1C1E',
 	},
 };
 
 export const LightNowPlaying: Story = {
 	args: {
-		osScreen: "now-playing",
+		osScreen: 'now-playing',
 	},
 };
 
 export const BlackNowPlaying: Story = {
 	args: {
-		skinColor: "#1C1C1E",
-		osScreen: "now-playing",
+		skinColor: '#1C1C1E',
+		osScreen: 'now-playing',
 	},
 };

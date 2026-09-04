@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
-import React from "react";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import { deriveGasketColor, hexToHsl } from "@ipod/lib/color-proximity";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-import { ipodDeviceVariants } from "./ipod-device-variants";
-
-import { liveTheme, captureTheme, vars } from "@ipod/lib/ipod-state/theme.css";
+import { deriveGasketColor } from '@ipod/lib/color-proximity';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import { captureTheme, liveTheme, vars } from '@ipod/lib/ipod-state/theme.css';
+import { type ClassValue, clsx } from 'clsx';
+import type React from 'react';
+import { twMerge } from 'tailwind-merge';
+import { ipodDeviceVariants } from './ipod-device-variants';
 
 /**
  * Utility to merge tailwind/unocss classes safely
@@ -22,7 +21,7 @@ interface IpodDeviceProps {
 	exportSafe?: boolean;
 	screen: React.ReactNode;
 	wheel: React.ReactNode;
-	viewMode?: "flat" | "3d" | "focus" | "preview" | "ascii";
+	viewMode?: 'flat' | '3d' | 'focus' | 'preview' | 'ascii';
 	className?: string;
 }
 
@@ -32,46 +31,47 @@ export function IpodDevice({
 	exportSafe = false,
 	screen,
 	wheel,
-	viewMode = "flat",
+	viewMode = 'flat',
 	className,
 }: IpodDeviceProps) {
 	const shellShadow = exportSafe
-		? "0 0 0 0.5px rgba(82,88,97,0.10)"
-		: "0 16px 32px -20px rgba(0,0,0,0.45), 0 0 0 1px rgba(88,94,102,0.15), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.08)";
+		? '0 0 0 0.5px rgba(82,88,97,0.10)'
+		: '0 16px 32px -20px rgba(0,0,0,0.45), 0 0 0 1px rgba(88,94,102,0.15), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.08)';
 
 	const gasketColor = deriveGasketColor(skinColor);
-	const gasketShadowOpacity = hexToHsl(skinColor).l < 0.45 ? "0.5" : "0.18";
 	const activeTheme = exportSafe ? captureTheme : liveTheme;
 
 	return (
 		<div
 			className={cn(
-				"flex flex-col items-center overflow-hidden",
-				ipodDeviceVariants({ 
-					viewMode, 
-					preset: (preset.id as any) || "custom",
-					materiality: viewMode === "ascii" ? "flat" : "physical"
+				'flex flex-col items-center overflow-hidden',
+				ipodDeviceVariants({
+					viewMode,
+					preset: (preset.id as any) || 'custom',
+					materiality: viewMode === 'ascii' ? 'flat' : 'physical',
 				}),
 				activeTheme,
-				className
+				className,
 			)}
-			style={{
-				width: preset.shell.width,
-				height: preset.shell.height,
-				backgroundColor: skinColor,
-				boxShadow: viewMode === "ascii" ? "none" : shellShadow,
-				borderRadius: preset.shell.radius,
-				paddingLeft: preset.shell.paddingX,
-				paddingRight: preset.shell.paddingX,
-				paddingTop: preset.shell.paddingTop,
-				paddingBottom: preset.shell.paddingBottom,
-				"--skin-color": skinColor,
-				"--gasket-color": gasketColor,
-			} as React.CSSProperties}
+			style={
+				{
+					width: preset.shell.width,
+					height: preset.shell.height,
+					backgroundColor: skinColor,
+					boxShadow: viewMode === 'ascii' ? 'none' : shellShadow,
+					borderRadius: preset.shell.radius,
+					paddingLeft: preset.shell.paddingX,
+					paddingRight: preset.shell.paddingX,
+					paddingTop: preset.shell.paddingTop,
+					paddingBottom: preset.shell.paddingBottom,
+					'--skin-color': skinColor,
+					'--gasket-color': gasketColor,
+				} as React.CSSProperties
+			}
 			data-export-layer="shell"
 		>
 			{/* Machined chamfer — only visible in non-ASCII modes */}
-			{viewMode !== "ascii" && (
+			{viewMode !== 'ascii' && (
 				<div
 					className="pointer-events-none absolute inset-0"
 					aria-hidden="true"
@@ -83,7 +83,7 @@ export function IpodDevice({
 			)}
 
 			{/* Specular sheen — only visible in non-ASCII modes */}
-			{viewMode !== "ascii" && (
+			{viewMode !== 'ascii' && (
 				<div
 					className="pointer-events-none absolute inset-[2px]"
 					aria-hidden="true"

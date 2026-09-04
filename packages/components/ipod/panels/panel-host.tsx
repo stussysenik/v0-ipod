@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { IpodStoreContext } from "@ipod/lib/xstate/store";
-import { FloatingPanel } from "./floating-panel";
+import { IpodStoreContext } from '@ipod/lib/xstate/store';
+import { FloatingPanel } from './floating-panel';
 import {
 	useIsCompact,
 	usePanelLayoutSync,
 	useResolvedPanels,
 	useViewportSize,
-} from "./use-panel-layout";
+} from './use-panel-layout';
 
 /**
  * Renders the visible floating panels for the current view mode (spec: floating-panel-system).
@@ -34,16 +34,32 @@ export function PanelHost() {
 					spec={spec}
 					frame={frame}
 					onCommitFrame={(patch) =>
-						send({ type: "SET_PANEL_FRAME", payload: { id: spec.id, frame: patch } })
-					}
-					onFocus={() => send({ type: "FOCUS_PANEL", payload: { id: spec.id } })}
-					onToggleCollapsed={() =>
 						send({
-							type: "SET_PANEL_COLLAPSED",
-							payload: { id: spec.id, collapsed: !frame.collapsed },
+							type: 'SET_PANEL_FRAME',
+							payload: { id: spec.id, frame: patch },
 						})
 					}
-					onClose={() => send({ type: "SET_PANEL_VISIBLE", payload: { id: spec.id, visible: false } })}
+					onFocus={() =>
+						send({
+							type: 'FOCUS_PANEL',
+							payload: { id: spec.id },
+						})
+					}
+					onToggleCollapsed={() =>
+						send({
+							type: 'SET_PANEL_COLLAPSED',
+							payload: {
+								id: spec.id,
+								collapsed: !frame.collapsed,
+							},
+						})
+					}
+					onClose={() =>
+						send({
+							type: 'SET_PANEL_VISIBLE',
+							payload: { id: spec.id, visible: false },
+						})
+					}
 				/>
 			))}
 		</div>

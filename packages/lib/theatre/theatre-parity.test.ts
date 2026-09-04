@@ -1,12 +1,11 @@
-import { describe, expect, it } from "vitest";
-
-import * as TheatreCore from "@theatre/core";
+import * as TheatreCore from '@theatre/core';
+import { describe, expect, it } from 'vitest';
 
 import {
 	createStateSampler,
 	type TheatreProjectState,
 	type TheatreTrack,
-} from "./keyframe-sampler";
+} from './keyframe-sampler';
 
 /**
  * THE FIDELITY CONTRACT.
@@ -27,9 +26,12 @@ import {
 const core = (TheatreCore as unknown as { default?: typeof TheatreCore }).default ?? TheatreCore;
 const { getProject, onChange, createRafDriver } = core;
 
-function easeTrack(points: Array<[number, number]>, type: "bezier" | "hold" = "bezier"): TheatreTrack {
+function easeTrack(
+	points: Array<[number, number]>,
+	type: 'bezier' | 'hold' = 'bezier',
+): TheatreTrack {
 	return {
-		type: "BasicKeyframedTrack",
+		type: 'BasicKeyframedTrack',
 		keyframes: points.map(([position, value], i) => ({
 			id: `kf-${i}`,
 			position,
@@ -79,28 +81,31 @@ function sampleWithCore(
 	return out;
 }
 
-describe("pure sampler ↔ @theatre/core parity", () => {
+describe('pure sampler ↔ @theatre/core parity', () => {
 	const POSITIONS = Array.from({ length: 41 }, (_, i) => (i / 40) * 4); // 0 → 4 inclusive
 
-	it("matches @theatre/core for a multi-keyframe asymmetric-ease track", () => {
+	it('matches @theatre/core for a multi-keyframe asymmetric-ease track', () => {
 		const state: TheatreProjectState = {
 			sheetsById: {
 				Cam: {
 					staticOverrides: { byObject: {} },
 					sequence: {
-						type: "PositionalSequence",
+						type: 'PositionalSequence',
 						length: 4,
 						subUnitsPerUnit: 30,
 						tracksByObject: {
 							Lens: {
-								trackIdByPropPath: { '["azimuth"]': "t-az", '["reach"]': "t-reach" },
+								trackIdByPropPath: {
+									'["azimuth"]': 't-az',
+									'["reach"]': 't-reach',
+								},
 								trackData: {
-									"t-az": easeTrack([
+									't-az': easeTrack([
 										[0, 0],
 										[1.5, 30],
 										[4, -20],
 									]),
-									"t-reach": easeTrack([
+									't-reach': easeTrack([
 										[0, 14],
 										[4, 9],
 									]),
@@ -110,40 +115,48 @@ describe("pure sampler ↔ @theatre/core parity", () => {
 					},
 				},
 			},
-			revisionHistory: ["r1"],
-			definitionVersion: "0.4.0",
+			revisionHistory: ['r1'],
+			definitionVersion: '0.4.0',
 		};
 
-		const sampler = createStateSampler(state, "Cam");
-		const coreValues = sampleWithCore(state, "Cam", "Lens", { azimuth: 0, reach: 0 }, POSITIONS);
+		const sampler = createStateSampler(state, 'Cam');
+		const coreValues = sampleWithCore(
+			state,
+			'Cam',
+			'Lens',
+			{ azimuth: 0, reach: 0 },
+			POSITIONS,
+		);
 
 		POSITIONS.forEach((position, i) => {
-			const mine = sampler.sampleObject("Lens", position);
+			const mine = sampler.sampleObject('Lens', position);
 			expect(mine.azimuth as number).toBeCloseTo(coreValues[i].azimuth, 4);
 			expect(mine.reach as number).toBeCloseTo(coreValues[i].reach, 4);
 		});
 	});
 
-	it("matches @theatre/core for a hold (stepped) track", () => {
+	it('matches @theatre/core for a hold (stepped) track', () => {
 		const state: TheatreProjectState = {
 			sheetsById: {
 				Cam: {
 					staticOverrides: { byObject: {} },
 					sequence: {
-						type: "PositionalSequence",
+						type: 'PositionalSequence',
 						length: 4,
 						subUnitsPerUnit: 30,
 						tracksByObject: {
 							Lens: {
-								trackIdByPropPath: { '["elevation"]': "t-el" },
+								trackIdByPropPath: {
+									'["elevation"]': 't-el',
+								},
 								trackData: {
-									"t-el": easeTrack(
+									't-el': easeTrack(
 										[
 											[0, 0],
 											[2, 45],
 											[4, 10],
 										],
-										"hold",
+										'hold',
 									),
 								},
 							},
@@ -151,15 +164,21 @@ describe("pure sampler ↔ @theatre/core parity", () => {
 					},
 				},
 			},
-			revisionHistory: ["r1"],
-			definitionVersion: "0.4.0",
+			revisionHistory: ['r1'],
+			definitionVersion: '0.4.0',
 		};
 
-		const sampler = createStateSampler(state, "Cam");
-		const coreValues = sampleWithCore(state, "Cam", "Lens", { elevation: 0 }, POSITIONS);
+		const sampler = createStateSampler(state, 'Cam');
+		const coreValues = sampleWithCore(
+			state,
+			'Cam',
+			'Lens',
+			{ elevation: 0 },
+			POSITIONS,
+		);
 
 		POSITIONS.forEach((position, i) => {
-			const mine = sampler.sampleObject("Lens", position);
+			const mine = sampler.sampleObject('Lens', position);
 			expect(mine.elevation as number).toBeCloseTo(coreValues[i].elevation, 4);
 		});
 	});

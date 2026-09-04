@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
-import { IpodStatusBar } from "./ipod-status-bar";
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { IpodStatusBar } from './ipod-status-bar';
 
-const classic2007 = getIpodClassicPreset("classic-2007");
+const classic2007 = getIpodClassicPreset('classic-2007');
 
 const meta = {
-	title: "components/ipod/display/IpodStatusBar",
+	title: 'components/ipod/display/IpodStatusBar',
 	component: IpodStatusBar,
 	args: {
 		screenTokens: classic2007.screen,

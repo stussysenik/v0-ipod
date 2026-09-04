@@ -1,4 +1,4 @@
-declare module "gifenc" {
+declare module 'gifenc' {
 	export type GifPaletteColor = [number, number, number] | [number, number, number, number];
 	export type GifPalette = GifPaletteColor[];
 
@@ -32,7 +32,7 @@ declare module "gifenc" {
 	}
 
 	export interface QuantizeOptions {
-		format?: "rgb565" | "rgb444" | "rgba4444";
+		format?: 'rgb565' | 'rgb444' | 'rgba4444';
 		oneBitAlpha?: boolean | number;
 		clearAlpha?: boolean;
 		clearAlphaThreshold?: number;
@@ -49,6 +49,6 @@ declare module "gifenc" {
 	export function applyPalette(
 		rgba: Uint8Array | Uint8ClampedArray,
 		palette: GifPalette,
-		format?: "rgb565" | "rgb444" | "rgba4444",
+		format?: 'rgb565' | 'rgb444' | 'rgba4444',
 	): Uint8Array<ArrayBuffer>;
 }

@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef } from "react";
-
-import { createDebouncer, type Debouncer } from "@ipod/lib/debounce";
+import { createDebouncer, type Debouncer } from '@ipod/lib/debounce';
+import { useEffect, useMemo, useRef } from 'react';
 
 /**
  * React ergonomics over `createDebouncer`.

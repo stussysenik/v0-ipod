@@ -1,24 +1,21 @@
-import { fn } from "@storybook/test";
-
-import { GreyPalettePicker } from "@ipod/components/ipod/grey-palette-picker";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { GreyPalettePicker } from '@ipod/components/ipod/grey-palette-picker';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 function srgbOklchStub(l: number, _c: number, _h: number): string {
 	const v = Math.max(0, Math.min(255, Math.round(l * 255)));
-	return `#${v.toString(16).padStart(2, "0").repeat(3)}`.toUpperCase();
+	return `#${v.toString(16).padStart(2, '0').repeat(3)}`.toUpperCase();
 }
 
 const meta = {
-	title: "iPod/Controls/Grey Palette Picker",
+	title: 'iPod/Controls/Grey Palette Picker',
 	component: GreyPalettePicker,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
-		target: "case",
-		currentColor: "#888888",
+		target: 'case',
+		currentColor: '#888888',
 		onColorSelect: fn(),
 		onColorCommit: fn(),
 		oklchToHex: srgbOklchStub,
@@ -33,7 +30,7 @@ type Story = StoryObj<typeof meta>;
 export const CaseTarget: Story = {};
 
 export const BackgroundTarget: Story = {
-	args: { target: "bg", currentColor: "#F5F5F3" },
+	args: { target: 'bg', currentColor: '#F5F5F3' },
 };
 
 export const OklchUnready: Story = {

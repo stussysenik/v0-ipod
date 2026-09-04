@@ -1,9 +1,9 @@
-import { addons } from "@storybook/manager-api";
+import { addons } from '@storybook/manager-api';
 
 addons.setConfig({
 	sidebar: {
 		showRoots: true,
-		collapsedRoots: ["tokens", "docs"],
+		collapsedRoots: ['tokens', 'docs'],
 	},
 	toolbar: {
 		title: { hidden: false },

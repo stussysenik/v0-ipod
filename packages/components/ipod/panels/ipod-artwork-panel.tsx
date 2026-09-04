@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { ImageUpload } from "@ipod/components/ipod/editors/image-upload";
-import type { SongMetadata } from "@ipod/types/ipod";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import type { RenderNowPlayingElement } from "@ipod/components/ipod/scenes/ipod-scene-types";
-import { PLACEHOLDER_LOGO_SRC } from "@ipod/lib/ipod-assets";
+import { ImageUpload } from '@ipod/components/ipod/editors/image-upload';
+import type { RenderNowPlayingElement } from '@ipod/components/ipod/scenes/ipod-scene-types';
+import { PLACEHOLDER_LOGO_SRC } from '@ipod/lib/ipod-assets';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import type { SongMetadata } from '@ipod/types/ipod';
+import { useMemo } from 'react';
 
 interface IpodArtworkPanelProps {
-	screenTokens: IpodClassicPresetDefinition["screen"];
+	screenTokens: IpodClassicPresetDefinition['screen'];
 	state: SongMetadata;
 	renderElement: RenderNowPlayingElement;
 	isInlineEditingEnabled: boolean;
@@ -31,7 +31,7 @@ export function IpodArtworkPanel({
 	const artworkSrc = state.artwork || PLACEHOLDER_LOGO_SRC;
 
 	const reflectionHeight = useMemo(
-		() => Math.round(screenTokens.artworkSize * 0.30),
+		() => Math.round(screenTokens.artworkSize * 0.3),
 		[screenTokens.artworkSize],
 	);
 
@@ -44,18 +44,18 @@ export function IpodArtworkPanel({
 	return (
 		<div className="flex h-full items-center justify-start">
 			{renderElement(
-				"artwork",
-				<div 
+				'artwork',
+				<div
 					className="relative"
 					style={{
-						perspective: "800px",
-						perspectiveOrigin: "center center",
+						perspective: '800px',
+						perspectiveOrigin: 'center center',
 					}}
 				>
 					<div
 						style={{
-							transform: "rotateY(-14deg) rotateX(2deg) scale(0.92)",
-							transformStyle: "preserve-3d",
+							transform: 'rotateY(-14deg) rotateX(2deg) scale(0.92)',
+							transformStyle: 'preserve-3d',
 						}}
 					>
 						{/* Authentic "Floor" Reflection - flat 2D image, perfectly aligned */}
@@ -64,7 +64,7 @@ export function IpodArtworkPanel({
 							style={{
 								width: screenTokens.artworkSize,
 								height: reflectionHeight,
-								overflow: "hidden",
+								overflow: 'hidden',
 								maskImage: reflectionMask,
 								WebkitMaskImage: reflectionMask,
 							}}
@@ -74,13 +74,14 @@ export function IpodArtworkPanel({
 								src={artworkSrc}
 								alt=""
 								style={{
-									position: "absolute",
+									position: 'absolute',
 									top: 0,
-									width: "100%",
+									width: '100%',
 									height: screenTokens.artworkSize,
-									transform: "scaleY(-1)",
-									transformOrigin: "center center",
-									objectFit: "cover",
+									transform: 'scaleY(-1)',
+									transformOrigin:
+										'center center',
+									objectFit: 'cover',
 								}}
 							/>
 						</div>
@@ -99,12 +100,12 @@ export function IpodArtworkPanel({
 								// Promote the cover to its own GPU layer rasterized at device
 								// resolution, so sampling it through the screen's 3D transform
 								// stays as sharp as the source allows (no extra compositor blur).
-								transform: "translateZ(0)",
-								backfaceVisibility: "hidden",
-								WebkitBackfaceVisibility: "hidden",
+								transform: 'translateZ(0)',
+								backfaceVisibility: 'hidden',
+								WebkitBackfaceVisibility: 'hidden',
 								// A whisper of saturation + contrast so the cover "pops" against
 								// the white screen without looking processed. This is the sauce.
-								filter: "saturate(1.06) contrast(1.03)",
+								filter: 'saturate(1.06) contrast(1.03)',
 							}}
 							data-export-layer="artwork"
 						>
@@ -118,21 +119,29 @@ export function IpodArtworkPanel({
 							) : (
 								<ImageUpload
 									currentImage={state.artwork}
-									onImageChange={(artwork) => {
-										if (!isInlineEditingEnabled) return;
-										onArtworkChange(artwork);
+									onImageChange={(
+										artwork,
+									) => {
+										if (
+											!isInlineEditingEnabled
+										)
+											return;
+										onArtworkChange(
+											artwork,
+										);
 										playClick();
 									}}
-									disabled={!isInlineEditingEnabled}
+									disabled={
+										!isInlineEditingEnabled
+									}
 									className="h-full w-full object-cover"
 								/>
 							)}
 						</div>
 					</div>
 				</div>,
-				{ testId: "os-layout-artwork" },
+				{ testId: 'os-layout-artwork' },
 			)}
 		</div>
 	);
 }
-

@@ -1,20 +1,17 @@
-import { fn } from "@storybook/test";
-
-import { EditableText } from "@ipod/components/ipod/editable-text";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { EditableText } from '@ipod/components/ipod/editable-text';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Fields/Editable Text",
+	title: 'iPod/Fields/Editable Text',
 	component: EditableText,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
-		value: "Such Great Heights",
+		value: 'Such Great Heights',
 		onChange: fn(),
-		editLabel: "Edit title",
+		editLabel: 'Edit title',
 	},
 } satisfies Meta<typeof EditableText>;
 
@@ -30,7 +27,7 @@ export const Disabled: Story = {
 
 export const MarqueePreview: Story = {
 	args: {
-		value: "An Exceptionally Long Title That Should Overflow",
+		value: 'An Exceptionally Long Title That Should Overflow',
 		animate: true,
 		preview: true,
 	},

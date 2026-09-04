@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
-import { cva } from "class-variance-authority";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { cva } from 'class-variance-authority';
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import React from 'react';
 
 /*
  * Ported from feat/architecture-evolution. Stages mirror the export machine's
@@ -10,13 +10,13 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
  * machine state — "idle" means the overlay is hidden, not a display stage.
  */
 export type ExportStage =
-	| "idle"
-	| "preparing"
-	| "capturing"
-	| "encoding"
-	| "finalizing"
-	| "success"
-	| "error";
+	| 'idle'
+	| 'preparing'
+	| 'capturing'
+	| 'encoding'
+	| 'finalizing'
+	| 'success'
+	| 'error';
 
 interface ExportProgressOverlayProps {
 	stage: ExportStage;
@@ -27,36 +27,36 @@ interface ExportProgressOverlayProps {
 }
 
 const overlayVariants = cva(
-	"fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-500",
+	'fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-500',
 	{
 		variants: {
 			visible: {
-				true: "opacity-100 pointer-events-auto",
-				false: "opacity-0 pointer-events-none",
+				true: 'opacity-100 pointer-events-auto',
+				false: 'opacity-0 pointer-events-none',
 			},
 		},
 	},
 );
 
 const cardVariants = cva(
-	"relative w-full max-w-sm rounded-[32px] border border-white/20 bg-[#F2F1ED]/95 p-8 shadow-[0_40px_100px_rgba(0,0,0,0.5)] transition-all duration-500 transform",
+	'relative w-full max-w-sm rounded-[32px] border border-white/20 bg-[#F2F1ED]/95 p-8 shadow-[0_40px_100px_rgba(0,0,0,0.5)] transition-all duration-500 transform',
 	{
 		variants: {
 			visible: {
-				true: "scale-100 translate-y-0",
-				false: "scale-95 translate-y-4",
+				true: 'scale-100 translate-y-0',
+				false: 'scale-95 translate-y-4',
 			},
 		},
 	},
 );
 
-const STAGE_LABELS: Record<Exclude<ExportStage, "idle">, string> = {
-	preparing: "Preparing Scene",
-	capturing: "Capturing Frames",
-	encoding: "Encoding Media",
-	finalizing: "Assembling File",
-	success: "Export Complete",
-	error: "Export Failed",
+const STAGE_LABELS: Record<Exclude<ExportStage, 'idle'>, string> = {
+	preparing: 'Preparing Scene',
+	capturing: 'Capturing Frames',
+	encoding: 'Encoding Media',
+	finalizing: 'Assembling File',
+	success: 'Export Complete',
+	error: 'Export Failed',
 };
 
 export function ExportProgressOverlay({
@@ -66,9 +66,9 @@ export function ExportProgressOverlay({
 	filename,
 	onClose,
 }: ExportProgressOverlayProps) {
-	const isVisible = stage !== "idle";
-	const isSuccess = stage === "success";
-	const isError = stage === "error";
+	const isVisible = stage !== 'idle';
+	const isSuccess = stage === 'success';
+	const isError = stage === 'error';
 	const isProcessing = isVisible && !isSuccess && !isError;
 
 	return (
@@ -80,7 +80,8 @@ export function ExportProgressOverlay({
 							<div className="relative">
 								<Loader2 className="h-12 w-12 text-[#111827] animate-spin" />
 								<div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
-									{Math.round(progress * 100)}%
+									{Math.round(progress * 100)}
+									%
 								</div>
 							</div>
 						)}
@@ -93,11 +94,15 @@ export function ExportProgressOverlay({
 					</div>
 
 					<h2 className="text-xl font-bold text-[#111827] tracking-tight">
-						{stage === "idle" ? "" : STAGE_LABELS[stage]}
+						{stage === 'idle' ? '' : STAGE_LABELS[stage]}
 					</h2>
 
 					<p className="mt-2 text-sm text-[#6B7280] font-medium max-w-[240px]">
-						{isError ? error : isSuccess ? filename : `High-fidelity ${stage} in progress...`}
+						{isError
+							? error
+							: isSuccess
+								? filename
+								: `High-fidelity ${stage} in progress...`}
 					</p>
 
 					{isProcessing && (
@@ -105,12 +110,17 @@ export function ExportProgressOverlay({
 							<div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10">
 								<div
 									className="h-full bg-[#111827] transition-all duration-300 ease-out"
-									style={{ width: `${progress * 100}%` }}
+									style={{
+										width: `${progress * 100}%`,
+									}}
 								/>
 							</div>
 							<div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-widest text-[#9CA3AF]">
 								<span>Processing</span>
-								<span>{Math.round(progress * 100)}%</span>
+								<span>
+									{Math.round(progress * 100)}
+									%
+								</span>
 							</div>
 						</div>
 					)}
@@ -121,7 +131,7 @@ export function ExportProgressOverlay({
 							onClick={onClose}
 							className="mt-8 w-full rounded-2xl bg-[#111827] py-4 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
 						>
-							{isSuccess ? "Great" : "Close"}
+							{isSuccess ? 'Great' : 'Close'}
 						</button>
 					)}
 				</div>

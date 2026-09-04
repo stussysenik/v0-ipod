@@ -6,33 +6,33 @@
  * parent.postMessage. The rendering work happens in code.ts.
  */
 
-const WS_URL = "ws://localhost:7733/figma-hmr";
+const WS_URL = 'ws://localhost:7733/figma-hmr';
 
-const statusEl = document.querySelector("#status")!;
-const statusText = document.querySelector("#status-text")!;
-const connectBtn = document.querySelector("#connect") as HTMLButtonElement;
-const bindInput = document.querySelector("#bind-story") as HTMLInputElement;
-const bindBtn = document.querySelector("#bind") as HTMLButtonElement;
-const undoBtn = document.querySelector("#undo") as HTMLButtonElement;
-const logEl = document.querySelector("#log")!;
+const statusEl = document.querySelector('#status')!;
+const statusText = document.querySelector('#status-text')!;
+const connectBtn = document.querySelector('#connect') as HTMLButtonElement;
+const bindInput = document.querySelector('#bind-story') as HTMLInputElement;
+const bindBtn = document.querySelector('#bind') as HTMLButtonElement;
+const undoBtn = document.querySelector('#undo') as HTMLButtonElement;
+const logEl = document.querySelector('#log')!;
 
 let socket: WebSocket | null = null;
 let selectedNodeId: string | null = null;
 
-function log(message: string, level: "info" | "ok" | "error" = "info"): void {
-	const line = document.createElement("div");
-	line.className = `log-line ${level === "info" ? "" : level}`;
+function log(message: string, level: 'info' | 'ok' | 'error' = 'info'): void {
+	const line = document.createElement('div');
+	line.className = `log-line ${level === 'info' ? '' : level}`;
 	const ts = new Date().toLocaleTimeString();
 	line.textContent = `[${ts}] ${message}`;
 	logEl.prepend(line);
 }
 
 function setConnected(connected: boolean): void {
-	statusEl.classList.toggle("connected", connected);
-	statusEl.classList.toggle("error", !connected);
-	statusText.textContent = connected ? "Connected" : "Disconnected";
+	statusEl.classList.toggle('connected', connected);
+	statusEl.classList.toggle('error', !connected);
+	statusText.textContent = connected ? 'Connected' : 'Disconnected';
 	bindBtn.disabled = !connected;
-	parent.postMessage({ pluginMessage: { type: "connect-state", connected } }, "*");
+	parent.postMessage({ pluginMessage: { type: 'connect-state', connected } }, '*');
 }
 
 function openSocket(): void {
@@ -40,36 +40,36 @@ function openSocket(): void {
 	try {
 		socket = new WebSocket(WS_URL);
 	} catch (error) {
-		log(`connect failed: ${(error as Error).message}`, "error");
+		log(`connect failed: ${(error as Error).message}`, 'error');
 		setConnected(false);
 		return;
 	}
-	socket.addEventListener("open", () => {
+	socket.addEventListener('open', () => {
 		setConnected(true);
-		log("connected to HMR server", "ok");
+		log('connected to HMR server', 'ok');
 	});
-	socket.addEventListener("close", () => {
+	socket.addEventListener('close', () => {
 		setConnected(false);
-		log("disconnected", "error");
+		log('disconnected', 'error');
 	});
-	socket.addEventListener("error", () => {
-		log("socket error", "error");
+	socket.addEventListener('error', () => {
+		log('socket error', 'error');
 	});
-	socket.addEventListener("message", (event) => {
+	socket.addEventListener('message', (event) => {
 		try {
 			const data = JSON.parse(event.data as string);
 			parent.postMessage(
-				{ pluginMessage: { type: "server-message", message: data } },
-				"*",
+				{ pluginMessage: { type: 'server-message', message: data } },
+				'*',
 			);
-			log(data.type ?? "(message)", "info");
+			log(data.type ?? '(message)', 'info');
 		} catch (error) {
-			log(`invalid message: ${(error as Error).message}`, "error");
+			log(`invalid message: ${(error as Error).message}`, 'error');
 		}
 	});
 }
 
-connectBtn.addEventListener("click", () => {
+connectBtn.addEventListener('click', () => {
 	if (socket?.readyState === WebSocket.OPEN) {
 		socket.close();
 		return;
@@ -77,69 +77,69 @@ connectBtn.addEventListener("click", () => {
 	openSocket();
 });
 
-bindBtn.addEventListener("click", () => {
+bindBtn.addEventListener('click', () => {
 	const value = bindInput.value.trim();
 	if (!value) {
-		log("enter a story id before binding", "error");
+		log('enter a story id before binding', 'error');
 		return;
 	}
-	parent.postMessage({ pluginMessage: { type: "bind-selected", storyId: value } }, "*");
+	parent.postMessage({ pluginMessage: { type: 'bind-selected', storyId: value } }, '*');
 });
 
-undoBtn.addEventListener("click", () => {
+undoBtn.addEventListener('click', () => {
 	if (!selectedNodeId) {
-		log("select a bound frame first", "error");
+		log('select a bound frame first', 'error');
 		return;
 	}
 	parent.postMessage(
-		{ pluginMessage: { type: "undo-restore", nodeId: selectedNodeId } },
-		"*",
+		{ pluginMessage: { type: 'undo-restore', nodeId: selectedNodeId } },
+		'*',
 	);
 });
 
-window.addEventListener("message", (event) => {
+window.addEventListener('message', (event) => {
 	const msg = event.data.pluginMessage;
 	if (!msg) return;
 	switch (msg.type) {
-		case "update-applied":
+		case 'update-applied':
 			selectedNodeId = msg.nodeId;
-			log(`applied ${msg.storyId}`, "ok");
+			log(`applied ${msg.storyId}`, 'ok');
 			break;
-		case "update-skipped":
-			log(`skipped ${msg.storyId}: ${msg.reason}`, "error");
+		case 'update-skipped':
+			log(`skipped ${msg.storyId}: ${msg.reason}`, 'error');
 			break;
-		case "story-error":
-			log(`error on ${msg.storyId}: ${msg.error}`, "error");
+		case 'story-error':
+			log(`error on ${msg.storyId}: ${msg.error}`, 'error');
 			break;
-		case "bind-applied":
+		case 'bind-applied':
 			selectedNodeId = msg.nodeId;
-			log(`bound ${msg.storyId}`, "ok");
+			log(`bound ${msg.storyId}`, 'ok');
 			break;
-		case "bind-error":
-			log(`bind failed: ${msg.reason}`, "error");
+		case 'bind-error':
+			log(`bind failed: ${msg.reason}`, 'error');
 			break;
-		case "undo-applied":
-			log(`undo applied`, "ok");
+		case 'undo-applied':
+			log(`undo applied`, 'ok');
 			break;
-		case "undo-empty":
-			log(`snapshot stack empty`, "error");
+		case 'undo-empty':
+			log(`snapshot stack empty`, 'error');
 			break;
-		case "tokens-sync-progress":
-			log(`tokens-sync: ${(msg.collections ?? []).join(", ")}`, "info");
+		case 'tokens-sync-progress':
+			log(`tokens-sync: ${(msg.collections ?? []).join(', ')}`, 'info');
 			break;
-		case "token-ack":
-			log(`token-ack: ${JSON.stringify(msg).slice(0, 120)}`, "ok");
+		case 'token-ack':
+			log(`token-ack: ${JSON.stringify(msg).slice(0, 120)}`, 'ok');
 			break;
-		case "variable-changed":
+		case 'variable-changed':
 			if (socket?.readyState !== WebSocket.OPEN) return;
 			socket.send(
 				JSON.stringify({
-					type: "token-changed",
+					type: 'token-changed',
 					payload: {
-						collection: "Semantic",
+						collection: 'Semantic',
 						variableName: msg.id,
-						modeId: "light",
-						newValue: "",
+						modeId: 'light',
+						newValue: '',
 					},
 				}),
 			);

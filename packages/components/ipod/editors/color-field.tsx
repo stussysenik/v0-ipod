@@ -1,15 +1,14 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Button } from "react-aria-components";
-import { Check } from "lucide-react";
-import { cva } from "class-variance-authority";
-
-import { findKumuPaletteProximityMatches } from "@ipod/lib/color-proximity";
-import type { ColorTarget } from "@ipod/lib/ipod-state/model";
-import { cn } from "@ipod/lib/utils";
-import { HexColorInput } from "./hex-color-input";
-import { NativeColorPicker } from "./native-color-picker";
+import { findKumuPaletteProximityMatches } from '@ipod/lib/color-proximity';
+import type { ColorTarget } from '@ipod/lib/ipod-state/model';
+import { cn } from '@ipod/lib/utils';
+import { cva } from 'class-variance-authority';
+import { Check } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from 'react-aria-components';
+import { HexColorInput } from './hex-color-input';
+import { NativeColorPicker } from './native-color-picker';
 
 /**
  * Shared color editor: hex input + native picker, a "Recent Custom" swatch strip, and an
@@ -17,7 +16,9 @@ import { NativeColorPicker } from "./native-color-picker";
  * panel renders the exact same control (spec: floating-panel-system §6 — colors panel).
  */
 
-const sectionHeading = cva("text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1");
+const sectionHeading = cva(
+	'text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1',
+);
 
 const SHADE_DISTANCE_THRESHOLD = 15;
 
@@ -39,12 +40,19 @@ export function ColorSwatchButton({
 			onPress={onClick}
 			aria-label={label}
 			className={cn(
-				"rounded-full transition-transform hover:scale-110 border box-border outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-				isActive ? "border-[#111827] border-2 shadow-[0_0_0_2px_#CDD1D6]" : "border-[#B5BBC3] border-1",
+				'rounded-full transition-transform hover:scale-110 border box-border outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+				isActive
+					? 'border-[#111827] border-2 shadow-[0_0_0_2px_#CDD1D6]'
+					: 'border-[#B5BBC3] border-1',
 			)}
 			style={{ width: size, height: size, backgroundColor: color }}
 		>
-			{isActive && <Check size={12} className="text-white mix-blend-difference mx-auto" />}
+			{isActive && (
+				<Check
+					size={12}
+					className="text-white mix-blend-difference mx-auto"
+				/>
+			)}
 		</Button>
 	);
 }
@@ -83,7 +91,9 @@ export function ColorField({
 								key={savedColor}
 								color={savedColor}
 								isActive={color === savedColor}
-								onClick={() => onColorChange(savedColor)}
+								onClick={() =>
+									onColorChange(savedColor)
+								}
 								label={`Custom ${savedColor}`}
 							/>
 						))}
@@ -117,7 +127,7 @@ export function ColorField({
 					className="w-3 h-3 rounded-full border border-[#B5BBC3] shrink-0"
 					style={{ backgroundColor: color }}
 				/>
-				{showShades ? "Hide Shades" : "View Shades"}
+				{showShades ? 'Hide Shades' : 'View Shades'}
 			</Button>
 			{showShades && (
 				<div className="flex flex-wrap gap-2 mt-3 p-2 bg-black/5 rounded-xl">

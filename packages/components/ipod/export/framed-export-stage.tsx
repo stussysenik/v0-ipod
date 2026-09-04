@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { forwardRef } from "react";
+import { IPodDeviceShell } from '@ipod/components/ipod/device/ipod-device-shell';
 
 import {
 	BASE_EXPORT_SCENE_HEIGHT,
 	BASE_EXPORT_SCENE_WIDTH,
+	type ExportPresetId,
 	getExportPreset,
 	getExportSceneScale,
-	type ExportPresetId,
-} from "@ipod/lib/export/export-scene";
-import { IPodDeviceShell } from "@ipod/components/ipod/device/ipod-device-shell";
-import { getIpodClassicPreset, DEFAULT_HARDWARE_PRESET_ID } from "@ipod/lib/ipod-classic-presets";
-import type { IpodHardwarePresetId } from "@ipod/types/ipod-state";
+} from '@ipod/lib/export/export-scene';
+import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import type { IpodHardwarePresetId } from '@ipod/types/ipod-state';
+import { forwardRef } from 'react';
 
 interface FramedExportStageProps {
 	presetId: ExportPresetId;
@@ -38,7 +38,7 @@ export const FramedExportStage = forwardRef<HTMLDivElement, FramedExportStagePro
 			exportSafe = false,
 			showShadowLayer = false,
 			dataTestId,
-			className = "",
+			className = '',
 		},
 		ref,
 	) {
@@ -79,4 +79,4 @@ export const FramedExportStage = forwardRef<HTMLDivElement, FramedExportStagePro
 	},
 );
 
-FramedExportStage.displayName = "FramedExportStage";
+FramedExportStage.displayName = 'FramedExportStage';

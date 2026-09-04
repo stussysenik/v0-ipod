@@ -1,13 +1,13 @@
-import figma from "@figma/code-connect";
+import figma from '@figma/code-connect';
 
-import { ProgressBar } from "@ipod/components/ipod/progress-bar";
+import { ProgressBar } from '@ipod/components/ipod/progress-bar';
 
 figma.connect(
 	ProgressBar,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		props: {
-			disabled: figma.boolean("disabled"),
+			disabled: figma.boolean('disabled'),
 		},
 		example: ({ disabled }) => (
 			<ProgressBar

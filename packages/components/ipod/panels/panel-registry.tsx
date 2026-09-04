@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
-
-import type { PanelFrame, PanelId } from "@ipod/lib/ipod-state/model";
-import { ColorsPanelBody } from "./colors-panel-body";
-import { SettingsPanelBody } from "./settings-panel-body";
-import { ViewModePanelBody } from "./view-mode-panel-body";
+import type { PanelFrame, PanelId } from '@ipod/lib/ipod-state/model';
+import type { ReactNode } from 'react';
+import { ColorsPanelBody } from './colors-panel-body';
+import { SettingsPanelBody } from './settings-panel-body';
+import { ViewModePanelBody } from './view-mode-panel-body';
 
 export interface PanelSpec {
 	id: PanelId;
@@ -32,27 +31,51 @@ export interface PanelSpec {
  */
 export const PANEL_REGISTRY: Record<PanelId, PanelSpec> = {
 	view: {
-		id: "view",
-		title: "View",
+		id: 'view',
+		title: 'View',
 		idealMinSize: { w: 200, h: 36 },
 		minSize: { w: 180, h: 150 },
-		defaultFrame: { x: 24, y: 88, w: 220, h: 232, collapsed: false, visible: false, z: 1 },
+		defaultFrame: {
+			x: 24,
+			y: 88,
+			w: 220,
+			h: 232,
+			collapsed: false,
+			visible: false,
+			z: 1,
+		},
 		content: <ViewModePanelBody />,
 	},
 	settings: {
-		id: "settings",
-		title: "Settings",
+		id: 'settings',
+		title: 'Settings',
 		idealMinSize: { w: 240, h: 36 },
 		minSize: { w: 240, h: 220 },
-		defaultFrame: { x: 24, y: 340, w: 300, h: 420, collapsed: false, visible: false, z: 1 },
+		defaultFrame: {
+			x: 24,
+			y: 340,
+			w: 300,
+			h: 420,
+			collapsed: false,
+			visible: false,
+			z: 1,
+		},
 		content: <SettingsPanelBody />,
 	},
 	colors: {
-		id: "colors",
-		title: "Colors",
+		id: 'colors',
+		title: 'Colors',
 		idealMinSize: { w: 260, h: 36 },
 		minSize: { w: 260, h: 260 },
-		defaultFrame: { x: 24, y: 88, w: 320, h: 520, collapsed: false, visible: false, z: 1 },
+		defaultFrame: {
+			x: 24,
+			y: 88,
+			w: 320,
+			h: 520,
+			collapsed: false,
+			visible: false,
+			z: 1,
+		},
 		content: <ColorsPanelBody />,
 	},
 };

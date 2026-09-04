@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from '@playwright/test';
 
 /**
  * Floating tool panels & command palette (specs: floating-panel-system, command-palette).
@@ -13,42 +13,42 @@ const PANEL = '[data-panel-id="view"]';
 const TITLEBAR = `${PANEL} [data-panel-titlebar]`;
 
 async function openPalette(page: Page) {
-	await page.keyboard.press("ControlOrMeta+k");
-	await expect(page.getByPlaceholder("Type a command or search…")).toBeVisible();
+	await page.keyboard.press('ControlOrMeta+k');
+	await expect(page.getByPlaceholder('Type a command or search…')).toBeVisible();
 }
 
 async function runCommand(page: Page, query: string) {
 	await openPalette(page);
-	await page.getByPlaceholder("Type a command or search…").fill(query);
-	await page.keyboard.press("Enter");
+	await page.getByPlaceholder('Type a command or search…').fill(query);
+	await page.keyboard.press('Enter');
 }
 
 async function summonViewPanel(page: Page) {
-	await runCommand(page, "Summon View");
+	await runCommand(page, 'Summon View');
 	await expect(page.locator(PANEL)).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
-	await page.goto("/", { waitUntil: "networkidle" });
+	await page.goto('/', { waitUntil: 'networkidle' });
 	// Start from a clean layout so prior runs don't leak state.
-	await page.evaluate(() => localStorage.removeItem("ipodSnapshotPanelLayout"));
-	await page.reload({ waitUntil: "networkidle" });
+	await page.evaluate(() => localStorage.removeItem('ipodSnapshotPanelLayout'));
+	await page.reload({ waitUntil: 'networkidle' });
 });
 
-test.describe("command palette", () => {
-	test("opens with ⌘K and closes with Escape", async ({ page }) => {
+test.describe('command palette', () => {
+	test('opens with ⌘K and closes with Escape', async ({ page }) => {
 		await openPalette(page);
-		await page.keyboard.press("Escape");
-		await expect(page.getByPlaceholder("Type a command or search…")).toBeHidden();
+		await page.keyboard.press('Escape');
+		await expect(page.getByPlaceholder('Type a command or search…')).toBeHidden();
 	});
 
-	test("summons a panel via fuzzy search + Enter", async ({ page }) => {
+	test('summons a panel via fuzzy search + Enter', async ({ page }) => {
 		await summonViewPanel(page);
 	});
 });
 
-test.describe("floating panel interaction", () => {
-	test("drags within the viewport and cannot leave it", async ({ page }) => {
+test.describe('floating panel interaction', () => {
+	test('drags within the viewport and cannot leave it', async ({ page }) => {
 		await summonViewPanel(page);
 		const titlebar = page.locator(TITLEBAR);
 		const box = await titlebar.boundingBox();
@@ -70,7 +70,7 @@ test.describe("floating panel interaction", () => {
 		expect(panelBox.x).toBeGreaterThanOrEqual(-1);
 	});
 
-	test("resizes no smaller than its declared minimum", async ({ page }) => {
+	test('resizes no smaller than its declared minimum', async ({ page }) => {
 		await summonViewPanel(page);
 		const handle = page.locator(`${PANEL} [data-panel-resize="se"]`);
 		const hb = (await handle.boundingBox())!;
@@ -85,7 +85,7 @@ test.describe("floating panel interaction", () => {
 		expect(panelBox.height).toBeGreaterThanOrEqual(150 - 1);
 	});
 
-	test("collapses to its ideal-minimal form and restores", async ({ page }) => {
+	test('collapses to its ideal-minimal form and restores', async ({ page }) => {
 		await summonViewPanel(page);
 		const expanded = (await page.locator(PANEL).boundingBox())!;
 		expect(expanded.height).toBeGreaterThan(150);
@@ -95,7 +95,9 @@ test.describe("floating panel interaction", () => {
 		// Collapsed = title bar / nub only.
 		expect(collapsed.height).toBeLessThan(60);
 		// The body controls are gone while collapsed.
-		await expect(page.locator(`${PANEL} [data-testid="panel-view-flat"]`)).toHaveCount(0);
+		await expect(page.locator(`${PANEL} [data-testid="panel-view-flat"]`)).toHaveCount(
+			0,
+		);
 
 		await page.locator(`${PANEL} [data-panel-collapse]`).click();
 		const restored = (await page.locator(PANEL).boundingBox())!;
@@ -103,18 +105,18 @@ test.describe("floating panel interaction", () => {
 	});
 });
 
-test.describe("per-mode layout + persistence", () => {
-	test("each view mode keeps its own arrangement", async ({ page }) => {
+test.describe('per-mode layout + persistence', () => {
+	test('each view mode keeps its own arrangement', async ({ page }) => {
 		await summonViewPanel(page);
 		// Switch to Preview from inside the panel — Preview has no summoned panels yet.
 		await page.locator(`${PANEL} [data-testid="panel-view-preview"]`).click();
 		await expect(page.locator(PANEL)).toBeHidden();
 		// Back to Flat restores the panel we summoned there.
-		await runCommand(page, "Switch to Flat");
+		await runCommand(page, 'Switch to Flat');
 		await expect(page.locator(PANEL)).toBeVisible();
 	});
 
-	test("a moved panel survives a reload", async ({ page }) => {
+	test('a moved panel survives a reload', async ({ page }) => {
 		await summonViewPanel(page);
 		const titlebar = page.locator(TITLEBAR);
 		const box = (await titlebar.boundingBox())!;
@@ -124,14 +126,14 @@ test.describe("per-mode layout + persistence", () => {
 		await page.mouse.up();
 		const moved = (await page.locator(PANEL).boundingBox())!;
 
-		await page.reload({ waitUntil: "networkidle" });
+		await page.reload({ waitUntil: 'networkidle' });
 		await expect(page.locator(PANEL)).toBeVisible();
 		const after = (await page.locator(PANEL).boundingBox())!;
 		expect(Math.abs(after.x - moved.x)).toBeLessThan(4);
 		expect(Math.abs(after.y - moved.y)).toBeLessThan(4);
 	});
 
-	test("a panel reclamps into the viewport after a window shrink", async ({ page }) => {
+	test('a panel reclamps into the viewport after a window shrink', async ({ page }) => {
 		await summonViewPanel(page);
 		// Push the panel toward the right edge first.
 		const titlebar = page.locator(TITLEBAR);

@@ -1,16 +1,13 @@
-import { fn } from "@storybook/test";
-
-import { EditableDuration } from "@ipod/components/ipod/editable-duration";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { EditableDuration } from '@ipod/components/ipod/editable-duration';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Fields/Editable Duration",
+	title: 'iPod/Fields/Editable Duration',
 	component: EditableDuration,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
 		value: 264,
 		onChange: fn(),

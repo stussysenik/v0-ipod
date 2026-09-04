@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
 import {
 	cloneLightingConfig,
 	NATURAL_LIGHT_RIG,
 	RIG_PRESETS,
 	sanitizeLightingConfig,
-} from "./studio-lighting-config";
+} from './studio-lighting-config';
 
 /*
  * ── Rig QC — "light evidence" ────────────────────────────────────────────────
@@ -23,18 +23,18 @@ import {
 
 const srgbToLinear = (c: number) => {
 	const s = c / 255;
-	return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 };
 const luminance = (hex: string) => {
-	const h = hex.replace("#", "");
+	const h = hex.replace('#', '');
 	const [r, g, b] = [h.slice(0, 2), h.slice(2, 4), h.slice(4, 6)].map((c) =>
 		srgbToLinear(parseInt(c, 16)),
 	);
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
-describe("rig preset registry", () => {
-	it("preset ids and rig names are unique (themes resolve rigs by name)", () => {
+describe('rig preset registry', () => {
+	it('preset ids and rig names are unique (themes resolve rigs by name)', () => {
 		const ids = RIG_PRESETS.map((p) => p.id);
 		const names = RIG_PRESETS.map((p) => p.config.name);
 		expect(new Set(ids).size).toBe(ids.length);
@@ -42,7 +42,7 @@ describe("rig preset registry", () => {
 	});
 
 	it.each(RIG_PRESETS.map((p) => [p.id, p.config] as const))(
-		"%s — survives the persistence round-trip unchanged",
+		'%s — survives the persistence round-trip unchanged',
 		(_id, config) => {
 			expect(sanitizeLightingConfig(cloneLightingConfig(config))).toEqual(
 				cloneLightingConfig(config),
@@ -51,9 +51,11 @@ describe("rig preset registry", () => {
 	);
 });
 
-describe("Natural Light — the legibility template", () => {
-	it("carries real front-hemisphere energy (the wall a metal face mirrors)", () => {
-		const frontPanels = NATURAL_LIGHT_RIG.env.softboxes.filter((s) => s.position[2] > 5);
+describe('Natural Light — the legibility template', () => {
+	it('carries real front-hemisphere energy (the wall a metal face mirrors)', () => {
+		const frontPanels = NATURAL_LIGHT_RIG.env.softboxes.filter(
+			(s) => s.position[2] > 5,
+		);
 		expect(frontPanels.length).toBeGreaterThan(0);
 		const main = frontPanels.reduce((a, b) => (a.intensity >= b.intensity ? a : b));
 		// Bright (near-white) and strong — this is what lifts a black wheel's
@@ -64,23 +66,23 @@ describe("Natural Light — the legibility template", () => {
 		expect(main.scale[0] * main.scale[1]).toBeGreaterThanOrEqual(400);
 	});
 
-	it("keeps an open-room ambient floor — no studio-void crush", () => {
+	it('keeps an open-room ambient floor — no studio-void crush', () => {
 		expect(NATURAL_LIGHT_RIG.ambient.intensity).toBeGreaterThanOrEqual(0.4);
 		expect(NATURAL_LIGHT_RIG.env.intensity).toBeGreaterThanOrEqual(1.0);
 	});
 
-	it("mixes warm key with cool fill — daylight, not a tinted rig", () => {
+	it('mixes warm key with cool fill — daylight, not a tinted rig', () => {
 		// Warm sun side: red channel leads; cool sky side: blue channel leads.
 		const key = NATURAL_LIGHT_RIG.key.color.toLowerCase();
 		const fill = NATURAL_LIGHT_RIG.fill.color.toLowerCase();
 		const channel = (hex: string, i: number) =>
-			parseInt(hex.replace("#", "").slice(i * 2, i * 2 + 2), 16);
+			parseInt(hex.replace('#', '').slice(i * 2, i * 2 + 2), 16);
 		expect(channel(key, 0)).toBeGreaterThan(channel(key, 2)); // key: R > B
 		expect(channel(fill, 2)).toBeGreaterThan(channel(fill, 0)); // fill: B > R
 	});
 
-	it("ships with a light stage — the backdrop stays a backdrop", () => {
-		const preset = RIG_PRESETS.find((p) => p.config.name === "Natural Light");
+	it('ships with a light stage — the backdrop stays a backdrop', () => {
+		const preset = RIG_PRESETS.find((p) => p.config.name === 'Natural Light');
 		expect(preset).toBeDefined();
 		expect(luminance(preset!.stage!)).toBeGreaterThanOrEqual(0.7);
 	});

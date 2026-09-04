@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { createActorContext } from "@xstate/react";
-import { ipodCentralMachine } from "./central-machine";
-import { createInitialIpodWorkbenchModel } from "@ipod/lib/ipod-state/update";
+import { createInitialIpodWorkbenchModel } from '@ipod/lib/ipod-state/update';
+import { createActorContext } from '@xstate/react';
+import { ipodCentralMachine } from './central-machine';
 
 export const IpodStoreContext = createActorContext(ipodCentralMachine);
 

@@ -1,18 +1,15 @@
-import { fn } from "@storybook/test";
-
-import { ThemeToggle } from "@ipod/components/ui/theme-toggle";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { ThemeToggle } from '@ipod/components/ui/theme-toggle';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "UI/Theme Toggle",
+	title: 'UI/Theme Toggle',
 	component: ThemeToggle,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
-		theme: "black",
+		theme: 'black',
 		onToggle: fn(),
 		showLabel: true,
 	},
@@ -25,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 export const Black: Story = {};
 
 export const White: Story = {
-	args: { theme: "white" },
+	args: { theme: 'white' },
 };
 
 export const NoLabel: Story = {

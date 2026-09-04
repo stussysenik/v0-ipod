@@ -11,9 +11,9 @@
  * single render of the angle the user actually settled on.
  */
 
-import type { ExportSnapshot } from "./export-fingerprint";
-import type { ProofRenderQueue } from "./proof-render-queue";
-import type { ProofStore } from "./proof-cache";
+import type { ExportSnapshot } from './export-fingerprint';
+import type { ProofStore } from './proof-cache';
+import type { ProofRenderQueue } from './proof-render-queue';
 
 export interface ProofSchedulerDeps {
 	store: ProofStore;

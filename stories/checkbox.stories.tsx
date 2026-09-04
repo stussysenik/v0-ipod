@@ -1,14 +1,12 @@
-import { Checkbox } from "@ipod/components/ui/checkbox";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { Checkbox } from '@ipod/components/ui/checkbox';
+import type { Meta, StoryObj } from '@storybook/react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "UI/Checkbox",
+	title: 'UI/Checkbox',
 	component: Checkbox,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 } satisfies Meta<typeof Checkbox>;
 
 export default meta;

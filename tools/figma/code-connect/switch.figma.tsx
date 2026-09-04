@@ -1,14 +1,14 @@
-import figma from "@figma/code-connect";
+import figma from '@figma/code-connect';
 
-import { Switch } from "@ipod/components/ui/switch";
+import { Switch } from '@ipod/components/ui/switch';
 
 figma.connect(
 	Switch,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		props: {
-			checked: figma.boolean("checked"),
-			disabled: figma.boolean("disabled"),
+			checked: figma.boolean('checked'),
+			disabled: figma.boolean('disabled'),
 		},
 		example: ({ checked, disabled }) => (
 			<Switch checked={checked} disabled={disabled} />

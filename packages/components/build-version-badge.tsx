@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
 interface BuildVersionBadgeProps {
 	initialVersion: string;
@@ -14,8 +14,8 @@ type NextDataCarrier = Window & {
 
 function normalizeVersion(raw: string): string {
 	const trimmed = raw.trim();
-	if (!trimmed) return "unknown";
-	if (trimmed === "dev") return "dev";
+	if (!trimmed) return 'unknown';
+	if (trimmed === 'dev') return 'dev';
 	return trimmed.slice(0, 12);
 }
 
@@ -23,7 +23,7 @@ export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
 	const [version, setVersion] = useState(() => normalizeVersion(initialVersion));
 
 	useEffect(() => {
-		if (version !== "dev" && version !== "unknown") {
+		if (version !== 'dev' && version !== 'unknown') {
 			return;
 		}
 
@@ -34,8 +34,8 @@ export function BuildVersionBadge({ initialVersion }: BuildVersionBadgeProps) {
 	}, [version]);
 
 	const label = useMemo(() => {
-		if (version === "dev") {
-			return "build dev";
+		if (version === 'dev') {
+			return 'build dev';
 		}
 		return `build ${version}`;
 	}, [version]);

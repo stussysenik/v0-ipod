@@ -1,17 +1,16 @@
-"use client";
-
-import { Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+'use client';
 
 import {
 	BACKGROUND_CURATED_FAVORITES,
 	CASE_CURATED_FAVORITES,
 	colorManifest,
-} from "@ipod/lib/color-manifest";
+} from '@ipod/lib/color-manifest';
+import { Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // --- Data Model ---
 
-export type GreyFamilyId = "neutral" | "warm" | "cool" | "greige" | "sage" | "lavender";
+export type GreyFamilyId = 'neutral' | 'warm' | 'cool' | 'greige' | 'sage' | 'lavender';
 
 interface GreyFamily {
 	label: string;
@@ -52,23 +51,23 @@ const GREY_FAMILIES: Record<GreyFamilyId, GreyFamily> = {
 	},
 };
 
-const FAMILY_IDS: GreyFamilyId[] = ["neutral", "warm", "cool", "greige", "sage", "lavender"];
+const FAMILY_IDS: GreyFamilyId[] = ['neutral', 'warm', 'cool', 'greige', 'sage', 'lavender'];
 
 // 23 perceptually-spaced lightness stops: denser in the mid-range
 const LIGHTNESS_STOPS = colorManifest.greyLightnessStops;
 
-const GREY_FAMILY_STORAGE_KEY = "ipodSnapshotGreyFamily";
+const GREY_FAMILY_STORAGE_KEY = 'ipodSnapshotGreyFamily';
 
 function isGreyFamilyId(value: unknown): value is GreyFamilyId {
-	return typeof value === "string" && FAMILY_IDS.includes(value as GreyFamilyId);
+	return typeof value === 'string' && FAMILY_IDS.includes(value as GreyFamilyId);
 }
 
 function loadGreyFamily(): GreyFamilyId {
 	try {
 		const raw = localStorage.getItem(GREY_FAMILY_STORAGE_KEY);
-		return isGreyFamilyId(raw) ? raw : "neutral";
+		return isGreyFamilyId(raw) ? raw : 'neutral';
 	} catch {
-		return "neutral";
+		return 'neutral';
 	}
 }
 
@@ -99,7 +98,7 @@ function buildGreyRamp(
 
 	for (const l of LIGHTNESS_STOPS) {
 		// At L=0 and L=1, all families converge — only include in neutral
-		if ((l === 0 || l === 1) && familyId !== "neutral") continue;
+		if ((l === 0 || l === 1) && familyId !== 'neutral') continue;
 
 		let hex: string | null = null;
 
@@ -110,7 +109,7 @@ function buildGreyRamp(
 		// Fallback: pure sRGB grey
 		if (!hex) {
 			const v = Math.round(l * 255);
-			hex = `#${v.toString(16).padStart(2, "0").repeat(3)}`.toUpperCase();
+			hex = `#${v.toString(16).padStart(2, '0').repeat(3)}`.toUpperCase();
 		}
 
 		// Deduplicate adjacent stops producing identical hex
@@ -131,7 +130,7 @@ function buildGreyRamp(
 // --- Component ---
 
 interface GreyPalettePickerProps {
-	target: "case" | "bg";
+	target: 'case' | 'bg';
 	currentColor: string;
 	onColorSelect: (hex: string) => void;
 	onColorCommit: (hex: string) => void;
@@ -147,7 +146,7 @@ export function GreyPalettePicker({
 	oklchToHex,
 	oklchReady,
 }: GreyPalettePickerProps) {
-	const [activeFamily, setActiveFamily] = useState<GreyFamilyId>("neutral");
+	const [activeFamily, setActiveFamily] = useState<GreyFamilyId>('neutral');
 
 	// Restore persisted family on mount
 	useEffect(() => {
@@ -168,14 +167,14 @@ export function GreyPalettePicker({
 
 	// Build gradient CSS from ramp hex values
 	const gradientCss = useMemo(
-		() => `linear-gradient(to right, ${ramp.map((s) => s.hex).join(", ")})`,
+		() => `linear-gradient(to right, ${ramp.map((s) => s.hex).join(', ')})`,
 		[ramp],
 	);
 
-	const curated = target === "case" ? CASE_CURATED_FAVORITES : BACKGROUND_CURATED_FAVORITES;
-	const isCase = target === "case";
-	const swatchSize = isCase ? "w-7 h-7" : "w-6 h-6";
-	const curatedSize = "w-5 h-5";
+	const curated = target === 'case' ? CASE_CURATED_FAVORITES : BACKGROUND_CURATED_FAVORITES;
+	const isCase = target === 'case';
+	const swatchSize = isCase ? 'w-7 h-7' : 'w-6 h-6';
+	const curatedSize = 'w-5 h-5';
 
 	const currentUpper = currentColor.toUpperCase();
 
@@ -198,17 +197,18 @@ export function GreyPalettePicker({
 					const dotHex =
 						oklchReady && f.chroma > 0
 							? (oklchToHex(0.5, f.chroma, f.hue) ??
-								"#808080")
-							: "#808080";
+								'#808080')
+							: '#808080';
 
 					return (
 						<button
 							key={id}
+							type="button"
 							aria-selected={isActive}
 							className={`flex min-h-11 items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-semibold leading-none transition-colors duration-200 ${
 								isActive
-									? "bg-[#111827] text-white"
-									: "bg-white/80 text-[#6B7280] hover:bg-white hover:text-[#374151]"
+									? 'bg-[#111827] text-white'
+									: 'bg-white/80 text-[#6B7280] hover:bg-white hover:text-[#374151]'
 							}`}
 							role="tab"
 							title={f.label}
@@ -239,17 +239,18 @@ export function GreyPalettePicker({
 				className="animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
 			>
 				<div
-					className={`grid ${isCase ? "grid-cols-7 sm:grid-cols-8" : "grid-cols-7 sm:grid-cols-8"} gap-1.5 mb-2`}
+					className={`grid ${isCase ? 'grid-cols-7 sm:grid-cols-8' : 'grid-cols-7 sm:grid-cols-8'} gap-1.5 mb-2`}
 				>
 					{ramp.map((swatch) => {
 						const isSelected = swatch.hex === currentUpper;
 						return (
 							<button
 								key={swatch.hex}
+								type="button"
 								className={`${swatchSize} rounded-full border transition-all duration-150 ease-out hover:scale-110 hover:shadow-[0_2px_8px_rgba(0,0,0,0.12)] active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
 									isSelected
-										? "border-[#111827] scale-105 ring-2 ring-[#CDD1D6]"
-										: "border-[#B5BBC3]"
+										? 'border-[#111827] scale-105 ring-2 ring-[#CDD1D6]'
+										: 'border-[#B5BBC3]'
 								}`}
 								style={{
 									backgroundColor: swatch.hex,
@@ -267,15 +268,15 @@ export function GreyPalettePicker({
 						className={`relative ${swatchSize} rounded-full border border-dashed border-[#7A838E] flex items-center justify-center hover:border-[#111827] cursor-pointer overflow-hidden transition-colors`}
 					>
 						<Plus
-							className={`${isCase ? "w-4 h-4" : "w-3 h-3"} text-[#4B5563] pointer-events-none`}
+							className={`${isCase ? 'w-4 h-4' : 'w-3 h-3'} text-[#4B5563] pointer-events-none`}
 						/>
 						<input
 							aria-label={`Open custom ${target} color picker`}
 							className="absolute inset-0 opacity-0 cursor-pointer"
 							data-testid={
 								isCase
-									? "custom-case-color-button"
-									: "custom-bg-color-button"
+									? 'custom-case-color-button'
+									: 'custom-bg-color-button'
 							}
 							title={`Custom ${target} color`}
 							type="color"
@@ -303,10 +304,11 @@ export function GreyPalettePicker({
 					return (
 						<button
 							key={c.value}
+							type="button"
 							className={`${curatedSize} rounded-full border transition-all duration-150 ease-out hover:scale-110 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100 ${
 								isSelected
-									? "border-[#111827] ring-2 ring-[#CDD1D6]"
-									: "border-[#B5BBC3]"
+									? 'border-[#111827] ring-2 ring-[#CDD1D6]'
+									: 'border-[#B5BBC3]'
 							}`}
 							style={{ backgroundColor: c.value }}
 							title={c.label}

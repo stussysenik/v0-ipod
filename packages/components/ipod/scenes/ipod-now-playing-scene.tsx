@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import type { SongMetadata } from "@ipod/types/ipod";
-import { IpodArtworkPanel } from "@ipod/components/ipod/panels/ipod-artwork-panel";
-import { IpodTrackMetaPanel } from "@ipod/components/ipod/panels/ipod-track-meta-panel";
-import { IpodPlaybackFooter } from "@ipod/components/ipod/panels/ipod-playback-footer";
-import type { IpodDisplayDispatch, RenderNowPlayingElement } from "./ipod-scene-types";
+import { IpodArtworkPanel } from '@ipod/components/ipod/panels/ipod-artwork-panel';
+import { IpodPlaybackFooter } from '@ipod/components/ipod/panels/ipod-playback-footer';
+import { IpodTrackMetaPanel } from '@ipod/components/ipod/panels/ipod-track-meta-panel';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import type { SongMetadata } from '@ipod/types/ipod';
+import type { IpodDisplayDispatch, RenderNowPlayingElement } from './ipod-scene-types';
 
 interface IpodNowPlayingSceneProps {
-	screenTokens: IpodClassicPresetDefinition["screen"];
+	screenTokens: IpodClassicPresetDefinition['screen'];
 	state: SongMetadata;
 	dispatch: IpodDisplayDispatch;
 	renderElement: RenderNowPlayingElement;
@@ -65,7 +65,7 @@ export function IpodNowPlayingScene({
 					playClick={playClick}
 					onArtworkChange={(artwork) =>
 						dispatch({
-							type: "UPDATE_ARTWORK",
+							type: 'UPDATE_ARTWORK',
 							payload: artwork,
 						})
 					}
@@ -80,26 +80,26 @@ export function IpodNowPlayingScene({
 					titleCaptureReady={titleCaptureReady}
 					onTitleOverflowChange={onTitleOverflowChange}
 					onTitleChange={(value) =>
-						dispatch({ type: "UPDATE_TITLE", payload: value })
+						dispatch({ type: 'UPDATE_TITLE', payload: value })
 					}
 					onArtistChange={(value) =>
-						dispatch({ type: "UPDATE_ARTIST", payload: value })
+						dispatch({ type: 'UPDATE_ARTIST', payload: value })
 					}
 					onAlbumChange={(value) =>
-						dispatch({ type: "UPDATE_ALBUM", payload: value })
+						dispatch({ type: 'UPDATE_ALBUM', payload: value })
 					}
 					onRatingChange={(rating) =>
-						dispatch({ type: "UPDATE_RATING", payload: rating })
+						dispatch({ type: 'UPDATE_RATING', payload: rating })
 					}
 					onTrackNumberChange={(value) =>
 						dispatch({
-							type: "UPDATE_TRACK_NUMBER",
+							type: 'UPDATE_TRACK_NUMBER',
 							payload: value,
 						})
 					}
 					onTotalTracksChange={(value) =>
 						dispatch({
-							type: "UPDATE_TOTAL_TRACKS",
+							type: 'UPDATE_TOTAL_TRACKS',
 							payload: value,
 						})
 					}

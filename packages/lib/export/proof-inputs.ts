@@ -9,7 +9,7 @@
  * Selectors take narrow slices (not the whole model) so they stay pure and cheaply testable.
  */
 
-import type { ExportSnapshot, FingerprintPose, ProofInputs } from "./export-fingerprint";
+import type { ExportSnapshot, FingerprintPose, ProofInputs } from './export-fingerprint';
 
 /** The studio-state fields that affect the anchor frame's pixels. */
 export interface ProofModelSlice {
@@ -53,7 +53,7 @@ export interface ProofExportOptions {
 export function selectProofInputs(
 	model: ProofModelSlice,
 	pose: FingerprintPose,
-	options: Pick<ProofExportOptions, "aspect" | "quality">,
+	options: Pick<ProofExportOptions, 'aspect' | 'quality'>,
 ): ProofInputs {
 	return {
 		pose: {

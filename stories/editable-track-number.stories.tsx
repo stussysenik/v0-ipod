@@ -1,16 +1,13 @@
-import { fn } from "@storybook/test";
-
-import { EditableTrackNumber } from "@ipod/components/ipod/editable-track-number";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { EditableTrackNumber } from '@ipod/components/ipod/editable-track-number';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Fields/Editable Track Number",
+	title: 'iPod/Fields/Editable Track Number',
 	component: EditableTrackNumber,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
 		trackNumber: 3,
 		totalTracks: 10,

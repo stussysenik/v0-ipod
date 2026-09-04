@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ThreeDIpodHandle } from '@ipod/components/three/three-d-ipod';
+import type { StudioPose } from '@ipod/lib/studio-camera';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
-import { type StudioPose } from "@ipod/lib/studio-camera";
-
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * The camera cockpit for the /3d now-playing stage — a designer-facing readout of
@@ -22,10 +21,10 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  * here is the hero the Robo/Orbit clip exports anchor on.
  */
 
-const PRESETS_STORAGE_KEY = "ipod-3d-camera-presets";
+const PRESETS_STORAGE_KEY = 'ipod-3d-camera-presets';
 
 interface AxisDef {
-	key: "azimuth" | "elevation" | "reach";
+	key: 'azimuth' | 'elevation' | 'reach';
 	label: string;
 	step: number;
 	unit: string;
@@ -33,9 +32,9 @@ interface AxisDef {
 }
 
 const AXES: readonly AxisDef[] = [
-	{ key: "azimuth", label: "Azimuth", step: 3, unit: "°", digits: 0 },
-	{ key: "elevation", label: "Elevation", step: 2, unit: "°", digits: 0 },
-	{ key: "reach", label: "Reach", step: 0.5, unit: "", digits: 1 },
+	{ key: 'azimuth', label: 'Azimuth', step: 3, unit: '°', digits: 0 },
+	{ key: 'elevation', label: 'Elevation', step: 2, unit: '°', digits: 0 },
+	{ key: 'reach', label: 'Reach', step: 0.5, unit: '', digits: 1 },
 ] as const;
 
 interface SavedPose {
@@ -97,7 +96,7 @@ export function Ipod3DCameraCockpit({
 	}, [apiRef]);
 
 	const nudge = useCallback(
-		(key: AxisDef["key"], delta: number) => {
+		(key: AxisDef['key'], delta: number) => {
 			const current = apiRef.current?.getCameraPose();
 			if (!current) return;
 			apiRef.current?.setCameraGoal({ [key]: current[key] + delta });
@@ -137,7 +136,7 @@ export function Ipod3DCameraCockpit({
 	);
 
 	const fmt = (axis: AxisDef) =>
-		pose ? `${pose[axis.key].toFixed(axis.digits)}${axis.unit}` : "—";
+		pose ? `${pose[axis.key].toFixed(axis.digits)}${axis.unit}` : '—';
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -150,18 +149,26 @@ export function Ipod3DCameraCockpit({
 							type="button"
 							onClick={onToggleLock}
 							aria-pressed={locked}
-							title={locked ? "Unlock to recompose" : "Lock this perspective for exports"}
+							title={
+								locked
+									? 'Unlock to recompose'
+									: 'Lock this perspective for exports'
+							}
 							className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] transition-colors ${
 								locked
-									? "border-black/80 bg-black text-white"
-									: "border-black/10 text-black/40 hover:border-black/40 hover:text-black"
+									? 'border-black/80 bg-black text-white'
+									: 'border-black/10 text-black/40 hover:border-black/40 hover:text-black'
 							}`}
 						>
-							<span aria-hidden>{locked ? "🔒" : "🔓"}</span>
-							{locked ? "Locked" : "Lock"}
+							<span aria-hidden>
+								{locked ? '🔒' : '🔓'}
+							</span>
+							{locked ? 'Locked' : 'Lock'}
 						</button>
 					) : (
-						<span className="text-[9px] font-medium text-black/25">drag to compose</span>
+						<span className="text-[9px] font-medium text-black/25">
+							drag to compose
+						</span>
 					)
 				}
 			/>
@@ -169,16 +176,33 @@ export function Ipod3DCameraCockpit({
 			{/* Studio-coordinate axes */}
 			<div className="px-3.5 py-2">
 				{AXES.map((axis) => (
-					<div key={axis.key} className="flex h-8 items-center justify-between">
-						<span className="text-[11px] font-medium text-black/55">{axis.label}</span>
+					<div
+						key={axis.key}
+						className="flex h-8 items-center justify-between"
+					>
+						<span className="text-[11px] font-medium text-black/55">
+							{axis.label}
+						</span>
 						<span className="flex items-center gap-2">
 							<span className="w-12 text-right font-mono text-[10px] uppercase tracking-tight text-black/45">
 								{fmt(axis)}
 							</span>
-							<Stepper disabled={locked} label={`${axis.label} down`} onClick={() => nudge(axis.key, -axis.step)}>
+							<Stepper
+								disabled={locked}
+								label={`${axis.label} down`}
+								onClick={() =>
+									nudge(axis.key, -axis.step)
+								}
+							>
 								◄
 							</Stepper>
-							<Stepper disabled={locked} label={`${axis.label} up`} onClick={() => nudge(axis.key, axis.step)}>
+							<Stepper
+								disabled={locked}
+								label={`${axis.label} up`}
+								onClick={() =>
+									nudge(axis.key, axis.step)
+								}
+							>
 								►
 							</Stepper>
 						</span>
@@ -205,8 +229,8 @@ export function Ipod3DCameraCockpit({
 					title="Show a centre crosshair to compose against the origin"
 					className={`ml-auto flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] transition-colors ${
 						showOrigin
-							? "border-black/80 bg-black text-white"
-							: "border-black/10 text-black/40 hover:border-black/40 hover:text-black"
+							? 'border-black/80 bg-black text-white'
+							: 'border-black/10 text-black/40 hover:border-black/40 hover:text-black'
 					}`}
 				>
 					<span aria-hidden>✛</span> Origin

@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import type { Dispatch } from "react";
+import type { BatteryMode } from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
+import type { Dispatch } from 'react';
 
-import type { BatteryMode } from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
-
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * Battery cockpit for the /3d stage.
@@ -24,8 +23,8 @@ interface Ipod3DBatteryCockpitProps {
 }
 
 const MODES: readonly { id: BatteryMode; label: string }[] = [
-	{ id: "manual", label: "Manual" },
-	{ id: "solar", label: "Solar" },
+	{ id: 'manual', label: 'Manual' },
+	{ id: 'solar', label: 'Solar' },
 ] as const;
 
 export function Ipod3DBatteryCockpit({
@@ -40,7 +39,11 @@ export function Ipod3DBatteryCockpit({
 			<Ipod3DCockpitHeader
 				index={index}
 				title="Battery"
-				right={<span className="font-mono text-[11px] tabular-nums text-black/55">{pct}%</span>}
+				right={
+					<span className="font-mono text-[11px] tabular-nums text-black/55">
+						{pct}%
+					</span>
+				}
 			/>
 
 			<div className="flex flex-col gap-3 px-3.5 py-3">
@@ -51,7 +54,10 @@ export function Ipod3DBatteryCockpit({
 					step={0.01}
 					value={batteryLevel}
 					onChange={(e) =>
-						dispatch({ type: "SET_BATTERY_LEVEL", payload: parseFloat(e.target.value) })
+						dispatch({
+							type: 'SET_BATTERY_LEVEL',
+							payload: parseFloat(e.target.value),
+						})
 					}
 					aria-label="Battery level"
 					className="h-1 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-black"
@@ -64,11 +70,16 @@ export function Ipod3DBatteryCockpit({
 							<button
 								key={m.id}
 								type="button"
-								onClick={() => dispatch({ type: "SET_BATTERY_MODE", payload: m.id })}
+								onClick={() =>
+									dispatch({
+										type: 'SET_BATTERY_MODE',
+										payload: m.id,
+									})
+								}
 								className={`flex-1 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-colors ${
 									active
-										? "border-black/80 text-black"
-										: "border-black/10 text-black/55 hover:border-black/40 hover:text-black"
+										? 'border-black/80 text-black'
+										: 'border-black/10 text-black/55 hover:border-black/40 hover:text-black'
 								}`}
 							>
 								{m.label}

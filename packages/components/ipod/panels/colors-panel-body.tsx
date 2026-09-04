@@ -1,19 +1,18 @@
-"use client";
+'use client';
 
-import { Button, Heading } from "react-aria-components";
-import { cva } from "class-variance-authority";
-
-import { ColorField } from "../editors/color-field";
-import { IPOD_6G_COLORS } from "@ipod/hooks/use-ipod-theme";
+import { IPOD_6G_COLORS } from '@ipod/hooks/use-ipod-theme';
 import {
 	loadPersistedSongSnapshot,
 	savePersistedSongSnapshot,
 	saveWorkbenchSnapshot,
-} from "@ipod/lib/ipod-state/effects";
-import type { ColorTarget } from "@ipod/lib/ipod-state/model";
-import { TEST_SONG_SNAPSHOT } from "@ipod/lib/song-snapshots";
-import { cn } from "@ipod/lib/utils";
-import { IpodStoreContext } from "@ipod/lib/xstate/store";
+} from '@ipod/lib/ipod-state/effects';
+import type { ColorTarget } from '@ipod/lib/ipod-state/model';
+import { TEST_SONG_SNAPSHOT } from '@ipod/lib/song-snapshots';
+import { cn } from '@ipod/lib/utils';
+import { IpodStoreContext } from '@ipod/lib/xstate/store';
+import { cva } from 'class-variance-authority';
+import { Button, Heading } from 'react-aria-components';
+import { ColorField } from '../editors/color-field';
 
 /**
  * Colors panel content (spec: floating-panel-system §6 — colors panel): the finish editors
@@ -23,15 +22,17 @@ import { IpodStoreContext } from "@ipod/lib/xstate/store";
  * until the dock control retires.
  */
 
-const sectionHeading = cva("text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1");
+const sectionHeading = cva(
+	'text-[11px] font-bold text-[#4F555D] uppercase tracking-[0.1em] mb-3 px-1',
+);
 
 const racButton = cva(
-	"flex items-center justify-center text-[11px] font-semibold transition-all duration-200 py-2.5 px-3 rounded-xl border outline-none focus-visible:ring-2 focus-visible:ring-blue-500 w-full",
+	'flex items-center justify-center text-[11px] font-semibold transition-all duration-200 py-2.5 px-3 rounded-xl border outline-none focus-visible:ring-2 focus-visible:ring-blue-500 w-full',
 	{
 		variants: {
 			isActive: {
-				true: "bg-white border-[#111827] text-[#111827] shadow-sm",
-				false: "bg-white/60 border-[#D0D4DA] text-[#6B7280] hover:bg-white/80",
+				true: 'bg-white border-[#111827] text-[#111827] shadow-sm',
+				false: 'bg-white/60 border-[#D0D4DA] text-[#6B7280] hover:bg-white/80',
 			},
 		},
 		defaultVariants: { isActive: false },
@@ -48,13 +49,13 @@ export function ColorsPanelBody() {
 	const savedColors = IpodStoreContext.useSelector((s) => s.context.savedColors);
 
 	const saveCustom = (target: ColorTarget, hex: string) =>
-		send({ type: "SAVE_CUSTOM_COLOR", payload: { target, hex } });
+		send({ type: 'SAVE_CUSTOM_COLOR', payload: { target, hex } });
 
 	const applyFinish = (caseHex: string, ring: string, center: string, bg: string) => {
-		send({ type: "SET_SKIN_COLOR", payload: caseHex });
-		send({ type: "SET_RING_COLOR", payload: ring });
-		send({ type: "SET_CENTER_COLOR", payload: center });
-		send({ type: "SET_BG_COLOR", payload: bg });
+		send({ type: 'SET_SKIN_COLOR', payload: caseHex });
+		send({ type: 'SET_RING_COLOR', payload: ring });
+		send({ type: 'SET_CENTER_COLOR', payload: center });
+		send({ type: 'SET_BG_COLOR', payload: bg });
 	};
 
 	const handleSaveSnapshot = () => {
@@ -64,7 +65,7 @@ export function ColorsPanelBody() {
 
 	const handleRestoreSnapshot = () => {
 		const persisted = loadPersistedSongSnapshot() ?? TEST_SONG_SNAPSHOT;
-		send({ type: "APPLY_SONG_SNAPSHOT", payload: persisted });
+		send({ type: 'APPLY_SONG_SNAPSHOT', payload: persisted });
 		savePersistedSongSnapshot(persisted);
 	};
 
@@ -83,7 +84,11 @@ export function ColorsPanelBody() {
 								IPOD_6G_COLORS.background.white,
 							)
 						}
-						className={racButton({ isActive: skinColor === IPOD_6G_COLORS.case.black })}
+						className={racButton({
+							isActive:
+								skinColor ===
+								IPOD_6G_COLORS.case.black,
+						})}
 					>
 						<span className="flex items-center gap-2">
 							<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#1A1A1A]" />
@@ -99,7 +104,11 @@ export function ColorsPanelBody() {
 								IPOD_6G_COLORS.background.white,
 							)
 						}
-						className={racButton({ isActive: skinColor === IPOD_6G_COLORS.case.white })}
+						className={racButton({
+							isActive:
+								skinColor ===
+								IPOD_6G_COLORS.case.white,
+						})}
 					>
 						<span className="flex items-center gap-2">
 							<span className="w-3.5 h-3.5 rounded-full border border-black/10 bg-[#F5F5F5]" />
@@ -110,7 +119,9 @@ export function ColorsPanelBody() {
 				<ColorField
 					label=""
 					color={skinColor}
-					onColorChange={(c) => send({ type: "SET_SKIN_COLOR", payload: c })}
+					onColorChange={(c) =>
+						send({ type: 'SET_SKIN_COLOR', payload: c })
+					}
 					onSaveCustom={saveCustom}
 					target="case"
 					savedColors={savedColors.case}
@@ -120,7 +131,7 @@ export function ColorsPanelBody() {
 			<ColorField
 				label="Outer Click Wheel"
 				color={ringColor}
-				onColorChange={(c) => send({ type: "SET_RING_COLOR", payload: c })}
+				onColorChange={(c) => send({ type: 'SET_RING_COLOR', payload: c })}
 				onSaveCustom={saveCustom}
 				target="ring"
 				savedColors={savedColors.ring}
@@ -129,7 +140,9 @@ export function ColorsPanelBody() {
 			<ColorField
 				label="Center Button"
 				color={centerColor}
-				onColorChange={(c) => send({ type: "SET_CENTER_COLOR", payload: c })}
+				onColorChange={(c) =>
+					send({ type: 'SET_CENTER_COLOR', payload: c })
+				}
 				onSaveCustom={saveCustom}
 				target="center"
 				savedColors={savedColors.center}
@@ -138,7 +151,7 @@ export function ColorsPanelBody() {
 			<ColorField
 				label="Studio Background"
 				color={bgColor}
-				onColorChange={(c) => send({ type: "SET_BG_COLOR", payload: c })}
+				onColorChange={(c) => send({ type: 'SET_BG_COLOR', payload: c })}
 				onSaveCustom={saveCustom}
 				target="bg"
 				savedColors={savedColors.bg}
@@ -148,13 +161,19 @@ export function ColorsPanelBody() {
 			<div className="mt-6 pt-6 border-t border-[#D5D7DA] grid grid-cols-2 gap-3">
 				<Button
 					onPress={handleRestoreSnapshot}
-					className={cn(racButton(), "bg-black/5 border-transparent text-[#111827]")}
+					className={cn(
+						racButton(),
+						'bg-black/5 border-transparent text-[#111827]',
+					)}
 				>
 					Restore
 				</Button>
 				<Button
 					onPress={handleSaveSnapshot}
-					className={cn(racButton(), "bg-[#111827] border-[#111827] text-white hover:bg-black")}
+					className={cn(
+						racButton(),
+						'bg-[#111827] border-[#111827] text-white hover:bg-black',
+					)}
 				>
 					Snapshot
 				</Button>

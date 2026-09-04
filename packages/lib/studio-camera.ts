@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from 'three';
 
 /**
  * Studio coordinates — a designer-facing language for the camera.
@@ -81,7 +81,7 @@ export function easeInOut(t: number): number {
  *   • hold      — no motion; the camera rests on the composed hero pose for the
  *                 whole clip (a still rendered as video, or a motion-free export).
  */
-export type LoopStyle = "loop" | "boomerang" | "hold";
+export type LoopStyle = 'loop' | 'boomerang' | 'hold';
 
 /**
  * Smooth ping-pong: each unit interval of `x` maps 0 → 1 → 0. We build a raw
@@ -104,7 +104,7 @@ export function pingPong(x: number): number {
 // pose the user composed). Phases are whole turns of sin/cos so pose(1) === pose(0)
 // — derivatives included — giving a seam-free IG loop with no first/last-frame pop.
 
-export type CameraMove = "orbit" | "robo" | "turntable" | "sweep" | "crane";
+export type CameraMove = 'orbit' | 'robo' | 'turntable' | 'sweep' | 'crane';
 
 export interface MoveSpec {
 	id: CameraMove;
@@ -113,11 +113,11 @@ export interface MoveSpec {
 }
 
 export const CAMERA_MOVES: readonly MoveSpec[] = [
-	{ id: "orbit", label: "Orbit", hint: "gentle 3/4 sway" },
-	{ id: "turntable", label: "Turntable", hint: "Z-axis 360 spin" },
-	{ id: "sweep", label: "Sweep", hint: "overhead arc" },
-	{ id: "robo", label: "Robo", hint: "diagonal dolly" },
-	{ id: "crane", label: "Crane", hint: "robotic lift arc" },
+	{ id: 'orbit', label: 'Orbit', hint: 'gentle 3/4 sway' },
+	{ id: 'turntable', label: 'Turntable', hint: 'Z-axis 360 spin' },
+	{ id: 'sweep', label: 'Sweep', hint: 'overhead arc' },
+	{ id: 'robo', label: 'Robo', hint: 'diagonal dolly' },
+	{ id: 'crane', label: 'Crane', hint: 'robotic lift arc' },
 ] as const;
 
 /**
@@ -152,10 +152,10 @@ export function cyclesForDuration(
 	move: CameraMove,
 	durationSec: number,
 	speed = 1,
-	loop: LoopStyle = "loop",
+	loop: LoopStyle = 'loop',
 ): number {
 	const raw = (durationSec * speed) / MOVE_CYCLE_SECONDS[move];
-	return Math.max(1, Math.round(loop === "boomerang" ? raw / 2 : raw));
+	return Math.max(1, Math.round(loop === 'boomerang' ? raw / 2 : raw));
 }
 
 /**
@@ -169,9 +169,9 @@ export function cyclesForDuration(
  * the boomerang close on the hero seam too. (`hold` carries no phase — the caller
  * pins the hero pose directly — so it falls through to the linear map harmlessly.)
  */
-export function phaseForProgress(p: number, cycles: number, loop: LoopStyle = "loop"): number {
+export function phaseForProgress(p: number, cycles: number, loop: LoopStyle = 'loop'): number {
 	const x = p * cycles;
-	return loop === "boomerang" ? pingPong(x) : x % 1;
+	return loop === 'boomerang' ? pingPong(x) : x % 1;
 }
 
 /**
@@ -271,13 +271,13 @@ export function cranePose(t: number, hero: StudioPose): StudioPose {
 /** Resolve a move id to its pose generator. */
 export function poseForMove(move: CameraMove, t: number, hero: StudioPose): StudioPose {
 	switch (move) {
-		case "turntable":
+		case 'turntable':
 			return turntablePose(t, hero);
-		case "sweep":
+		case 'sweep':
 			return sweepPose(t, hero);
-		case "robo":
+		case 'robo':
 			return roboDiagonalPose(t, hero);
-		case "crane":
+		case 'crane':
 			return cranePose(t, hero);
 		default:
 			return orbitPose(t, hero);
@@ -294,7 +294,11 @@ export const ELEVATION_RANGE: readonly [number, number] = [-78, 78];
 export function clampPose(p: StudioPose): StudioPose {
 	return {
 		azimuth: p.azimuth,
-		elevation: THREE.MathUtils.clamp(p.elevation, ELEVATION_RANGE[0], ELEVATION_RANGE[1]),
+		elevation: THREE.MathUtils.clamp(
+			p.elevation,
+			ELEVATION_RANGE[0],
+			ELEVATION_RANGE[1],
+		),
 		reach: THREE.MathUtils.clamp(p.reach, REACH_RANGE[0], REACH_RANGE[1]),
 		target: p.target,
 	};

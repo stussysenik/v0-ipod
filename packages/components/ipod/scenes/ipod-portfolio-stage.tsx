@@ -1,21 +1,20 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import { IpodClickWheel } from "@ipod/components/ipod/controls/ipod-click-wheel";
-import { PortfolioScreen } from "@ipod/components/ipod/portfolio/portfolio-screen";
-import {
-	DEFAULT_HARDWARE_PRESET_ID,
-	getIpodClassicPreset,
-} from "@ipod/lib/ipod-classic-presets";
-import { playClickAudio } from "@ipod/lib/ipod-state/effects";
-import { createInitialIpodWorkbenchModel } from "@ipod/lib/ipod-state/model";
-import { profile } from "@ipod/lib/portfolio/data";
-import { usePortfolioOs } from "@ipod/lib/portfolio/os";
+import { IpodClickWheel } from '@ipod/components/ipod/controls/ipod-click-wheel';
+import { PortfolioScreen } from '@ipod/components/ipod/portfolio/portfolio-screen';
+import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import { playClickAudio } from '@ipod/lib/ipod-state/effects';
+import { createInitialIpodWorkbenchModel } from '@ipod/lib/ipod-state/model';
+import { profile } from '@ipod/lib/portfolio/data';
+import { usePortfolioOs } from '@ipod/lib/portfolio/os';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const ThreeDIpod = dynamic(
-	() => import("@ipod/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
+	() =>
+		import('@ipod/components/three/three-d-ipod').then((m) => ({
+			default: m.ThreeDIpod,
+		})),
 	{
 		ssr: false,
 		loading: () => (
@@ -48,7 +47,7 @@ export function IpodPortfolioStage() {
 	}, []);
 
 	const openUrl = useCallback((url: string) => {
-		window.open(url, "_blank", "noopener,noreferrer");
+		window.open(url, '_blank', 'noopener,noreferrer');
 	}, []);
 
 	const os = usePortfolioOs(openUrl);
@@ -58,7 +57,10 @@ export function IpodPortfolioStage() {
 	const presentation = initialModel.presentation;
 	const lighting = initialModel.studio.lighting;
 	const preset = useMemo(
-		() => getIpodClassicPreset(presentation.hardwarePreset ?? DEFAULT_HARDWARE_PRESET_ID),
+		() =>
+			getIpodClassicPreset(
+				presentation.hardwarePreset ?? DEFAULT_HARDWARE_PRESET_ID,
+			),
 		[presentation.hardwarePreset],
 	);
 
@@ -66,12 +68,10 @@ export function IpodPortfolioStage() {
 	// unlock on mount — desktop drag-to-orbit stays a feature, touch stays safe.
 	const [orbitEnabled, setOrbitEnabled] = useState(false);
 	useEffect(() => {
-		if (window.matchMedia("(pointer: fine)").matches) setOrbitEnabled(true);
+		if (window.matchMedia('(pointer: fine)').matches) setOrbitEnabled(true);
 	}, []);
 
-	const screenComponent = (
-		<PortfolioScreen preset={preset} frame={os.frame} rows={os.rows} />
-	);
+	const screenComponent = <PortfolioScreen preset={preset} frame={os.frame} rows={os.rows} />;
 
 	const wheelComponent = (
 		<IpodClickWheel
@@ -128,7 +128,9 @@ export function IpodPortfolioStage() {
 				<div className="text-[12px] font-bold uppercase tracking-[0.3em] text-white">
 					{profile.handle}
 				</div>
-				<div className="text-[13px] font-medium text-white/75">{profile.role}</div>
+				<div className="text-[13px] font-medium text-white/75">
+					{profile.role}
+				</div>
 			</div>
 
 			{/* Orbit lock — the HOLD switch of the stage. Locked = the wheel owns
@@ -139,7 +141,7 @@ export function IpodPortfolioStage() {
 				aria-pressed={orbitEnabled}
 				className="absolute right-6 top-6 z-20 mt-[env(safe-area-inset-top)] rounded-full border border-white/25 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 transition-all hover:border-white/50 hover:bg-white/5 hover:text-white active:scale-95"
 			>
-				{orbitEnabled ? "Orbit · On" : "Hold · Locked"}
+				{orbitEnabled ? 'Orbit · On' : 'Hold · Locked'}
 			</button>
 
 			{/* Hint — bottom-left */}

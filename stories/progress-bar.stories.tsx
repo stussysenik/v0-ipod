@@ -1,16 +1,13 @@
-import { fn } from "@storybook/test";
-
-import { ProgressBar } from "@ipod/components/ipod/progress-bar";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { ProgressBar } from '@ipod/components/ipod/progress-bar';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Fields/Progress Bar",
+	title: 'iPod/Fields/Progress Bar',
 	component: ProgressBar,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
 		currentTime: 72,
 		duration: 264,

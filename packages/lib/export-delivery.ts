@@ -9,25 +9,25 @@ export interface ExportCapabilities {
 }
 
 export type MobileExportDelivery =
-	| "auto-download"
-	| "prompt-preview"
-	| "prompt-save"
-	| "prompt-share";
+	| 'auto-download'
+	| 'prompt-preview'
+	| 'prompt-save'
+	| 'prompt-share';
 
 export function resolveMobileExportDelivery(
 	capabilities: ExportCapabilities,
 ): MobileExportDelivery {
 	if (!capabilities.isMobile) {
-		return "auto-download";
+		return 'auto-download';
 	}
 
 	if (capabilities.canShareFiles) {
-		return "prompt-share";
+		return 'prompt-share';
 	}
 
 	if (capabilities.canSaveWithPicker) {
-		return "prompt-save";
+		return 'prompt-save';
 	}
 
-	return "prompt-preview";
+	return 'prompt-preview';
 }

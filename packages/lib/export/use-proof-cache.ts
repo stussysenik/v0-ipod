@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { FingerprintPose } from "./export-fingerprint";
-import { proofFingerprint } from "./export-fingerprint";
-import { createIdbProofPersistence } from "./proof-cache-idb";
-import { createProofStore, type ProofEntry, type ProofStore } from "./proof-cache";
-import { createProofRenderQueue } from "./proof-render-queue";
-import { createProofScheduler } from "./proof-scheduler";
+import type { FingerprintPose } from './export-fingerprint';
+import { proofFingerprint } from './export-fingerprint';
+import { createProofStore, type ProofEntry, type ProofStore } from './proof-cache';
+import { createIdbProofPersistence } from './proof-cache-idb';
 import {
-	selectExportSnapshot,
 	type ProofExportOptions,
 	type ProofModelSlice,
-} from "./proof-inputs";
+	selectExportSnapshot,
+} from './proof-inputs';
+import { createProofRenderQueue } from './proof-render-queue';
+import { createProofScheduler } from './proof-scheduler';
 
 /**
  * Ambient proof orchestration for `/3d`.
@@ -66,7 +66,10 @@ export function useProofCache({
 	// One store + queue + scheduler for the lifetime of the stage.
 	const storeRef = useRef<ProofStore | null>(null);
 	if (storeRef.current === null) {
-		storeRef.current = createProofStore({ max: MEMORY_ENTRIES, persist: createIdbProofPersistence() });
+		storeRef.current = createProofStore({
+			max: MEMORY_ENTRIES,
+			persist: createIdbProofPersistence(),
+		});
 	}
 	const queueRef = useRef(createProofRenderQueue());
 
@@ -113,7 +116,11 @@ export function useProofCache({
 		const id = window.setInterval(() => {
 			const pose = getPoseRef.current();
 			if (!pose) return;
-			const snapshot = selectExportSnapshot(modelRef.current, pose, optionsRef.current);
+			const snapshot = selectExportSnapshot(
+				modelRef.current,
+				pose,
+				optionsRef.current,
+			);
 			const key = proofFingerprint(snapshot);
 			setCurrentFingerprint((prev) => (prev === key ? prev : key));
 			schedulerRef.current?.tick(key, snapshot);

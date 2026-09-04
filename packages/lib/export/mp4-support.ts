@@ -1,21 +1,21 @@
 import {
+	type AnimatedExportPlan,
+	buildAnimatedExportPlan,
 	DEFAULT_MP4_EXPORT_FPS,
+	MAX_MP4_FRAME_COUNT,
 	MP4_BITRATE_BITS_PER_SECOND,
 	MP4_CAPTURE_SCALES,
-	MAX_MP4_FRAME_COUNT,
-	buildAnimatedExportPlan,
-	type AnimatedExportPlan,
-} from "./animated-export";
+} from './animated-export';
 
 const MP4_CODEC_CANDIDATES = [
-	"avc1.42001F",
-	"avc1.420028",
-	"avc1.4d0028",
-	"avc1.4d0032",
-	"avc1.640028",
-	"avc1.640032",
-	"avc1.640033",
-	"avc1.640034",
+	'avc1.42001F',
+	'avc1.420028',
+	'avc1.4d0028',
+	'avc1.4d0032',
+	'avc1.640028',
+	'avc1.640032',
+	'avc1.640033',
+	'avc1.640034',
 ] as const;
 
 export interface SupportedMp4EncoderConfig {
@@ -39,7 +39,7 @@ export interface Mp4ExportStrategy {
 
 function createVideoEncoderConfig(
 	options: Required<
-		Pick<Mp4EncodingProbeOptions, "width" | "height" | "bitrate" | "framerate">
+		Pick<Mp4EncodingProbeOptions, 'width' | 'height' | 'bitrate' | 'framerate'>
 	>,
 	codec: string,
 ): VideoEncoderConfig {
@@ -49,14 +49,14 @@ function createVideoEncoderConfig(
 		height: options.height,
 		bitrate: options.bitrate,
 		framerate: options.framerate,
-		latencyMode: "quality",
+		latencyMode: 'quality',
 	};
 }
 
 export async function resolveSupportedMp4EncoderConfig(
 	options: Mp4EncodingProbeOptions,
 ): Promise<SupportedMp4EncoderConfig | null> {
-	if (typeof VideoEncoder === "undefined") {
+	if (typeof VideoEncoder === 'undefined') {
 		return null;
 	}
 

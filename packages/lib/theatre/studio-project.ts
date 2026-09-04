@@ -1,5 +1,5 @@
-import { ELEVATION_RANGE, REACH_RANGE, type StudioPose } from "../studio-camera";
-import type { SampledValues } from "./keyframe-sampler";
+import { ELEVATION_RANGE, REACH_RANGE, type StudioPose } from '../studio-camera';
+import type { SampledValues } from './keyframe-sampler';
 
 /**
  * The canonical Theatre project layout for the 3D studio, plus the bridge between
@@ -14,9 +14,9 @@ import type { SampledValues } from "./keyframe-sampler";
  * from `CAMERA_PROP_RANGES`.
  */
 
-export const THEATRE_PROJECT_ID = "iPod 3D Studio";
-export const CAMERA_SHEET_ID = "Camera";
-export const CAMERA_OBJECT_KEY = "Lens";
+export const THEATRE_PROJECT_ID = 'iPod 3D Studio';
+export const CAMERA_SHEET_ID = 'Camera';
+export const CAMERA_OBJECT_KEY = 'Lens';
 
 /** A sensible neutral framing used when a track or prop is absent. */
 export const DEFAULT_REACH = 14;
@@ -52,19 +52,19 @@ export function poseToStudioValues(pose: StudioPose): Record<CameraPropName, num
 
 function num(values: SampledValues, key: string, fallback: number): number {
 	const v = values[key];
-	return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+	return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 }
 
 /** Sampled Theatre values → `StudioPose`, with safe defaults for missing props. */
 export function studioValuesToPose(values: SampledValues): StudioPose {
 	return {
-		azimuth: num(values, "azimuth", 0),
-		elevation: num(values, "elevation", 0),
-		reach: num(values, "reach", DEFAULT_REACH),
+		azimuth: num(values, 'azimuth', 0),
+		elevation: num(values, 'elevation', 0),
+		reach: num(values, 'reach', DEFAULT_REACH),
 		target: [
-			num(values, "targetX", 0),
-			num(values, "targetY", 0),
-			num(values, "targetZ", 0),
+			num(values, 'targetX', 0),
+			num(values, 'targetY', 0),
+			num(values, 'targetZ', 0),
 		],
 	};
 }

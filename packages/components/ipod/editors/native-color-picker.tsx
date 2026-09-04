@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Pipette, Palette } from "lucide-react";
+import { Palette, Pipette } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface NativeColorPickerProps {
 	value: string;
@@ -10,14 +10,14 @@ interface NativeColorPickerProps {
 }
 
 function hasEyeDropperApi(): boolean {
-	return typeof window !== "undefined" && "EyeDropper" in window;
+	return typeof window !== 'undefined' && 'EyeDropper' in window;
 }
 
 function hasNativeColorInput(): boolean {
-	if (typeof document === "undefined") return false;
-	const input = document.createElement("input");
-	input.type = "color";
-	return input.type === "color";
+	if (typeof document === 'undefined') return false;
+	const input = document.createElement('input');
+	input.type = 'color';
+	return input.type === 'color';
 }
 
 export function NativeColorPicker({ value, onChange, target }: NativeColorPickerProps) {
@@ -32,7 +32,13 @@ export function NativeColorPicker({ value, onChange, target }: NativeColorPicker
 
 	const openEyeDropper = useCallback(async () => {
 		try {
-			const eyeDropper = new (window as unknown as { EyeDropper: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper();
+			const eyeDropper = new (
+				window as unknown as {
+					EyeDropper: new () => {
+						open: () => Promise<{ sRGBHex: string }>;
+					};
+				}
+			).EyeDropper();
 			const result = await eyeDropper.open();
 			const hex = result.sRGBHex;
 			onChange(hex);

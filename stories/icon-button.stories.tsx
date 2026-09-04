@@ -1,19 +1,16 @@
-import { Camera, Download, Share } from "lucide-react";
-
-import { IconButton } from "@ipod/components/ui/icon-button";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { IconButton } from '@ipod/components/ui/icon-button';
+import type { Meta, StoryObj } from '@storybook/react';
+import { Camera, Download, Share } from 'lucide-react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "UI/Icon Button",
+	title: 'UI/Icon Button',
 	component: IconButton,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
 		icon: <Camera aria-hidden="true" className="h-5 w-5" />,
-		label: "Capture",
+		label: 'Capture',
 	},
 } satisfies Meta<typeof IconButton>;
 
@@ -34,7 +31,7 @@ export const Contrast: Story = {
 export const WithBadge: Story = {
 	args: {
 		icon: <Download aria-hidden="true" className="h-5 w-5" />,
-		badge: "NEW",
+		badge: 'NEW',
 	},
 };
 

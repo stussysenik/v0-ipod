@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
 	BACKGROUND_CURATED_FAVORITES,
 	CASE_CURATED_FAVORITES,
 	getAuthenticFinishes,
-} from "@ipod/lib/color-manifest";
+} from '@ipod/lib/color-manifest';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 function Swatch({ label, hex, note }: { label: string; hex: string; note?: string }) {
 	return (
@@ -105,10 +105,10 @@ function ProductFinishesBoard() {
 }
 
 const meta = {
-	title: "scripts/color-manifest/ProductFinishes",
+	title: 'scripts/color-manifest/ProductFinishes',
 	component: ProductFinishesBoard,
 	parameters: {
-		layout: "padded",
+		layout: 'padded',
 	},
 } satisfies Meta<typeof ProductFinishesBoard>;
 

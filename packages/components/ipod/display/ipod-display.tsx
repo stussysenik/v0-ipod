@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { getSurfaceToken } from "@ipod/lib/color-manifest";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import { IpodGlassOverlay } from "./ipod-glass-overlay";
-import { IpodStatusBar } from "./ipod-status-bar";
+import { getSurfaceToken } from '@ipod/lib/color-manifest';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import { IpodGlassOverlay } from './ipod-glass-overlay';
+import { IpodStatusBar } from './ipod-status-bar';
 
 interface IpodDisplayProps {
 	preset: IpodClassicPresetDefinition;
@@ -21,7 +21,6 @@ interface IpodDisplayProps {
 
 export function IpodDisplay({
 	preset,
-	skinColor,
 	exportSafe = false,
 	showOsMenu,
 	frameRef,
@@ -37,10 +36,10 @@ export function IpodDisplay({
 			style={{
 				width: screenTokens.frameWidth,
 				height: screenTokens.frameHeight,
-				background: "transparent",
+				background: 'transparent',
 				borderRadius: screenTokens.outerRadius,
-				boxShadow: "none",
-				outline: "none",
+				boxShadow: 'none',
+				outline: 'none',
 			}}
 			data-export-layer="screen"
 			data-testid="ipod-screen"
@@ -49,16 +48,16 @@ export function IpodDisplay({
 				ref={frameRef}
 				className="relative h-full w-full overflow-hidden"
 				style={{
-					backgroundColor: getSurfaceToken("screen.content.bg"),
+					backgroundColor: getSurfaceToken('screen.content.bg'),
 					borderRadius: screenTokens.innerRadius,
 					fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
 					// Recessed-under-glass edge, not a bright halo: the old white inset
 					// highlight + light border glowed against the black bezel and read as
 					// glare / a hard aliased edge. A single thin DARK hairline restores the
 					// crisp "the LCD is set into the frame" detail without any glow.
-					boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.22)",
-					outline: "none",
-					border: "none",
+					boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.22)',
+					outline: 'none',
+					border: 'none',
 				}}
 			>
 				<IpodStatusBar

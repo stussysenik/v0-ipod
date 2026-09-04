@@ -1,19 +1,16 @@
-import { fn } from "@storybook/test";
+import { ClickWheel } from '@ipod/components/ipod/click-wheel';
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
-import { ClickWheel } from "@ipod/components/ipod/click-wheel";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
-
-const preset = getIpodClassicPreset("classic-2008-black");
+const preset = getIpodClassicPreset('classic-2008-black');
 
 const meta = {
-	title: "iPod/Wheel/Click Wheel",
+	title: 'iPod/Wheel/Click Wheel',
 	component: ClickWheel,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
 		preset,
 		playClick: fn(),
@@ -27,7 +24,7 @@ const meta = {
 		exportSafe: false,
 	},
 	argTypes: {
-		skinColor: { control: "color" },
+		skinColor: { control: 'color' },
 	},
 } satisfies Meta<typeof ClickWheel>;
 
@@ -38,7 +35,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const Silver: Story = {
-	args: { skinColor: "#C8C9CB" },
+	args: { skinColor: '#C8C9CB' },
 };
 
 export const ExportSafe: Story = {

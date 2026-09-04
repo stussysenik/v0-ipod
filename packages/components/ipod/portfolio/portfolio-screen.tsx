@@ -1,9 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-
-import { IpodDisplay } from "@ipod/components/ipod/display/ipod-display";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
+import { IpodDisplay } from '@ipod/components/ipod/display/ipod-display';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
 import {
 	hiringMission,
 	hiringPhilosophy,
@@ -11,20 +9,20 @@ import {
 	labs,
 	languages,
 	nowLines,
+	photographySeries,
 	processPhases,
 	profile,
 	projects,
 	proofPillars,
-	photographySeries,
 	tasteCollections,
 	writings,
-} from "@ipod/lib/portfolio/data";
-import { photos, videos } from "@ipod/lib/portfolio/media";
-import { getTitle, type Frame, type Row } from "@ipod/lib/portfolio/os";
+} from '@ipod/lib/portfolio/data';
+import { photos, videos } from '@ipod/lib/portfolio/media';
+import { type Frame, getTitle, type Row } from '@ipod/lib/portfolio/os';
+import { useEffect, useRef } from 'react';
 
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
-const SELECTED_BG =
-	"linear-gradient(180deg, rgba(104,181,242,1) 0%, rgba(49,137,211,1) 100%)";
+const SELECTED_BG = 'linear-gradient(180deg, rgba(104,181,242,1) 0%, rgba(49,137,211,1) 100%)';
 
 interface PortfolioScreenProps {
 	preset: IpodClassicPresetDefinition;
@@ -44,7 +42,7 @@ export function PortfolioScreen({ preset, frame, rows }: PortfolioScreenProps) {
 	const screenTokens = preset.screen;
 	const contentHeight = screenTokens.frameHeight - screenTokens.statusBarHeight - 2;
 
-	const showOsMenu = frame.screen === "menu";
+	const showOsMenu = frame.screen === 'menu';
 
 	return (
 		<IpodDisplay
@@ -54,9 +52,16 @@ export function PortfolioScreen({ preset, frame, rows }: PortfolioScreenProps) {
 			statusBarTitle={getTitle(frame)}
 			showPlayIndicator={false}
 		>
-			<div style={{ height: contentHeight, fontFamily: FONT }} className="bg-[#FBFBF9]">
+			<div
+				style={{ height: contentHeight, fontFamily: FONT }}
+				className="bg-[#FBFBF9]"
+			>
 				{rows.length > 0 ? (
-					<ListView rows={rows} cursor={frame.cursor} height={contentHeight} />
+					<ListView
+						rows={rows}
+						cursor={frame.cursor}
+						height={contentHeight}
+					/>
 				) : (
 					<ContentView frame={frame} height={contentHeight} />
 				)}
@@ -67,20 +72,12 @@ export function PortfolioScreen({ preset, frame, rows }: PortfolioScreenProps) {
 
 // ─── List view (menu / projects / labs / cv / links / media lists) ────────────
 
-function ListView({
-	rows,
-	cursor,
-	height,
-}: {
-	rows: Row[];
-	cursor: number;
-	height: number;
-}) {
+function ListView({ rows, cursor, height }: { rows: Row[]; cursor: number; height: number }) {
 	const activeRef = useRef<HTMLDivElement | null>(null);
 
 	// Keep the highlighted row in view as the wheel scrolls.
 	useEffect(() => {
-		activeRef.current?.scrollIntoView({ block: "nearest" });
+		activeRef.current?.scrollIntoView({ block: 'nearest' });
 	}, [cursor]);
 
 	return (
@@ -94,15 +91,25 @@ function ListView({
 							ref={isActive ? activeRef : undefined}
 							className="flex items-center justify-between gap-2 px-[8px] py-[3.5px] text-[10px] font-semibold leading-[1.15]"
 							style={{
-								color: isActive ? "#FFFFFF" : "#111111",
-								background: isActive ? SELECTED_BG : "transparent",
+								color: isActive
+									? '#FFFFFF'
+									: '#111111',
+								background: isActive
+									? SELECTED_BG
+									: 'transparent',
 							}}
 						>
-							<span className="truncate">{row.label}</span>
+							<span className="truncate">
+								{row.label}
+							</span>
 							{row.hint ? (
 								<span
 									className="shrink-0 text-[9px] font-medium tabular-nums"
-									style={{ color: isActive ? "rgba(255,255,255,0.85)" : "#8A8F98" }}
+									style={{
+										color: isActive
+											? 'rgba(255,255,255,0.85)'
+											: '#8A8F98',
+									}}
 								>
 									{row.hint}
 								</span>
@@ -119,33 +126,33 @@ function ListView({
 
 function ContentView({ frame, height }: { frame: Frame; height: number }) {
 	switch (frame.screen) {
-		case "work":
+		case 'work':
 			return <ProjectDetail index={frame.param} height={height} />;
-		case "process-step":
+		case 'process-step':
 			return <ProcessStepDetail index={frame.param} height={height} />;
-		case "lab":
+		case 'lab':
 			return <LabDetail index={frame.param} height={height} />;
-		case "photo":
+		case 'photo':
 			return <PhotoViewer index={frame.param} height={height} />;
-		case "video":
+		case 'video':
 			return <VideoViewer index={frame.param} height={height} />;
-		case "writing":
+		case 'writing':
 			return <WritingDetail index={frame.param} height={height} />;
-		case "bio":
+		case 'bio':
 			return <AboutView height={height} />;
-		case "now":
+		case 'now':
 			return <NowView height={height} />;
-		case "hire-mission":
+		case 'hire-mission':
 			return <HireMissionView height={height} />;
-		case "hire-track":
+		case 'hire-track':
 			return <HireTrackDetail index={frame.param} height={height} />;
-		case "hire-pillar":
+		case 'hire-pillar':
 			return <HirePillarDetail index={frame.param} height={height} />;
-		case "taste-list":
+		case 'taste-list':
 			return <TasteListDetail index={frame.param} height={height} />;
-		case "photos":
+		case 'photos':
 			return <EmptyMedia kind="photos" height={height} />;
-		case "videos":
+		case 'videos':
 			return <EmptyMedia kind="videos" height={height} />;
 		default:
 			return null;
@@ -170,13 +177,19 @@ function ProjectDetail({ index, height }: { index: number; height: number }) {
 		<Pane height={height}>
 			<div className="text-[11px] font-bold leading-[1.2]">{p.title}</div>
 			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
-				{[p.category, p.month ? `${p.month}/${p.year}` : p.year].filter(Boolean).join(" · ")}
+				{[p.category, p.month ? `${p.month}/${p.year}` : p.year]
+					.filter(Boolean)
+					.join(' · ')}
 			</div>
 			{p.description ? (
-				<div className="text-[9px] leading-[1.35] text-[#3A3F47]">{p.description}</div>
+				<div className="text-[9px] leading-[1.35] text-[#3A3F47]">
+					{p.description}
+				</div>
 			) : null}
 			{p.tools?.length ? (
-				<div className="text-[8px] leading-[1.3] text-[#5A5F67]">{p.tools.join(" · ")}</div>
+				<div className="text-[8px] leading-[1.3] text-[#5A5F67]">
+					{p.tools.join(' · ')}
+				</div>
 			) : null}
 			{p.url ? (
 				<div className="mt-auto flex items-center gap-[4px] text-[9px] font-semibold text-[#3189D3]">
@@ -197,8 +210,12 @@ function LabDetail({ index, height }: { index: number; height: number }) {
 			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
 				{l.status} · {l.date.slice(0, 4)}
 			</div>
-			<div className="text-[9px] leading-[1.35] text-[#3A3F47]">{l.description}</div>
-			<div className="text-[8px] leading-[1.3] text-[#5A5F67]">{l.tags.join(" · ")}</div>
+			<div className="text-[9px] leading-[1.35] text-[#3A3F47]">
+				{l.description}
+			</div>
+			<div className="text-[8px] leading-[1.3] text-[#5A5F67]">
+				{l.tags.join(' · ')}
+			</div>
 		</Pane>
 	);
 }
@@ -212,8 +229,12 @@ function ProcessStepDetail({ index, height }: { index: number; height: number })
 				Step {index + 1} of {processPhases.length}
 			</div>
 			<div className="text-[11px] font-bold leading-[1.2]">{phase.title}</div>
-			<div className="text-[9px] font-semibold leading-[1.3] text-[#3189D3]">{phase.summary}</div>
-			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{phase.detail}</div>
+			<div className="text-[9px] font-semibold leading-[1.3] text-[#3189D3]">
+				{phase.summary}
+			</div>
+			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">
+				{phase.detail}
+			</div>
 		</Pane>
 	);
 }
@@ -224,9 +245,13 @@ function WritingDetail({ index, height }: { index: number; height: number }) {
 	return (
 		<Pane height={height}>
 			<div className="text-[11px] font-bold leading-[1.2]">{w.title}</div>
-			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">{w.date}</div>
+			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
+				{w.date}
+			</div>
 			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{w.excerpt}</div>
-			<div className="mt-auto text-[8px] leading-[1.3] text-[#5A5F67]">{w.tags.join(" · ")}</div>
+			<div className="mt-auto text-[8px] leading-[1.3] text-[#5A5F67]">
+				{w.tags.join(' · ')}
+			</div>
 		</Pane>
 	);
 }
@@ -235,9 +260,16 @@ function PhotoViewer({ index, height }: { index: number; height: number }) {
 	const ph = photos[index];
 	if (!ph) return <EmptyMedia kind="photos" height={height} />;
 	return (
-		<div className="flex h-full items-center justify-center bg-black" style={{ height }}>
+		<div
+			className="flex h-full items-center justify-center bg-black"
+			style={{ height }}
+		>
 			{/* eslint-disable-next-line @next/next/no-img-element */}
-			<img src={ph.src} alt={ph.title} className="max-h-full max-w-full object-contain" />
+			<img
+				src={ph.src}
+				alt={ph.title}
+				className="max-h-full max-w-full object-contain"
+			/>
 		</div>
 	);
 }
@@ -246,7 +278,10 @@ function VideoViewer({ index, height }: { index: number; height: number }) {
 	const v = videos[index];
 	if (!v) return <EmptyMedia kind="videos" height={height} />;
 	return (
-		<div className="flex h-full items-center justify-center bg-black" style={{ height }}>
+		<div
+			className="flex h-full items-center justify-center bg-black"
+			style={{ height }}
+		>
 			<video
 				src={v.src}
 				poster={v.poster}
@@ -262,13 +297,17 @@ function AboutView({ height }: { height: number }) {
 	return (
 		<Pane height={height}>
 			<div className="text-[11px] font-bold leading-[1.15]">{profile.name}</div>
-			<div className="text-[9px] font-semibold text-[#3189D3]">{profile.handle}</div>
+			<div className="text-[9px] font-semibold text-[#3189D3]">
+				{profile.handle}
+			</div>
 			<div className="text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
 				{profile.role}
 			</div>
-			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{profile.longBio}</div>
+			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">
+				{profile.longBio}
+			</div>
 			<div className="text-[8px] leading-[1.3] text-[#5A5F67]">
-				{languages.map((l) => `${l.name} ${l.level}`).join(" · ")}
+				{languages.map((l) => `${l.name} ${l.level}`).join(' · ')}
 			</div>
 			<div className="mt-auto text-[8px] text-[#8A8F98]">
 				{profile.location} · Ed. {profile.edition} · {profile.createdDate}
@@ -283,12 +322,14 @@ function HireMissionView({ height }: { height: number }) {
 	return (
 		<Pane height={height}>
 			<div className="text-[11px] font-bold leading-[1.2]">Mission</div>
-			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">{hiringMission}</div>
+			<div className="text-[9px] leading-[1.4] text-[#3A3F47]">
+				{hiringMission}
+			</div>
 			<div className="text-[9px] font-semibold leading-[1.35] text-[#3189D3]">
 				“{hiringPhilosophy}”
 			</div>
 			<div className="mt-auto text-[8px] font-medium uppercase tracking-[0.08em] text-[#8A8F98]">
-				{profile.available ? "Available · " : ""}
+				{profile.available ? 'Available · ' : ''}
 				{profile.location}
 			</div>
 		</Pane>
@@ -335,7 +376,10 @@ function TasteListDetail({ index, height }: { index: number; height: number }) {
 			<div className="text-[11px] font-bold leading-[1.2]">{t.title}</div>
 			<ul className="flex flex-col gap-[4px]">
 				{t.items.map((item) => (
-					<li key={item} className="flex gap-[6px] text-[9px] leading-[1.35] text-[#3A3F47]">
+					<li
+						key={item}
+						className="flex gap-[6px] text-[9px] leading-[1.35] text-[#3A3F47]"
+					>
 						<span aria-hidden className="text-[#3189D3]">
 							›
 						</span>
@@ -353,7 +397,10 @@ function NowView({ height }: { height: number }) {
 			<div className="text-[11px] font-bold">Now</div>
 			<ul className="flex flex-col gap-[5px]">
 				{nowLines.map((line) => (
-					<li key={line} className="flex gap-[6px] text-[9px] leading-[1.35] text-[#3A3F47]">
+					<li
+						key={line}
+						className="flex gap-[6px] text-[9px] leading-[1.35] text-[#3A3F47]"
+					>
 						<span aria-hidden className="text-[#3189D3]">
 							›
 						</span>
@@ -365,15 +412,23 @@ function NowView({ height }: { height: number }) {
 	);
 }
 
-function EmptyMedia({ kind, height }: { kind: "photos" | "videos"; height: number }) {
-	const series = kind === "photos" ? photographySeries : [];
+function EmptyMedia({ kind, height }: { kind: 'photos' | 'videos'; height: number }) {
+	const series = kind === 'photos' ? photographySeries : [];
 	return (
 		<Pane height={height}>
 			<div className="text-[11px] font-bold capitalize">{kind}</div>
-			<div className="text-[9px] leading-[1.35] text-[#3A3F47]">Coming soon — syncing media…</div>
+			<div className="text-[9px] leading-[1.35] text-[#3A3F47]">
+				Coming soon — syncing media…
+			</div>
 			{series.map((s) => (
-				<div key={s.title} className="text-[8px] leading-[1.3] text-[#5A5F67]">
-					<span className="font-semibold text-[#3A3F47]">{s.title}</span> · {s.aspect}
+				<div
+					key={s.title}
+					className="text-[8px] leading-[1.3] text-[#5A5F67]"
+				>
+					<span className="font-semibold text-[#3A3F47]">
+						{s.title}
+					</span>{' '}
+					· {s.aspect}
 				</div>
 			))}
 		</Pane>

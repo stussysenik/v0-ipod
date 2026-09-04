@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { MarqueeText } from "./marquee-text";
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { MarqueeText } from './marquee-text';
 
 const meta = {
-	title: "components/ui/MarqueeText",
+	title: 'components/ui/MarqueeText',
 	component: MarqueeText,
 	args: {
-		text: "The Avalanches - Since I Left You",
+		text: 'The Avalanches - Since I Left You',
 	},
 	argTypes: {
 		className: {
@@ -31,19 +31,19 @@ type Story = StoryObj<typeof meta>;
 
 export const StaticFit: Story = {
 	args: {
-		text: "Boards of Canada",
+		text: 'Boards of Canada',
 	},
 };
 
 export const OverflowDetected: Story = {
 	args: {
-		text: "Sufjan Stevens - Chicago (Demo Version From The Avalanche Outtakes)",
+		text: 'Sufjan Stevens - Chicago (Demo Version From The Avalanche Outtakes)',
 	},
 };
 
 export const PreviewLoop: Story = {
 	args: {
-		text: "Daft Punk - Something About Us (Discovery Draft Sequence)",
+		text: 'Daft Punk - Something About Us (Discovery Draft Sequence)',
 		preview: true,
 		captureReady: true,
 	},

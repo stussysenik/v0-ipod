@@ -1,13 +1,13 @@
 export interface StartGifEncodingMessage {
 	id: number;
-	type: "start-gif";
+	type: 'start-gif';
 	width: number;
 	height: number;
 }
 
 export interface AppendGifFrameMessage {
 	id: number;
-	type: "append-gif-frame";
+	type: 'append-gif-frame';
 	frameIndex: number;
 	width: number;
 	height: number;
@@ -17,7 +17,7 @@ export interface AppendGifFrameMessage {
 
 export interface StartMp4EncodingMessage {
 	id: number;
-	type: "start-mp4";
+	type: 'start-mp4';
 	width: number;
 	height: number;
 	frameRate: number;
@@ -27,7 +27,7 @@ export interface StartMp4EncodingMessage {
 
 export interface AppendMp4FrameMessage {
 	id: number;
-	type: "append-mp4-frame";
+	type: 'append-mp4-frame';
 	frameIndex: number;
 	timestampUs: number;
 	durationUs: number;
@@ -36,7 +36,7 @@ export interface AppendMp4FrameMessage {
 
 export interface FinalizeEncodingMessage {
 	id: number;
-	type: "finalize";
+	type: 'finalize';
 }
 
 export type EncoderWorkerRequest =
@@ -47,33 +47,33 @@ export type EncoderWorkerRequest =
 	| FinalizeEncodingMessage;
 
 export type EncoderWorkerRequestPayload =
-	| Omit<StartGifEncodingMessage, "id">
-	| Omit<AppendGifFrameMessage, "id">
-	| Omit<StartMp4EncodingMessage, "id">
-	| Omit<AppendMp4FrameMessage, "id">
-	| Omit<FinalizeEncodingMessage, "id">;
+	| Omit<StartGifEncodingMessage, 'id'>
+	| Omit<AppendGifFrameMessage, 'id'>
+	| Omit<StartMp4EncodingMessage, 'id'>
+	| Omit<AppendMp4FrameMessage, 'id'>
+	| Omit<FinalizeEncodingMessage, 'id'>;
 
 export interface EncoderWorkerOkResponse {
 	id: number;
-	type: "ok";
+	type: 'ok';
 }
 
 export interface EncoderWorkerFinalizedResponse {
 	id: number;
-	type: "finalized";
+	type: 'finalized';
 	buffer: ArrayBuffer;
 	mimeType: string;
 }
 
 export interface EncoderWorkerErrorResponse {
 	id: number;
-	type: "error";
+	type: 'error';
 	error: string;
 }
 
 export interface EncoderWorkerProgressResponse {
 	id: number;
-	type: "progress";
+	type: 'progress';
 	progress: number;
 	detail?: string;
 }

@@ -1,4 +1,4 @@
-import { IPOD_CLASSIC_MM, type IpodClassicPresetDefinition } from "./ipod-classic-presets";
+import { IPOD_CLASSIC_MM, type IpodClassicPresetDefinition } from './ipod-classic-presets';
 
 /**
  * Derives 3D scene geometry from the canonical 2D preset tokens.
@@ -83,9 +83,7 @@ export interface Ipod3DDimensions {
  * below the top padding and the wheel sits below the screen by the control
  * margin, so the 3D layout lines up with what the 2D workbench renders.
  */
-export function deriveIpod3DDimensions(
-	preset: IpodClassicPresetDefinition,
-): Ipod3DDimensions {
+export function deriveIpod3DDimensions(preset: IpodClassicPresetDefinition): Ipod3DDimensions {
 	const { shell, screen, wheel } = preset;
 	const unit = SCENE_HEIGHT / shell.height;
 
@@ -129,7 +127,10 @@ export function deriveIpod3DDimensions(
 			},
 			hold: {
 				centerX: (halfWmm - holdCenterFromRightMm) * mmToWorld,
-				length: (holdSwitch.slotFarFromRight - holdSwitch.slotNearFromRight) * mmToWorld,
+				length:
+					(holdSwitch.slotFarFromRight -
+						holdSwitch.slotNearFromRight) *
+					mmToWorld,
 				width: holdSwitch.slotWidth * mmToWorld,
 			},
 			dock: {

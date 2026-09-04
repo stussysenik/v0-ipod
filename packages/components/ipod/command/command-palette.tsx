@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import { Command } from "cmdk";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-
-import { IpodStoreContext } from "@ipod/lib/xstate/store";
-import { buildCommands, type PaletteCommand } from "./command-registry";
+import { IpodStoreContext } from '@ipod/lib/xstate/store';
+import { Command } from 'cmdk';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { buildCommands, type PaletteCommand } from './command-registry';
 
 function groupBy(commands: PaletteCommand[]): [string, PaletteCommand[]][] {
 	const byGroup = new Map<string, PaletteCommand[]>();
@@ -29,7 +28,7 @@ function groupBy(commands: PaletteCommand[]): [string, PaletteCommand[]][] {
  */
 export function CommandPalette() {
 	const [open, setOpen] = useState(false);
-	const [search, setSearch] = useState("");
+	const [search, setSearch] = useState('');
 	const [showSecondary, setShowSecondary] = useState(false);
 	const router = useRouter();
 	const { send } = IpodStoreContext.useActorRef();
@@ -38,20 +37,20 @@ export function CommandPalette() {
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+			if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
 				e.preventDefault();
 				setOpen((prev) => !prev);
 			}
 		};
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
+		document.addEventListener('keydown', onKey);
+		return () => document.removeEventListener('keydown', onKey);
 	}, []);
 
 	// Reset triage state on every open so each ⌘K starts from the curated primary list.
 	const onOpenChange = (next: boolean) => {
 		setOpen(next);
 		if (!next) {
-			setSearch("");
+			setSearch('');
 			setShowSecondary(false);
 		}
 	};
@@ -68,11 +67,11 @@ export function CommandPalette() {
 	// the "more" toggle. The toggle row only earns its place when there is something to reveal.
 	const searching = search.trim().length > 0;
 	const secondaryCount = useMemo(
-		() => commands.filter((c) => c.tier === "secondary").length,
+		() => commands.filter((c) => c.tier === 'secondary').length,
 		[commands],
 	);
 	const revealSecondary = searching || showSecondary;
-	const visible = revealSecondary ? commands : commands.filter((c) => c.tier === "primary");
+	const visible = revealSecondary ? commands : commands.filter((c) => c.tier === 'primary');
 	const groups = useMemo(() => groupBy(visible), [visible]);
 
 	return (
@@ -115,13 +114,20 @@ export function CommandPalette() {
 				{!searching && secondaryCount > 0 && (
 					<Command.Item
 						value="__toggle_secondary__"
-						keywords={["more", "less", "secondary", "advanced", "all", "commands"]}
+						keywords={[
+							'more',
+							'less',
+							'secondary',
+							'advanced',
+							'all',
+							'commands',
+						]}
 						onSelect={() => setShowSecondary((prev) => !prev)}
 						className="mt-1 cursor-pointer rounded-lg px-3 py-2 text-[12px] font-medium text-black/45 data-[selected=true]:bg-black/[0.06] data-[selected=true]:text-black/70"
 					>
 						{showSecondary
-							? "Show fewer commands"
-							: `Show ${secondaryCount} more command${secondaryCount === 1 ? "" : "s"}…`}
+							? 'Show fewer commands'
+							: `Show ${secondaryCount} more command${secondaryCount === 1 ? '' : 's'}…`}
 					</Command.Item>
 				)}
 			</Command.List>

@@ -1,4 +1,4 @@
-import manifestData from "@scripts/design-system.json";
+import manifestData from '@scripts/design-system.json';
 
 export interface BatteryChromeTokens {
 	width: number;

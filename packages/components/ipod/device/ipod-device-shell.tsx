@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from "@ipod/lib/export/export-scene";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import { deriveGasketColor } from "@ipod/lib/color-proximity";
+import { deriveGasketColor } from '@ipod/lib/color-proximity';
+import { BASE_EXPORT_SCENE_HEIGHT, BASE_EXPORT_SCENE_WIDTH } from '@ipod/lib/export/export-scene';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import { useMemo } from 'react';
 
 /**
  * Physical enclosure for the iPod device.
@@ -40,16 +40,16 @@ export function IPodDeviceShell({
 	dataTestId,
 }: IPodDeviceShellProps) {
 	const shellShadow = exportSafe
-		? "0 0 0 0.5px rgba(70,76,84,0.08)"
-		: "0 20px 48px -28px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(0,0,0,0.12)";
+		? '0 0 0 0.5px rgba(70,76,84,0.08)'
+		: '0 20px 48px -28px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(0,0,0,0.12)';
 
 	const shellSurfaceStyle = useMemo(
 		() => ({
 			backgroundColor: skinColor,
 			backgroundImage: [
-				"linear-gradient(160deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 14%, rgba(255,255,255,0) 30%)",
-				"linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 60%, rgba(0,0,0,0.07) 100%)",
-			].join(", "),
+				'linear-gradient(160deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 14%, rgba(255,255,255,0) 30%)',
+				'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 60%, rgba(0,0,0,0.07) 100%)',
+			].join(', '),
 		}),
 		[skinColor],
 	);
@@ -69,7 +69,7 @@ export function IPodDeviceShell({
 			<div
 				className="pointer-events-none absolute left-1/2 bottom-[118px] h-[80px] w-[240px] -translate-x-1/2 rounded-full opacity-50 blur-[24px]"
 				style={{
-					background: "radial-gradient(circle, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.14) 40%, rgba(0,0,0,0) 72%)",
+					background: 'radial-gradient(circle, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.14) 40%, rgba(0,0,0,0) 72%)',
 				}}
 				aria-hidden="true"
 			/>
@@ -94,7 +94,7 @@ export function IPodDeviceShell({
 						className="pointer-events-none absolute inset-0"
 						style={{
 							borderRadius: preset.shell.radius,
-							boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1.5px 3px rgba(0,0,0,0.10)",
+							boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1.5px 3px rgba(0,0,0,0.10)',
 						}}
 						aria-hidden="true"
 					/>
@@ -104,7 +104,7 @@ export function IPodDeviceShell({
 							className="absolute inset-0"
 							style={{
 								borderRadius: preset.shell.radius,
-								boxShadow: "0 20px 48px -28px rgba(0,0,0,0.4), 0 42px 64px -44px rgba(0,0,0,0.3)",
+								boxShadow: '0 20px 48px -28px rgba(0,0,0,0.4), 0 42px 64px -44px rgba(0,0,0,0.3)',
 							}}
 							aria-hidden="true"
 							data-export-layer="shell-shadow"
@@ -124,7 +124,7 @@ export function IPodDeviceShell({
 					<div
 						className="pointer-events-none absolute left-[8%] top-[2%] h-[28%] w-[76%] rounded-[80px] opacity-22"
 						style={{
-							background: "linear-gradient(162deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 18%, rgba(255,255,255,0) 50%)",
+							background: 'linear-gradient(162deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 18%, rgba(255,255,255,0) 50%)',
 						}}
 						aria-hidden="true"
 					/>
@@ -132,13 +132,13 @@ export function IPodDeviceShell({
 					<div
 						className="pointer-events-none absolute inset-x-[6%] bottom-[5%] h-[16%] rounded-[60px] opacity-10"
 						style={{
-							background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.06) 70%, rgba(0,0,0,0.1) 100%)",
+							background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.06) 70%, rgba(0,0,0,0.1) 100%)',
 						}}
 						aria-hidden="true"
 					/>
 
 					{/* Screen gasket — recessed edge derived from case color */}
-					<div 
+					<div
 						className="relative z-10 w-full"
 						style={{
 							backgroundColor: gasketColor,

@@ -1,8 +1,8 @@
-import { CAMERA_MOVES, MOVE_CYCLE_SECONDS } from "./studio-camera";
-import type { StudioClip } from "./studio-clip";
-import { MOTION_PRESETS } from "./theatre/motion-presets";
+import { CAMERA_MOVES, MOVE_CYCLE_SECONDS } from './studio-camera';
+import type { StudioClip } from './studio-clip';
+import { MOTION_PRESETS } from './theatre/motion-presets';
 
-export * from "./studio-clip";
+export * from './studio-clip';
 
 /**
  * The full studio motion catalogue: the procedural moves and the Theatre.js
@@ -12,7 +12,7 @@ export * from "./studio-clip";
  */
 
 const PROCEDURAL_CLIPS: StudioClip[] = CAMERA_MOVES.map((move) => ({
-	kind: "procedural",
+	kind: 'procedural',
 	id: move.id,
 	label: move.label,
 	hint: move.hint,
@@ -22,7 +22,7 @@ const PROCEDURAL_CLIPS: StudioClip[] = CAMERA_MOVES.map((move) => ({
 }));
 
 const THEATRE_CLIPS: StudioClip[] = MOTION_PRESETS.map((preset) => ({
-	kind: "theatre",
+	kind: 'theatre',
 	id: preset.id,
 	label: preset.label,
 	hint: preset.hint,

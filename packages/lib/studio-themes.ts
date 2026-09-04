@@ -15,11 +15,11 @@
  */
 
 import {
+	cloneLightingConfig,
 	DESIGNER_DARK_RIG,
 	RIG_PRESETS,
-	cloneLightingConfig,
 	type StudioLightingConfig,
-} from "@ipod/lib/studio-lighting-config";
+} from '@ipod/lib/studio-lighting-config';
 
 // ─── Model ──────────────────────────────────────────────────────────────────
 
@@ -50,19 +50,19 @@ export interface StudioTheme {
  * boots; the theme exists so the user can always RETURN to factory in one tap.
  */
 export const NOIR_THEME: StudioTheme = {
-	id: "noir",
-	label: "Noir",
+	id: 'noir',
+	label: 'Noir',
 	builtIn: true,
 	colors: {
-		skinColor: "#1b1818",
-		ringColor: "#313030",
-		centerColor: "#141212",
-		backColor: "#cfd3d7",
-		edgeColor: "#cfd3d7",
-		bezelColor: "#0a0a0a",
-		bgColor: "#0048FF",
+		skinColor: '#1b1818',
+		ringColor: '#313030',
+		centerColor: '#141212',
+		backColor: '#cfd3d7',
+		edgeColor: '#cfd3d7',
+		bezelColor: '#0a0a0a',
+		bgColor: '#0048FF',
 	},
-	rigName: "Designer Dark",
+	rigName: 'Designer Dark',
 };
 
 export const BUILT_IN_THEMES: readonly StudioTheme[] = [NOIR_THEME] as const;
@@ -75,57 +75,55 @@ export function rigForTheme(theme: StudioTheme): StudioLightingConfig {
 
 // ─── Persistence ────────────────────────────────────────────────────────────
 
-export const STUDIO_THEMES_STORAGE_KEY = "ipodStudioThemes";
+export const STUDIO_THEMES_STORAGE_KEY = 'ipodStudioThemes';
 
 const HEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 function sanitizeTheme(value: unknown): StudioTheme | null {
-	if (typeof value !== "object" || value === null) return null;
+	if (typeof value !== 'object' || value === null) return null;
 	const t = value as Partial<StudioTheme>;
 	const c = (t.colors ?? {}) as Partial<StudioThemeColors>;
 	const colorKeys: (keyof StudioThemeColors)[] = [
-		"skinColor",
-		"ringColor",
-		"centerColor",
-		"backColor",
-		"edgeColor",
-		"bezelColor",
-		"bgColor",
+		'skinColor',
+		'ringColor',
+		'centerColor',
+		'backColor',
+		'edgeColor',
+		'bezelColor',
+		'bgColor',
 	];
-	if (typeof t.id !== "string" || t.id.length === 0) return null;
-	if (typeof t.label !== "string" || t.label.length === 0) return null;
+	if (typeof t.id !== 'string' || t.id.length === 0) return null;
+	if (typeof t.label !== 'string' || t.label.length === 0) return null;
 	const colors = {} as StudioThemeColors;
 	for (const key of colorKeys) {
 		const hex = c[key];
-		if (typeof hex !== "string" || !HEX.test(hex)) return null;
+		if (typeof hex !== 'string' || !HEX.test(hex)) return null;
 		colors[key] = hex;
 	}
 	return {
 		id: t.id,
 		label: t.label,
 		colors,
-		rigName: typeof t.rigName === "string" ? t.rigName : DESIGNER_DARK_RIG.name,
+		rigName: typeof t.rigName === 'string' ? t.rigName : DESIGNER_DARK_RIG.name,
 	};
 }
 
 /** Load the user's saved themes (never the built-ins; those ship with the code). */
 export function loadSavedThemes(): StudioTheme[] {
-	if (typeof window === "undefined") return [];
+	if (typeof window === 'undefined') return [];
 	try {
 		const raw = window.localStorage.getItem(STUDIO_THEMES_STORAGE_KEY);
 		if (!raw) return [];
 		const parsed: unknown = JSON.parse(raw);
 		if (!Array.isArray(parsed)) return [];
-		return parsed
-			.map(sanitizeTheme)
-			.filter((t): t is StudioTheme => t !== null);
+		return parsed.map(sanitizeTheme).filter((t): t is StudioTheme => t !== null);
 	} catch {
 		return [];
 	}
 }
 
 export function persistSavedThemes(themes: StudioTheme[]): void {
-	if (typeof window === "undefined") return;
+	if (typeof window === 'undefined') return;
 	try {
 		window.localStorage.setItem(STUDIO_THEMES_STORAGE_KEY, JSON.stringify(themes));
 	} catch {
@@ -137,7 +135,7 @@ export function persistSavedThemes(themes: StudioTheme[]): void {
 export function nextThemeLabel(existing: readonly StudioTheme[]): string {
 	const taken = new Set(existing.map((t) => t.label));
 	for (let i = 1; i < 100; i++) {
-		const label = `Theme ${String(i).padStart(2, "0")}`;
+		const label = `Theme ${String(i).padStart(2, '0')}`;
 		if (!taken.has(label)) return label;
 	}
 	return `Theme ${existing.length + 1}`;

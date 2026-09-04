@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { createElement, useCallback, useEffect, useRef } from "react";
+import type { RenderNowPlayingElement } from '@ipod/components/ipod/scenes/ipod-scene-types';
 import type {
 	IpodNowPlayingLayoutElementId,
 	IpodNowPlayingLayoutPosition,
 	IpodNowPlayingLayoutState,
-} from "@ipod/lib/ipod-state/model";
-import type { RenderNowPlayingElement } from "@ipod/components/ipod/scenes/ipod-scene-types";
+} from '@ipod/lib/ipod-state/model';
+import { createElement, useCallback, useEffect, useRef } from 'react';
 
 const DEFAULT_LAYOUT_POSITION: IpodNowPlayingLayoutPosition = { x: 0, y: 0 };
 
@@ -59,7 +59,7 @@ export function useIpodNowPlayingLayout(options: {
 		(
 			elementId: IpodNowPlayingLayoutElementId,
 			nextPosition: IpodNowPlayingLayoutPosition,
-			phase: "move" | "drop",
+			phase: 'move' | 'drop',
 		) => {
 			const currentPosition = getLayoutPosition(layoutRef.current, elementId);
 			if (hasSameLayoutPosition(currentPosition, nextPosition)) {
@@ -75,7 +75,7 @@ export function useIpodNowPlayingLayout(options: {
 
 			layoutRef.current = nextLayout;
 			options.onLayoutChange?.(nextLayout);
-			console.info("[ipod-os-layout]", {
+			console.info('[ipod-os-layout]', {
 				phase,
 				elementId,
 				x: nextPosition.x,
@@ -120,7 +120,7 @@ export function useIpodNowPlayingLayout(options: {
 						maxY,
 					),
 				},
-				"move",
+				'move',
 			);
 		};
 
@@ -134,8 +134,8 @@ export function useIpodNowPlayingLayout(options: {
 				layoutRef.current,
 				dragState.elementId,
 			);
-			console.info("[ipod-os-layout]", {
-				phase: "drop",
+			console.info('[ipod-os-layout]', {
+				phase: 'drop',
 				elementId: dragState.elementId,
 				x: finalPosition.x,
 				y: finalPosition.y,
@@ -143,14 +143,14 @@ export function useIpodNowPlayingLayout(options: {
 			dragRef.current = null;
 		};
 
-		window.addEventListener("pointermove", handlePointerMove);
-		window.addEventListener("pointerup", handlePointerUp);
-		window.addEventListener("pointercancel", handlePointerUp);
+		window.addEventListener('pointermove', handlePointerMove);
+		window.addEventListener('pointerup', handlePointerUp);
+		window.addEventListener('pointercancel', handlePointerUp);
 
 		return () => {
-			window.removeEventListener("pointermove", handlePointerMove);
-			window.removeEventListener("pointerup", handlePointerUp);
-			window.removeEventListener("pointercancel", handlePointerUp);
+			window.removeEventListener('pointermove', handlePointerMove);
+			window.removeEventListener('pointerup', handlePointerUp);
+			window.removeEventListener('pointercancel', handlePointerUp);
 		};
 	}, [options.isLayoutMode, options.statusBarHeight, updateLayout]);
 
@@ -186,16 +186,16 @@ export function useIpodNowPlayingLayout(options: {
 				: DEFAULT_LAYOUT_POSITION;
 
 			return createElement(
-				"div",
+				'div',
 				{
 					className: [
 						elementOptions?.className,
 						options.isLayoutMode
-							? "cursor-move touch-none rounded-[2px] outline outline-1 outline-dashed outline-[#5AA0DF]/65"
-							: "",
+							? 'cursor-move touch-none rounded-[2px] outline outline-1 outline-dashed outline-[#5AA0DF]/65'
+							: '',
 					]
 						.filter(Boolean)
-						.join(" "),
+						.join(' '),
 					style: {
 						...elementOptions?.style,
 						transform:
@@ -203,10 +203,10 @@ export function useIpodNowPlayingLayout(options: {
 								? undefined
 								: `translate(${position.x}px, ${position.y}px)`,
 					},
-					"data-testid": elementOptions?.testId,
-					"data-layout-element": elementId,
-					"data-layout-x": position.x,
-					"data-layout-y": position.y,
+					'data-testid': elementOptions?.testId,
+					'data-layout-element': elementId,
+					'data-layout-x': position.x,
+					'data-layout-y': position.y,
 					onPointerDown: options.isLayoutMode
 						? startDrag(elementId)
 						: undefined,

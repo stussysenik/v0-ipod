@@ -1,19 +1,19 @@
-import type { SongSnapshot } from "@ipod/types/ipod-state";
+import { DEFAULT_HARDWARE_PRESET_ID } from '@ipod/lib/ipod-classic-presets';
+import type { SongSnapshot } from '@ipod/types/ipod-state';
 import {
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
 	DEFAULT_OS_ORIGINAL_MENU_SPLIT,
 	DEFAULT_SELECTION_KIND,
 	SONG_SNAPSHOT_SCHEMA_VERSION,
-} from "@ipod/types/ipod-state";
-import { DEFAULT_HARDWARE_PRESET_ID } from "@ipod/lib/ipod-classic-presets";
+} from '@ipod/types/ipod-state';
 
 export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 	schemaVersion: SONG_SNAPSHOT_SCHEMA_VERSION,
 	metadata: {
-		title: "Chamakay",
-		artist: "Blood Orange",
-		album: "Cupid Deluxe",
-		artwork: "/placeholder-logo.png",
+		title: 'Chamakay',
+		artist: 'Blood Orange',
+		album: 'Cupid Deluxe',
+		artwork: '/placeholder-logo.png',
 		duration: 252,
 		currentTime: 47,
 		rating: 4,
@@ -21,26 +21,26 @@ export const TEST_SONG_SNAPSHOT: SongSnapshot = {
 		totalTracks: 12,
 	},
 	ui: {
-		skinColor: "#FBFBF8",
-		bgColor: "#F4F4EF",
-		ringColor: "",
-		centerColor: "",
-		backColor: "#cfd3d7",
-		edgeColor: "#cfd3d7",
-		bezelColor: "#0a0a0a",
-		viewMode: "flat",
+		skinColor: '#FBFBF8',
+		bgColor: '#F4F4EF',
+		ringColor: '',
+		centerColor: '',
+		backColor: '#cfd3d7',
+		edgeColor: '#cfd3d7',
+		bezelColor: '#0a0a0a',
+		viewMode: 'flat',
 		hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
-		interactionModel: "direct",
+		interactionModel: 'direct',
 		selectionKind: DEFAULT_SELECTION_KIND,
 		rangeStartTime: null,
 		rangeEndTime: null,
-		osScreen: "now-playing",
+		osScreen: 'now-playing',
 		menuIndex: 0,
 		osOriginalMenuSplit: DEFAULT_OS_ORIGINAL_MENU_SPLIT,
 		osNowPlayingLayout: DEFAULT_OS_NOW_PLAYING_LAYOUT,
 		isPlaying: false,
 		batteryLevel: 1.0,
-		batteryMode: "manual",
+		batteryMode: 'manual',
 	},
 	playback: {
 		currentTime: 5,

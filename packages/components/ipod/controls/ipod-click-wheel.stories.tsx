@@ -1,16 +1,16 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { fn } from "storybook/test";
-import { IPOD_CLASSIC_PRESETS } from "@ipod/lib/ipod-classic-presets";
-import { IpodClickWheel } from "./ipod-click-wheel";
+import { IPOD_CLASSIC_PRESETS } from '@ipod/lib/ipod-classic-presets';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { fn } from 'storybook/test';
+import { IpodClickWheel } from './ipod-click-wheel';
 
 const meta = {
-	title: "components/ipod/controls/IpodClickWheel",
+	title: 'components/ipod/controls/IpodClickWheel',
 	component: IpodClickWheel,
 	parameters: {
-		layout: "padded",
+		layout: 'padded',
 		docs: {
 			description: {
-				component: "Hardware-specific showcase story. This remains product-owned and is intentionally separate from reusable design-system primitives.",
+				component: 'Hardware-specific showcase story. This remains product-owned and is intentionally separate from reusable design-system primitives.',
 			},
 		},
 	},
@@ -60,7 +60,7 @@ export const LightFinish: Story = {};
 
 export const BlackFinish: Story = {
 	args: {
-		skinColor: "#2E333A",
+		skinColor: '#2E333A',
 	},
 };
 

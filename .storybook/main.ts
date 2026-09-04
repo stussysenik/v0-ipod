@@ -1,17 +1,17 @@
-import type { StorybookConfig } from "@storybook/nextjs-vite";
+import type { StorybookConfig } from '@storybook/nextjs-vite';
 
 const config: StorybookConfig = {
-	stories: ["../stories/**/*.mdx", "../components/**/*.stories.@(ts|tsx)"],
+	stories: ['../stories/**/*.mdx', '../components/**/*.stories.@(ts|tsx)'],
 	addons: [
-		"@chromatic-com/storybook",
-		"@storybook/addon-vitest",
-		"@storybook/addon-a11y",
-		"@storybook/addon-docs",
+		'@chromatic-com/storybook',
+		'@storybook/addon-vitest',
+		'@storybook/addon-a11y',
+		'@storybook/addon-docs',
 	],
-	framework: "@storybook/nextjs-vite",
-	staticDirs: ["../public"],
+	framework: '@storybook/nextjs-vite',
+	staticDirs: ['../public'],
 	docs: {
-		defaultName: "Overview",
+		defaultName: 'Overview',
 	},
 };
 

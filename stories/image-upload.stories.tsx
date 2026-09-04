@@ -1,20 +1,17 @@
-import { fn } from "@storybook/test";
-
-import { ImageUpload } from "@ipod/components/ipod/image-upload";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { ImageUpload } from '@ipod/components/ipod/image-upload';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Controls/Image Upload",
+	title: 'iPod/Controls/Image Upload',
 	component: ImageUpload,
-	tags: ["autodocs"],
-	parameters: compatParameters("exclude"),
+	tags: ['autodocs'],
+	parameters: compatParameters('exclude'),
 	args: {
-		currentImage: "",
+		currentImage: '',
 		onImageChange: fn(),
-		className: "w-32 h-32 border border-neutral-200 rounded",
+		className: 'w-32 h-32 border border-neutral-200 rounded',
 	},
 } satisfies Meta<typeof ImageUpload>;
 

@@ -1,29 +1,28 @@
-import type { SongMetadata } from "@ipod/types/ipod";
+import { DEFAULT_HARDWARE_PRESET_ID } from '@ipod/lib/ipod-classic-presets';
 import {
+	type BatteryMode,
 	COLOR_TARGETS,
+	type ColorTarget,
 	createInitialStudioState,
 	DEFAULT_PANEL_LAYOUT,
 	DEFAULT_SAVED_COLORS,
-	MAX_SAVED_COLORS,
-	type BatteryMode,
-	type ColorTarget,
 	type IpodStudioState,
 	type IpodWorkbenchModel,
+	MAX_SAVED_COLORS,
 	type PanelLayoutState,
 	type SavedColorHistory,
-} from "@ipod/lib/ipod-state/model";
-import { sanitizeLightingConfig } from "@ipod/lib/studio-lighting-config";
+} from '@ipod/lib/ipod-state/model';
+import { sanitizeLightingConfig } from '@ipod/lib/studio-lighting-config';
+import type { SongMetadata } from '@ipod/types/ipod';
 import {
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
 	DEFAULT_INTERACTION_MODEL,
 	DEFAULT_MENU_INDEX,
 	DEFAULT_OS_NOW_PLAYING_LAYOUT,
-	DEFAULT_OS_SCREEN,
 	DEFAULT_OS_ORIGINAL_MENU_SPLIT,
-	NOW_PLAYING_LAYOUT_ELEMENT_IDS,
+	DEFAULT_OS_SCREEN,
 	DEFAULT_SELECTION_KIND,
-	SONG_SNAPSHOT_SCHEMA_VERSION,
 	type IpodHardwarePresetId,
 	type IpodInteractionModel,
 	type IpodNowPlayingLayoutPosition,
@@ -32,30 +31,31 @@ import {
 	type IpodPlaybackSnapshot,
 	type IpodUiState,
 	type IpodViewMode,
+	NOW_PLAYING_LAYOUT_ELEMENT_IDS,
 	type SnapshotSelectionKind,
+	SONG_SNAPSHOT_SCHEMA_VERSION,
 	type SongSnapshot,
-} from "@ipod/types/ipod-state";
-import { DEFAULT_HARDWARE_PRESET_ID } from "@ipod/lib/ipod-classic-presets";
+} from '@ipod/types/ipod-state';
 
-const METADATA_STORAGE_KEY = "ipodSnapshotMetadata";
-const UI_STORAGE_KEY = "ipodSnapshotUiState";
-const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
-const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
-const LAST_EXPORTED_BATTERY_KEY = "ipodSnapshotLastBattery";
+const METADATA_STORAGE_KEY = 'ipodSnapshotMetadata';
+const UI_STORAGE_KEY = 'ipodSnapshotUiState';
+const SNAPSHOT_STORAGE_KEY = 'ipodSnapshotSongSnapshot';
+const EXPORT_COUNTER_STORAGE_KEY = 'ipodSnapshotExportCounter';
+const LAST_EXPORTED_BATTERY_KEY = 'ipodSnapshotLastBattery';
 // The /3d studio slice (lighting rig, flat/lock/marquee toggles, camera pose) rides its own
 // key rather than the whitelisted SongSnapshot.ui, since it carries a nested lighting record.
-const STUDIO_STORAGE_KEY = "ipodSnapshotStudio";
+const STUDIO_STORAGE_KEY = 'ipodSnapshotStudio';
 // Floating tool-panel layout (spec: floating-panel-system) is editor-local, per-mode
 // chrome — not song/finish — so it rides its own key rather than the shared SongSnapshot.
-const PANEL_LAYOUT_STORAGE_KEY = "ipodSnapshotPanelLayout";
+const PANEL_LAYOUT_STORAGE_KEY = 'ipodSnapshotPanelLayout';
 // "Recent Custom" color history, one localStorage key per target. These pre-date the
 // model-lift and are kept verbatim so a user's existing swatches survive the migration
 // into `model.savedColors` (spec: floating-panel-system §6 — colors panel).
 const SAVED_COLORS_KEYS: Record<ColorTarget, string> = {
-	case: "ipodSnapshotCaseCustomColors",
-	bg: "ipodSnapshotBgCustomColors",
-	ring: "ipodSnapshotRingCustomColors",
-	center: "ipodSnapshotCenterCustomColors",
+	case: 'ipodSnapshotCaseCustomColors',
+	bg: 'ipodSnapshotBgCustomColors',
+	ring: 'ipodSnapshotRingCustomColors',
+	center: 'ipodSnapshotCenterCustomColors',
 };
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
@@ -64,7 +64,7 @@ export function loadMetadata(): Partial<SongMetadata> | null {
 		const raw = localStorage.getItem(METADATA_STORAGE_KEY);
 		if (!raw) return null;
 		const parsed = JSON.parse(raw);
-		if (typeof parsed !== "object" || parsed === null) return null;
+		if (typeof parsed !== 'object' || parsed === null) return null;
 		return parsed as Partial<SongMetadata>;
 	} catch {
 		return null;
@@ -81,78 +81,78 @@ export function saveMetadata(state: SongMetadata): void {
 
 function isViewMode(value: unknown): value is IpodViewMode {
 	return (
-		value === "flat" ||
-		value === "3d" ||
-		value === "focus" ||
-		value === "preview" ||
-		value === "ascii"
+		value === 'flat' ||
+		value === '3d' ||
+		value === 'focus' ||
+		value === 'preview' ||
+		value === 'ascii'
 	);
 }
 
 function isInteractionModel(value: unknown): value is IpodInteractionModel {
-	return value === "direct" || value === "ipod-os" || value === "ipod-os-original";
+	return value === 'direct' || value === 'ipod-os' || value === 'ipod-os-original';
 }
 
 function isHardwarePreset(value: unknown): value is IpodHardwarePresetId {
-	return value === "classic-2007" || value === "classic-2008" || value === "classic-2009";
+	return value === 'classic-2007' || value === 'classic-2008' || value === 'classic-2009';
 }
 
 function isSelectionKind(value: unknown): value is SnapshotSelectionKind {
-	return value === "moment" || value === "range";
+	return value === 'moment' || value === 'range';
 }
 
 function isOsScreen(value: unknown): value is IpodOsScreen {
-	return value === "menu" || value === "now-playing";
+	return value === 'menu' || value === 'now-playing';
 }
 
 function isBatteryMode(value: unknown): value is BatteryMode {
-	return value === "manual" || value === "solar";
+	return value === 'manual' || value === 'solar';
 }
 
 export function isHexColor(value: unknown): value is string {
-	return typeof value === "string" && HEX_COLOR_PATTERN.test(value);
+	return typeof value === 'string' && HEX_COLOR_PATTERN.test(value);
 }
 
 function isSongMetadata(value: unknown): value is SongMetadata {
-	if (typeof value !== "object" || value === null) return false;
+	if (typeof value !== 'object' || value === null) return false;
 	const candidate = value as Partial<SongMetadata>;
 	return (
-		typeof candidate.title === "string" &&
-		typeof candidate.artist === "string" &&
-		typeof candidate.album === "string" &&
-		typeof candidate.artwork === "string" &&
-		typeof candidate.duration === "number" &&
-		typeof candidate.currentTime === "number" &&
-		typeof candidate.rating === "number" &&
-		typeof candidate.trackNumber === "number" &&
-		typeof candidate.totalTracks === "number"
+		typeof candidate.title === 'string' &&
+		typeof candidate.artist === 'string' &&
+		typeof candidate.album === 'string' &&
+		typeof candidate.artwork === 'string' &&
+		typeof candidate.duration === 'number' &&
+		typeof candidate.currentTime === 'number' &&
+		typeof candidate.rating === 'number' &&
+		typeof candidate.trackNumber === 'number' &&
+		typeof candidate.totalTracks === 'number'
 	);
 }
 
 function getFiniteNonNegativeNumber(value: unknown): number | null {
-	if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+	if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
 		return null;
 	}
 	return Math.floor(value);
 }
 
 function getMenuSplit(value: unknown): number | null {
-	if (typeof value !== "number" || !Number.isFinite(value)) {
+	if (typeof value !== 'number' || !Number.isFinite(value)) {
 		return null;
 	}
 	return Math.min(Math.max(value, 0.4), 0.7);
 }
 
 function getLayoutPosition(value: unknown): IpodNowPlayingLayoutPosition | null {
-	if (typeof value !== "object" || value === null) {
+	if (typeof value !== 'object' || value === null) {
 		return null;
 	}
 
 	const candidate = value as Partial<IpodNowPlayingLayoutPosition>;
 	if (
-		typeof candidate.x !== "number" ||
+		typeof candidate.x !== 'number' ||
 		!Number.isFinite(candidate.x) ||
-		typeof candidate.y !== "number" ||
+		typeof candidate.y !== 'number' ||
 		!Number.isFinite(candidate.y)
 	) {
 		return null;
@@ -165,7 +165,7 @@ function getLayoutPosition(value: unknown): IpodNowPlayingLayoutPosition | null 
 }
 
 function getNowPlayingLayout(value: unknown): IpodNowPlayingLayoutState {
-	if (typeof value !== "object" || value === null) {
+	if (typeof value !== 'object' || value === null) {
 		return DEFAULT_OS_NOW_PLAYING_LAYOUT;
 	}
 
@@ -187,7 +187,7 @@ function normalizePlaybackSnapshot(
 	ui: Partial<IpodUiState> | null,
 ): IpodPlaybackSnapshot {
 	const playbackCandidate =
-		typeof playback === "object" && playback !== null
+		typeof playback === 'object' && playback !== null
 			? (playback as Partial<IpodPlaybackSnapshot>)
 			: null;
 	const safeDuration = Math.max(
@@ -216,7 +216,7 @@ function normalizePlaybackSnapshot(
 		ui?.rangeEndTime ??
 		null;
 
-	if (selectionKind === "range") {
+	if (selectionKind === 'range') {
 		rangeStartTime = Math.min(
 			Math.max(rangeStartTime ?? safeCurrentTime, 0),
 			safeDuration,
@@ -244,7 +244,7 @@ export function loadUiState(): Partial<IpodUiState> | null {
 		const raw = localStorage.getItem(UI_STORAGE_KEY);
 		if (!raw) return null;
 		const parsed: unknown = JSON.parse(raw);
-		if (typeof parsed !== "object" || parsed === null) return null;
+		if (typeof parsed !== 'object' || parsed === null) return null;
 
 		const candidate = parsed as Partial<IpodUiState>;
 		const safe: Partial<IpodUiState> = {};
@@ -261,7 +261,7 @@ export function loadUiState(): Partial<IpodUiState> | null {
 		if (isSelectionKind(candidate.selectionKind))
 			safe.selectionKind = candidate.selectionKind;
 		if (isOsScreen(candidate.osScreen)) safe.osScreen = candidate.osScreen;
-		if (typeof candidate.isPlaying === "boolean") {
+		if (typeof candidate.isPlaying === 'boolean') {
 			safe.isPlaying = candidate.isPlaying;
 		}
 		const rangeStartTime = getFiniteNonNegativeNumber(candidate.rangeStartTime);
@@ -269,7 +269,7 @@ export function loadUiState(): Partial<IpodUiState> | null {
 		const rangeEndTime = getFiniteNonNegativeNumber(candidate.rangeEndTime);
 		if (rangeEndTime !== null) safe.rangeEndTime = rangeEndTime;
 		if (
-			typeof candidate.menuIndex === "number" &&
+			typeof candidate.menuIndex === 'number' &&
 			Number.isFinite(candidate.menuIndex)
 		) {
 			safe.menuIndex = Math.max(0, Math.floor(candidate.menuIndex));
@@ -279,8 +279,7 @@ export function loadUiState(): Partial<IpodUiState> | null {
 			safe.osOriginalMenuSplit = osOriginalMenuSplit;
 		}
 		safe.osNowPlayingLayout = getNowPlayingLayout(candidate.osNowPlayingLayout);
-		if (isBatteryMode(candidate.batteryMode))
-			safe.batteryMode = candidate.batteryMode;
+		if (isBatteryMode(candidate.batteryMode)) safe.batteryMode = candidate.batteryMode;
 		return safe;
 	} catch {
 		return null;
@@ -300,7 +299,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
 		const raw = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
 		if (!raw) return null;
 		const parsed: unknown = JSON.parse(raw);
-		if (typeof parsed !== "object" || parsed === null) return null;
+		if (typeof parsed !== 'object' || parsed === null) return null;
 		const candidate = parsed as Partial<SongSnapshot>;
 
 		if (!isSongMetadata(candidate.metadata)) {
@@ -323,8 +322,8 @@ export function loadSongSnapshot(): SongSnapshot | null {
 		const ui: IpodUiState = {
 			skinColor: partialUi.skinColor,
 			bgColor: partialUi.bgColor,
-			ringColor: partialUi.ringColor ?? "",
-			centerColor: partialUi.centerColor ?? "",
+			ringColor: partialUi.ringColor ?? '',
+			centerColor: partialUi.centerColor ?? '',
 			backColor: partialUi.backColor ?? DEFAULT_BACK_COLOR,
 			edgeColor: partialUi.edgeColor ?? partialUi.backColor ?? DEFAULT_BACK_COLOR,
 			bezelColor: partialUi.bezelColor ?? DEFAULT_BEZEL_COLOR,
@@ -342,7 +341,7 @@ export function loadSongSnapshot(): SongSnapshot | null {
 				partialUi.osNowPlayingLayout ?? DEFAULT_OS_NOW_PLAYING_LAYOUT,
 			isPlaying: partialUi.isPlaying ?? false,
 			batteryLevel: partialUi.batteryLevel ?? 1.0,
-			batteryMode: partialUi.batteryMode ?? "manual",
+			batteryMode: partialUi.batteryMode ?? 'manual',
 		};
 
 		return {
@@ -389,7 +388,7 @@ export function saveSongSnapshot(snapshot: SongSnapshot): void {
 }
 
 function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
-	if (typeof candidate !== "object" || candidate === null) {
+	if (typeof candidate !== 'object' || candidate === null) {
 		return {};
 	}
 
@@ -405,14 +404,14 @@ function loadUiStateCandidate(candidate: unknown): Partial<IpodUiState> {
 		safe.interactionModel = parsed.interactionModel;
 	if (isSelectionKind(parsed.selectionKind)) safe.selectionKind = parsed.selectionKind;
 	if (isOsScreen(parsed.osScreen)) safe.osScreen = parsed.osScreen;
-	if (typeof parsed.batteryLevel === "number") safe.batteryLevel = parsed.batteryLevel;
+	if (typeof parsed.batteryLevel === 'number') safe.batteryLevel = parsed.batteryLevel;
 	if (isBatteryMode(parsed.batteryMode)) safe.batteryMode = parsed.batteryMode;
 
 	const rangeStartTime = getFiniteNonNegativeNumber(parsed.rangeStartTime);
 	if (rangeStartTime !== null) safe.rangeStartTime = rangeStartTime;
 	const rangeEndTime = getFiniteNonNegativeNumber(parsed.rangeEndTime);
 	if (rangeEndTime !== null) safe.rangeEndTime = rangeEndTime;
-	if (typeof parsed.menuIndex === "number" && Number.isFinite(parsed.menuIndex)) {
+	if (typeof parsed.menuIndex === 'number' && Number.isFinite(parsed.menuIndex)) {
 		safe.menuIndex = Math.max(0, Math.floor(parsed.menuIndex));
 	}
 	const osOriginalMenuSplit = getMenuSplit(parsed.osOriginalMenuSplit);
@@ -549,19 +548,27 @@ export function loadStudioState(): IpodStudioState | null {
 		const raw = localStorage.getItem(STUDIO_STORAGE_KEY);
 		if (!raw) return null;
 		const parsed: unknown = JSON.parse(raw);
-		if (typeof parsed !== "object" || parsed === null) return null;
+		if (typeof parsed !== 'object' || parsed === null) return null;
 		const c = parsed as Partial<IpodStudioState>;
 		const base = createInitialStudioState();
 		return {
 			lighting: sanitizeLightingConfig(c.lighting),
-			technicalFlat: typeof c.technicalFlat === "boolean" ? c.technicalFlat : base.technicalFlat,
+			technicalFlat:
+				typeof c.technicalFlat === 'boolean'
+					? c.technicalFlat
+					: base.technicalFlat,
 			interactionLocked:
-				typeof c.interactionLocked === "boolean" ? c.interactionLocked : base.interactionLocked,
-			marquee: typeof c.marquee === "boolean" ? c.marquee : base.marquee,
-			showPorts: typeof c.showPorts === "boolean" ? c.showPorts : base.showPorts,
-			layoutMode: typeof c.layoutMode === "boolean" ? c.layoutMode : base.layoutMode,
+				typeof c.interactionLocked === 'boolean'
+					? c.interactionLocked
+					: base.interactionLocked,
+			marquee: typeof c.marquee === 'boolean' ? c.marquee : base.marquee,
+			showPorts: typeof c.showPorts === 'boolean' ? c.showPorts : base.showPorts,
+			layoutMode:
+				typeof c.layoutMode === 'boolean' ? c.layoutMode : base.layoutMode,
 			theatreStudio:
-				typeof c.theatreStudio === "boolean" ? c.theatreStudio : base.theatreStudio,
+				typeof c.theatreStudio === 'boolean'
+					? c.theatreStudio
+					: base.theatreStudio,
 		};
 	} catch {
 		return null;
@@ -583,7 +590,7 @@ export function loadPanelLayout(): PanelLayoutState {
 		const parsed: unknown = JSON.parse(raw);
 		// Plain sparse data; the host resolves every frame against the registry default,
 		// so a shallow object check is enough to reject corrupt blobs without over-validating.
-		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
 			return { ...DEFAULT_PANEL_LAYOUT };
 		}
 		return parsed as PanelLayoutState;
@@ -601,7 +608,10 @@ export function loadSavedColors(): SavedColorHistory {
 			const parsed: unknown = JSON.parse(raw);
 			if (!Array.isArray(parsed)) continue;
 			result[target] = parsed
-				.filter((v): v is string => typeof v === "string" && HEX_COLOR_PATTERN.test(v))
+				.filter(
+					(v): v is string =>
+						typeof v === 'string' && HEX_COLOR_PATTERN.test(v),
+				)
 				.slice(0, MAX_SAVED_COLORS);
 		} catch {
 			// Ignore corrupt blobs — target stays empty.
@@ -614,7 +624,10 @@ export function saveSavedColors(history: SavedColorHistory): void {
 	const safe = history ?? DEFAULT_SAVED_COLORS;
 	for (const target of COLOR_TARGETS) {
 		try {
-			localStorage.setItem(SAVED_COLORS_KEYS[target], JSON.stringify(safe[target] ?? []));
+			localStorage.setItem(
+				SAVED_COLORS_KEYS[target],
+				JSON.stringify(safe[target] ?? []),
+			);
 		} catch {
 			// Ignore quota errors
 		}

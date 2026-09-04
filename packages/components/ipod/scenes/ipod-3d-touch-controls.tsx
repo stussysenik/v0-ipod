@@ -1,9 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-
-import type { ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
-import { REACH_RANGE, type StudioPose } from "@ipod/lib/studio-camera";
+import type { ThreeDIpodHandle } from '@ipod/components/three/three-d-ipod';
+import { REACH_RANGE, type StudioPose } from '@ipod/lib/studio-camera';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * On-canvas touch camera controls for /3d on mobile.
@@ -32,12 +31,12 @@ interface CanonicalView {
 // Canonical product views, mapped to studio-coordinate poses. Reach is left
 // untouched on a snap so a snap re-aims without zooming.
 const VIEWS: readonly CanonicalView[] = [
-	{ id: "front", label: "Front", azimuth: 0, elevation: 0 },
-	{ id: "right", label: "Right", azimuth: 90, elevation: 0 },
-	{ id: "back", label: "Back", azimuth: 180, elevation: 0 },
-	{ id: "left", label: "Left", azimuth: -90, elevation: 0 },
-	{ id: "top", label: "Top", azimuth: 0, elevation: 70 },
-	{ id: "hero", label: "¾", azimuth: 20, elevation: 12 },
+	{ id: 'front', label: 'Front', azimuth: 0, elevation: 0 },
+	{ id: 'right', label: 'Right', azimuth: 90, elevation: 0 },
+	{ id: 'back', label: 'Back', azimuth: 180, elevation: 0 },
+	{ id: 'left', label: 'Left', azimuth: -90, elevation: 0 },
+	{ id: 'top', label: 'Top', azimuth: 0, elevation: 70 },
+	{ id: 'hero', label: '¾', azimuth: 20, elevation: 12 },
 ] as const;
 
 // Degrees of orbit per pixel of finger travel on the pad — tuned for a calm,
@@ -46,7 +45,7 @@ const ORBIT_DEG_PER_PX = 0.4;
 
 /** Shortest signed angular distance a→b in degrees, in [-180, 180]. */
 function angleDelta(a: number, b: number): number {
-	let d = (((b - a) % 360) + 540) % 360;
+	const d = (((b - a) % 360) + 540) % 360;
 	return d - 180;
 }
 
@@ -74,7 +73,12 @@ export function Ipod3DTouchControls({ apiRef, landscape = false }: Ipod3DTouchCo
 	const pointers = useRef(new Map<number, { x: number; y: number }>());
 	// Orbit accumulates from the goal captured at gesture START (never re-reads the
 	// eased mid-flight pose), so fine orbit cannot drift while the rig is still easing.
-	const orbitStart = useRef<{ azimuth: number; elevation: number; x: number; y: number } | null>(null);
+	const orbitStart = useRef<{
+		azimuth: number;
+		elevation: number;
+		x: number;
+		y: number;
+	} | null>(null);
 	const pinchStart = useRef<{ dist: number; reach: number } | null>(null);
 
 	const beginOrbit = () => {
@@ -84,7 +88,12 @@ export function Ipod3DTouchControls({ apiRef, landscape = false }: Ipod3DTouchCo
 			orbitStart.current = null;
 			return;
 		}
-		orbitStart.current = { azimuth: pose.azimuth, elevation: pose.elevation, x: pts[0].x, y: pts[0].y };
+		orbitStart.current = {
+			azimuth: pose.azimuth,
+			elevation: pose.elevation,
+			x: pts[0].x,
+			y: pts[0].y,
+		};
 	};
 
 	const beginPinch = () => {
@@ -118,7 +127,9 @@ export function Ipod3DTouchControls({ apiRef, landscape = false }: Ipod3DTouchCo
 			const pts = [...pointers.current.values()];
 			const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
 			// Fingers apart (dist↑) → reach↓ → zoom in. The rig clamps to REACH_RANGE.
-			api.setCameraGoal({ reach: pinchStart.current.reach * (pinchStart.current.dist / dist) });
+			api.setCameraGoal({
+				reach: pinchStart.current.reach * (pinchStart.current.dist / dist),
+			});
 			return;
 		}
 
@@ -159,10 +170,10 @@ export function Ipod3DTouchControls({ apiRef, landscape = false }: Ipod3DTouchCo
 		<div
 			className={`pointer-events-none fixed z-20 flex max-w-full gap-2 lg:hidden ${
 				landscape
-					? "bottom-3 right-3 flex-row items-end"
-					: "inset-x-0 bottom-[84px] flex-col items-center px-4"
+					? 'bottom-3 right-3 flex-row items-end'
+					: 'inset-x-0 bottom-[84px] flex-col items-center px-4'
 			}`}
-			style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+			style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
 		>
 			{/* Orientation gizmo — tap a face to snap to that canonical view. */}
 			<div className="pointer-events-auto grid grid-cols-6 gap-1 rounded-full border border-black/10 bg-white/85 p-1 backdrop-blur-md">
@@ -175,8 +186,8 @@ export function Ipod3DTouchControls({ apiRef, landscape = false }: Ipod3DTouchCo
 						aria-label={`Snap camera to ${view.label} view`}
 						className={`h-8 min-w-8 rounded-full px-2 text-[11px] font-medium tabular-nums transition-colors ${
 							activeViewId === view.id
-								? "bg-black text-white"
-								: "text-black/55 hover:text-black"
+								? 'bg-black text-white'
+								: 'text-black/55 hover:text-black'
 						}`}
 					>
 						{view.label}

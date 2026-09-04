@@ -1,10 +1,10 @@
 // iPod Classic 6th Generation Colors (from reference image)
 // Silver: Light anodized aluminum with light wheel
 // Black: Deep black with dark wheel
-import { getRevisionNotes } from "./ipod-revision-data";
-import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR } from "./color-manifest";
 
-import type { IpodHardwarePresetId } from "@ipod/types/ipod-state";
+import type { IpodHardwarePresetId } from '@ipod/types/ipod-state';
+import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR } from './color-manifest';
+import { getRevisionNotes } from './ipod-revision-data';
 
 // ─── Mechanical Ground Truth (millimetres) ──────────────────────────────────────────
 //
@@ -28,8 +28,20 @@ import type { IpodHardwarePresetId } from "@ipod/types/ipod-state";
 // EQUAL on top and sides — (61.8 − 52.0)/2 = 4.9 ≈ 24.7 − 39.5/2 = 4.95. Any drift in
 // one token breaks that symmetry, which is exactly what reads as "not quite real".
 export const IPOD_CLASSIC_MM = {
-	body: { width: 61.8, height: 103.5, cornerRadius: 6.4, depthThin: 10.5, depthThick: 13.5, faceStep: 0.4 },
-	screen: { apertureWidth: 52.0, apertureHeight: 39.5, apertureCenterFromTop: 24.7, cornerRadius: 3.0 },
+	body: {
+		width: 61.8,
+		height: 103.5,
+		cornerRadius: 6.4,
+		depthThin: 10.5,
+		depthThick: 13.5,
+		faceStep: 0.4,
+	},
+	screen: {
+		apertureWidth: 52.0,
+		apertureHeight: 39.5,
+		apertureCenterFromTop: 24.7,
+		cornerRadius: 3.0,
+	},
 	wheel: { diameter: 38.0, buttonDiameter: 13.7, centerFromBottom: 30.4 },
 	// ── Chassis edge features (Fig 3-53 top/bottom edge views, read at 600 DPI) ──
 	// All are machined INTO the steel — recessed openings, never proud of the
@@ -74,7 +86,8 @@ function machinedGeometry(shellHeightPx: number) {
 	const apertureTopMm = mm.screen.apertureCenterFromTop - mm.screen.apertureHeight / 2;
 	const sideRevealMm = (mm.body.width - mm.screen.apertureWidth) / 2;
 	// Wheel seat: Ø38 disc, centre 30.4 up from the bottom edge.
-	const wheelTopFromTopMm = mm.body.height - mm.wheel.centerFromBottom - mm.wheel.diameter / 2;
+	const wheelTopFromTopMm =
+		mm.body.height - mm.wheel.centerFromBottom - mm.wheel.diameter / 2;
 	const apertureBottomMm = apertureTopMm + mm.screen.apertureHeight;
 
 	const radius = r1(px(mm.body.cornerRadius));
@@ -216,16 +229,16 @@ export interface IpodClassicPresetDefinition {
 }
 
 // Default to black iPod Classic 2008 (6th generation)
-export const DEFAULT_HARDWARE_PRESET_ID: IpodHardwarePresetId = "classic-2008-black";
+export const DEFAULT_HARDWARE_PRESET_ID: IpodHardwarePresetId = 'classic-2008-black';
 
 export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 	{
-		id: "classic-2007",
-		label: "Classic 2007 · 6th Gen",
-		shortLabel: "2007",
-		yearLabel: "2007",
-		capacityLabel: "160GB",
-		notes: "Original all-metal iPod classic launch proportions.",
+		id: 'classic-2007',
+		label: 'Classic 2007 · 6th Gen',
+		shortLabel: '2007',
+		yearLabel: '2007',
+		capacityLabel: '160GB',
+		notes: 'Original all-metal iPod classic launch proportions.',
 		depthMm: IPOD_CLASSIC_MM.body.depthThick,
 		defaultShellColor: DEFAULT_SHELL_COLOR,
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
@@ -256,20 +269,20 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		wheel: {
 			...GEOMETRY_580.wheel,
 			labelFontSize: 11.2,
-			labelTracking: "0.18em",
+			labelTracking: '0.18em',
 			sideIconSize: 22,
 			playPauseIconSize: 18,
 		},
 	},
 	{
-		id: "classic-2008",
-		label: "Classic 2008 · 6.5 Gen",
-		shortLabel: "2008",
-		yearLabel: "2008",
-		capacityLabel: "120GB",
-		notes: "The refined 120GB revision with improved display density.",
+		id: 'classic-2008',
+		label: 'Classic 2008 · 6.5 Gen',
+		shortLabel: '2008',
+		yearLabel: '2008',
+		capacityLabel: '120GB',
+		notes: 'The refined 120GB revision with improved display density.',
 		depthMm: IPOD_CLASSIC_MM.body.depthThin,
-		defaultShellColor: "#E8E8E8",
+		defaultShellColor: '#E8E8E8',
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
 		shell: GEOMETRY_580.shell,
 		screen: {
@@ -298,27 +311,27 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		wheel: {
 			...GEOMETRY_580.wheel,
 			labelFontSize: 11.5,
-			labelTracking: "0.08em",
+			labelTracking: '0.08em',
 			sideIconSize: 20,
 			playPauseIconSize: 15,
 		},
 	},
 	{
-		id: "classic-2008-black",
-		label: "Classic 2008 · Black",
-		shortLabel: "2008 Black",
-		yearLabel: "2008",
-		capacityLabel: "120GB",
-		notes: "Black version of the 120GB revision.",
+		id: 'classic-2008-black',
+		label: 'Classic 2008 · Black',
+		shortLabel: '2008 Black',
+		yearLabel: '2008',
+		capacityLabel: '120GB',
+		notes: 'Black version of the 120GB revision.',
 		depthMm: IPOD_CLASSIC_MM.body.depthThin,
-		defaultShellColor: "#1b1818",
+		defaultShellColor: '#1b1818',
 		// The canonical "Noir" stage — the studio's signature blue field, ratified
 		// from the curated look (spec: 3d-studio-presentation, Noir factory default).
-		defaultBackdropColor: "#0048FF",
+		defaultBackdropColor: '#0048FF',
 		// Hand-tuned wheel: derivation lands on #242020, one step too close to the
 		// case — the curated ring is lifted to keep the wheel a distinct part.
-		defaultRingColor: "#313030",
-		defaultCenterColor: "#141212",
+		defaultRingColor: '#313030',
+		defaultCenterColor: '#141212',
 		shell: GEOMETRY_580.shell,
 		screen: {
 			...GEOMETRY_580.screen,
@@ -346,20 +359,20 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		wheel: {
 			...GEOMETRY_580.wheel,
 			labelFontSize: 11.5,
-			labelTracking: "0.08em",
+			labelTracking: '0.08em',
 			sideIconSize: 20,
 			playPauseIconSize: 15,
 		},
 	},
 	{
-		id: "classic-2008-silver",
-		label: "Classic 2008 · Silver",
-		shortLabel: "2008 Silver",
-		yearLabel: "2008",
-		capacityLabel: "120GB",
-		notes: "Silver version of the 120GB revision.",
+		id: 'classic-2008-silver',
+		label: 'Classic 2008 · Silver',
+		shortLabel: '2008 Silver',
+		yearLabel: '2008',
+		capacityLabel: '120GB',
+		notes: 'Silver version of the 120GB revision.',
 		depthMm: IPOD_CLASSIC_MM.body.depthThin,
-		defaultShellColor: "#E8E8E8",
+		defaultShellColor: '#E8E8E8',
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
 		shell: GEOMETRY_580.shell,
 		screen: {
@@ -388,20 +401,20 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		wheel: {
 			...GEOMETRY_580.wheel,
 			labelFontSize: 11.5,
-			labelTracking: "0.08em",
+			labelTracking: '0.08em',
 			sideIconSize: 20,
 			playPauseIconSize: 15,
 		},
 	},
 	{
-		id: "classic-2009",
-		label: "Classic 2009 · Late 160GB",
-		shortLabel: "2009",
-		yearLabel: "2009",
-		capacityLabel: "160GB",
-		notes: "Late thin revision with tighter wheel and calmer screen chrome.",
+		id: 'classic-2009',
+		label: 'Classic 2009 · Late 160GB',
+		shortLabel: '2009',
+		yearLabel: '2009',
+		capacityLabel: '160GB',
+		notes: 'Late thin revision with tighter wheel and calmer screen chrome.',
 		depthMm: IPOD_CLASSIC_MM.body.depthThin,
-		defaultShellColor: "#F7F7F7",
+		defaultShellColor: '#F7F7F7',
 		defaultBackdropColor: DEFAULT_BACKDROP_COLOR,
 		shell: GEOMETRY_620.shell,
 		screen: {
@@ -430,7 +443,7 @@ export const IPOD_CLASSIC_PRESETS: readonly IpodClassicPresetDefinition[] = [
 		wheel: {
 			...GEOMETRY_620.wheel,
 			labelFontSize: 10.9,
-			labelTracking: "0.16em",
+			labelTracking: '0.16em',
 			sideIconSize: 18,
 			playPauseIconSize: 14,
 		},

@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from 'three';
 
 /**
  * Capture a high-resolution render from a Three.js scene
@@ -37,13 +37,13 @@ export async function captureThreeCanvas(
 		gl.setRenderTarget(null);
 
 		// Convert to PNG blob via canvas
-		const canvas = document.createElement("canvas");
+		const canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
-		const ctx = canvas.getContext("2d");
+		const ctx = canvas.getContext('2d');
 
 		if (!ctx) {
-			throw new Error("Failed to get canvas 2D context");
+			throw new Error('Failed to get canvas 2D context');
 		}
 
 		const imageData = ctx.createImageData(width, height);
@@ -70,7 +70,7 @@ export async function captureThreeCanvas(
 				(blob) => {
 					resolve(blob);
 				},
-				"image/png",
+				'image/png',
 				1.0,
 			);
 		});
@@ -92,7 +92,7 @@ export function captureCanvasDataUrl(
 	gl.render(scene, camera);
 
 	// Preserve drawing buffer must be true in the renderer for this to work
-	return gl.domElement.toDataURL("image/png");
+	return gl.domElement.toDataURL('image/png');
 }
 
 /**
@@ -100,7 +100,7 @@ export function captureCanvasDataUrl(
  */
 export function downloadBlob(blob: Blob, filename: string): void {
 	const url = URL.createObjectURL(blob);
-	const link = document.createElement("a");
+	const link = document.createElement('a');
 	link.download = filename;
 	link.href = url;
 	link.click();

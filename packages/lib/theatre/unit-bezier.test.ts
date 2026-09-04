@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { UnitBezier } from "./unit-bezier";
+import { UnitBezier } from './unit-bezier';
 
 /**
  * A unit cubic Bézier is the easing primitive Theatre.js stores per keyframe
@@ -10,14 +10,14 @@ import { UnitBezier } from "./unit-bezier";
  * stays bit-faithful to `@theatre/core`'s internal solver (the parity test
  * proves the whole pipeline; this proves the kernel in isolation).
  */
-describe("UnitBezier", () => {
-	it("passes through the curve endpoints", () => {
+describe('UnitBezier', () => {
+	it('passes through the curve endpoints', () => {
 		const b = new UnitBezier(0.42, 0, 0.58, 1);
 		expect(b.solve(0)).toBeCloseTo(0, 9);
 		expect(b.solve(1)).toBeCloseTo(1, 9);
 	});
 
-	it("is the identity when both control points sit on the diagonal", () => {
+	it('is the identity when both control points sit on the diagonal', () => {
 		const b = new UnitBezier(1 / 3, 1 / 3, 2 / 3, 2 / 3);
 		for (const x of [0.1, 0.25, 0.5, 0.75, 0.9]) {
 			expect(b.solve(x)).toBeCloseTo(x, 6);
@@ -33,17 +33,17 @@ describe("UnitBezier", () => {
 		expect(b.solve(0.75)).toBeCloseTo(0.89411, 4);
 	});
 
-	it("ease-in bunches motion late (output trails input before the midpoint)", () => {
+	it('ease-in bunches motion late (output trails input before the midpoint)', () => {
 		const easeIn = new UnitBezier(0.42, 0, 1, 1);
 		expect(easeIn.solve(0.5)).toBeLessThan(0.5);
 	});
 
-	it("ease-out front-loads motion (output leads input before the midpoint)", () => {
+	it('ease-out front-loads motion (output leads input before the midpoint)', () => {
 		const easeOut = new UnitBezier(0, 0, 0.58, 1);
 		expect(easeOut.solve(0.5)).toBeGreaterThan(0.5);
 	});
 
-	it("is monotonically non-decreasing across the segment", () => {
+	it('is monotonically non-decreasing across the segment', () => {
 		const b = new UnitBezier(0.42, 0, 0.58, 1);
 		let prev = -Infinity;
 		for (let i = 0; i <= 100; i++) {

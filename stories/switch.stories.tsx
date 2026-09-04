@@ -1,14 +1,12 @@
-import { Switch } from "@ipod/components/ui/switch";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { Switch } from '@ipod/components/ui/switch';
+import type { Meta, StoryObj } from '@storybook/react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "UI/Switch",
+	title: 'UI/Switch',
 	component: Switch,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 } satisfies Meta<typeof Switch>;
 
 export default meta;

@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { sharedUiTokens } from "@ipod/lib/shared-ui-tokens";
+import { sharedUiTokens } from '@ipod/lib/shared-ui-tokens';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 function formatTokenValue(value: unknown): string {
-	if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+	if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 		return String(value);
 	}
 
@@ -49,13 +49,13 @@ function SharedUiTokensPreview() {
 }
 
 const meta = {
-	title: "tokens/shared-ui/Manifest",
+	title: 'tokens/shared-ui/Manifest',
 	component: SharedUiTokensPreview,
 	parameters: {
-		layout: "padded",
+		layout: 'padded',
 		docs: {
 			description: {
-				component: "Inspection surface for the shared primitive manifest. Use this to review code-owned token changes before syncing them outward to design tools.",
+				component: 'Inspection surface for the shared primitive manifest. Use this to review code-owned token changes before syncing them outward to design tools.',
 			},
 		},
 	},

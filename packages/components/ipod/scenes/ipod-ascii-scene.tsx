@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-
-import type { SongMetadata } from "@ipod/types/ipod";
+import type { SongMetadata } from '@ipod/types/ipod';
+import { useMemo } from 'react';
 
 interface IpodAsciiSceneProps {
 	state: SongMetadata;
@@ -15,7 +14,7 @@ function formatTime(seconds: number, isRemaining: boolean): string {
 	const clamped = Math.max(0, seconds);
 	const m = Math.floor(clamped / 60);
 	const s = Math.floor(clamped % 60);
-	return `${isRemaining ? "-" : ""}${m}:${s.toString().padStart(2, "0")}`;
+	return `${isRemaining ? '-' : ''}${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function truncate(text: string, maxLen: number): string {
@@ -25,12 +24,12 @@ function truncate(text: string, maxLen: number): string {
 
 function padRight(text: string, width: number): string {
 	if (text.length >= width) return text.slice(0, width);
-	return text + " ".repeat(width - text.length);
+	return text + ' '.repeat(width - text.length);
 }
 
 function renderStars(rating: number): string {
 	const filled = Math.min(Math.max(Math.round(rating), 0), 5);
-	return "*".repeat(filled) + ".".repeat(5 - filled);
+	return '*'.repeat(filled) + '.'.repeat(5 - filled);
 }
 
 export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
@@ -44,7 +43,7 @@ export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
 				? Math.round((state.currentTime / state.duration) * PROGRESS_COLS)
 				: 0;
 		const emptyCount = PROGRESS_COLS - filledCount;
-		const progressBar = "▓".repeat(filledCount) + "░".repeat(emptyCount);
+		const progressBar = '▓'.repeat(filledCount) + '░'.repeat(emptyCount);
 
 		const title = truncate(state.title, 18);
 		const artist = truncate(state.artist, 18);
@@ -56,23 +55,23 @@ export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
 		// Time line: elapsed left-aligned, remaining right-aligned within 28 chars
 		const timeInner = 28;
 		const timeGap = Math.max(timeInner - elapsed.length - remainingStr.length, 1);
-		const timeLine = ` ${elapsed}${" ".repeat(timeGap)}${remainingStr} `;
+		const timeLine = ` ${elapsed}${' '.repeat(timeGap)}${remainingStr} `;
 
 		const lines = [
-			`┌${"─".repeat(COLS)}┐`,
-			`│ > Now Playing${" ".repeat(COLS - 18)}[=] │`,
-			`├────────┬${"─".repeat(COLS - 9)}┤`,
+			`┌${'─'.repeat(COLS)}┐`,
+			`│ > Now Playing${' '.repeat(COLS - 18)}[=] │`,
+			`├────────┬${'─'.repeat(COLS - 9)}┤`,
 			`│ ┌────┐ │ ${padRight(title, COLS - 11)} │`,
 			`│ │ ♫  │ │ ${padRight(artist, COLS - 11)} │`,
 			`│ │    │ │ ${padRight(album, COLS - 11)} │`,
 			`│ └────┘ │ ${padRight(metaLine, COLS - 11)} │`,
-			`├────────┴${"─".repeat(COLS - 9)}┤`,
+			`├────────┴${'─'.repeat(COLS - 9)}┤`,
 			`│ ${progressBar}  │`,
 			`│${timeLine}│`,
-			`└${"─".repeat(COLS)}┘`,
+			`└${'─'.repeat(COLS)}┘`,
 		];
 
-		return lines.join("\n");
+		return lines.join('\n');
 	}, [
 		state.title,
 		state.artist,
@@ -92,8 +91,8 @@ export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
 			data-export-layer="screen"
 			data-testid="ascii-screen"
 			style={{
-				backgroundColor: "#0a0a0a",
-				boxShadow: "0 3px 0 rgba(0,0,0,0.84), 0 1px 5px rgba(0,0,0,0.32)",
+				backgroundColor: '#0a0a0a',
+				boxShadow: '0 3px 0 rgba(0,0,0,0.84), 0 1px 5px rgba(0,0,0,0.32)',
 			}}
 		>
 			<pre
@@ -102,8 +101,8 @@ export function IpodAsciiScene({ state }: IpodAsciiSceneProps) {
 				data-export-time-value={state.currentTime}
 				data-testid="ascii-pre"
 				style={{
-					color: "#33ff33",
-					textShadow: "0 0 6px rgba(51,255,51,0.35)",
+					color: '#33ff33',
+					textShadow: '0 0 6px rgba(51,255,51,0.35)',
 				}}
 			>
 				{ascii}

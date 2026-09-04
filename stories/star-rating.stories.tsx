@@ -1,22 +1,19 @@
-import { fn } from "@storybook/test";
-
-import { StarRating } from "@ipod/components/ipod/star-rating";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { StarRating } from '@ipod/components/ipod/star-rating';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Fields/Star Rating",
+	title: 'iPod/Fields/Star Rating',
 	component: StarRating,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
 		rating: 4,
 		onChange: fn(),
 	},
 	argTypes: {
-		rating: { control: { type: "range", min: 0, max: 5, step: 1 } },
+		rating: { control: { type: 'range', min: 0, max: 5, step: 1 } },
 	},
 } satisfies Meta<typeof StarRating>;
 

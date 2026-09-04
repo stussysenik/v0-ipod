@@ -1,4 +1,4 @@
-import manifestData from "@ipod/tokens/shared-ui.json";
+import manifestData from '@ipod/tokens/shared-ui.json';
 
 interface IconButtonAppearance {
 	border: string;

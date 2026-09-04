@@ -1,19 +1,17 @@
-import IPodClassic from "@ipod/components/ipod/ipod-classic";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import IPodClassic from '@ipod/components/ipod/ipod-classic';
+import type { Meta, StoryObj } from '@storybook/react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Classic",
+	title: 'iPod/Classic',
 	component: IPodClassic,
-	tags: ["autodocs"],
+	tags: ['autodocs'],
 	parameters: {
-		layout: "fullscreen",
-		...compatParameters("raster"),
+		layout: 'fullscreen',
+		...compatParameters('raster'),
 		docs: {
 			description: {
-				component: "Top-level interactive iPod surface. Rendered as Phase 1 raster only — the interactive shell wraps the full state machine, settings sidebar, and 3D iframe which cannot be vector-serialized.",
+				component: 'Top-level interactive iPod surface. Rendered as Phase 1 raster only — the interactive shell wraps the full state machine, settings sidebar, and 3D iframe which cannot be vector-serialized.',
 			},
 		},
 	},

@@ -11,35 +11,35 @@
  * Tests are skipped automatically when STORYBOOK_URL is unreachable.
  */
 
-import http from "node:http";
+import http from 'node:http';
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from '@playwright/test';
 
 const STORIES = [
-	"ipod-device-shell--black",
-	"ipod-screen--now-playing",
-	"click-wheel--default",
-	"editable-text--default",
-	"editable-duration--default",
-	"editable-time--elapsed",
-	"editable-track-number--default",
-	"progress-bar--quarter-elapsed",
-	"screen-battery--normal",
-	"star-rating--four-stars",
-	"marquee-text--default",
-	"icon-button--default",
-	"checkbox--unchecked",
-	"carbon-checkbox--unchecked",
-	"switch--off",
-	"theme-toggle--black",
-	"hex-color-input--black",
-	"grey-palette-picker--case-target",
-	"build-version-badge--dev",
-	"revision-spec-card--black2008",
-	"now-playing--black",
+	'ipod-device-shell--black',
+	'ipod-screen--now-playing',
+	'click-wheel--default',
+	'editable-text--default',
+	'editable-duration--default',
+	'editable-time--elapsed',
+	'editable-track-number--default',
+	'progress-bar--quarter-elapsed',
+	'screen-battery--normal',
+	'star-rating--four-stars',
+	'marquee-text--default',
+	'icon-button--default',
+	'checkbox--unchecked',
+	'carbon-checkbox--unchecked',
+	'switch--off',
+	'theme-toggle--black',
+	'hex-color-input--black',
+	'grey-palette-picker--case-target',
+	'build-version-badge--dev',
+	'revision-spec-card--black2008',
+	'now-playing--black',
 ];
 
-const STORYBOOK_URL = process.env.STORYBOOK_URL ?? "http://localhost:6006";
+const STORYBOOK_URL = process.env.STORYBOOK_URL ?? 'http://localhost:6006';
 
 /** Returns true if the Storybook server is reachable. */
 function isStorybookReachable(): Promise<boolean> {
@@ -49,12 +49,12 @@ function isStorybookReachable(): Promise<boolean> {
 			{
 				hostname: url.hostname,
 				port: Number(url.port) || 80,
-				path: "/",
-				method: "HEAD",
+				path: '/',
+				method: 'HEAD',
 			},
 			() => resolve(true),
 		);
-		req.on("error", () => resolve(false));
+		req.on('error', () => resolve(false));
 		req.setTimeout(2000, () => {
 			req.destroy();
 			resolve(false);
@@ -63,7 +63,7 @@ function isStorybookReachable(): Promise<boolean> {
 	});
 }
 
-test.describe("Storybook smoke", () => {
+test.describe('Storybook smoke', () => {
 	let storybookAvailable = false;
 
 	test.beforeAll(async () => {
@@ -82,9 +82,9 @@ test.describe("Storybook smoke", () => {
 			}
 
 			const errors: string[] = [];
-			page.on("pageerror", (error) => errors.push(error.message));
-			page.on("console", (msg) => {
-				if (msg.type() === "error") {
+			page.on('pageerror', (error) => errors.push(error.message));
+			page.on('console', (msg) => {
+				if (msg.type() === 'error') {
 					errors.push(msg.text());
 				}
 			});
@@ -93,12 +93,12 @@ test.describe("Storybook smoke", () => {
 				`${STORYBOOK_URL}/iframe.html?id=${encodeURIComponent(storyId)}&viewMode=story`,
 			);
 			// Wait for Storybook's root to mount.
-			await page.waitForSelector("#storybook-root", { timeout: 10_000 });
-			await page.waitForLoadState("networkidle");
+			await page.waitForSelector('#storybook-root', { timeout: 10_000 });
+			await page.waitForLoadState('networkidle');
 
 			expect(
 				errors,
-				`story ${storyId} threw on render:\n${errors.join("\n")}`,
+				`story ${storyId} threw on render:\n${errors.join('\n')}`,
 			).toEqual([]);
 		});
 	}

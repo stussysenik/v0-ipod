@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { isHexColor } from "@ipod/lib/ipod-state/storage";
+import { isHexColor } from '@ipod/lib/ipod-state/storage';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface HexColorInputProps {
 	value: string;
@@ -17,7 +17,7 @@ function normalize3to6(hex: string): string {
 }
 
 export function HexColorInput({ value, onChange }: HexColorInputProps) {
-	const [draft, setDraft] = useState(value.replace("#", "").toUpperCase());
+	const [draft, setDraft] = useState(value.replace('#', '').toUpperCase());
 	const inputRef = useRef<HTMLInputElement>(null);
 	const lastCommitted = useRef(value.toUpperCase());
 
@@ -27,10 +27,10 @@ export function HexColorInput({ value, onChange }: HexColorInputProps) {
 			if (isHexColor(candidate)) {
 				const normalized = normalize3to6(candidate);
 				lastCommitted.current = normalized;
-				setDraft(normalized.replace("#", ""));
+				setDraft(normalized.replace('#', ''));
 				onChange(normalized);
 			} else {
-				setDraft(lastCommitted.current.replace("#", ""));
+				setDraft(lastCommitted.current.replace('#', ''));
 			}
 		},
 		[onChange],
@@ -40,7 +40,7 @@ export function HexColorInput({ value, onChange }: HexColorInputProps) {
 	useEffect(() => {
 		if (value.toUpperCase() !== lastCommitted.current) {
 			lastCommitted.current = value.toUpperCase();
-			setDraft(value.replace("#", "").toUpperCase());
+			setDraft(value.replace('#', '').toUpperCase());
 		}
 	}, [value]);
 
@@ -69,12 +69,12 @@ export function HexColorInput({ value, onChange }: HexColorInputProps) {
 				onBlur={() => commit(draft)}
 				onChange={(e) => {
 					const cleaned = e.target.value
-						.replaceAll(/[^\dA-Fa-f]/g, "")
+						.replaceAll(/[^\dA-Fa-f]/g, '')
 						.toUpperCase();
 					setDraft(cleaned);
 				}}
 				onKeyDown={(e) => {
-					if (e.key === "Enter") {
+					if (e.key === 'Enter') {
 						commit(draft);
 						inputRef.current?.blur();
 					}

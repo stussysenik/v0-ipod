@@ -1,9 +1,9 @@
-import { PANEL_REGISTRY } from "@ipod/components/ipod/panels/panel-registry";
-import { FEATURE_FLAGS } from "@ipod/lib/feature-flags";
-import type { IpodViewMode, PanelLayoutState } from "@ipod/lib/ipod-state/model";
-import { getModeLayout, resolveFrame } from "@ipod/lib/ipod-state/panel-layout";
-import type { IpodMachineEvent } from "@ipod/lib/xstate/central-machine";
-import { availableViewModes } from "@ipod/lib/view-modes";
+import { PANEL_REGISTRY } from '@ipod/components/ipod/panels/panel-registry';
+import { FEATURE_FLAGS } from '@ipod/lib/feature-flags';
+import type { IpodViewMode, PanelLayoutState } from '@ipod/lib/ipod-state/model';
+import { getModeLayout, resolveFrame } from '@ipod/lib/ipod-state/panel-layout';
+import { availableViewModes } from '@ipod/lib/view-modes';
+import type { IpodMachineEvent } from '@ipod/lib/xstate/central-machine';
 
 /**
  * Two-tier palette (spec: command-palette §Triage). `primary` commands surface immediately;
@@ -11,7 +11,7 @@ import { availableViewModes } from "@ipod/lib/view-modes";
  * immediate list reads as "what matters" while nothing is actually removed. Promote/demote a
  * command by flipping its `tier` here — that is the on/off knob.
  */
-export type CommandTier = "primary" | "secondary";
+export type CommandTier = 'primary' | 'secondary';
 
 export interface PaletteCommand {
 	id: string;
@@ -35,7 +35,13 @@ interface BuildArgs {
  * the current machine state on every render so available modes (feature-gated) and the
  * registered panels are always represented accurately — no reload needed.
  */
-export function buildCommands({ viewMode, layout, send, navigate, close }: BuildArgs): PaletteCommand[] {
+export function buildCommands({
+	viewMode,
+	layout,
+	send,
+	navigate,
+	close,
+}: BuildArgs): PaletteCommand[] {
 	const commands: PaletteCommand[] = [];
 	const run = (event: IpodMachineEvent) => () => {
 		send(event);
@@ -51,12 +57,20 @@ export function buildCommands({ viewMode, layout, send, navigate, close }: Build
 	// flag so the two 3D affordances appear and disappear together.
 	if (FEATURE_FLAGS.SHOW_3D_VIEW_MODE) {
 		commands.push({
-			id: "nav:3d-studio",
-			group: "Switch mode",
-			label: "Open 3D studio (/3d)",
-			keywords: ["3d", "studio", "render", "stage", "navigate", "open", "fullscreen"],
-			tier: "primary",
-			run: go("/3d"),
+			id: 'nav:3d-studio',
+			group: 'Switch mode',
+			label: 'Open 3D studio (/3d)',
+			keywords: [
+				'3d',
+				'studio',
+				'render',
+				'stage',
+				'navigate',
+				'open',
+				'fullscreen',
+			],
+			tier: 'primary',
+			run: go('/3d'),
 		});
 	}
 
@@ -66,11 +80,11 @@ export function buildCommands({ viewMode, layout, send, navigate, close }: Build
 		if (mode.id === viewMode) continue;
 		commands.push({
 			id: `mode:${mode.id}`,
-			group: "Switch mode",
+			group: 'Switch mode',
 			label: `Switch to ${mode.label}`,
-			keywords: ["mode", "view", mode.id, mode.label],
-			tier: "primary",
-			run: run({ type: "SET_VIEW_MODE", payload: mode.id }),
+			keywords: ['mode', 'view', mode.id, mode.label],
+			tier: 'primary',
+			run: run({ type: 'SET_VIEW_MODE', payload: mode.id }),
 		});
 	}
 
@@ -81,38 +95,44 @@ export function buildCommands({ viewMode, layout, send, navigate, close }: Build
 		const frame = resolveFrame(modeLayout[spec.id], spec.defaultFrame);
 		commands.push({
 			id: `panel:summon:${spec.id}`,
-			group: "Panels",
+			group: 'Panels',
 			label: `Summon ${spec.title} panel`,
-			keywords: ["panel", "summon", "open", "show", spec.title],
-			tier: "primary",
-			run: run({ type: "SUMMON_PANEL", payload: { id: spec.id } }),
+			keywords: ['panel', 'summon', 'open', 'show', spec.title],
+			tier: 'primary',
+			run: run({ type: 'SUMMON_PANEL', payload: { id: spec.id } }),
 		});
 		commands.push({
 			id: `panel:toggle:${spec.id}`,
-			group: "Panels",
-			label: `${frame.visible ? "Hide" : "Show"} ${spec.title} panel`,
-			keywords: ["panel", "toggle", "hide", "show", spec.title],
-			tier: "secondary",
-			run: run({ type: "SET_PANEL_VISIBLE", payload: { id: spec.id, visible: !frame.visible } }),
+			group: 'Panels',
+			label: `${frame.visible ? 'Hide' : 'Show'} ${spec.title} panel`,
+			keywords: ['panel', 'toggle', 'hide', 'show', spec.title],
+			tier: 'secondary',
+			run: run({
+				type: 'SET_PANEL_VISIBLE',
+				payload: { id: spec.id, visible: !frame.visible },
+			}),
 		});
 		commands.push({
 			id: `panel:collapse:${spec.id}`,
-			group: "Panels",
-			label: `${frame.collapsed ? "Expand" : "Collapse"} ${spec.title} panel`,
-			keywords: ["panel", "collapse", "expand", "minimize", spec.title],
-			tier: "secondary",
-			run: run({ type: "SET_PANEL_COLLAPSED", payload: { id: spec.id, collapsed: !frame.collapsed } }),
+			group: 'Panels',
+			label: `${frame.collapsed ? 'Expand' : 'Collapse'} ${spec.title} panel`,
+			keywords: ['panel', 'collapse', 'expand', 'minimize', spec.title],
+			tier: 'secondary',
+			run: run({
+				type: 'SET_PANEL_COLLAPSED',
+				payload: { id: spec.id, collapsed: !frame.collapsed },
+			}),
 		});
 	}
 
 	// Layout reset for the current mode.
 	commands.push({
-		id: "layout:reset",
-		group: "Layout",
-		label: "Reset panel layout",
-		keywords: ["reset", "layout", "default", "panels"],
-		tier: "secondary",
-		run: run({ type: "RESET_PANEL_LAYOUT" }),
+		id: 'layout:reset',
+		group: 'Layout',
+		label: 'Reset panel layout',
+		keywords: ['reset', 'layout', 'default', 'panels'],
+		tier: 'secondary',
+		run: run({ type: 'RESET_PANEL_LAYOUT' }),
 	});
 
 	return commands;

@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { useCallback, useRef, useState } from "react";
-
-import type React from "react";
+import type React from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface IpodProgressBarProps {
 	currentTime: number;
@@ -10,7 +9,7 @@ interface IpodProgressBarProps {
 	onSeek: (time: number) => void;
 	disabled?: boolean;
 	trackHeight?: number;
-	variant?: "experimental" | "classic";
+	variant?: 'experimental' | 'classic';
 }
 
 export function IpodProgressBar({
@@ -78,7 +77,7 @@ export function IpodProgressBar({
 				data-testid="progress-track"
 				data-export-duration={duration}
 				className={`relative w-full border ${
-					disabled ? "cursor-default" : "cursor-pointer"
+					disabled ? 'cursor-default' : 'cursor-pointer'
 				}`}
 				onPointerDown={handlePointerDown}
 				onPointerMove={handlePointerMove}
@@ -87,10 +86,10 @@ export function IpodProgressBar({
 				style={{
 					height: visualTrackHeight,
 					borderRadius: 2,
-					borderColor: "rgba(0,0,0,0.1)",
-					background: "#f1f1f1",
-					touchAction: "none",
-					padding: "0 1px",
+					borderColor: 'rgba(0,0,0,0.1)',
+					background: '#f1f1f1',
+					touchAction: 'none',
+					padding: '0 1px',
 				}}
 			>
 				<div
@@ -98,9 +97,9 @@ export function IpodProgressBar({
 					className="absolute inset-y-0 left-0"
 					style={{
 						width: `${visibleProgress}%`,
-						background: "linear-gradient(to bottom, #72B9F4 0%, #3D9CF4 48%, #1680E0 52%, #4C9EEB 100%)",
-						maxWidth: "100%",
-						borderRadius: "1px 0 0 1px",
+						background: 'linear-gradient(to bottom, #72B9F4 0%, #3D9CF4 48%, #1680E0 52%, #4C9EEB 100%)',
+						maxWidth: '100%',
+						borderRadius: '1px 0 0 1px',
 					}}
 				/>
 			</div>

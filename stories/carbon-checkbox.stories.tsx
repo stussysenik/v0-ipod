@@ -1,14 +1,12 @@
-import { CarbonCheckbox } from "@ipod/components/ui/carbon-checkbox";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { CarbonCheckbox } from '@ipod/components/ui/carbon-checkbox';
+import type { Meta, StoryObj } from '@storybook/react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "UI/Carbon Checkbox",
+	title: 'UI/Carbon Checkbox',
 	component: CarbonCheckbox,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 } satisfies Meta<typeof CarbonCheckbox>;
 
 export default meta;

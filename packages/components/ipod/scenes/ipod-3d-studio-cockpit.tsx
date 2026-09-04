@@ -1,15 +1,14 @@
-"use client";
-
-import { type Dispatch } from "react";
+'use client';
 
 import type {
 	IpodInteractionModel,
 	IpodInteractionState,
 	IpodStudioState,
-} from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
+} from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
+import type { Dispatch } from 'react';
 
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * The studio/interaction cockpit for /3d — the controls that the 2D workbench had but the
@@ -36,9 +35,9 @@ interface Ipod3DStudioCockpitProps {
 }
 
 const MODES: readonly { id: IpodInteractionModel; label: string }[] = [
-	{ id: "direct", label: "Direct" },
-	{ id: "ipod-os", label: "iPod OS" },
-	{ id: "ipod-os-original", label: "Original" },
+	{ id: 'direct', label: 'Direct' },
+	{ id: 'ipod-os', label: 'iPod OS' },
+	{ id: 'ipod-os-original', label: 'Original' },
 ] as const;
 
 export function Ipod3DStudioCockpit({
@@ -57,17 +56,23 @@ export function Ipod3DStudioCockpit({
 				<Label>Interaction</Label>
 				<div className="mt-2 flex gap-1">
 					{MODES.map((mode) => {
-						const active = interaction.interactionModel === mode.id;
+						const active =
+							interaction.interactionModel === mode.id;
 						return (
 							<button
 								key={mode.id}
 								type="button"
-								onClick={() => dispatch({ type: "SET_INTERACTION_MODEL", payload: mode.id })}
+								onClick={() =>
+									dispatch({
+										type: 'SET_INTERACTION_MODEL',
+										payload: mode.id,
+									})
+								}
 								aria-pressed={active}
 								className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
 									active
-										? "border-black/80 text-black"
-										: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+										? 'border-black/80 text-black'
+										: 'border-black/10 text-black/55 hover:border-black/25 hover:text-black/80'
 								}`}
 							>
 								{mode.label}
@@ -82,7 +87,7 @@ export function Ipod3DStudioCockpit({
 				label="Lock editing"
 				hint="Clean state for screenshots & export"
 				on={studio.interactionLocked}
-				onToggle={() => dispatch({ type: "TOGGLE_INTERACTION_LOCK" })}
+				onToggle={() => dispatch({ type: 'TOGGLE_INTERACTION_LOCK' })}
 			/>
 
 			{/* Marquee — the scrolling track-title animation */}
@@ -90,7 +95,7 @@ export function Ipod3DStudioCockpit({
 				label="Marquee"
 				hint="Scroll overflowing track titles"
 				on={studio.marquee}
-				onToggle={() => dispatch({ type: "TOGGLE_MARQUEE" })}
+				onToggle={() => dispatch({ type: 'TOGGLE_MARQUEE' })}
 			/>
 
 			{/* Ports — headphone jack, hold switch & 30-pin dock (evaluating the look) */}
@@ -98,7 +103,7 @@ export function Ipod3DStudioCockpit({
 				label="Edge ports"
 				hint="Jack, hold switch & 30-pin dock"
 				on={studio.showPorts}
-				onToggle={() => dispatch({ type: "TOGGLE_SHOW_PORTS" })}
+				onToggle={() => dispatch({ type: 'TOGGLE_SHOW_PORTS' })}
 			/>
 
 			{/* Touch controls — the mobile on-canvas gizmo + orbit-pad + pinch */}
@@ -112,23 +117,23 @@ export function Ipod3DStudioCockpit({
 			{/* Layout tool — dashed bounding boxes + drag handles to reposition Now Playing
 			    elements (dev only). Off by default so the boxes never leak into the live
 			    view or an export; with it off, every mode uses plain tap-to-edit text. */}
-			{process.env.NODE_ENV !== "production" && (
+			{process.env.NODE_ENV !== 'production' && (
 				<ToggleRow
 					label="Layout boxes"
 					hint="Drag to reposition · dev only"
 					on={studio.layoutMode}
-					onToggle={() => dispatch({ type: "TOGGLE_LAYOUT_MODE" })}
+					onToggle={() => dispatch({ type: 'TOGGLE_LAYOUT_MODE' })}
 				/>
 			)}
 
 			{/* Theatre.js timeline — camera-keyframe authoring overlay (dev only). Off by
 			    default so its full-screen editor never clutters the view or an export. */}
-			{process.env.NODE_ENV !== "production" && (
+			{process.env.NODE_ENV !== 'production' && (
 				<ToggleRow
 					label="Theatre timeline"
 					hint="Camera keyframe editor · dev only"
 					on={studio.theatreStudio}
-					onToggle={() => dispatch({ type: "TOGGLE_THEATRE_STUDIO" })}
+					onToggle={() => dispatch({ type: 'TOGGLE_THEATRE_STUDIO' })}
 				/>
 			)}
 		</div>
@@ -154,18 +159,20 @@ function ToggleRow({
 			className="flex w-full items-center justify-between border-b border-black/[0.05] px-3.5 py-2.5 text-left last:border-b-0"
 		>
 			<span className="flex flex-col">
-				<span className="text-[11px] font-medium text-black/70">{label}</span>
+				<span className="text-[11px] font-medium text-black/70">
+					{label}
+				</span>
 				<span className="text-[9px] text-black/30">{hint}</span>
 			</span>
 			{/* A minimal iOS-style switch in the cockpit's monochrome palette. */}
 			<span
 				className={`relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-300 ${
-					on ? "bg-black" : "bg-black/15"
+					on ? 'bg-black' : 'bg-black/15'
 				}`}
 			>
 				<span
 					className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-sm transition-transform duration-300 ${
-						on ? "translate-x-[14px]" : "translate-x-[2px]"
+						on ? 'translate-x-[14px]' : 'translate-x-[2px]'
 					}`}
 				/>
 			</span>

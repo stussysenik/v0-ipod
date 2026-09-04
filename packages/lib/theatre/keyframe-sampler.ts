@@ -1,4 +1,4 @@
-import { UnitBezier } from "./unit-bezier";
+import { UnitBezier } from './unit-bezier';
 
 /**
  * A pure, synchronous reader for Theatre.js project state (`OnDiskState`).
@@ -18,7 +18,7 @@ import { UnitBezier } from "./unit-bezier";
  * companion parity test proves this sampler matches `@theatre/core` exactly.
  */
 
-export type TheatreKeyframeType = "bezier" | "hold";
+export type TheatreKeyframeType = 'bezier' | 'hold';
 
 export interface TheatreKeyframe {
 	id: string;
@@ -33,7 +33,7 @@ export interface TheatreKeyframe {
 }
 
 export interface TheatreTrack {
-	type: "BasicKeyframedTrack";
+	type: 'BasicKeyframedTrack';
 	__debugName?: string;
 	keyframes: TheatreKeyframe[];
 }
@@ -45,7 +45,7 @@ export interface TheatreObjectTracks {
 }
 
 export interface TheatreSequence {
-	type: "PositionalSequence";
+	type: 'PositionalSequence';
 	length?: number;
 	subUnitsPerUnit?: number;
 	tracksByObject: Record<string, TheatreObjectTracks>;
@@ -81,8 +81,9 @@ export function sampleTrack(track: TheatreTrack, position: number): number {
 		return 0;
 	}
 	// Keyframes are stored sorted, but never trust unsorted input in a sampler.
-	const sorted =
-		isSortedByPosition(kfs) ? kfs : [...kfs].sort((a, b) => a.position - b.position);
+	const sorted = isSortedByPosition(kfs)
+		? kfs
+		: [...kfs].sort((a, b) => a.position - b.position);
 
 	const first = sorted[0];
 	const last = sorted[sorted.length - 1];
@@ -111,11 +112,16 @@ export function sampleTrack(track: TheatreTrack, position: number): number {
 	const span = right.position - left.position;
 	const localProgression = span <= 0 ? 0 : (position - left.position) / span;
 
-	if (left.type === "hold") {
+	if (left.type === 'hold') {
 		return Math.floor(localProgression) >= 1 ? right.value : left.value;
 	}
 
-	const solver = new UnitBezier(left.handles[2], left.handles[3], right.handles[0], right.handles[1]);
+	const solver = new UnitBezier(
+		left.handles[2],
+		left.handles[3],
+		right.handles[0],
+		right.handles[1],
+	);
 	const valueProgression = solver.solve(localProgression);
 	return left.value + valueProgression * (right.value - left.value);
 }
@@ -147,7 +153,7 @@ function setDeep(target: SampledValues, path: string[], value: unknown): void {
 	let node = target;
 	for (let i = 0; i < path.length - 1; i++) {
 		const key = path[i];
-		if (typeof node[key] !== "object" || node[key] === null) {
+		if (typeof node[key] !== 'object' || node[key] === null) {
 			node[key] = {};
 		}
 		node = node[key] as SampledValues;
@@ -162,7 +168,7 @@ export function computeSequenceLength(state: TheatreProjectState, sheetId?: stri
 	if (!seq) {
 		return 0;
 	}
-	if (typeof seq.length === "number" && seq.length > 0) {
+	if (typeof seq.length === 'number' && seq.length > 0) {
 		return seq.length;
 	}
 	let max = 0;
@@ -224,12 +230,18 @@ export function createStateSampler(state: TheatreProjectState, sheetId?: string)
 
 		const tracks = tracksByObject[objectKey];
 		if (tracks) {
-			for (const [encodedPath, trackId] of Object.entries(tracks.trackIdByPropPath)) {
+			for (const [encodedPath, trackId] of Object.entries(
+				tracks.trackIdByPropPath,
+			)) {
 				const track = tracks.trackData[trackId];
 				if (!track) {
 					continue;
 				}
-				setDeep(out, decodePropPath(encodedPath), sampleTrack(track, position));
+				setDeep(
+					out,
+					decodePropPath(encodedPath),
+					sampleTrack(track, position),
+				);
 			}
 		}
 

@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveMp4ExportStrategy, resolveSupportedMp4EncoderConfig } from "./mp4-support";
+import { resolveMp4ExportStrategy, resolveSupportedMp4EncoderConfig } from './mp4-support';
 
 type MockSupportResponse = {
 	config?: VideoEncoderConfig;
@@ -10,7 +10,7 @@ type MockSupportResponse = {
 const mockIsConfigSupported = vi.fn<(config: VideoEncoderConfig) => Promise<MockSupportResponse>>();
 
 beforeEach(() => {
-	vi.stubGlobal("VideoEncoder", {
+	vi.stubGlobal('VideoEncoder', {
 		isConfigSupported: mockIsConfigSupported,
 	});
 });
@@ -20,12 +20,12 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-describe("resolveSupportedMp4EncoderConfig", () => {
-	it("picks a higher AVC level when the default codec cannot encode the export size", async () => {
+describe('resolveSupportedMp4EncoderConfig', () => {
+	it('picks a higher AVC level when the default codec cannot encode the export size', async () => {
 		mockIsConfigSupported.mockImplementation(async (config) => ({
 			config,
 			supported:
-				config.codec === "avc1.420028" &&
+				config.codec === 'avc1.420028' &&
 				config.width === 892 &&
 				config.height === 1352,
 		}));
@@ -37,15 +37,15 @@ describe("resolveSupportedMp4EncoderConfig", () => {
 			framerate: 24,
 		});
 
-		expect(support?.codec).toBe("avc1.420028");
+		expect(support?.codec).toBe('avc1.420028');
 		expect(mockIsConfigSupported).toHaveBeenCalled();
 	});
 
-	it("falls back to a smaller capture scale when full-resolution MP4 encoding is unavailable", async () => {
+	it('falls back to a smaller capture scale when full-resolution MP4 encoding is unavailable', async () => {
 		mockIsConfigSupported.mockImplementation(async (config) => ({
 			config,
 			supported:
-				config.codec === "avc1.420028" &&
+				config.codec === 'avc1.420028' &&
 				config.width === 670 &&
 				config.height === 1014,
 		}));
@@ -58,6 +58,6 @@ describe("resolveSupportedMp4EncoderConfig", () => {
 		expect(strategy?.captureScale).toBe(1.5);
 		expect(strategy?.plan.captureWidth).toBe(670);
 		expect(strategy?.plan.captureHeight).toBe(1014);
-		expect(strategy?.encoder.codec).toBe("avc1.420028");
+		expect(strategy?.encoder.codec).toBe('avc1.420028');
 	});
 });

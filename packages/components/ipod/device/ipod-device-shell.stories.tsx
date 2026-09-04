@@ -1,33 +1,33 @@
-"use client";
+'use client';
 
-import { useCallback, useReducer } from "react";
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { fn } from "storybook/test";
-import { IpodClickWheel } from "@ipod/components/ipod/controls/ipod-click-wheel";
-import { IpodScreen } from "@ipod/components/ipod/display/ipod-screen";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
+import { IpodClickWheel } from '@ipod/components/ipod/controls/ipod-click-wheel';
+import { IpodScreen } from '@ipod/components/ipod/display/ipod-screen';
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
 import {
 	createInitialIpodWorkbenchModel,
 	type IpodHardwarePresetId,
 	type IpodInteractionModel,
 	type IpodOsScreen,
-} from "@ipod/lib/ipod-state/model";
-import { ipodWorkbenchReducer } from "@ipod/lib/ipod-state/update";
-import { IPodDeviceShell } from "./ipod-device-shell";
+} from '@ipod/lib/ipod-state/model';
+import { ipodWorkbenchReducer } from '@ipod/lib/ipod-state/update';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { useCallback, useReducer } from 'react';
+import { fn } from 'storybook/test';
+import { IPodDeviceShell } from './ipod-device-shell';
 
 const CLASSIC_OS_MENU_ITEMS = [
-	{ id: "music", label: "Music" },
-	{ id: "videos", label: "Videos" },
-	{ id: "photos", label: "Photos" },
-	{ id: "podcasts", label: "Podcasts" },
-	{ id: "extras", label: "Extras" },
-	{ id: "settings", label: "Settings" },
-	{ id: "shuffle-songs", label: "Shuffle Songs" },
-	{ id: "now-playing", label: "Now Playing" },
-	{ id: "about", label: "About" },
+	{ id: 'music', label: 'Music' },
+	{ id: 'videos', label: 'Videos' },
+	{ id: 'photos', label: 'Photos' },
+	{ id: 'podcasts', label: 'Podcasts' },
+	{ id: 'extras', label: 'Extras' },
+	{ id: 'settings', label: 'Settings' },
+	{ id: 'shuffle-songs', label: 'Shuffle Songs' },
+	{ id: 'now-playing', label: 'Now Playing' },
+	{ id: 'about', label: 'About' },
 ] as const;
 
-const MENU_TO_NOW_PLAYING = new Set(["music", "shuffle-songs", "now-playing"]);
+const MENU_TO_NOW_PLAYING = new Set(['music', 'shuffle-songs', 'now-playing']);
 
 interface PhysicalAssemblyStoryArgs {
 	presetId: IpodHardwarePresetId;
@@ -62,8 +62,8 @@ function PhysicalAssemblyShowcase({
 				...initial.interaction,
 				interactionModel,
 				osScreen:
-					interactionModel === "direct"
-						? "now-playing"
+					interactionModel === 'direct'
+						? 'now-playing'
 						: initialScreen,
 				menuIndex: 0,
 			},
@@ -72,30 +72,30 @@ function PhysicalAssemblyShowcase({
 
 	const activePreset = getIpodClassicPreset(model.presentation.hardwarePreset);
 	const isMenuScreen =
-		model.interaction.interactionModel !== "direct" &&
-		model.interaction.osScreen === "menu";
+		model.interaction.interactionModel !== 'direct' &&
+		model.interaction.osScreen === 'menu';
 
 	const openNowPlaying = useCallback(() => {
-		dispatch({ type: "SET_OS_SCREEN", payload: "now-playing" });
+		dispatch({ type: 'SET_OS_SCREEN', payload: 'now-playing' });
 	}, []);
 
 	const openMenu = useCallback(() => {
-		if (model.interaction.interactionModel === "direct") return;
-		dispatch({ type: "SET_OS_SCREEN", payload: "menu" });
+		if (model.interaction.interactionModel === 'direct') return;
+		dispatch({ type: 'SET_OS_SCREEN', payload: 'menu' });
 	}, [model.interaction.interactionModel]);
 
 	const handleWheelSeek = useCallback(
 		(direction: number) => {
 			if (isMenuScreen) {
 				dispatch({
-					type: "CYCLE_OS_MENU",
+					type: 'CYCLE_OS_MENU',
 					payload: { direction, total: CLASSIC_OS_MENU_ITEMS.length },
 				});
 				return;
 			}
 
 			dispatch({
-				type: "UPDATE_CURRENT_TIME",
+				type: 'UPDATE_CURRENT_TIME',
 				payload: model.metadata.currentTime + direction * 5,
 			});
 		},
@@ -115,7 +115,7 @@ function PhysicalAssemblyShowcase({
 		<div
 			className="rounded-[40px] p-6"
 			style={{
-				background: "radial-gradient(circle at top, rgba(255,255,255,0.9) 0%, rgba(244,239,226,0.86) 38%, rgba(232,223,208,0.96) 100%)",
+				background: 'radial-gradient(circle at top, rgba(255,255,255,0.9) 0%, rgba(244,239,226,0.86) 38%, rgba(232,223,208,0.96) 100%)',
 			}}
 		>
 			<IPodDeviceShell
@@ -141,7 +141,7 @@ function PhysicalAssemblyShowcase({
 						}
 						onOsOriginalMenuSplitChange={(nextSplit) =>
 							dispatch({
-								type: "SET_OS_ORIGINAL_MENU_SPLIT",
+								type: 'SET_OS_ORIGINAL_MENU_SPLIT',
 								payload: nextSplit,
 							})
 						}
@@ -150,7 +150,7 @@ function PhysicalAssemblyShowcase({
 						}
 						onOsNowPlayingLayoutChange={(nextLayout) =>
 							dispatch({
-								type: "SET_OS_NOW_PLAYING_LAYOUT",
+								type: 'SET_OS_NOW_PLAYING_LAYOUT',
 								payload: nextLayout,
 							})
 						}
@@ -181,36 +181,36 @@ function PhysicalAssemblyShowcase({
 }
 
 const meta = {
-	title: "components/ipod/device/PhysicalIpod",
+	title: 'components/ipod/device/PhysicalIpod',
 	component: PhysicalAssemblyShowcase,
 	parameters: {
-		layout: "centered",
+		layout: 'centered',
 		docs: {
 			description: {
-				component: "Repository-default review surface for the physical iPod assembly. Use this lane for hardware finish, screen chrome, and click-wheel fidelity work before checking the full workbench flow.",
+				component: 'Repository-default review surface for the physical iPod assembly. Use this lane for hardware finish, screen chrome, and click-wheel fidelity work before checking the full workbench flow.',
 			},
 		},
 	},
 	args: {
-		presetId: "classic-2007",
-		skinColor: "#E2E2E4",
-		interactionModel: "ipod-os",
-		initialScreen: "menu",
+		presetId: 'classic-2007',
+		skinColor: '#E2E2E4',
+		interactionModel: 'ipod-os',
+		initialScreen: 'menu',
 		exportSafe: false,
 		showShadowLayer: true,
 	},
 	argTypes: {
 		presetId: {
-			control: "select",
-			options: ["classic-2007", "classic-2008", "classic-2009"],
+			control: 'select',
+			options: ['classic-2007', 'classic-2008', 'classic-2009'],
 		},
 		interactionModel: {
-			control: "inline-radio",
-			options: ["direct", "ipod-os", "ipod-os-original"],
+			control: 'inline-radio',
+			options: ['direct', 'ipod-os', 'ipod-os-original'],
 		},
 		initialScreen: {
-			control: "inline-radio",
-			options: ["menu", "now-playing"],
+			control: 'inline-radio',
+			options: ['menu', 'now-playing'],
 		},
 	},
 	render: (args) => (
@@ -229,19 +229,19 @@ export const LightMenu: Story = {};
 
 export const BlackMenu: Story = {
 	args: {
-		skinColor: "#1C1C1E",
+		skinColor: '#1C1C1E',
 	},
 };
 
 export const LightNowPlaying: Story = {
 	args: {
-		initialScreen: "now-playing",
+		initialScreen: 'now-playing',
 	},
 };
 
 export const BlackNowPlaying: Story = {
 	args: {
-		skinColor: "#1C1C1E",
-		initialScreen: "now-playing",
+		skinColor: '#1C1C1E',
+		initialScreen: 'now-playing',
 	},
 };

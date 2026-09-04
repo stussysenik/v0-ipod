@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-
-import { Ipod3DStageClient } from "@ipod/components/ipod/scenes/ipod-3d-stage-client";
+import { Ipod3DStageClient } from '@ipod/components/ipod/scenes/ipod-3d-stage-client';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-	title: "iPod · 3D Focus",
+	title: 'iPod · 3D Focus',
 	description:
-		"A focused 3D render of the iPod classic — physically accurate proportions, live display and click wheel, and a finished steel back.",
+		'A focused 3D render of the iPod classic — physically accurate proportions, live display and click wheel, and a finished steel back.',
 };
 
 export default function ThreeDFocusPage() {

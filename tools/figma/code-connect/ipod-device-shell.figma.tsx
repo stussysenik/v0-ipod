@@ -1,14 +1,14 @@
-import figma from "@figma/code-connect";
+import figma from '@figma/code-connect';
 
-import { IPodDeviceShell } from "@ipod/components/ipod/ipod-device-shell";
+import { IPodDeviceShell } from '@ipod/components/ipod/ipod-device-shell';
 
 figma.connect(
 	IPodDeviceShell,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		props: {
-			skinColor: figma.string("skinColor"),
-			exportSafe: figma.boolean("exportSafe"),
+			skinColor: figma.string('skinColor'),
+			exportSafe: figma.boolean('exportSafe'),
 		},
 		example: ({ skinColor, exportSafe }) => (
 			<IPodDeviceShell

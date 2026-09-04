@@ -1,4 +1,4 @@
-import { assign, setup, type SnapshotFrom } from "xstate";
+import { assign, type SnapshotFrom, setup } from 'xstate';
 
 /*
  * Central export lifecycle machine (spec: 3d-export-reliability, design D7).
@@ -29,13 +29,13 @@ export interface ExportMachineContext {
 }
 
 export type ExportMachineEvent =
-	| { type: "EXPORT"; job: ExportJobId; progress: number | null }
-	| { type: "PREPARED" }
-	| { type: "PROGRESS"; encoded: number; total: number }
-	| { type: "ENCODED" }
-	| { type: "SAVED" }
-	| { type: "FAIL"; error: string }
-	| { type: "RESET" };
+	| { type: 'EXPORT'; job: ExportJobId; progress: number | null }
+	| { type: 'PREPARED' }
+	| { type: 'PROGRESS'; encoded: number; total: number }
+	| { type: 'ENCODED' }
+	| { type: 'SAVED' }
+	| { type: 'FAIL'; error: string }
+	| { type: 'RESET' };
 
 const IDLE_CONTEXT: ExportMachineContext = { job: null, progress: null, error: null };
 
@@ -48,28 +48,30 @@ export const exportMachine = setup({
 		clearContext: assign(() => IDLE_CONTEXT),
 		assignProgress: assign({
 			progress: ({ event }) =>
-				event.type === "PROGRESS" && event.total > 0
+				event.type === 'PROGRESS' && event.total > 0
 					? Math.min(1, Math.max(0, event.encoded / event.total))
 					: null,
 		}),
 		recordFailure: assign({
-			error: ({ event }) => (event.type === "FAIL" ? event.error : null),
+			error: ({ event }) => (event.type === 'FAIL' ? event.error : null),
 		}),
 	},
 	guards: {
 		/** Last frame handed to the encoder — the flush (encode tail) begins. */
 		isFinalFrame: ({ event }) =>
-			event.type === "PROGRESS" && event.total > 0 && event.encoded >= event.total,
+			event.type === 'PROGRESS' &&
+			event.total > 0 &&
+			event.encoded >= event.total,
 	},
 }).createMachine({
-	id: "ipod3dExport",
-	initial: "idle",
+	id: 'ipod3dExport',
+	initial: 'idle',
 	context: IDLE_CONTEXT,
 	states: {
 		idle: {
 			on: {
 				EXPORT: {
-					target: "preparing",
+					target: 'preparing',
 					actions: assign({
 						job: ({ event }) => event.job,
 						progress: ({ event }) => event.progress,
@@ -80,40 +82,44 @@ export const exportMachine = setup({
 		},
 		preparing: {
 			on: {
-				PREPARED: { target: "rendering" },
-				FAIL: { target: "error", actions: "recordFailure" },
-				RESET: { target: "idle", actions: "clearContext" },
+				PREPARED: { target: 'rendering' },
+				FAIL: { target: 'error', actions: 'recordFailure' },
+				RESET: { target: 'idle', actions: 'clearContext' },
 			},
 		},
 		rendering: {
 			on: {
 				PROGRESS: [
-					{ guard: "isFinalFrame", target: "encoding", actions: "assignProgress" },
-					{ actions: "assignProgress" },
+					{
+						guard: 'isFinalFrame',
+						target: 'encoding',
+						actions: 'assignProgress',
+					},
+					{ actions: 'assignProgress' },
 				],
-				ENCODED: { target: "saving" },
-				FAIL: { target: "error", actions: "recordFailure" },
-				RESET: { target: "idle", actions: "clearContext" },
+				ENCODED: { target: 'saving' },
+				FAIL: { target: 'error', actions: 'recordFailure' },
+				RESET: { target: 'idle', actions: 'clearContext' },
 			},
 		},
 		encoding: {
 			on: {
-				PROGRESS: { actions: "assignProgress" },
-				ENCODED: { target: "saving" },
-				FAIL: { target: "error", actions: "recordFailure" },
-				RESET: { target: "idle", actions: "clearContext" },
+				PROGRESS: { actions: 'assignProgress' },
+				ENCODED: { target: 'saving' },
+				FAIL: { target: 'error', actions: 'recordFailure' },
+				RESET: { target: 'idle', actions: 'clearContext' },
 			},
 		},
 		saving: {
 			on: {
-				SAVED: { target: "idle", actions: "clearContext" },
-				FAIL: { target: "error", actions: "recordFailure" },
-				RESET: { target: "idle", actions: "clearContext" },
+				SAVED: { target: 'idle', actions: 'clearContext' },
+				FAIL: { target: 'error', actions: 'recordFailure' },
+				RESET: { target: 'idle', actions: 'clearContext' },
 			},
 		},
 		error: {
 			on: {
-				RESET: { target: "idle", actions: "clearContext" },
+				RESET: { target: 'idle', actions: 'clearContext' },
 			},
 		},
 	},

@@ -1,1 +1,1 @@
-export * from "@ipod/lib/ipod-state/storage";
+export * from '@ipod/lib/ipod-state/storage';

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { CommandPalette } from "@ipod/components/ipod/command/command-palette";
-import { PanelHost } from "./panel-host";
+import { CommandPalette } from '@ipod/components/ipod/command/command-palette';
+import { PanelHost } from './panel-host';
 
 /**
  * The floating-panel system mount point: the panel host + the global ⌘K command palette

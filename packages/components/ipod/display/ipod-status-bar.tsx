@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { getTextTokenCss } from "@ipod/lib/color-manifest";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import { screenChromeTokens } from "@ipod/lib/design-system";
-import { ScreenBattery } from "@ipod/components/ipod/display/screen-battery";
+import { ScreenBattery } from '@ipod/components/ipod/display/screen-battery';
+import { getTextTokenCss } from '@ipod/lib/color-manifest';
+import { screenChromeTokens } from '@ipod/lib/design-system';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
 
 interface IpodStatusBarProps {
-	screenTokens: IpodClassicPresetDefinition["screen"];
+	screenTokens: IpodClassicPresetDefinition['screen'];
 	showOsMenu: boolean;
 	batteryLevel?: number;
 	/** Override the status label. Defaults to the music-OS title. */
@@ -23,7 +23,7 @@ export function IpodStatusBar({
 	showPlayIndicator,
 }: IpodStatusBarProps) {
 	const statusBarTokens = screenChromeTokens.statusBar;
-	const label = title ?? (showOsMenu ? "RE:MIX" : "Now Playing");
+	const label = title ?? (showOsMenu ? 'RE:MIX' : 'Now Playing');
 	const playVisible = showPlayIndicator ?? !showOsMenu;
 
 	return (
@@ -32,15 +32,15 @@ export function IpodStatusBar({
 			style={{
 				height: screenTokens.statusBarHeight,
 				paddingInline: screenTokens.statusBarPaddingX,
-				backgroundImage: "none",
-				backgroundColor: "#f9fafb",
-				borderColor: "#e5e7eb",
+				backgroundImage: 'none',
+				backgroundColor: '#f9fafb',
+				borderColor: '#e5e7eb',
 			}}
 		>
 			<div
 				className="flex items-center gap-[4px] font-bold leading-none tracking-[-0.03em]"
 				style={{
-					color: getTextTokenCss("screen.statusbar.text"),
+					color: getTextTokenCss('screen.statusbar.text'),
 					fontSize: Math.max(9, screenTokens.statusBarHeight - 7),
 					paddingLeft: 2, // Tiny bit of margin from the left
 				}}
@@ -50,7 +50,10 @@ export function IpodStatusBar({
 			</div>
 			<div className="flex items-center gap-[5px]">
 				{playVisible && (
-					<div className="relative flex items-center justify-center" style={{ width: 14, height: 14 }}>
+					<div
+						className="relative flex items-center justify-center"
+						style={{ width: 14, height: 14 }}
+					>
 						<svg
 							aria-hidden="true"
 							className="shrink-0 drop-shadow-[0_0.5px_0.5px_rgba(0,0,0,0.12)]"

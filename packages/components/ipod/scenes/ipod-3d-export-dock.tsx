@@ -1,19 +1,18 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-
-import type { ExportFraming } from "@ipod/components/three/three-d-ipod";
-import { type LoopStyle } from "@ipod/lib/studio-camera";
+import type { ExportFraming } from '@ipod/components/three/three-d-ipod';
+import { MAX_ANIMATED_EXPORT_DURATION_SECONDS } from '@ipod/lib/export/animated-export';
+import { type ExportRecord, getExportVideoUrl } from '@ipod/lib/pocketbase';
+import type { LoopStyle } from '@ipod/lib/studio-camera';
 import {
 	clipCyclesForDuration,
 	findStudioClip,
 	isTheatreClip,
 	STUDIO_CLIPS,
-} from "@ipod/lib/studio-clip-presets";
-import { MAX_ANIMATED_EXPORT_DURATION_SECONDS } from "@ipod/lib/export/animated-export";
-import { getExportVideoUrl, type ExportRecord } from "@ipod/lib/pocketbase";
+} from '@ipod/lib/studio-clip-presets';
+import { useEffect, useState } from 'react';
 
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * Export dock for the /3d now-playing stage.
@@ -34,8 +33,8 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
  * spacious, preset-driven control surface, just feeding the 3D capture pipeline.
  */
 
-export type ExportAspect = "story" | "square" | "portrait";
-export type ExportQuality = "standard" | "pro" | "cinema";
+export type ExportAspect = 'story' | 'square' | 'portrait';
+export type ExportQuality = 'standard' | 'pro' | 'cinema';
 
 export interface ClipExportOptions {
 	durationSec: number;
@@ -48,9 +47,9 @@ export interface ClipExportOptions {
 }
 
 const LOOP_STYLES: ReadonlyArray<{ id: LoopStyle; label: string; hint: string }> = [
-	{ id: "loop", label: "Loop", hint: "one-way seamless" },
-	{ id: "boomerang", label: "Boomerang", hint: "forward + back" },
-	{ id: "hold", label: "Hold", hint: "no motion" },
+	{ id: 'loop', label: 'Loop', hint: 'one-way seamless' },
+	{ id: 'boomerang', label: 'Boomerang', hint: 'forward + back' },
+	{ id: 'hold', label: 'Hold', hint: 'no motion' },
 ];
 
 /** Speed multiplier stops — sub-1 slows the cadence, >1 quickens it. */
@@ -59,12 +58,12 @@ export interface StillExportOptions {
 	aspect: ExportAspect;
 }
 
-export type Ipod3DExportState = "idle" | `png:${ExportFraming}` | `clip:${string}`;
+export type Ipod3DExportState = 'idle' | `png:${ExportFraming}` | `clip:${string}`;
 
 const ASPECTS: ReadonlyArray<{ id: ExportAspect; label: string; hint: string }> = [
-	{ id: "story", label: "9:16", hint: "Story" },
-	{ id: "portrait", label: "4:5", hint: "Portrait" },
-	{ id: "square", label: "1:1", hint: "Square" },
+	{ id: 'story', label: '9:16', hint: 'Story' },
+	{ id: 'portrait', label: '4:5', hint: 'Portrait' },
+	{ id: 'square', label: '1:1', hint: 'Square' },
 ];
 
 const MIN_DURATION = 2;
@@ -146,7 +145,7 @@ export function Ipod3DExportDock({
 	peekProofBlob,
 	onReopen,
 }: Ipod3DExportDockProps) {
-	const busy = exportState !== "idle";
+	const busy = exportState !== 'idle';
 
 	// Default picker = procedural moves only (the clean, battle-tested set). The
 	// `·`-prefixed Theatre moment cards only join the grid when the dev toggle is on.
@@ -157,12 +156,12 @@ export function Ipod3DExportDock({
 	const still: StillExportOptions = { aspect };
 	const clip: ClipExportOptions = { durationSec, quality, aspect, speed, loop: loopStyle };
 
-	const hold = loopStyle === "hold";
+	const hold = loopStyle === 'hold';
 	const moveSpec = findStudioClip(previewMove) ?? STUDIO_CLIPS[0];
 	const cycles = clipCyclesForDuration(moveSpec, durationSec, speed, loopStyle);
 	const elapsed = previewT * durationSec;
 	// What the clip button promises: a held angle, or N× of the selected move.
-	const clipHint = hold ? "no motion" : `${cycles}× · ${moveSpec.label}`;
+	const clipHint = hold ? 'no motion' : `${cycles}× · ${moveSpec.label}`;
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[16px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -172,7 +171,10 @@ export function Ipod3DExportDock({
 			<div className="flex flex-col gap-3 border-b border-black/[0.06] px-4 py-3.5">
 				<Row label="Aspect">
 					<Segmented
-						options={ASPECTS.map((a) => ({ id: a.id, label: a.label }))}
+						options={ASPECTS.map((a) => ({
+							id: a.id,
+							label: a.label,
+						}))}
 						value={aspect}
 						onChange={(v) => onAspectChange(v as ExportAspect)}
 						disabled={busy}
@@ -181,12 +183,14 @@ export function Ipod3DExportDock({
 				<Row label="Quality">
 					<Segmented
 						options={[
-							{ id: "standard", label: "Standard" },
-							{ id: "pro", label: "Pro" },
-							{ id: "cinema", label: "Cinema" },
+							{ id: 'standard', label: 'Standard' },
+							{ id: 'pro', label: 'Pro' },
+							{ id: 'cinema', label: 'Cinema' },
 						]}
 						value={quality}
-						onChange={(v) => onQualityChange(v as ExportQuality)}
+						onChange={(v) =>
+							onQualityChange(v as ExportQuality)
+						}
 						disabled={busy}
 					/>
 				</Row>
@@ -204,7 +208,9 @@ export function Ipod3DExportDock({
 						step={1}
 						value={durationSec}
 						disabled={busy}
-						onChange={(e) => onDurationChange(Number(e.target.value))}
+						onChange={(e) =>
+							onDurationChange(Number(e.target.value))
+						}
 						data-testid="clip-length-slider"
 						aria-label="Clip length (seconds)"
 						className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-black disabled:cursor-not-allowed disabled:opacity-40"
@@ -222,13 +228,16 @@ export function Ipod3DExportDock({
 				<div className="flex items-center justify-between">
 					<Label>Preview</Label>
 					<span className="font-mono text-[10px] uppercase tracking-tight text-black/35">
-						{hold ? "still" : `${cycles}× · ${moveSpec.hint}`}
+						{hold ? 'still' : `${cycles}× · ${moveSpec.hint}`}
 					</span>
 				</div>
 
 				{/* Style — loop / boomerang / hold (hold freezes the composed angle) */}
 				<Segmented
-					options={LOOP_STYLES.map((s) => ({ id: s.id, label: s.label }))}
+					options={LOOP_STYLES.map((s) => ({
+						id: s.id,
+						label: s.label,
+					}))}
 					value={loopStyle}
 					onChange={(v) => onLoopStyleChange(v as LoopStyle)}
 					disabled={busy}
@@ -245,12 +254,18 @@ export function Ipod3DExportDock({
 								type="button"
 								disabled={busy || hold}
 								title={m.hint}
-								onClick={() => onPreviewMoveChange(m.id)}
+								onClick={() =>
+									onPreviewMoveChange(m.id)
+								}
 								className={`rounded-[7px] px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-									active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
+									active
+										? 'bg-white text-black shadow-sm'
+										: 'text-black/45 hover:text-black/70'
 								}`}
 							>
-								{isTheatreClip(m) ? `· ${m.label}` : m.label}
+								{isTheatreClip(m)
+									? `· ${m.label}`
+									: m.label}
 							</button>
 						);
 					})}
@@ -267,9 +282,13 @@ export function Ipod3DExportDock({
 									key={s}
 									type="button"
 									disabled={busy || hold}
-									onClick={() => onSpeedChange(s)}
+									onClick={() =>
+										onSpeedChange(s)
+									}
 									className={`rounded-[7px] px-2 py-1.5 font-mono text-[10px] tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-										active ? "bg-white text-black shadow-sm" : "text-black/45 hover:text-black/70"
+										active
+											? 'bg-white text-black shadow-sm'
+											: 'text-black/45 hover:text-black/70'
 									}`}
 								>
 									{s}×
@@ -285,7 +304,11 @@ export function Ipod3DExportDock({
 						type="button"
 						disabled={busy}
 						onClick={onTogglePlay}
-						aria-label={previewPlaying ? "Pause preview" : "Play preview"}
+						aria-label={
+							previewPlaying
+								? 'Pause preview'
+								: 'Play preview'
+						}
 						className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-black/10 text-black/70 transition-colors hover:border-black/40 hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
 					>
 						{previewPlaying ? <PauseIcon /> : <PlayIcon />}
@@ -297,7 +320,9 @@ export function Ipod3DExportDock({
 						step={1}
 						value={Math.round(previewT * 1000)}
 						disabled={busy}
-						onChange={(e) => onScrub(Number(e.target.value) / 1000)}
+						onChange={(e) =>
+							onScrub(Number(e.target.value) / 1000)
+						}
 						aria-label="Scrub preview"
 						className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-black disabled:cursor-not-allowed disabled:opacity-40"
 					/>
@@ -327,18 +352,18 @@ export function Ipod3DExportDock({
 					onClick={() => onExportClip(previewMove, clip)}
 				/>
 				<DockButton
-					busy={exportState === "png:hero"}
+					busy={exportState === 'png:hero'}
 					disabled={busy}
 					hint="3/4 still"
 					label="Still · Hero"
-					onClick={() => onExportPng("hero", still)}
+					onClick={() => onExportPng('hero', still)}
 				/>
 				<DockButton
-					busy={exportState === "png:front"}
+					busy={exportState === 'png:front'}
 					disabled={busy}
 					hint="Front still"
 					label="Still · Front"
-					onClick={() => onExportPng("front", still)}
+					onClick={() => onExportPng('front', still)}
 				/>
 			</div>
 
@@ -352,42 +377,69 @@ export function Ipod3DExportDock({
 								›
 							</span>
 							<Label>Recent Exports</Label>
-							<span className="text-[10px] font-medium text-black/30">{history.length}</span>
+							<span className="text-[10px] font-medium text-black/30">
+								{history.length}
+							</span>
 						</span>
-						<span className="text-[10px] font-medium text-black/35">1080p</span>
+						<span className="text-[10px] font-medium text-black/35">
+							1080p
+						</span>
 					</summary>
 					<div className="mt-2 flex flex-col gap-1.5">
 						{history.map((record) => {
 							// Provenance: the proof thumbnail is the SAME cached frame the panel showed
 							// pre-export (one store, two tenses); re-open restores the exact setup.
 							const proofBlob = peekProofBlob?.(record);
-							const canReopen = Boolean(record.snapshot) && Boolean(onReopen);
+							const canReopen =
+								Boolean(record.snapshot) &&
+								Boolean(onReopen);
 							return (
 								<div
 									key={record.id}
 									className="group flex items-center gap-2.5 rounded-lg bg-black/[0.03] px-3 py-2 transition-colors hover:bg-black/[0.06]"
 								>
-									<ProofThumb blob={proofBlob} />
+									<ProofThumb
+										blob={proofBlob}
+									/>
 									<div className="flex min-w-0 flex-1 flex-col">
 										<span className="truncate text-[11px] font-semibold text-black/75">
-											{record.title}
+											{
+												record.title
+											}
 										</span>
 										<span className="font-mono text-[9px] uppercase tracking-tight text-black/40">
-											{record.move} · {record.aspect} · {record.duration}s
+											{
+												record.move
+											}{' '}
+											·{' '}
+											{
+												record.aspect
+											}{' '}
+											·{' '}
+											{
+												record.duration
+											}
+											s
 										</span>
 									</div>
 									<div className="flex items-center gap-1">
 										{canReopen && (
 											<button
 												type="button"
-												onClick={() => onReopen?.(record)}
+												onClick={() =>
+													onReopen?.(
+														record,
+													)
+												}
 												className="flex h-7 items-center rounded-md border border-black/10 bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-black/60 shadow-sm transition-all hover:border-black/30 hover:text-black active:scale-[0.97]"
 											>
 												Re-open
 											</button>
 										)}
 										<a
-											href={getExportVideoUrl(record)}
+											href={getExportVideoUrl(
+												record,
+											)}
 											target="_blank"
 											rel="noreferrer"
 											className="flex h-7 items-center rounded-md border border-black/10 bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-black/60 shadow-sm transition-all hover:border-black/30 hover:text-black active:scale-[0.97]"
@@ -403,8 +455,8 @@ export function Ipod3DExportDock({
 			)}
 
 			<p className="border-t border-black/[0.06] px-4 py-2.5 text-[10px] leading-snug text-black/35">
-				Stills export as PNG, clips as seamless MP4 up to 60s. The now-playing screen is
-				baked on at capture.
+				Stills export as PNG, clips as seamless MP4 up to 60s. The
+				now-playing screen is baked on at capture.
 			</p>
 		</div>
 	);
@@ -442,8 +494,8 @@ function Segmented({
 						onClick={() => onChange(o.id)}
 						className={`rounded-[7px] px-2.5 py-1.5 text-[11px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 							active
-								? "bg-white text-black shadow-sm"
-								: "text-black/45 hover:text-black/70"
+								? 'bg-white text-black shadow-sm'
+								: 'text-black/45 hover:text-black/70'
 						}`}
 					>
 						{o.label}
@@ -474,11 +526,13 @@ function DockButton({
 			disabled={disabled}
 			className={`flex items-center justify-between rounded-lg border px-3.5 py-2.5 text-left transition-colors ${
 				busy
-					? "border-black/80 text-black"
-					: "border-black/10 text-black/70 hover:border-black/40 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-black/10 disabled:hover:text-black/70"
+					? 'border-black/80 text-black'
+					: 'border-black/10 text-black/70 hover:border-black/40 hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-black/10 disabled:hover:text-black/70'
 			}`}
 		>
-			<span className="text-[12.5px] font-medium">{busy ? "Capturing…" : label}</span>
+			<span className="text-[12.5px] font-medium">
+				{busy ? 'Capturing…' : label}
+			</span>
 			<span className="font-mono text-[10px] uppercase tracking-tight text-black/35">
 				{hint}
 			</span>
@@ -508,7 +562,9 @@ function ProofThumb({ blob }: { blob?: Blob }) {
 				// eslint-disable-next-line @next/next/no-img-element
 				<img src={url} alt="" className="h-full w-full object-contain" />
 			) : (
-				<span className="font-mono text-[7px] uppercase tracking-tight text-black/20">mp4</span>
+				<span className="font-mono text-[7px] uppercase tracking-tight text-black/20">
+					mp4
+				</span>
 			)}
 		</div>
 	);
@@ -540,7 +596,17 @@ function PauseIcon() {
 
 function ResetIcon() {
 	return (
-		<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+		<svg
+			width="13"
+			height="13"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden
+		>
 			<path d="M3 12a9 9 0 1 0 3-6.7" />
 			<path d="M3 4v4h4" />
 		</svg>

@@ -100,17 +100,15 @@ export function quantizePose(pose: FingerprintPose): FingerprintPose {
  * logical input always serializes to the same string.
  */
 export function stableStringify(value: unknown): string {
-	if (value === null || typeof value !== "object") {
+	if (value === null || typeof value !== 'object') {
 		return JSON.stringify(value);
 	}
 	if (Array.isArray(value)) {
-		return `[${value.map(stableStringify).join(",")}]`;
+		return `[${value.map(stableStringify).join(',')}]`;
 	}
 	const obj = value as Record<string, unknown>;
 	const keys = Object.keys(obj).sort();
-	return `{${keys
-		.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
-		.join(",")}}`;
+	return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`).join(',')}}`;
 }
 
 /** FNV-1a 32-bit → 8-char hex. Tiny, fast, stable, and dependency-free. */
@@ -121,7 +119,7 @@ export function hashString(input: string): string {
 		// h *= 16777619, kept in 32-bit unsigned range via Math.imul.
 		h = Math.imul(h, 0x01000193);
 	}
-	return (h >>> 0).toString(16).padStart(8, "0");
+	return (h >>> 0).toString(16).padStart(8, '0');
 }
 
 // Pick ONLY the proof fields explicitly (never spread) so passing a superset — e.g. a full
@@ -159,7 +157,7 @@ function normalizeProofInputs(inputs: ProofInputs): ProofInputs {
 export function proofFingerprint(inputs: ProofInputs): string {
 	const canonical = stableStringify({
 		v: FINGERPRINT_VERSION,
-		kind: "proof",
+		kind: 'proof',
 		inputs: normalizeProofInputs(inputs),
 	});
 	return hashString(canonical);
@@ -170,7 +168,7 @@ export function exportFingerprint(snapshot: ExportSnapshot): string {
 	const { move, loop, speed, durationSec, ...proof } = snapshot;
 	const canonical = stableStringify({
 		v: FINGERPRINT_VERSION,
-		kind: "export",
+		kind: 'export',
 		motion: { move, loop, speed, durationSec },
 		inputs: normalizeProofInputs(proof),
 	});

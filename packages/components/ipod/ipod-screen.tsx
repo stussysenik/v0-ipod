@@ -1,1 +1,1 @@
-export { IpodScreen } from "@ipod/components/ipod/display/ipod-screen";
+export { IpodScreen } from '@ipod/components/ipod/display/ipod-screen';

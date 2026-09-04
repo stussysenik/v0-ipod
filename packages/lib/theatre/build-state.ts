@@ -1,11 +1,11 @@
-import { easingHandles, type CubicBezierHandles, type EasingName } from "./easings";
+import { type CubicBezierHandles, type EasingName, easingHandles } from './easings';
 import type {
 	TheatreKeyframe,
 	TheatreObjectTracks,
 	TheatreProjectState,
 	TheatreSheetState,
 	TheatreTrack,
-} from "./keyframe-sampler";
+} from './keyframe-sampler';
 
 /**
  * Author a Theatre.js `OnDiskState` from a concise, designer-readable spec.
@@ -51,13 +51,13 @@ export interface SheetSpec {
 	objects: ObjectSpec[];
 }
 
-const DEFAULT_EASING: EasingName = "easeInOut";
+const DEFAULT_EASING: EasingName = 'easeInOut';
 /** Outer handle for the first/last keyframe — never used by interpolation. */
 const NEUTRAL_HANDLE: readonly [number, number] = [0.5, 0.5];
 
 /** Encode a dot-path (or array path) the way Theatre keys its tracks. */
 export function encodePropPath(path: string | readonly string[]): string {
-	const segments = Array.isArray(path) ? path : String(path).split(".");
+	const segments = Array.isArray(path) ? path : String(path).split('.');
 	return JSON.stringify(segments);
 }
 
@@ -81,11 +81,11 @@ function buildTrack(spec: TrackSpec, debugName: string): TheatreTrack {
 			value: kf.value,
 			handles: [leftX, leftY, rightX, rightY],
 			connectedRight: !isLast,
-			type: kf.hold ? "hold" : "bezier",
+			type: kf.hold ? 'hold' : 'bezier',
 		};
 	});
 
-	return { type: "BasicKeyframedTrack", __debugName: debugName, keyframes };
+	return { type: 'BasicKeyframedTrack', __debugName: debugName, keyframes };
 }
 
 function lastPosition(spec: SheetSpec): number {
@@ -120,7 +120,7 @@ export function buildTheatreState(spec: SheetSpec): TheatreProjectState {
 	const sheet: TheatreSheetState = {
 		staticOverrides: { byObject: {} },
 		sequence: {
-			type: "PositionalSequence",
+			type: 'PositionalSequence',
 			length: spec.length ?? lastPosition(spec),
 			subUnitsPerUnit: spec.fps ?? 30,
 			tracksByObject,
@@ -129,7 +129,7 @@ export function buildTheatreState(spec: SheetSpec): TheatreProjectState {
 
 	return {
 		sheetsById: { [spec.sheetId]: sheet },
-		revisionHistory: ["rev-initial"],
-		definitionVersion: "0.4.0",
+		revisionHistory: ['rev-initial'],
+		definitionVersion: '0.4.0',
 	};
 }

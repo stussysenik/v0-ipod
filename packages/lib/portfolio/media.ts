@@ -39,7 +39,7 @@ export interface VideoItem {
  * arrays fill. While empty, the Photos/Videos screens show a graceful empty
  * state. (Drive assets land here once downloaded into the folder.)
  */
-import manifest from "./media-manifest.json";
+import manifest from './media-manifest.json';
 
 export const photos: PhotoItem[] = manifest.photos as PhotoItem[];
 

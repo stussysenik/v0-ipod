@@ -1,20 +1,19 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState, type Dispatch } from "react";
+import { parseColor } from '@ipod/lib/color-format';
 
 import {
 	CASE_CURATED_FAVORITES,
 	deriveWheelColors,
 	IPOD_6G_BLACK,
 	IPOD_6G_SILVER,
-} from "@ipod/lib/color-manifest";
-import { parseColor } from "@ipod/lib/color-format";
+} from '@ipod/lib/color-manifest';
 import {
 	DEFAULT_BACK_COLOR,
 	DEFAULT_BEZEL_COLOR,
 	type IpodPresentationState,
-} from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
+} from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
 import {
 	BUILT_IN_THEMES,
 	loadSavedThemes,
@@ -22,9 +21,10 @@ import {
 	persistSavedThemes,
 	rigForTheme,
 	type StudioTheme,
-} from "@ipod/lib/studio-themes";
+} from '@ipod/lib/studio-themes';
+import { type Dispatch, useEffect, useMemo, useState } from 'react';
 
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * The monochrome color cockpit for the /3d now-playing stage.
@@ -46,7 +46,7 @@ import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
 // rest of the spectrum lives one native-picker tap away.
 
 interface FinishAsset {
-	id: "black" | "silver";
+	id: 'black' | 'silver';
 	label: string;
 	swatch: string;
 	skinColor: string;
@@ -60,29 +60,29 @@ interface FinishAsset {
 
 const PRELOADED_FINISHES: readonly FinishAsset[] = [
 	{
-		id: "black",
-		label: "Black",
+		id: 'black',
+		label: 'Black',
 		swatch: IPOD_6G_BLACK,
 		skinColor: IPOD_6G_BLACK, // black anodized aluminum face
 		backColor: DEFAULT_BACK_COLOR, // mirror steel back
 		bezelColor: DEFAULT_BEZEL_COLOR,
 		// The Noir factory stage + hand-tuned wheel: derivation gives #242020,
 		// one step too close to the case — the curated ring keeps the wheel a part.
-		bgColor: "#0048FF",
-		ringColor: "#313030",
-		centerColor: "#141212",
+		bgColor: '#0048FF',
+		ringColor: '#313030',
+		centerColor: '#141212',
 	},
 	{
-		id: "silver",
-		label: "Silver",
-		swatch: "#D6D8DA",
+		id: 'silver',
+		label: 'Silver',
+		swatch: '#D6D8DA',
 		// The 2008 Classic's light finish was silver anodized ALUMINUM, never
 		// paper-white — a cool neutral gray whose brightness comes from the metal
 		// reflecting the studio env, not a white albedo.
 		skinColor: IPOD_6G_SILVER,
 		backColor: DEFAULT_BACK_COLOR,
 		bezelColor: DEFAULT_BEZEL_COLOR,
-		bgColor: "#FFFFFF",
+		bgColor: '#FFFFFF',
 	},
 ] as const;
 
@@ -92,15 +92,15 @@ type PartAction = Extract<
 	IpodWorkbenchAction,
 	{
 		type:
-			| "SET_SKIN_COLOR"
-			| "SET_RING_COLOR"
-			| "SET_CENTER_COLOR"
-			| "SET_BACK_COLOR"
-			| "SET_EDGE_COLOR"
-			| "SET_BEZEL_COLOR"
-			| "SET_BG_COLOR";
+			| 'SET_SKIN_COLOR'
+			| 'SET_RING_COLOR'
+			| 'SET_CENTER_COLOR'
+			| 'SET_BACK_COLOR'
+			| 'SET_EDGE_COLOR'
+			| 'SET_BEZEL_COLOR'
+			| 'SET_BG_COLOR';
 	}
->["type"];
+>['type'];
 
 interface PartRow {
 	id: string;
@@ -110,23 +110,28 @@ interface PartRow {
 }
 
 const PARTS: readonly PartRow[] = [
-	{ id: "case", label: "Case", action: "SET_SKIN_COLOR", value: (p) => p.skinColor },
+	{ id: 'case', label: 'Case', action: 'SET_SKIN_COLOR', value: (p) => p.skinColor },
 	{
-		id: "ring",
-		label: "Wheel",
-		action: "SET_RING_COLOR",
+		id: 'ring',
+		label: 'Wheel',
+		action: 'SET_RING_COLOR',
 		value: (p, d) => p.ringColor || d.gradient.via,
 	},
 	{
-		id: "center",
-		label: "Center",
-		action: "SET_CENTER_COLOR",
+		id: 'center',
+		label: 'Center',
+		action: 'SET_CENTER_COLOR',
 		value: (p, d) => p.centerColor || d.centerGradient.via,
 	},
-	{ id: "back", label: "Back", action: "SET_BACK_COLOR", value: (p) => p.backColor },
-	{ id: "edge", label: "Edges", action: "SET_EDGE_COLOR", value: (p) => p.edgeColor || p.backColor },
-	{ id: "bezel", label: "Bezel", action: "SET_BEZEL_COLOR", value: (p) => p.bezelColor },
-	{ id: "bg", label: "Stage", action: "SET_BG_COLOR", value: (p) => p.bgColor },
+	{ id: 'back', label: 'Back', action: 'SET_BACK_COLOR', value: (p) => p.backColor },
+	{
+		id: 'edge',
+		label: 'Edges',
+		action: 'SET_EDGE_COLOR',
+		value: (p) => p.edgeColor || p.backColor,
+	},
+	{ id: 'bezel', label: 'Bezel', action: 'SET_BEZEL_COLOR', value: (p) => p.bezelColor },
+	{ id: 'bg', label: 'Stage', action: 'SET_BG_COLOR', value: (p) => p.bgColor },
 ] as const;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────────
@@ -161,7 +166,7 @@ function hslToHex(h: number, s: number, l: number): string {
 	const to = (v: number) =>
 		Math.round((v + m) * 255)
 			.toString(16)
-			.padStart(2, "0");
+			.padStart(2, '0');
 	return `#${to(r)}${to(g)}${to(b)}`;
 }
 
@@ -182,12 +187,54 @@ interface DeviceLook {
  * one sets the whole device in a tap; the wheel re-derives from the case.
  */
 const CURATED_LOOKS: readonly DeviceLook[] = [
-	{ id: "graphite", label: "Graphite", skinColor: "#2A2D31", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070809", bgColor: "#0B0D12" },
-	{ id: "bondi", label: "Bondi", skinColor: "#0E7C9B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#06171D", bgColor: "#F2F6F7" },
-	{ id: "crimson", label: "Crimson", skinColor: "#B5121B", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A0606", bgColor: "#FBEDED" },
-	{ id: "gold", label: "Gold", skinColor: "#C9A86A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#1A1408", bgColor: "#FAF6EE" },
-	{ id: "cobalt", label: "Cobalt", skinColor: "#2B4C8C", backColor: DEFAULT_BACK_COLOR, bezelColor: "#070B16", bgColor: "#EEF1F8" },
-	{ id: "sage", label: "Sage", skinColor: "#7E8C6A", backColor: DEFAULT_BACK_COLOR, bezelColor: "#10130C", bgColor: "#F2F4ED" },
+	{
+		id: 'graphite',
+		label: 'Graphite',
+		skinColor: '#2A2D31',
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor: '#070809',
+		bgColor: '#0B0D12',
+	},
+	{
+		id: 'bondi',
+		label: 'Bondi',
+		skinColor: '#0E7C9B',
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor: '#06171D',
+		bgColor: '#F2F6F7',
+	},
+	{
+		id: 'crimson',
+		label: 'Crimson',
+		skinColor: '#B5121B',
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor: '#1A0606',
+		bgColor: '#FBEDED',
+	},
+	{
+		id: 'gold',
+		label: 'Gold',
+		skinColor: '#C9A86A',
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor: '#1A1408',
+		bgColor: '#FAF6EE',
+	},
+	{
+		id: 'cobalt',
+		label: 'Cobalt',
+		skinColor: '#2B4C8C',
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor: '#070B16',
+		bgColor: '#EEF1F8',
+	},
+	{
+		id: 'sage',
+		label: 'Sage',
+		skinColor: '#7E8C6A',
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor: '#10130C',
+		bgColor: '#F2F4ED',
+	},
 ] as const;
 
 /**
@@ -205,7 +252,14 @@ function randomCompatibleLook(): DeviceLook {
 	const lightStage = l < 50;
 	const bgColor = lightStage ? hslToHex(accentH, 10, 94) : hslToHex(accentH, 16, 10);
 	const bezelColor = hslToHex(baseH, 18, 8);
-	return { id: "random", label: "Random", skinColor, backColor: DEFAULT_BACK_COLOR, bezelColor, bgColor };
+	return {
+		id: 'random',
+		label: 'Random',
+		skinColor,
+		backColor: DEFAULT_BACK_COLOR,
+		bezelColor,
+		bgColor,
+	};
 }
 
 // ─── Harmony suggestions (deterministic) ────────────────────────────────────────────
@@ -228,10 +282,7 @@ interface PartPalette {
 	stage: string;
 }
 
-function paletteOf(
-	p: IpodPresentationState,
-	d: ReturnType<typeof deriveWheelColors>,
-): PartPalette {
+function paletteOf(p: IpodPresentationState, d: ReturnType<typeof deriveWheelColors>): PartPalette {
 	return {
 		case: p.skinColor,
 		ring: p.ringColor || d.gradient.via,
@@ -244,7 +295,7 @@ function paletteOf(
 }
 
 function hexToHsl(hex: string): [number, number, number] {
-	const c = parseColor(hex) ?? "#000000";
+	const c = parseColor(hex) ?? '#000000';
 	const r = Number.parseInt(c.slice(1, 3), 16) / 255;
 	const g = Number.parseInt(c.slice(3, 5), 16) / 255;
 	const b = Number.parseInt(c.slice(5, 7), 16) / 255;
@@ -277,22 +328,26 @@ function dedupeShades(shades: string[]): string[] {
 
 /** A small ordered set of harmonious shades for `partId`, given the current palette. */
 function deriveRelatedShades(partId: string, palette: PartPalette): string[] {
-	if (partId === "ring" || partId === "center") {
+	if (partId === 'ring' || partId === 'center') {
 		const w = deriveWheelColors(palette.case);
 		const ladder =
-			partId === "ring"
+			partId === 'ring'
 				? [w.gradient.from, w.gradient.via, w.gradient.to]
-				: [w.centerGradient.from, w.centerGradient.via, w.centerGradient.to];
+				: [
+						w.centerGradient.from,
+						w.centerGradient.via,
+						w.centerGradient.to,
+					];
 		return dedupeShades(ladder);
 	}
 	const base =
-		partId === "back"
+		partId === 'back'
 			? palette.back
-			: partId === "edge"
+			: partId === 'edge'
 				? palette.edge
-				: partId === "bezel"
+				: partId === 'bezel'
 					? palette.bezel
-					: partId === "bg"
+					: partId === 'bg'
 						? palette.stage
 						: palette.case;
 	const [h, s, l] = hexToHsl(base);
@@ -332,15 +387,15 @@ export function Ipod3DColorCockpit({
 
 	const applyTheme = (theme: StudioTheme) => {
 		const { colors } = theme;
-		dispatch({ type: "SET_SKIN_COLOR", payload: colors.skinColor });
-		dispatch({ type: "SET_RING_COLOR", payload: colors.ringColor });
-		dispatch({ type: "SET_CENTER_COLOR", payload: colors.centerColor });
-		dispatch({ type: "SET_BACK_COLOR", payload: colors.backColor });
-		dispatch({ type: "SET_EDGE_COLOR", payload: colors.edgeColor });
-		dispatch({ type: "SET_BEZEL_COLOR", payload: colors.bezelColor });
-		dispatch({ type: "SET_BG_COLOR", payload: colors.bgColor });
+		dispatch({ type: 'SET_SKIN_COLOR', payload: colors.skinColor });
+		dispatch({ type: 'SET_RING_COLOR', payload: colors.ringColor });
+		dispatch({ type: 'SET_CENTER_COLOR', payload: colors.centerColor });
+		dispatch({ type: 'SET_BACK_COLOR', payload: colors.backColor });
+		dispatch({ type: 'SET_EDGE_COLOR', payload: colors.edgeColor });
+		dispatch({ type: 'SET_BEZEL_COLOR', payload: colors.bezelColor });
+		dispatch({ type: 'SET_BG_COLOR', payload: colors.bgColor });
 		// The rig completes the theme — colours and light are one look.
-		dispatch({ type: "SET_LIGHTING", payload: rigForTheme(theme) });
+		dispatch({ type: 'SET_LIGHTING', payload: rigForTheme(theme) });
 	};
 
 	const saveCurrentTheme = () => {
@@ -356,7 +411,7 @@ export function Ipod3DColorCockpit({
 				bezelColor: presentation.bezelColor,
 				bgColor: presentation.bgColor,
 			},
-			rigName: lightingName ?? "Designer Dark",
+			rigName: lightingName ?? 'Designer Dark',
 		};
 		const next = [...savedThemes, theme];
 		setSavedThemes(next);
@@ -377,43 +432,46 @@ export function Ipod3DColorCockpit({
 	)?.id;
 
 	const applyFinish = (f: FinishAsset) => {
-		dispatch({ type: "SET_SKIN_COLOR", payload: f.skinColor });
-		dispatch({ type: "SET_BACK_COLOR", payload: f.backColor });
+		dispatch({ type: 'SET_SKIN_COLOR', payload: f.skinColor });
+		dispatch({ type: 'SET_BACK_COLOR', payload: f.backColor });
 		// Keep the rim matched to the back until the user sets it apart.
-		dispatch({ type: "SET_EDGE_COLOR", payload: f.backColor });
-		dispatch({ type: "SET_BEZEL_COLOR", payload: f.bezelColor });
-		dispatch({ type: "SET_BG_COLOR", payload: f.bgColor });
+		dispatch({ type: 'SET_EDGE_COLOR', payload: f.backColor });
+		dispatch({ type: 'SET_BEZEL_COLOR', payload: f.bezelColor });
+		dispatch({ type: 'SET_BG_COLOR', payload: f.bgColor });
 		// Curated wheel override wins; otherwise re-derive from the new case so
 		// the look stays coherent.
 		const d = deriveWheelColors(f.skinColor);
-		dispatch({ type: "SET_RING_COLOR", payload: f.ringColor ?? d.gradient.via });
-		dispatch({ type: "SET_CENTER_COLOR", payload: f.centerColor ?? d.centerGradient.via });
+		dispatch({ type: 'SET_RING_COLOR', payload: f.ringColor ?? d.gradient.via });
+		dispatch({
+			type: 'SET_CENTER_COLOR',
+			payload: f.centerColor ?? d.centerGradient.via,
+		});
 	};
 
 	// Apply a complete coordinated look (curated or random): every surface + stage + a wheel
 	// re-derived from the new case, so the device stays one coherent object.
 	const applyLook = (look: DeviceLook) => {
-		dispatch({ type: "SET_SKIN_COLOR", payload: look.skinColor });
-		dispatch({ type: "SET_BACK_COLOR", payload: look.backColor });
-		dispatch({ type: "SET_EDGE_COLOR", payload: look.backColor });
-		dispatch({ type: "SET_BEZEL_COLOR", payload: look.bezelColor });
-		dispatch({ type: "SET_BG_COLOR", payload: look.bgColor });
+		dispatch({ type: 'SET_SKIN_COLOR', payload: look.skinColor });
+		dispatch({ type: 'SET_BACK_COLOR', payload: look.backColor });
+		dispatch({ type: 'SET_EDGE_COLOR', payload: look.backColor });
+		dispatch({ type: 'SET_BEZEL_COLOR', payload: look.bezelColor });
+		dispatch({ type: 'SET_BG_COLOR', payload: look.bgColor });
 		const d = deriveWheelColors(look.skinColor);
-		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
-		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
+		dispatch({ type: 'SET_RING_COLOR', payload: d.gradient.via });
+		dispatch({ type: 'SET_CENTER_COLOR', payload: d.centerGradient.via });
 	};
 
 	const deriveWheelFromCase = () => {
-		dispatch({ type: "SET_RING_COLOR", payload: derived.gradient.via });
-		dispatch({ type: "SET_CENTER_COLOR", payload: derived.centerGradient.via });
+		dispatch({ type: 'SET_RING_COLOR', payload: derived.gradient.via });
+		dispatch({ type: 'SET_CENTER_COLOR', payload: derived.centerGradient.via });
 	};
 
 	const shuffle = () => {
 		const next = randomCaseHex();
-		dispatch({ type: "SET_SKIN_COLOR", payload: next });
+		dispatch({ type: 'SET_SKIN_COLOR', payload: next });
 		const d = deriveWheelColors(next);
-		dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
-		dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
+		dispatch({ type: 'SET_RING_COLOR', payload: d.gradient.via });
+		dispatch({ type: 'SET_CENTER_COLOR', payload: d.centerGradient.via });
 	};
 
 	return (
@@ -430,13 +488,15 @@ export function Ipod3DColorCockpit({
 							onClick={() => applyFinish(f)}
 							className={`flex flex-1 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
 								activeFinish === f.id
-									? "border-black/80 text-black"
-									: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+									? 'border-black/80 text-black'
+									: 'border-black/10 text-black/55 hover:border-black/25 hover:text-black/80'
 							}`}
 						>
 							<span
 								className="h-3 w-3 rounded-full border border-black/15"
-								style={{ backgroundColor: f.swatch }}
+								style={{
+									backgroundColor: f.swatch,
+								}}
 							/>
 							{f.label}
 						</button>
@@ -450,37 +510,53 @@ export function Ipod3DColorCockpit({
 			<div className="border-b border-black/[0.06] px-3.5 py-2.5">
 				<div className="flex items-center justify-between">
 					<Label>Themes</Label>
-					<HelperButton onClick={saveCurrentTheme}>+ Save</HelperButton>
+					<HelperButton onClick={saveCurrentTheme}>
+						+ Save
+					</HelperButton>
 				</div>
 				<div className="mt-2 flex flex-wrap gap-1.5">
 					{[...BUILT_IN_THEMES, ...savedThemes].map((theme) => {
 						const active =
-							normalizeHex(theme.colors.skinColor) === normalizeHex(palette.case) &&
-							normalizeHex(theme.colors.bgColor) === normalizeHex(palette.stage) &&
-							normalizeHex(theme.colors.ringColor) === normalizeHex(palette.ring);
+							normalizeHex(theme.colors.skinColor) ===
+								normalizeHex(palette.case) &&
+							normalizeHex(theme.colors.bgColor) ===
+								normalizeHex(palette.stage) &&
+							normalizeHex(theme.colors.ringColor) ===
+								normalizeHex(palette.ring);
 						return (
-							<span key={theme.id} className="group/theme relative">
+							<span
+								key={theme.id}
+								className="group/theme relative"
+							>
 								<button
 									type="button"
-									onClick={() => applyTheme(theme)}
+									onClick={() =>
+										applyTheme(theme)
+									}
 									aria-pressed={active}
 									aria-label={`Apply ${theme.label} theme`}
 									className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
 										active
-											? "border-black/80 text-black"
-											: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+											? 'border-black/80 text-black'
+											: 'border-black/10 text-black/55 hover:border-black/25 hover:text-black/80'
 									}`}
 								>
 									<span className="flex">
 										{[
-											theme.colors.skinColor,
-											theme.colors.ringColor,
-											theme.colors.bgColor,
+											theme.colors
+												.skinColor,
+											theme.colors
+												.ringColor,
+											theme.colors
+												.bgColor,
 										].map((c, i) => (
 											<span
 												key={`${theme.id}-dot-${i}`}
 												className="-ml-0.5 h-2.5 w-2.5 rounded-full border border-black/15 first:ml-0"
-												style={{ backgroundColor: c }}
+												style={{
+													backgroundColor:
+														c,
+												}}
 											/>
 										))}
 									</span>
@@ -489,7 +565,11 @@ export function Ipod3DColorCockpit({
 								{!theme.builtIn && (
 									<button
 										type="button"
-										onClick={() => deleteTheme(theme.id)}
+										onClick={() =>
+											deleteTheme(
+												theme.id,
+											)
+										}
 										aria-label={`Delete ${theme.label} theme`}
 										className="absolute -right-1 -top-1 hidden h-3.5 w-3.5 items-center justify-center rounded-full border border-black/15 bg-white text-[8px] leading-none text-black/50 hover:text-black group-hover/theme:flex"
 									>
@@ -508,7 +588,9 @@ export function Ipod3DColorCockpit({
 			<div className="px-4 py-3">
 				{PARTS.map((part) => {
 					const value = part.value(presentation, derived);
-					const swatchHex = (parseColor(value) ?? "#000000").toLowerCase();
+					const swatchHex = (
+						parseColor(value) ?? '#000000'
+					).toLowerCase();
 					const shades = deriveRelatedShades(part.id, palette);
 					return (
 						<div key={part.id} className="group py-1.5">
@@ -520,17 +602,36 @@ export function Ipod3DColorCockpit({
 									<ColorField
 										value={value}
 										label={part.label}
-										onCommit={(hex) => dispatch({ type: part.action, payload: hex })}
+										onCommit={(hex) =>
+											dispatch({
+												type: part.action,
+												payload: hex,
+											})
+										}
 									/>
 									<label
 										className="relative h-6 w-6 cursor-pointer rounded-md border border-black/15 shadow-sm transition-transform hover:scale-105"
-										style={{ backgroundColor: swatchHex }}
+										style={{
+											backgroundColor:
+												swatchHex,
+										}}
 									>
 										<input
 											type="color"
-											value={swatchHex}
-											onChange={(e) =>
-												dispatch({ type: part.action, payload: e.target.value })
+											value={
+												swatchHex
+											}
+											onChange={(
+												e,
+											) =>
+												dispatch(
+													{
+														type: part.action,
+														payload: e
+															.target
+															.value,
+													},
+												)
 											}
 											className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
 											aria-label={`${part.label} color`}
@@ -542,7 +643,12 @@ export function Ipod3DColorCockpit({
 								shades={shades}
 								current={value}
 								label={part.label}
-								onPick={(hex) => dispatch({ type: part.action, payload: hex })}
+								onPick={(hex) =>
+									dispatch({
+										type: part.action,
+										payload: hex,
+									})
+								}
 							/>
 						</div>
 					);
@@ -566,9 +672,12 @@ export function Ipod3DColorCockpit({
 							look.bezelColor,
 						];
 						const active =
-							normalizeHex(look.skinColor) === normalizeHex(palette.case) &&
-							normalizeHex(look.bezelColor) === normalizeHex(palette.bezel) &&
-							normalizeHex(look.bgColor) === normalizeHex(palette.stage);
+							normalizeHex(look.skinColor) ===
+								normalizeHex(palette.case) &&
+							normalizeHex(look.bezelColor) ===
+								normalizeHex(palette.bezel) &&
+							normalizeHex(look.bgColor) ===
+								normalizeHex(palette.stage);
 						return (
 							<button
 								key={look.id}
@@ -577,7 +686,9 @@ export function Ipod3DColorCockpit({
 								aria-pressed={active}
 								aria-label={`Apply ${look.label} combination`}
 								className={`flex flex-col gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-medium transition-colors ${
-									active ? "border-black/80 text-black" : "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+									active
+										? 'border-black/80 text-black'
+										: 'border-black/10 text-black/55 hover:border-black/25 hover:text-black/80'
 								}`}
 							>
 								<span className="flex">
@@ -585,11 +696,16 @@ export function Ipod3DColorCockpit({
 										<span
 											key={`${look.id}-${i}`}
 											className="-ml-0.5 h-2.5 w-2.5 rounded-full border border-black/15 first:ml-0"
-											style={{ backgroundColor: c }}
+											style={{
+												backgroundColor:
+													c,
+											}}
 										/>
 									))}
 								</span>
-								<span className="text-left">{look.label}</span>
+								<span className="text-left">
+									{look.label}
+								</span>
 							</button>
 						);
 					})}
@@ -607,15 +723,28 @@ export function Ipod3DColorCockpit({
 							title={fav.label}
 							aria-label={`Case ${fav.label}`}
 							onClick={() => {
-								dispatch({ type: "SET_SKIN_COLOR", payload: fav.value });
-								const d = deriveWheelColors(fav.value);
-								dispatch({ type: "SET_RING_COLOR", payload: d.gradient.via });
-								dispatch({ type: "SET_CENTER_COLOR", payload: d.centerGradient.via });
+								dispatch({
+									type: 'SET_SKIN_COLOR',
+									payload: fav.value,
+								});
+								const d = deriveWheelColors(
+									fav.value,
+								);
+								dispatch({
+									type: 'SET_RING_COLOR',
+									payload: d.gradient.via,
+								});
+								dispatch({
+									type: 'SET_CENTER_COLOR',
+									payload: d.centerGradient
+										.via,
+								});
 							}}
 							className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
-								normalizeHex(fav.value) === normalizeHex(presentation.skinColor)
-									? "border-black/70"
-									: "border-black/15"
+								normalizeHex(fav.value) ===
+								normalizeHex(presentation.skinColor)
+									? 'border-black/70'
+									: 'border-black/15'
 							}`}
 							style={{ backgroundColor: fav.value }}
 						/>
@@ -625,11 +754,15 @@ export function Ipod3DColorCockpit({
 
 			{/* Helper actions */}
 			<div className="flex items-center gap-3 border-t border-black/[0.06] px-3.5 py-2.5">
-				<HelperButton onClick={deriveWheelFromCase}>Derive wheel</HelperButton>
+				<HelperButton onClick={deriveWheelFromCase}>
+					Derive wheel
+				</HelperButton>
 				<span className="h-3 w-px bg-black/10" />
 				<HelperButton onClick={shuffle}>Shuffle case</HelperButton>
 				<span className="h-3 w-px bg-black/10" />
-				<HelperButton onClick={() => applyLook(randomCompatibleLook())}>Random look</HelperButton>
+				<HelperButton onClick={() => applyLook(randomCompatibleLook())}>
+					Random look
+				</HelperButton>
 			</div>
 		</div>
 	);
@@ -682,10 +815,10 @@ function ColorField({
 			}}
 			onBlur={commit}
 			onKeyDown={(e) => {
-				if (e.key === "Enter") {
+				if (e.key === 'Enter') {
 					e.preventDefault();
 					e.currentTarget.blur();
-				} else if (e.key === "Escape") {
+				} else if (e.key === 'Escape') {
 					setDraft(value);
 					setInvalid(false);
 					e.currentTarget.blur();
@@ -695,8 +828,8 @@ function ColorField({
 			aria-invalid={invalid}
 			className={`w-[120px] bg-transparent text-right font-mono text-[11px] uppercase tracking-tight tabular-nums outline-none transition-colors ${
 				invalid
-					? "text-red-500"
-					: "text-black/40 focus:text-black/80 group-hover:text-black/65"
+					? 'text-red-500'
+					: 'text-black/40 focus:text-black/80 group-hover:text-black/65'
 			}`}
 		/>
 	);
@@ -716,7 +849,11 @@ function ShadeStrip({
 }) {
 	if (shades.length === 0) return null;
 	return (
-		<div className="mt-1.5 flex gap-1" role="group" aria-label={`${label} related shades`}>
+		<div
+			className="mt-1.5 flex gap-1"
+			role="group"
+			aria-label={`${label} related shades`}
+		>
 			{shades.map((shade) => {
 				const active = normalizeHex(shade) === normalizeHex(current);
 				return (
@@ -728,7 +865,9 @@ function ShadeStrip({
 						aria-pressed={active}
 						onClick={() => onPick(shade)}
 						className={`h-3.5 flex-1 rounded-[3px] border transition-transform hover:scale-y-150 ${
-							active ? "border-black/70 ring-1 ring-black/25" : "border-black/10"
+							active
+								? 'border-black/70 ring-1 ring-black/25'
+								: 'border-black/10'
 						}`}
 						style={{ backgroundColor: shade }}
 					/>
@@ -746,13 +885,7 @@ function Label({ children }: { children: React.ReactNode }) {
 	);
 }
 
-function HelperButton({
-	onClick,
-	children,
-}: {
-	onClick: () => void;
-	children: React.ReactNode;
-}) {
+function HelperButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
 	return (
 		<button
 			type="button"

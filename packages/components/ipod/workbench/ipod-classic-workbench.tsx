@@ -1,42 +1,36 @@
-"use client";
+'use client';
 
-import { KumaSettingsPanel } from "./kuma-settings-panel";
-
-import {
-	useRef,
-	useCallback,
-	useState,
-	useEffect,
-	useMemo,
-} from "react";
+import { AnimatedExportDialog } from '@ipod/components/ipod/export/animated-export-dialog';
+import type { ThreeDIpodHandle } from '@ipod/components/three/three-d-ipod';
+import { IconButton } from '@ipod/components/ui/icon-button';
+import { type ExportProgress, probeAnimatedMp4ExportSupport } from '@ipod/lib/export-utils';
+import { TEST_SONG_SNAPSHOT } from '@ipod/lib/song-snapshots';
 import {
 	Box,
-	Share,
-	Monitor,
-	Smartphone,
 	Check,
+	Eye,
+	Film,
 	Loader2,
 	Menu,
-	Film,
-	Video,
-	Eye,
-	Terminal,
-	Play,
+	Monitor,
 	Pause,
+	Play,
 	RotateCcw,
-} from "lucide-react";
-import { toast } from "sonner";
-import {
-	probeAnimatedMp4ExportSupport,
-	type ExportProgress,
-} from "@ipod/lib/export-utils";
-import { TEST_SONG_SNAPSHOT } from "@ipod/lib/song-snapshots";
-import { IconButton } from "@ipod/components/ui/icon-button";
-import { AnimatedExportDialog } from "@ipod/components/ipod/export/animated-export-dialog";
-import type { ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
-import dynamic from "next/dynamic";
+	Share,
+	Smartphone,
+	Terminal,
+	Video,
+} from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { KumaSettingsPanel } from './kuma-settings-panel';
+
 const ThreeDIpod = dynamic(
-	() => import("@ipod/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
+	() =>
+		import('@ipod/components/three/three-d-ipod').then((m) => ({
+			default: m.ThreeDIpod,
+		})),
 	{
 		ssr: false,
 		loading: () => (
@@ -46,70 +40,73 @@ const ThreeDIpod = dynamic(
 		),
 	},
 );
-import { FixedEditorProvider } from "../editors/fixed-editor";
-import { IpodScreen } from "../display/ipod-screen";
-import { IpodAsciiScene } from "../scenes/ipod-ascii-scene";
-import { IpodClickWheel } from "../controls/ipod-click-wheel";
+
 import {
-	CLASSIC_OS_MENU_ITEMS,
-} from "../hooks/use-ipod-click-wheel-controls";
-import { IpodDevice } from "../device/ipod-device";
-import { ExportProgressOverlay, type ExportStage } from "@ipod/components/ipod/export/export-progress-overlay";
+	ExportProgressOverlay,
+	type ExportStage,
+} from '@ipod/components/ipod/export/export-progress-overlay';
+import {
+	type AnimatedExportFormat,
+	type AnimatedExportLayout,
+	type AnimatedExportQuality,
+	clampAnimatedExportDurationSeconds,
+	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
+} from '@ipod/lib/export/animated-export';
+import { resolveMp4ExportStrategy } from '@ipod/lib/export/mp4-support';
+import { FEATURE_FLAGS } from '@ipod/lib/feature-flags';
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
 import {
 	exportWorkbenchGif,
 	exportWorkbenchMp4,
 	exportWorkbenchPng,
 	loadPersistedExportCounter,
-	loadPersistedSongSnapshot,
 	loadPersistedLastBattery,
+	loadPersistedSongSnapshot,
 	loadPersistedWorkbenchModel,
 	persistWorkbenchModel,
 	playClickAudio,
 	savePersistedExportCounter,
 	savePersistedSongSnapshot,
 	saveWorkbenchSnapshot,
-} from "@ipod/lib/ipod-state/effects";
+} from '@ipod/lib/ipod-state/effects';
 import {
-	createInitialIpodWorkbenchModel,
 	type BatteryMode,
-	type IpodHardwarePresetId,
-	type IpodNowPlayingLayoutState,
-	type IpodViewMode,
-	type IpodOsScreen,
-	type IpodInteractionModel,
 	type ColorTarget,
-} from "@ipod/lib/ipod-state/model";
+	createInitialIpodWorkbenchModel,
+	type IpodHardwarePresetId,
+	type IpodInteractionModel,
+	type IpodNowPlayingLayoutState,
+	type IpodOsScreen,
+	type IpodViewMode,
+} from '@ipod/lib/ipod-state/model';
 import {
 	isAsciiViewMode,
 	isAuthenticInteractionModel,
 	isPngExportViewMode,
 	isPreviewViewMode,
-} from "@ipod/lib/ipod-state/selectors";
-import { clampSnapshotTime } from "@ipod/lib/ipod-state/update";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
-import { FEATURE_FLAGS } from "@ipod/lib/feature-flags";
-import {
-	DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
-	type AnimatedExportFormat,
-	type AnimatedExportQuality,
-	type AnimatedExportLayout,
-	clampAnimatedExportDurationSeconds,
-} from "@ipod/lib/export/animated-export";
-import { resolveMp4ExportStrategy } from "@ipod/lib/export/mp4-support";
-import { formatTimecode } from "@ipod/lib/time-utils";
-import { IpodStoreContext } from "@ipod/lib/xstate/store";
-import { PanelSystem } from "../panels/panel-system";
+} from '@ipod/lib/ipod-state/selectors';
+import { clampSnapshotTime } from '@ipod/lib/ipod-state/update';
+import { formatTimecode } from '@ipod/lib/time-utils';
+import { IpodStoreContext } from '@ipod/lib/xstate/store';
+import { IpodClickWheel } from '../controls/ipod-click-wheel';
+import { IpodDevice } from '../device/ipod-device';
+import { IpodScreen } from '../display/ipod-screen';
+import { FixedEditorProvider } from '../editors/fixed-editor';
+import { CLASSIC_OS_MENU_ITEMS } from '../hooks/use-ipod-click-wheel-controls';
+import { PanelSystem } from '../panels/panel-system';
+import { IpodAsciiScene } from '../scenes/ipod-ascii-scene';
+
 const SHELL_PADDING = 48;
 const EXPORT_COUNTER_PAD = 4;
-type ExportKind = "png" | AnimatedExportFormat;
+type ExportKind = 'png' | AnimatedExportFormat;
 
 function slugifyExportSegment(value: string): string {
 	return (
 		value
 			.toLowerCase()
 			.trim()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/^-+|-+$/g, "") || "snapshot"
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-+|-+$/g, '') || 'snapshot'
 	);
 }
 
@@ -119,7 +116,7 @@ function slugifyExportSegment(value: string): string {
 export default function IpodClassicWorkbench() {
 	const { send } = IpodStoreContext.useActorRef();
 	const model = IpodStoreContext.useSelector((s) => s.context);
-	
+
 	const exportStatus = model.exportStatus;
 	const exportProgressValue = model.exportProgress;
 	const exportError = model.exportError;
@@ -132,9 +129,9 @@ export default function IpodClassicWorkbench() {
 		DEFAULT_ANIMATED_EXPORT_DURATION_SECONDS,
 	);
 	const [animatedExportQuality, setAnimatedExportQuality] =
-		useState<AnimatedExportQuality>("pro");
+		useState<AnimatedExportQuality>('pro');
 	const [animatedExportLayout, setAnimatedExportLayout] =
-		useState<AnimatedExportLayout>("original");
+		useState<AnimatedExportLayout>('original');
 	const [canMp4Export, setCanMp4Export] = useState(false);
 
 	// Customization State
@@ -173,8 +170,8 @@ export default function IpodClassicWorkbench() {
 	const batteryLevel = model.interaction.batteryLevel;
 	const batteryMode = model.interaction.batteryMode;
 
-	const isFlatView = viewMode === "flat";
-	const isFocusView = viewMode === "focus";
+	const isFlatView = viewMode === 'flat';
+	const isFocusView = viewMode === 'focus';
 	const isPreviewView = isPreviewViewMode(viewMode);
 	const isAsciiView = isAsciiViewMode(viewMode);
 	const canPngExport = isPngExportViewMode(viewMode);
@@ -196,39 +193,72 @@ export default function IpodClassicWorkbench() {
 	const toolsRef = useRef<HTMLDivElement>(null);
 	const threeDIpodRef = useRef<ThreeDIpodHandle>(null);
 
-	const setSkinColor = useCallback((nextColor: string) => {
-		send({ type: "SET_SKIN_COLOR", payload: nextColor });
-	}, [send]);
-	const setBgColor = useCallback((nextColor: string) => {
-		send({ type: "SET_BG_COLOR", payload: nextColor });
-	}, [send]);
-	const setRingColor = useCallback((nextColor: string) => {
-		send({ type: "SET_RING_COLOR", payload: nextColor });
-	}, [send]);
-	const setCenterColor = useCallback((nextColor: string) => {
-		send({ type: "SET_CENTER_COLOR", payload: nextColor });
-	}, [send]);
-	const setRangeStartTime = useCallback((nextValue: number | null) => {
-		send({ type: "SET_RANGE_START_TIME", payload: nextValue });
-	}, [send]);
-	const setRangeEndTime = useCallback((nextValue: number | null) => {
-		send({ type: "SET_RANGE_END_TIME", payload: nextValue });
-	}, [send]);
-	const setOsScreen = useCallback((nextScreen: IpodOsScreen) => {
-		send({ type: "SET_OS_SCREEN", payload: nextScreen });
-	}, [send]);
-	const setOsNowPlayingLayout = useCallback((nextLayout: IpodNowPlayingLayoutState) => {
-		send({ type: "SET_OS_NOW_PLAYING_LAYOUT", payload: nextLayout });
-	}, [send]);
-	const setOsOriginalMenuSplit = useCallback((nextSplit: number) => {
-		send({ type: "SET_OS_ORIGINAL_MENU_SPLIT", payload: nextSplit });
-	}, [send]);
-	const setBatteryLevel = useCallback((nextLevel: number) => {
-		send({ type: "SET_BATTERY_LEVEL", payload: nextLevel });
-	}, [send]);
-	const setBatteryMode = useCallback((nextMode: BatteryMode) => {
-		send({ type: "SET_BATTERY_MODE", payload: nextMode });
-	}, [send]);
+	const setSkinColor = useCallback(
+		(nextColor: string) => {
+			send({ type: 'SET_SKIN_COLOR', payload: nextColor });
+		},
+		[send],
+	);
+	const setBgColor = useCallback(
+		(nextColor: string) => {
+			send({ type: 'SET_BG_COLOR', payload: nextColor });
+		},
+		[send],
+	);
+	const setRingColor = useCallback(
+		(nextColor: string) => {
+			send({ type: 'SET_RING_COLOR', payload: nextColor });
+		},
+		[send],
+	);
+	const setCenterColor = useCallback(
+		(nextColor: string) => {
+			send({ type: 'SET_CENTER_COLOR', payload: nextColor });
+		},
+		[send],
+	);
+	const setRangeStartTime = useCallback(
+		(nextValue: number | null) => {
+			send({ type: 'SET_RANGE_START_TIME', payload: nextValue });
+		},
+		[send],
+	);
+	const setRangeEndTime = useCallback(
+		(nextValue: number | null) => {
+			send({ type: 'SET_RANGE_END_TIME', payload: nextValue });
+		},
+		[send],
+	);
+	const setOsScreen = useCallback(
+		(nextScreen: IpodOsScreen) => {
+			send({ type: 'SET_OS_SCREEN', payload: nextScreen });
+		},
+		[send],
+	);
+	const setOsNowPlayingLayout = useCallback(
+		(nextLayout: IpodNowPlayingLayoutState) => {
+			send({ type: 'SET_OS_NOW_PLAYING_LAYOUT', payload: nextLayout });
+		},
+		[send],
+	);
+	const setOsOriginalMenuSplit = useCallback(
+		(nextSplit: number) => {
+			send({ type: 'SET_OS_ORIGINAL_MENU_SPLIT', payload: nextSplit });
+		},
+		[send],
+	);
+	const setBatteryLevel = useCallback(
+		(nextLevel: number) => {
+			send({ type: 'SET_BATTERY_LEVEL', payload: nextLevel });
+		},
+		[send],
+	);
+	const setBatteryMode = useCallback(
+		(nextMode: BatteryMode) => {
+			send({ type: 'SET_BATTERY_MODE', payload: nextMode });
+		},
+		[send],
+	);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -241,19 +271,30 @@ export default function IpodClassicWorkbench() {
 			});
 		} else {
 			void resolveMp4ExportStrategy({
-				targetWidth: Math.max(exportTarget.offsetWidth, exportTarget.clientWidth, 1),
-				targetHeight: Math.max(exportTarget.offsetHeight, exportTarget.clientHeight, 1),
+				targetWidth: Math.max(
+					exportTarget.offsetWidth,
+					exportTarget.clientWidth,
+					1,
+				),
+				targetHeight: Math.max(
+					exportTarget.offsetHeight,
+					exportTarget.clientHeight,
+					1,
+				),
 			}).then((strategy) => {
 				if (!cancelled) {
 					setCanMp4Export(strategy !== null);
 				}
 			});
 		}
-		return () => { cancelled = true; };
+		return () => {
+			cancelled = true;
+		};
 	}, [hardwarePreset, viewportSize.width, viewportSize.height]);
 
 	const saveCustomColor = useCallback(
-		(target: ColorTarget, hex: string) => send({ type: "SAVE_CUSTOM_COLOR", payload: { target, hex } }),
+		(target: ColorTarget, hex: string) =>
+			send({ type: 'SAVE_CUSTOM_COLOR', payload: { target, hex } }),
 		[send],
 	);
 
@@ -265,17 +306,17 @@ export default function IpodClassicWorkbench() {
 			});
 		};
 		readViewport();
-		window.addEventListener("resize", readViewport, { passive: true });
-		window.addEventListener("orientationchange", readViewport, { passive: true });
+		window.addEventListener('resize', readViewport, { passive: true });
+		window.addEventListener('orientationchange', readViewport, { passive: true });
 		return () => {
-			window.removeEventListener("resize", readViewport);
-			window.removeEventListener("orientationchange", readViewport);
+			window.removeEventListener('resize', readViewport);
+			window.removeEventListener('orientationchange', readViewport);
 		};
 	}, []);
 
 	useEffect(() => {
 		send({
-			type: "RESTORE_MODEL",
+			type: 'RESTORE_MODEL',
 			payload: loadPersistedWorkbenchModel(createInitialIpodWorkbenchModel()),
 		});
 		setIsModelHydrated(true);
@@ -284,15 +325,15 @@ export default function IpodClassicWorkbench() {
 	useEffect(() => {
 		if (!isModelHydrated) return;
 		const gatedModes: Array<{ mode: IpodViewMode; flag: boolean }> = [
-			{ mode: "3d", flag: FEATURE_FLAGS.SHOW_3D_VIEW_MODE },
-			{ mode: "focus", flag: FEATURE_FLAGS.SHOW_FOCUS_VIEW_MODE },
-			{ mode: "ascii", flag: FEATURE_FLAGS.SHOW_ASCII_VIEW_MODE },
+			{ mode: '3d', flag: FEATURE_FLAGS.SHOW_3D_VIEW_MODE },
+			{ mode: 'focus', flag: FEATURE_FLAGS.SHOW_FOCUS_VIEW_MODE },
+			{ mode: 'ascii', flag: FEATURE_FLAGS.SHOW_ASCII_VIEW_MODE },
 		];
 		const activeGated = gatedModes.find(
 			(g) => g.mode === model.presentation.viewMode && !g.flag,
 		);
 		if (activeGated) {
-			send({ type: "SET_VIEW_MODE", payload: "preview" });
+			send({ type: 'SET_VIEW_MODE', payload: 'preview' });
 		}
 	}, [isModelHydrated, model.presentation.viewMode, send]);
 
@@ -317,13 +358,13 @@ export default function IpodClassicWorkbench() {
 	useEffect(() => {
 		if (!isPlaying) return;
 		const intervalId = window.setInterval(() => {
-			send({ type: "TICK" });
+			send({ type: 'TICK' });
 		}, 1000);
 		return () => window.clearInterval(intervalId);
 	}, [isPlaying, send]);
 
 	useEffect(() => {
-		if (selectionKind !== "range") {
+		if (selectionKind !== 'range') {
 			if (rangeStartTime !== null) setRangeStartTime(null);
 			if (rangeEndTime !== null) setRangeEndTime(null);
 			return;
@@ -351,12 +392,12 @@ export default function IpodClassicWorkbench() {
 	const lastExportedBatteryRef = useRef(loadPersistedLastBattery());
 
 	useEffect(() => {
-		if (batteryMode !== "manual") return;
-		send({ type: "SET_BATTERY_LEVEL", payload: lastExportedBatteryRef.current });
+		if (batteryMode !== 'manual') return;
+		send({ type: 'SET_BATTERY_LEVEL', payload: lastExportedBatteryRef.current });
 	}, [batteryMode, send]);
 
 	useEffect(() => {
-		if (batteryMode !== "solar") return;
+		if (batteryMode !== 'solar') return;
 		const startLevel = lastExportedBatteryRef.current;
 		const interval = setInterval(() => {
 			const dur = model.metadata.duration;
@@ -364,7 +405,7 @@ export default function IpodClassicWorkbench() {
 			const progress = Math.min(model.metadata.currentTime / dur, 1.0);
 			const SENSITIVITY = 0.05;
 			const level = startLevel - (startLevel - 0.08) * progress * SENSITIVITY;
-			send({ type: "SET_BATTERY_LEVEL", payload: Math.max(level, 0.08) });
+			send({ type: 'SET_BATTERY_LEVEL', payload: Math.max(level, 0.08) });
 		}, 10000);
 		return () => clearInterval(interval);
 	}, [batteryMode, model.metadata.currentTime, model.metadata.duration, send]);
@@ -421,11 +462,11 @@ export default function IpodClassicWorkbench() {
 	);
 
 	const formatExportId = useCallback((id: number) => {
-		return String(id).padStart(EXPORT_COUNTER_PAD, "0");
+		return String(id).padStart(EXPORT_COUNTER_PAD, '0');
 	}, []);
 
 	const handlePngExport = useCallback(async () => {
-		if (exportStatus !== "idle") return;
+		if (exportStatus !== 'idle') return;
 		resetInteractionChrome({
 			closeSettings: true,
 			closeEditor: true,
@@ -434,7 +475,7 @@ export default function IpodClassicWorkbench() {
 		});
 		if (!canPngExport) {
 			playClick();
-			showSoftNotice("Switch to Flat or Focus for Image");
+			showSoftNotice('Switch to Flat or Focus for Image');
 			return;
 		}
 		playClick();
@@ -444,9 +485,9 @@ export default function IpodClassicWorkbench() {
 		const exportTag = formatExportId(exportId);
 		const filename = `ipod-${exportTag}-${buildExportSlug()}.png`;
 
-		setActiveExportKind("png");
+		setActiveExportKind('png');
 		setIsExportCapturing(true);
-		send({ type: "START_EXPORT", payload: { kind: "png" } });
+		send({ type: 'START_EXPORT', payload: { kind: 'png' } });
 
 		try {
 			const result = await exportWorkbenchPng(exportTargetRef.current, {
@@ -456,22 +497,28 @@ export default function IpodClassicWorkbench() {
 					// status handling
 				},
 				onProgressChange: (p) => {
-					send({ type: "UPDATE_EXPORT_PROGRESS", payload: p.progress });
+					send({
+						type: 'UPDATE_EXPORT_PROGRESS',
+						payload: p.progress,
+					});
 				},
-				threeDIpodHandle: viewMode === "3d" ? threeDIpodRef.current : null,
+				threeDIpodHandle: viewMode === '3d' ? threeDIpodRef.current : null,
 			});
 
 			if (result.success) {
-				send({ type: "EXPORT_COMPLETE" });
+				send({ type: 'EXPORT_COMPLETE' });
 				const nextCounter = exportId + 1;
 				setExportCounter(nextCounter);
 				savePersistedExportCounter(nextCounter);
 				toast.success(`Exported image successfully`);
 			} else {
-				send({ type: "EXPORT_ERROR", payload: (result as any).error || "Export failed" });
+				send({
+					type: 'EXPORT_ERROR',
+					payload: (result as any).error || 'Export failed',
+				});
 			}
 		} catch (error) {
-			send({ type: "EXPORT_ERROR", payload: "Critical export error" });
+			send({ type: 'EXPORT_ERROR', payload: 'Critical export error' });
 		} finally {
 			setIsExportCapturing(false);
 		}
@@ -486,7 +533,7 @@ export default function IpodClassicWorkbench() {
 		resetInteractionChrome,
 		showSoftNotice,
 		send,
-		viewMode
+		viewMode,
 	]);
 
 	const handleAnimatedExportConfirm = useCallback(async () => {
@@ -500,11 +547,11 @@ export default function IpodClassicWorkbench() {
 		setAnimatedExportDialogFormat(null);
 		setActiveExportKind(kind);
 		setIsExportCapturing(true);
-		send({ type: "START_EXPORT", payload: { kind } });
+		send({ type: 'START_EXPORT', payload: { kind } });
 
 		const element = exportTargetRef.current;
 		if (!element) {
-			send({ type: "EXPORT_ERROR", payload: "Export target not found" });
+			send({ type: 'EXPORT_ERROR', payload: 'Export target not found' });
 			setIsExportCapturing(false);
 			return;
 		}
@@ -520,29 +567,35 @@ export default function IpodClassicWorkbench() {
 					// status handling
 				},
 				onProgressChange: (p: ExportProgress) => {
-					send({ type: "UPDATE_EXPORT_PROGRESS", payload: p.progress });
+					send({
+						type: 'UPDATE_EXPORT_PROGRESS',
+						payload: p.progress,
+					});
 				},
-				threeDIpodHandle: viewMode === "3d" ? threeDIpodRef.current : null,
+				threeDIpodHandle: viewMode === '3d' ? threeDIpodRef.current : null,
 			};
 
 			const result =
-				kind === "gif"
+				kind === 'gif'
 					? await exportWorkbenchGif(element, options)
 					: await exportWorkbenchMp4(element, options);
 
 			if (result.success) {
-				send({ type: "EXPORT_COMPLETE" });
+				send({ type: 'EXPORT_COMPLETE' });
 				const nextCounter = exportId + 1;
 				setExportCounter(nextCounter);
 				savePersistedExportCounter(nextCounter);
 				toast.success(`Exported ${kind.toUpperCase()} successfully`);
 			} else {
-				send({ type: "EXPORT_ERROR", payload: (result as any).error || "Export failed" });
+				send({
+					type: 'EXPORT_ERROR',
+					payload: (result as any).error || 'Export failed',
+				});
 			}
 		} catch (error) {
 			send({
-				type: "EXPORT_ERROR",
-				payload: error instanceof Error ? error.message : "Unknown error",
+				type: 'EXPORT_ERROR',
+				payload: error instanceof Error ? error.message : 'Unknown error',
 			});
 		} finally {
 			setIsExportCapturing(false);
@@ -557,7 +610,7 @@ export default function IpodClassicWorkbench() {
 		buildExportSlug,
 		send,
 		bgColor,
-		viewMode
+		viewMode,
 	]);
 
 	const handleHardwarePresetChange = useCallback(
@@ -568,7 +621,7 @@ export default function IpodClassicWorkbench() {
 				closeToolbox: true,
 				clearNotice: true,
 			});
-			send({ type: "SET_HARDWARE_PRESET", payload: nextPreset });
+			send({ type: 'SET_HARDWARE_PRESET', payload: nextPreset });
 		},
 		[resetInteractionChrome, send],
 	);
@@ -581,7 +634,7 @@ export default function IpodClassicWorkbench() {
 				closeToolbox: true,
 				clearNotice: true,
 			});
-			send({ type: "SET_INTERACTION_MODEL", payload: nextModel });
+			send({ type: 'SET_INTERACTION_MODEL', payload: nextModel });
 		},
 		[resetInteractionChrome, send],
 	);
@@ -596,7 +649,7 @@ export default function IpodClassicWorkbench() {
 		playClick();
 		saveWorkbenchSnapshot(model);
 		lastExportedBatteryRef.current = model.interaction.batteryLevel;
-		showSoftNotice("Snapshot saved");
+		showSoftNotice('Snapshot saved');
 	}, [model, playClick, showSoftNotice, resetInteractionChrome]);
 
 	const handleResetModel = useCallback(() => {
@@ -607,8 +660,8 @@ export default function IpodClassicWorkbench() {
 			clearNotice: true,
 		});
 		playClick();
-		send({ type: "RESET_MODEL" });
-		showSoftNotice("Reset to defaults");
+		send({ type: 'RESET_MODEL' });
+		showSoftNotice('Reset to defaults');
 	}, [send, playClick, showSoftNotice, resetInteractionChrome]);
 
 	const handleLoadSnapshot = useCallback(() => {
@@ -621,19 +674,19 @@ export default function IpodClassicWorkbench() {
 		playClick();
 		const persisted = loadPersistedSongSnapshot();
 		if (persisted) {
-			send({ type: "APPLY_SONG_SNAPSHOT", payload: persisted });
+			send({ type: 'APPLY_SONG_SNAPSHOT', payload: persisted });
 			savePersistedSongSnapshot(persisted);
 			lastExportedBatteryRef.current = persisted.ui.batteryLevel;
 			setShowSettings(false);
-			showSoftNotice("Snapshot loaded");
+			showSoftNotice('Snapshot loaded');
 			return;
 		}
 
-		send({ type: "APPLY_SONG_SNAPSHOT", payload: TEST_SONG_SNAPSHOT });
+		send({ type: 'APPLY_SONG_SNAPSHOT', payload: TEST_SONG_SNAPSHOT });
 		savePersistedSongSnapshot(TEST_SONG_SNAPSHOT);
 		lastExportedBatteryRef.current = TEST_SONG_SNAPSHOT.ui.batteryLevel;
 		setShowSettings(false);
-		showSoftNotice("Loaded sample snapshot");
+		showSoftNotice('Loaded sample snapshot');
 	}, [send, playClick, showSoftNotice, resetInteractionChrome]);
 
 	const handleViewModeChange = useCallback(
@@ -644,10 +697,10 @@ export default function IpodClassicWorkbench() {
 				closeToolbox: true,
 				clearNotice: true,
 			});
-			if (nextMode === "preview") {
-				send({ type: "SET_OS_SCREEN", payload: "now-playing" });
+			if (nextMode === 'preview') {
+				send({ type: 'SET_OS_SCREEN', payload: 'now-playing' });
 			}
-			send({ type: "SET_VIEW_MODE", payload: nextMode });
+			send({ type: 'SET_VIEW_MODE', payload: nextMode });
 		},
 		[resetInteractionChrome, send],
 	);
@@ -670,7 +723,8 @@ export default function IpodClassicWorkbench() {
 	const frameHeight = activePreset.shell.height + SHELL_PADDING * 2;
 
 	const previewScale = useMemo(() => {
-		if (isExportCapturing || viewportSize.width === 0 || viewportSize.height === 0) return 1;
+		if (isExportCapturing || viewportSize.width === 0 || viewportSize.height === 0)
+			return 1;
 		const isSmall = viewportSize.width < 640;
 		const isMedium = viewportSize.width < 1024;
 		const horizontalReserve = isSmall ? 32 : isMedium ? 56 : 80;
@@ -681,29 +735,45 @@ export default function IpodClassicWorkbench() {
 		// Portrait phone: lock to width so a changing innerHeight (URL bar / keyboard)
 		// can't rescale the device. The container scrolls if it runs past the viewport.
 		// Focus keeps fit-to-both below since it intentionally zooms.
-		if (isCompactPortrait && viewMode !== "focus") {
+		if (isCompactPortrait && viewMode !== 'focus') {
 			return widthScale;
 		}
-		const fitScale = Math.min(availableWidth / frameWidth, availableHeight / frameHeight, 1);
-		if (viewMode === "focus") {
-			const maxScale = Math.min(availableWidth / frameWidth, availableHeight / frameHeight, 1.28);
+		const fitScale = Math.min(
+			availableWidth / frameWidth,
+			availableHeight / frameHeight,
+			1,
+		);
+		if (viewMode === 'focus') {
+			const maxScale = Math.min(
+				availableWidth / frameWidth,
+				availableHeight / frameHeight,
+				1.28,
+			);
 			return Math.min(maxScale, fitScale * 1.3);
 		}
 		return fitScale;
-	}, [isCompactPortrait, isCompactToolbox, isExportCapturing, viewportSize, viewMode, frameWidth, frameHeight]);
+	}, [
+		isCompactPortrait,
+		isCompactToolbox,
+		isExportCapturing,
+		viewportSize,
+		viewMode,
+		frameWidth,
+		frameHeight,
+	]);
 
 	const scaledFrameWidth = Math.round(frameWidth * previewScale);
 	const scaledFrameHeight = Math.round(frameHeight * previewScale);
-	const pngBusy = activeExportKind === "png" && exportStatus !== "idle";
-	const gifBusy = activeExportKind === "gif" && exportStatus !== "idle";
-	const mp4Busy = activeExportKind === "mp4" && exportStatus !== "idle";
-	
+	const pngBusy = activeExportKind === 'png' && exportStatus !== 'idle';
+	const gifBusy = activeExportKind === 'gif' && exportStatus !== 'idle';
+	const mp4Busy = activeExportKind === 'mp4' && exportStatus !== 'idle';
+
 	const toolboxDockClass = isCompactToolbox
-		? "fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
-		: "fixed top-6 right-6";
+		? 'fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1rem)]'
+		: 'fixed top-6 right-6';
 	const toolboxPanelClass = isCompactToolbox
-		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem-var(--safe-inset-top)-var(--safe-inset-bottom))] overflow-y-auto overscroll-contain flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"}`
-		: "flex flex-col gap-3";
+		? `absolute right-0 bottom-14 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem-var(--safe-inset-top)-var(--safe-inset-bottom))] overflow-y-auto overscroll-contain flex flex-col gap-3 rounded-2xl border border-[#D0D4DA] bg-[#E7E7E3]/95 p-2 shadow-[0_16px_34px_rgba(0,0,0,0.2)] transition-opacity duration-300 ${isToolboxVisible ? 'opacity-100 visible pointer-events-auto' : 'opacity-0 invisible pointer-events-none'}`
+		: 'flex flex-col gap-3';
 
 	const screenComponent = isAsciiView ? (
 		<IpodAsciiScene state={state} />
@@ -726,13 +796,17 @@ export default function IpodClassicWorkbench() {
 			isEditable={
 				!isExportCapturing &&
 				(isAuthenticInteraction
-					? isOsNowPlayingEditable && osScreen === "now-playing"
+					? isOsNowPlayingEditable && osScreen === 'now-playing'
 					: isFlatView)
 			}
 			exportSafe={isExportCapturing}
 			titlePreview={isPreviewView || isPlaying}
 			animateText={isPlaying}
-			titleCaptureReady={isPreviewView || activeExportKind === "gif" || activeExportKind === "mp4"}
+			titleCaptureReady={
+				isPreviewView ||
+				activeExportKind === 'gif' ||
+				activeExportKind === 'mp4'
+			}
 			onTitleOverflowChange={setTitleCanMarquee}
 		/>
 	);
@@ -745,87 +819,116 @@ export default function IpodClassicWorkbench() {
 			centerColor={centerColor || undefined}
 			playClick={playClick}
 			onSeek={(delta: number) => {
-				if (osScreen === "menu") {
+				if (osScreen === 'menu') {
 					send({
-						type: "CYCLE_OS_MENU",
-						payload: { direction: delta, total: CLASSIC_OS_MENU_ITEMS.length },
+						type: 'CYCLE_OS_MENU',
+						payload: {
+							direction: delta,
+							total: CLASSIC_OS_MENU_ITEMS.length,
+						},
 					});
 					playClick();
 					return;
 				}
 				const step = 2;
-				const nextTime = Math.max(0, Math.min(state.duration, state.currentTime + delta * step));
+				const nextTime = Math.max(
+					0,
+					Math.min(state.duration, state.currentTime + delta * step),
+				);
 				if (Math.floor(nextTime) !== Math.floor(state.currentTime)) {
-					send({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+					send({ type: 'UPDATE_CURRENT_TIME', payload: nextTime });
 					if (Math.abs(delta) > 0.5) playClick();
 				}
 			}}
 			onCenterClick={
-				osScreen === "menu"
+				osScreen === 'menu'
 					? () => {
-							const activeItem = CLASSIC_OS_MENU_ITEMS[osMenuIndex];
+							const activeItem =
+								CLASSIC_OS_MENU_ITEMS[osMenuIndex];
 							if (!activeItem) return;
 							switch (activeItem.id) {
-								case "music":
-								case "now-playing":
-								case "shuffle-songs":
-									setOsScreen("now-playing");
+								case 'music':
+								case 'now-playing':
+								case 'shuffle-songs':
+									setOsScreen('now-playing');
 									return;
-								case "settings":
-									if (isCompactToolbox) setIsToolboxOpen(true);
+								case 'settings':
+									if (isCompactToolbox)
+										setIsToolboxOpen(
+											true,
+										);
 									setShowSettings(true);
 									return;
 								default:
-									showSoftNotice(`${activeItem.label} is queued for the fuller OS pass`);
+									showSoftNotice(
+										`${activeItem.label} is queued for the fuller OS pass`,
+									);
 							}
 						}
 					: () => {
-							send({ type: "TOGGLE_IS_PLAYING" });
+							send({ type: 'TOGGLE_IS_PLAYING' });
 							playClick();
-							showSoftNotice(!isPlaying ? "Playing" : "Paused");
+							showSoftNotice(
+								!isPlaying ? 'Playing' : 'Paused',
+							);
 						}
 			}
 			onMenuPress={() => {
 				if (!isAuthenticInteraction) {
-					setOsScreen(osScreen === "menu" ? "now-playing" : "menu");
+					setOsScreen(osScreen === 'menu' ? 'now-playing' : 'menu');
 					return;
 				}
-				send({ type: "SET_OS_NOW_PLAYING_EDITABLE", payload: false });
-				setOsScreen("menu");
+				send({ type: 'SET_OS_NOW_PLAYING_EDITABLE', payload: false });
+				setOsScreen('menu');
 			}}
 			onPreviousPress={() => {
-				if (osScreen === "menu") {
-					send({ type: "CYCLE_OS_MENU", payload: { direction: -1, total: CLASSIC_OS_MENU_ITEMS.length } });
+				if (osScreen === 'menu') {
+					send({
+						type: 'CYCLE_OS_MENU',
+						payload: {
+							direction: -1,
+							total: CLASSIC_OS_MENU_ITEMS.length,
+						},
+					});
 					playClick();
 					return;
 				}
 				const nextTime = Math.max(0, state.currentTime - 15);
-				send({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+				send({ type: 'UPDATE_CURRENT_TIME', payload: nextTime });
 				playClick();
 			}}
 			onNextPress={() => {
-				if (osScreen === "menu") {
-					send({ type: "CYCLE_OS_MENU", payload: { direction: 1, total: CLASSIC_OS_MENU_ITEMS.length } });
+				if (osScreen === 'menu') {
+					send({
+						type: 'CYCLE_OS_MENU',
+						payload: {
+							direction: 1,
+							total: CLASSIC_OS_MENU_ITEMS.length,
+						},
+					});
 					playClick();
 					return;
 				}
 				const nextTime = Math.min(state.duration, state.currentTime + 15);
-				send({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+				send({ type: 'UPDATE_CURRENT_TIME', payload: nextTime });
 				playClick();
 			}}
 			onPlayPausePress={() => {
-				if (osScreen === "menu") {
-					setOsScreen("now-playing");
+				if (osScreen === 'menu') {
+					setOsScreen('now-playing');
 					return;
 				}
-				send({ type: "TOGGLE_IS_PLAYING" });
+				send({ type: 'TOGGLE_IS_PLAYING' });
 				playClick();
-				showSoftNotice(!isPlaying ? "Playing" : "Paused");
+				showSoftNotice(!isPlaying ? 'Playing' : 'Paused');
 			}}
 			disabled={
 				isExportCapturing ||
 				isAsciiView ||
-				(osScreen !== "menu" && !isFlatView && !isFocusView && !isAuthenticInteraction)
+				(osScreen !== 'menu' &&
+					!isFlatView &&
+					!isFocusView &&
+					!isAuthenticInteraction)
 			}
 			exportSafe={isExportCapturing}
 		/>
@@ -837,8 +940,8 @@ export default function IpodClassicWorkbench() {
 				ref={containerRef}
 				className={`relative min-h-dvh w-full flex flex-col items-center transition-colors duration-500 ${
 					isCompactPortrait
-						? "justify-start overflow-y-auto overscroll-contain"
-						: "justify-center overflow-hidden"
+						? 'justify-start overflow-y-auto overscroll-contain'
+						: 'justify-center overflow-hidden'
 				}`}
 				style={{
 					backgroundColor: bgColor,
@@ -852,12 +955,16 @@ export default function IpodClassicWorkbench() {
 
 				<div
 					ref={toolsRef}
-					className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== "idle" ? "opacity-0 pointer-events-none" : ""}`}
+					className={`${toolboxDockClass} z-50 flex flex-col items-end gap-3 animate-in fade-in slide-in-from-top-4 duration-700 ${exportStatus !== 'idle' ? 'opacity-0 pointer-events-none' : ''}`}
 				>
 					{isCompactToolbox && (
 						<IconButton
 							icon={<Menu className="w-5 h-5" />}
-							label={isToolboxVisible ? "Hide Toolbox" : "Toolbox"}
+							label={
+								isToolboxVisible
+									? 'Hide Toolbox'
+									: 'Toolbox'
+							}
 							onClick={handleToggleToolbox}
 							isActive={isToolboxVisible}
 							className="w-12 h-12 border border-[#D0D4DA] bg-[#F2F2F0]/95 text-black backdrop-blur-sm"
@@ -870,9 +977,13 @@ export default function IpodClassicWorkbench() {
 							onToggleSettings={handleToggleSettings}
 							isCompactToolbox={isCompactToolbox}
 							hardwarePreset={hardwarePreset}
-							onHardwarePresetChange={handleHardwarePresetChange}
+							onHardwarePresetChange={
+								handleHardwarePresetChange
+							}
 							interactionModel={interactionModel}
-							onInteractionModelChange={handleInteractionModelChange}
+							onInteractionModelChange={
+								handleInteractionModelChange
+							}
 							batteryLevel={batteryLevel}
 							onBatteryLevelChange={setBatteryLevel}
 							batteryMode={batteryMode}
@@ -896,60 +1007,104 @@ export default function IpodClassicWorkbench() {
 
 						<div className="flex flex-col gap-2 p-2 bg-[#E7E7E3]/80 backdrop-blur-sm rounded-xl border border-[#D0D4DA] shadow-[0_10px_24px_rgba(0,0,0,0.12)]">
 							<IconButton
-								icon={<Smartphone className="w-5 h-5" />}
+								icon={
+									<Smartphone className="w-5 h-5" />
+								}
 								label="Flat"
 								data-testid="flat-button"
-								isActive={viewMode === "flat"}
-								onClick={() => handleViewModeChange("flat")}
+								isActive={viewMode === 'flat'}
+								onClick={() =>
+									handleViewModeChange('flat')
+								}
 							/>
 							<IconButton
 								icon={<Eye className="w-5 h-5" />}
 								label="Preview"
 								data-testid="preview-button"
-								isActive={viewMode === "preview"}
-								onClick={() => handleViewModeChange("preview")}
+								isActive={viewMode === 'preview'}
+								onClick={() =>
+									handleViewModeChange(
+										'preview',
+									)
+								}
 							/>
 							{FEATURE_FLAGS.SHOW_3D_VIEW_MODE && (
 								<IconButton
-									icon={<Box className="w-5 h-5" />}
+									icon={
+										<Box className="w-5 h-5" />
+									}
 									label="3D Experience"
 									badge="WIP"
 									data-testid="3d-button"
-									isActive={viewMode === "3d"}
-									onClick={() => handleViewModeChange("3d")}
+									isActive={viewMode === '3d'}
+									onClick={() =>
+										handleViewModeChange(
+											'3d',
+										)
+									}
 								/>
 							)}
 							{FEATURE_FLAGS.SHOW_FOCUS_VIEW_MODE && (
 								<IconButton
-									icon={<Monitor className="w-5 h-5" />}
+									icon={
+										<Monitor className="w-5 h-5" />
+									}
 									label="Focus Mode"
 									data-testid="focus-button"
-									isActive={viewMode === "focus"}
-									onClick={() => handleViewModeChange("focus")}
+									isActive={
+										viewMode === 'focus'
+									}
+									onClick={() =>
+										handleViewModeChange(
+											'focus',
+										)
+									}
 								/>
 							)}
 							{FEATURE_FLAGS.SHOW_ASCII_VIEW_MODE && (
 								<IconButton
-									icon={<Terminal className="w-5 h-5" />}
+									icon={
+										<Terminal className="w-5 h-5" />
+									}
 									label="ASCII Mode"
 									badge="WIP"
 									data-testid="ascii-button"
-									isActive={viewMode === "ascii"}
-									onClick={() => handleViewModeChange("ascii")}
+									isActive={
+										viewMode === 'ascii'
+									}
+									onClick={() =>
+										handleViewModeChange(
+											'ascii',
+										)
+									}
 								/>
 							)}
 							<IconButton
-								icon={isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-								label={isPlaying ? "Pause" : "Play"}
+								icon={
+									isPlaying ? (
+										<Pause className="w-5 h-5" />
+									) : (
+										<Play className="w-5 h-5" />
+									)
+								}
+								label={isPlaying ? 'Pause' : 'Play'}
 								data-testid="play-pause-button"
 								onClick={() => {
 									playClick();
-									send({ type: "TOGGLE_IS_PLAYING" });
+									send({
+										type: 'TOGGLE_IS_PLAYING',
+									});
 								}}
-								className={isPlaying ? "bg-blue-100 text-blue-600 border-blue-200" : ""}
+								className={
+									isPlaying
+										? 'bg-blue-100 text-blue-600 border-blue-200'
+										: ''
+								}
 							/>
 							<IconButton
-								icon={<RotateCcw className="w-5 h-5" />}
+								icon={
+									<RotateCcw className="w-5 h-5" />
+								}
 								label="Reset Defaults"
 								data-testid="reset-button"
 								onClick={handleResetModel}
@@ -958,57 +1113,147 @@ export default function IpodClassicWorkbench() {
 						</div>
 
 						<IconButton
-							icon={activeExportKind === "png" && exportStatus === "success" ? <Check className="w-5 h-5" /> : pngBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share className="w-5 h-5" />}
-							label={!canPngExport ? "Flat/Focus for PNG" : "Export PNG"}
+							icon={
+								activeExportKind === 'png' &&
+								exportStatus === 'success' ? (
+									<Check className="w-5 h-5" />
+								) : pngBusy ? (
+									<Loader2 className="w-5 h-5 animate-spin" />
+								) : (
+									<Share className="w-5 h-5" />
+								)
+							}
+							label={
+								!canPngExport
+									? 'Flat/Focus for PNG'
+									: 'Export PNG'
+							}
 							data-testid="png-export-button"
 							onClick={handlePngExport}
 							contrast
-							disabled={!canPngExport || exportStatus !== "idle"}
-							className={activeExportKind === "png" && exportStatus === "success" ? "bg-green-500" : pngBusy ? "bg-blue-500" : ""}
+							disabled={
+								!canPngExport ||
+								exportStatus !== 'idle'
+							}
+							className={
+								activeExportKind === 'png' &&
+								exportStatus === 'success'
+									? 'bg-green-500'
+									: pngBusy
+										? 'bg-blue-500'
+										: ''
+							}
 						/>
 						<IconButton
-							icon={activeExportKind === "gif" && exportStatus === "success" ? <Check className="w-5 h-5" /> : gifBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Film className="w-5 h-5" />}
+							icon={
+								activeExportKind === 'gif' &&
+								exportStatus === 'success' ? (
+									<Check className="w-5 h-5" />
+								) : gifBusy ? (
+									<Loader2 className="w-5 h-5 animate-spin" />
+								) : (
+									<Film className="w-5 h-5" />
+								)
+							}
 							label="Export GIF"
 							data-testid="gif-export-button"
 							onClick={() => {
-								if (!isPreviewView && !isAsciiView) {
-									handleViewModeChange("preview");
-									setTimeout(() => setAnimatedExportDialogFormat("gif"), 100);
+								if (
+									!isPreviewView &&
+									!isAsciiView
+								) {
+									handleViewModeChange(
+										'preview',
+									);
+									setTimeout(
+										() =>
+											setAnimatedExportDialogFormat(
+												'gif',
+											),
+										100,
+									);
 									return;
 								}
 								playClick();
-								setAnimatedExportDialogFormat("gif");
+								setAnimatedExportDialogFormat(
+									'gif',
+								);
 							}}
 							contrast
-							disabled={exportStatus !== "idle"}
-							className={activeExportKind === "gif" && exportStatus === "success" ? "bg-green-500" : gifBusy ? "bg-blue-500" : ""}
+							disabled={exportStatus !== 'idle'}
+							className={
+								activeExportKind === 'gif' &&
+								exportStatus === 'success'
+									? 'bg-green-500'
+									: gifBusy
+										? 'bg-blue-500'
+										: ''
+							}
 						/>
 						<IconButton
-							icon={activeExportKind === "mp4" && exportStatus === "success" ? <Check className="w-5 h-5" /> : mp4Busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
-							label={!canMp4Export ? "MP4 Not Supported" : "Export MP4"}
+							icon={
+								activeExportKind === 'mp4' &&
+								exportStatus === 'success' ? (
+									<Check className="w-5 h-5" />
+								) : mp4Busy ? (
+									<Loader2 className="w-5 h-5 animate-spin" />
+								) : (
+									<Video className="w-5 h-5" />
+								)
+							}
+							label={
+								!canMp4Export
+									? 'MP4 Not Supported'
+									: 'Export MP4'
+							}
 							data-testid="mp4-export-button"
 							onClick={() => {
 								if (!canMp4Export) {
 									playClick();
-									showSoftNotice("Needs newer browser");
+									showSoftNotice(
+										'Needs newer browser',
+									);
 									return;
 								}
-								if (!isPreviewView && !isAsciiView) {
-									handleViewModeChange("preview");
-									setTimeout(() => setAnimatedExportDialogFormat("mp4"), 100);
+								if (
+									!isPreviewView &&
+									!isAsciiView
+								) {
+									handleViewModeChange(
+										'preview',
+									);
+									setTimeout(
+										() =>
+											setAnimatedExportDialogFormat(
+												'mp4',
+											),
+										100,
+									);
 									return;
 								}
 								playClick();
-								setAnimatedExportDialogFormat("mp4");
+								setAnimatedExportDialogFormat(
+									'mp4',
+								);
 							}}
 							contrast
-							disabled={!canMp4Export || exportStatus !== "idle"}
-							className={activeExportKind === "mp4" && exportStatus === "success" ? "bg-green-500" : mp4Busy ? "bg-blue-500" : ""}
+							disabled={
+								!canMp4Export ||
+								exportStatus !== 'idle'
+							}
+							className={
+								activeExportKind === 'mp4' &&
+								exportStatus === 'success'
+									? 'bg-green-500'
+									: mp4Busy
+										? 'bg-blue-500'
+										: ''
+							}
 						/>
 					</div>
 				</div>
 
-				{softNotice && exportStatus === "idle" && (
+				{softNotice && exportStatus === 'idle' && (
 					<div
 						className="fixed z-50 rounded-full border border-black/10 bg-white/72 px-3 py-1 text-[11px] font-medium text-black/65 shadow-[0_8px_18px_rgba(0,0,0,0.1)] backdrop-blur-sm"
 						style={{
@@ -1024,12 +1269,16 @@ export default function IpodClassicWorkbench() {
 					stage={exportStatus as ExportStage}
 					progress={exportProgressValue}
 					error={exportError}
-					filename={activeExportKind ? `${state.title}.${activeExportKind}` : undefined}
-					onClose={() => send({ type: "RESET_EXPORT" })}
+					filename={
+						activeExportKind
+							? `${state.title}.${activeExportKind}`
+							: undefined
+					}
+					onClose={() => send({ type: 'RESET_EXPORT' })}
 				/>
 
 				<div
-					className={`relative my-auto overflow-hidden transition-opacity duration-700 ${viewMode !== "3d" ? "opacity-100" : "opacity-0 pointer-events-none absolute"}`}
+					className={`relative my-auto overflow-hidden transition-opacity duration-700 ${viewMode !== '3d' ? 'opacity-100' : 'opacity-0 pointer-events-none absolute'}`}
 					style={{
 						width: `${scaledFrameWidth}px`,
 						height: `${scaledFrameHeight}px`,
@@ -1046,13 +1295,17 @@ export default function IpodClassicWorkbench() {
 							width: `${frameWidth}px`,
 							height: `${frameHeight}px`,
 							transform: `scale(${previewScale})`,
-							transformOrigin: "top left",
+							transformOrigin: 'top left',
 						}}
 					>
 						<div
 							ref={exportTargetRef}
 							className="p-8 sm:p-10 md:p-12"
-							style={{ backgroundColor: isExportCapturing ? bgColor : "transparent" }}
+							style={{
+								backgroundColor: isExportCapturing
+									? bgColor
+									: 'transparent',
+							}}
 						>
 							<IpodDevice
 								preset={activePreset}
@@ -1067,21 +1320,25 @@ export default function IpodClassicWorkbench() {
 
 				<AnimatedExportDialog
 					open={animatedExportDialogFormat !== null}
-					format={animatedExportDialogFormat ?? "gif"}
+					format={animatedExportDialogFormat ?? 'gif'}
 					durationSeconds={animatedExportDurationSeconds}
 					quality={animatedExportQuality}
 					layout={animatedExportLayout}
 					currentTimeLabel={currentTimeLabel}
 					mp4Supported={canMp4Export}
 					onClose={() => setAnimatedExportDialogFormat(null)}
-					onDurationChange={(value) => setAnimatedExportDurationSeconds(clampAnimatedExportDurationSeconds(value))}
+					onDurationChange={(value) =>
+						setAnimatedExportDurationSeconds(
+							clampAnimatedExportDurationSeconds(value),
+						)
+					}
 					onFormatChange={(f) => setAnimatedExportDialogFormat(f)}
 					onQualityChange={setAnimatedExportQuality}
 					onLayoutChange={setAnimatedExportLayout}
 					onConfirm={handleAnimatedExportConfirm}
 				/>
 
-				{viewMode === "3d" && (
+				{viewMode === '3d' && (
 					<ThreeDIpod
 						ref={threeDIpodRef}
 						preset={activePreset}

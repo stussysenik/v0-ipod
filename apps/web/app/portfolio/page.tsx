@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-
-import { IpodPortfolioStage } from "@ipod/components/ipod/scenes/ipod-portfolio-stage";
+import { IpodPortfolioStage } from '@ipod/components/ipod/scenes/ipod-portfolio-stage';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-	title: "Stüssy Senik · iPod Portfolio",
+	title: 'Stüssy Senik · iPod Portfolio',
 	description:
-		"A portfolio you browse like an iPod — spin the wheel through works, the hiring case, writings, labs, and CV. Design Engineer & Creative Producer. REMIX, RE-THINK, RE:IMAGINE.",
+		'A portfolio you browse like an iPod — spin the wheel through works, the hiring case, writings, labs, and CV. Design Engineer & Creative Producer. REMIX, RE-THINK, RE:IMAGINE.',
 };
 
 export default function PortfolioPage() {

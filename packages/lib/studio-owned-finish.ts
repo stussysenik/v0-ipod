@@ -31,7 +31,7 @@
  * inputs, so the whole thing is unit-testable and the keyframe-diff harness can reason about it.
  */
 
-import { cloneLightingConfig, type StudioLightingConfig } from "./studio-lighting-config";
+import { cloneLightingConfig, type StudioLightingConfig } from './studio-lighting-config';
 
 /**
  * Below this GGX roughness the steel back is a 1:1 mirror: a turntable's full 360° azimuth then
@@ -44,7 +44,7 @@ import { cloneLightingConfig, type StudioLightingConfig } from "./studio-lightin
 export const STEEL_ROUGHNESS_FLOOR = 0.13;
 
 /** Factory stainless — the back's default when the caller leaves it unset. */
-const FACTORY_STEEL = "#cfd3d7";
+const FACTORY_STEEL = '#cfd3d7';
 
 /** The chosen exterior colours that matter for the finish, plus the stage behind them. */
 export interface DeviceColors {
@@ -58,13 +58,17 @@ export interface DeviceColors {
 
 /** Parse `#rgb` / `#rrggbb` into 0..1 channels; tolerant of a missing/short hash. */
 function channels(hex: string): [number, number, number] {
-	let h = hex.replace("#", "").trim();
+	let h = hex.replace('#', '').trim();
 	if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
 	if (h.length !== 6) return [0.5, 0.5, 0.5];
 	const r = parseInt(h.slice(0, 2), 16) / 255;
 	const g = parseInt(h.slice(2, 4), 16) / 255;
 	const b = parseInt(h.slice(4, 6), 16) / 255;
-	return [Number.isFinite(r) ? r : 0.5, Number.isFinite(g) ? g : 0.5, Number.isFinite(b) ? b : 0.5];
+	return [
+		Number.isFinite(r) ? r : 0.5,
+		Number.isFinite(g) ? g : 0.5,
+		Number.isFinite(b) ? b : 0.5,
+	];
 }
 
 /**
@@ -97,7 +101,10 @@ const PROXIMITY_SPAN = 0.35;
  * by construction. `technicalFlat` callers should skip this: the flat spec-sheet view wants the
  * neutral rig untouched.
  */
-export function deriveOwnedRig(base: StudioLightingConfig, colors: DeviceColors): StudioLightingConfig {
+export function deriveOwnedRig(
+	base: StudioLightingConfig,
+	colors: DeviceColors,
+): StudioLightingConfig {
 	const rig = cloneLightingConfig(base);
 	const stageLum = relativeLuminance(colors.stage);
 	const faceLum = relativeLuminance(colors.skin);

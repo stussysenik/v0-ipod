@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
-import React, { useId, useRef } from "react";
-import { PLACEHOLDER_LOGO_SRC } from "@ipod/lib/ipod-assets";
+import { PLACEHOLDER_LOGO_SRC } from '@ipod/lib/ipod-assets';
+import type React from 'react';
+import { useId, useRef } from 'react';
 
 interface ImageUploadProps {
 	currentImage: string;
@@ -13,7 +14,7 @@ interface ImageUploadProps {
 export function ImageUpload({
 	currentImage,
 	onImageChange,
-	className = "",
+	className = '',
 	disabled = false,
 }: ImageUploadProps) {
 	const inputId = useId();
@@ -24,9 +25,9 @@ export function ImageUpload({
 		const file = e.target.files?.[0];
 		if (file) {
 			const reader = new FileReader();
-			reader.addEventListener("load", (e) => {
+			reader.addEventListener('load', (e) => {
 				const result = e.target?.result;
-				if (typeof result === "string") {
+				if (typeof result === 'string') {
 					onImageChange(result);
 				}
 			});
@@ -35,31 +36,30 @@ export function ImageUpload({
 	};
 
 	// Only use crossOrigin for external URLs, not for data URLs or local images
-	const isDataUrl = currentImage?.startsWith("data:");
-	const isLocalImage = currentImage?.startsWith("/");
+	const isDataUrl = currentImage?.startsWith('data:');
+	const isLocalImage = currentImage?.startsWith('/');
 	const needsCrossOrigin = currentImage && !isDataUrl && !isLocalImage;
 
 	return (
 		<>
 			<label
 				htmlFor={inputId}
-				role="button"
 				tabIndex={disabled ? -1 : 0}
 				onKeyDown={(e) => {
 					if (disabled) return;
-					if (e.key === "Enter" || e.key === " ") {
+					if (e.key === 'Enter' || e.key === ' ') {
 						e.preventDefault();
 						inputRef.current?.click();
 					}
 				}}
-				className={`${disabled ? "cursor-default" : "cursor-pointer"} touch-manipulation ${className}`}
+				className={`${disabled ? 'cursor-default' : 'cursor-pointer'} touch-manipulation ${className}`}
 			>
 				<img
 					src={currentImage || PLACEHOLDER_LOGO_SRC}
 					alt="Album artwork"
 					data-testid="artwork-image"
 					className="w-full h-full object-cover"
-					{...(needsCrossOrigin ? { crossOrigin: "anonymous" } : {})}
+					{...(needsCrossOrigin ? { crossOrigin: 'anonymous' } : {})}
 				/>
 			</label>
 			<input
@@ -73,17 +73,17 @@ export function ImageUpload({
 				aria-hidden="true"
 				tabIndex={-1}
 				style={{
-					position: "absolute",
-					width: "1px",
-					height: "1px",
-					margin: "-1px",
+					position: 'absolute',
+					width: '1px',
+					height: '1px',
+					margin: '-1px',
 					padding: 0,
 					border: 0,
-					overflow: "hidden",
-					clip: "rect(0 0 0 0)",
-					clipPath: "inset(50%)",
-					whiteSpace: "nowrap",
-					pointerEvents: "none",
+					overflow: 'hidden',
+					clip: 'rect(0 0 0 0)',
+					clipPath: 'inset(50%)',
+					whiteSpace: 'nowrap',
+					pointerEvents: 'none',
 				}}
 			/>
 		</>

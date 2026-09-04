@@ -1,39 +1,38 @@
-"use client";
+'use client';
 
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
-
-import type { IpodHardwarePresetId } from "@ipod/types/ipod-state";
+import type { IpodHardwarePresetId } from '@ipod/types/ipod-state';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 // iPod 6th Generation Color Tokens
 // Based on reference: ipod-6th-classic-gen.png
 export const IPOD_6G_COLORS = {
 	case: {
-		black: "#1b1818",
-		white: "#F5F5F7",
+		black: '#1b1818',
+		white: '#F5F5F7',
 	},
 	background: {
-		white: "#FFFFFF",
-		dark: "#000000",
+		white: '#FFFFFF',
+		dark: '#000000',
 	},
 	wheel: {
 		dark: {
-			surface: "#1c1a1b",
-			border: "#2c2a2b",
-			label: "#FFFFFF",
-			center: "#2c2a2b",
-			centerBorder: "#3a3838",
+			surface: '#1c1a1b',
+			border: '#2c2a2b',
+			label: '#FFFFFF',
+			center: '#2c2a2b',
+			centerBorder: '#3a3838',
 		},
 		light: {
-			surface: "#F5F5F7",
-			border: "#D1D1D6",
-			label: "#8E8E93",
-			center: "#E5E5EA",
-			centerBorder: "#D1D1D6",
+			surface: '#F5F5F7',
+			border: '#D1D1D6',
+			label: '#8E8E93',
+			center: '#E5E5EA',
+			centerBorder: '#D1D1D6',
 		},
 	},
 } as const;
 
-export type IPodTheme = "black" | "white";
+export type IPodTheme = 'black' | 'white';
 
 export interface UseIPodThemeReturn {
 	theme: IPodTheme;
@@ -46,21 +45,21 @@ export interface UseIPodThemeReturn {
 	setTheme: (theme: IPodTheme) => void;
 }
 
-const STORAGE_KEY = "ipod-theme";
+const STORAGE_KEY = 'ipod-theme';
 
 function readStoredTheme(): IPodTheme | null {
-	if (typeof window === "undefined") return null;
+	if (typeof window === 'undefined') return null;
 	try {
 		const raw = window.localStorage.getItem(STORAGE_KEY);
-		if (raw === "black" || raw === "white") return raw;
+		if (raw === 'black' || raw === 'white') return raw;
 		// Migrate legacy `silver` → `white`
-		if (raw === "silver") {
+		if (raw === 'silver') {
 			try {
-				window.localStorage.setItem(STORAGE_KEY, "white");
+				window.localStorage.setItem(STORAGE_KEY, 'white');
 			} catch {
 				// Ignore quota / private-mode failures; return migrated value anyway.
 			}
-			return "white";
+			return 'white';
 		}
 	} catch {
 		// Ignore Safari private-mode SecurityError and similar.
@@ -71,7 +70,7 @@ function readStoredTheme(): IPodTheme | null {
 /**
  * Custom hook for iPod theme management
  */
-export function useIPodTheme(initialTheme: IPodTheme = "black"): UseIPodThemeReturn {
+export function useIPodTheme(initialTheme: IPodTheme = 'black'): UseIPodThemeReturn {
 	const [theme, setThemeState] = useState<IPodTheme>(initialTheme);
 
 	useEffect(() => {
@@ -80,7 +79,7 @@ export function useIPodTheme(initialTheme: IPodTheme = "black"): UseIPodThemeRet
 	}, []);
 
 	useEffect(() => {
-		if (typeof window === "undefined") return;
+		if (typeof window === 'undefined') return;
 		try {
 			window.localStorage.setItem(STORAGE_KEY, theme);
 		} catch {
@@ -89,14 +88,14 @@ export function useIPodTheme(initialTheme: IPodTheme = "black"): UseIPodThemeRet
 	}, [theme]);
 
 	const toggleTheme = useCallback(() => {
-		setThemeState((prev) => (prev === "black" ? "white" : "black"));
+		setThemeState((prev) => (prev === 'black' ? 'white' : 'black'));
 	}, []);
 
 	const setTheme = useCallback((nextTheme: IPodTheme) => {
 		setThemeState(nextTheme);
 	}, []);
 
-	const isBlack = theme === "black";
+	const isBlack = theme === 'black';
 
 	const caseColor = isBlack ? IPOD_6G_COLORS.case.black : IPOD_6G_COLORS.case.white;
 
@@ -105,8 +104,8 @@ export function useIPodTheme(initialTheme: IPodTheme = "black"): UseIPodThemeRet
 	const wheelColors = isBlack ? IPOD_6G_COLORS.wheel.dark : IPOD_6G_COLORS.wheel.light;
 
 	const presetId: IpodHardwarePresetId = isBlack
-		? "classic-2008-black"
-		: "classic-2008-silver";
+		? 'classic-2008-black'
+		: 'classic-2008-silver';
 
 	return {
 		theme,
@@ -120,7 +119,7 @@ export function useIPodTheme(initialTheme: IPodTheme = "black"): UseIPodThemeRet
 	};
 }
 
-const IPodThemeContext = createContext<IPodTheme>("black");
+const IPodThemeContext = createContext<IPodTheme>('black');
 
 export function IPodThemeProvider({ theme, children }: { theme: IPodTheme; children: ReactNode }) {
 	return <IPodThemeContext.Provider value={theme}>{children}</IPodThemeContext.Provider>;

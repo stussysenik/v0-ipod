@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { IpodStarRating } from "@ipod/components/ipod/controls/ipod-star-rating";
-import { EditableText } from "@ipod/components/ipod/editors/editable-text";
-import { EditableTrackNumber } from "@ipod/components/ipod/editors/editable-track-number";
-import { getTextTokenCss } from "@ipod/lib/color-manifest";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import type { SongMetadata } from "@ipod/types/ipod";
-import type { RenderNowPlayingElement } from "@ipod/components/ipod/scenes/ipod-scene-types";
+import { IpodStarRating } from '@ipod/components/ipod/controls/ipod-star-rating';
+import { EditableText } from '@ipod/components/ipod/editors/editable-text';
+import { EditableTrackNumber } from '@ipod/components/ipod/editors/editable-track-number';
+import type { RenderNowPlayingElement } from '@ipod/components/ipod/scenes/ipod-scene-types';
+import { getTextTokenCss } from '@ipod/lib/color-manifest';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import type { SongMetadata } from '@ipod/types/ipod';
 
 interface IpodTrackMetaPanelProps {
-	screenTokens: IpodClassicPresetDefinition["screen"];
+	screenTokens: IpodClassicPresetDefinition['screen'];
 	state: SongMetadata;
 	renderElement: RenderNowPlayingElement;
 	isInlineEditingEnabled: boolean;
@@ -43,10 +43,10 @@ export function IpodTrackMetaPanel({
 	onTotalTracksChange,
 	playClick,
 }: IpodTrackMetaPanelProps) {
-	const titleColor = getTextTokenCss("screen.title");
-	const artistColor = getTextTokenCss("screen.artist");
-	const albumColor = getTextTokenCss("screen.album");
-	const trackInfoColor = getTextTokenCss("screen.trackInfo");
+	const titleColor = getTextTokenCss('screen.title');
+	const artistColor = getTextTokenCss('screen.artist');
+	const albumColor = getTextTokenCss('screen.album');
+	const trackInfoColor = getTextTokenCss('screen.trackInfo');
 
 	return (
 		<div
@@ -54,7 +54,7 @@ export function IpodTrackMetaPanel({
 			data-testid="track-meta"
 		>
 			{renderElement(
-				"title",
+				'title',
 				<div
 					className="min-w-0 font-bold leading-[1.05] tracking-[-0.03em]"
 					style={{
@@ -78,14 +78,14 @@ export function IpodTrackMetaPanel({
 					/>
 				</div>,
 				{
-					className: "relative z-20 w-full min-w-0",
+					className: 'relative z-20 w-full min-w-0',
 					style: { marginBottom: screenTokens.titleMarginBottom },
-					testId: "track-title",
+					testId: 'track-title',
 				},
 			)}
 
 			{renderElement(
-				"artist",
+				'artist',
 				<div
 					className="min-w-0 font-normal leading-[1.25] tracking-[-0.01em]"
 					style={{
@@ -108,14 +108,14 @@ export function IpodTrackMetaPanel({
 					/>
 				</div>,
 				{
-					className: "relative z-20 w-full min-w-0",
+					className: 'relative z-20 w-full min-w-0',
 					style: { marginBottom: screenTokens.artistMarginBottom },
-					testId: "track-artist",
+					testId: 'track-artist',
 				},
 			)}
 
 			{renderElement(
-				"album",
+				'album',
 				<div
 					className="min-w-0 font-normal leading-[1.25] tracking-[-0.01em]"
 					style={{
@@ -138,14 +138,14 @@ export function IpodTrackMetaPanel({
 					/>
 				</div>,
 				{
-					className: "relative z-20 w-full min-w-0",
+					className: 'relative z-20 w-full min-w-0',
 					style: { marginBottom: screenTokens.albumMarginBottom },
-					testId: "track-album",
+					testId: 'track-album',
 				},
 			)}
 
 			{renderElement(
-				"rating",
+				'rating',
 				<IpodStarRating
 					rating={state.rating}
 					onChange={(rating) => {
@@ -160,14 +160,14 @@ export function IpodTrackMetaPanel({
 					fontSize={Math.max(10, screenTokens.metaFontSize + 2)}
 				/>,
 				{
-					className: "relative z-20",
+					className: 'relative z-20',
 					style: { marginBottom: screenTokens.metaMarginBottom },
-					testId: "os-layout-rating",
+					testId: 'os-layout-rating',
 				},
 			)}
 
 			{renderElement(
-				"track-info",
+				'track-info',
 				<div
 					className="mt-[6.5px] font-normal leading-tight tracking-[0.01em] pb-0"
 					style={{
@@ -184,7 +184,7 @@ export function IpodTrackMetaPanel({
 						disabled={!isInlineEditingEnabled}
 					/>
 				</div>,
-				{ testId: "os-layout-track-info" },
+				{ testId: 'os-layout-track-info' },
 			)}
 		</div>
 	);

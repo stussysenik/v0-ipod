@@ -1,17 +1,17 @@
 import {
 	defineConfig,
-	presetUno,
 	presetAttributify,
 	presetIcons,
 	presetTypography,
+	presetUno,
 	transformerDirectives,
 	transformerVariantGroup,
-} from "unocss";
+} from 'unocss';
 
 export default defineConfig({
 	shortcuts: [
-		["flex-center", "flex items-center justify-center"],
-		["stack", "flex flex-col"],
+		['flex-center', 'flex items-center justify-center'],
+		['stack', 'flex flex-col'],
 	],
 	presets: [
 		presetUno(), // Includes Tachyons support

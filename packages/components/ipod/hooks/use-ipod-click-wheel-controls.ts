@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback } from "react";
+import type { IpodWorkbenchModel } from '@ipod/lib/ipod-state/model';
 
-import { isAuthenticInteractionModel } from "@ipod/lib/ipod-state/selectors";
-import type { IpodWorkbenchModel } from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
+import { isAuthenticInteractionModel } from '@ipod/lib/ipod-state/selectors';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
+import { useCallback } from 'react';
 
 /**
  * Canonical top-level menu for the iPod classic OS.
@@ -14,15 +14,15 @@ import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
  * lockstep across views.
  */
 export const CLASSIC_OS_MENU_ITEMS = [
-	{ id: "music", label: "Music" },
-	{ id: "videos", label: "Videos" },
-	{ id: "photos", label: "Photos" },
-	{ id: "podcasts", label: "Podcasts" },
-	{ id: "extras", label: "Extras" },
-	{ id: "settings", label: "Settings" },
-	{ id: "shuffle-songs", label: "Shuffle Songs" },
-	{ id: "now-playing", label: "Now Playing" },
-	{ id: "about", label: "About" },
+	{ id: 'music', label: 'Music' },
+	{ id: 'videos', label: 'Videos' },
+	{ id: 'photos', label: 'Photos' },
+	{ id: 'podcasts', label: 'Podcasts' },
+	{ id: 'extras', label: 'Extras' },
+	{ id: 'settings', label: 'Settings' },
+	{ id: 'shuffle-songs', label: 'Shuffle Songs' },
+	{ id: 'now-playing', label: 'Now Playing' },
+	{ id: 'about', label: 'About' },
 ] as const;
 
 export interface ClickWheelControlsParams {
@@ -45,7 +45,7 @@ export interface ClickWheelControlsParams {
 
 export interface ClickWheelControls {
 	menuItems: typeof CLASSIC_OS_MENU_ITEMS;
-	setOsScreen: (next: IpodWorkbenchModel["interaction"]["osScreen"]) => void;
+	setOsScreen: (next: IpodWorkbenchModel['interaction']['osScreen']) => void;
 	cycleOsMenu: (direction: number) => void;
 	handleWheelSeek: (delta: number) => void;
 	handleSeek: (direction: number) => void;
@@ -82,8 +82,8 @@ export function useIpodClickWheelControls({
 	);
 
 	const setOsScreen = useCallback(
-		(nextScreen: IpodWorkbenchModel["interaction"]["osScreen"]) => {
-			dispatch({ type: "SET_OS_SCREEN", payload: nextScreen });
+		(nextScreen: IpodWorkbenchModel['interaction']['osScreen']) => {
+			dispatch({ type: 'SET_OS_SCREEN', payload: nextScreen });
 		},
 		[dispatch],
 	);
@@ -91,7 +91,7 @@ export function useIpodClickWheelControls({
 	const cycleOsMenu = useCallback(
 		(direction: number) => {
 			dispatch({
-				type: "CYCLE_OS_MENU",
+				type: 'CYCLE_OS_MENU',
 				payload: { direction, total: CLASSIC_OS_MENU_ITEMS.length },
 			});
 			playClick();
@@ -101,7 +101,7 @@ export function useIpodClickWheelControls({
 
 	const handleWheelSeek = useCallback(
 		(delta: number) => {
-			if (osScreen === "menu") {
+			if (osScreen === 'menu') {
 				cycleOsMenu(delta);
 				return;
 			}
@@ -112,7 +112,7 @@ export function useIpodClickWheelControls({
 				Math.min(state.duration, state.currentTime + delta * step),
 			);
 			if (Math.floor(nextTime) !== Math.floor(state.currentTime)) {
-				dispatch({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+				dispatch({ type: 'UPDATE_CURRENT_TIME', payload: nextTime });
 				if (Math.abs(delta) > 0.5) playClick();
 			}
 		},
@@ -126,7 +126,7 @@ export function useIpodClickWheelControls({
 				0,
 				Math.min(state.duration, state.currentTime + direction * step),
 			);
-			dispatch({ type: "UPDATE_CURRENT_TIME", payload: nextTime });
+			dispatch({ type: 'UPDATE_CURRENT_TIME', payload: nextTime });
 			playClick();
 		},
 		[dispatch, playClick, state.currentTime, state.duration],
@@ -137,12 +137,12 @@ export function useIpodClickWheelControls({
 		if (!activeItem) return;
 
 		switch (activeItem.id) {
-			case "music":
-			case "now-playing":
-			case "shuffle-songs":
-				setOsScreen("now-playing");
+			case 'music':
+			case 'now-playing':
+			case 'shuffle-songs':
+				setOsScreen('now-playing');
 				return;
-			case "settings":
+			case 'settings':
 				onOpenSettings?.();
 				return;
 			default:
@@ -151,21 +151,21 @@ export function useIpodClickWheelControls({
 	}, [onNotice, onOpenSettings, osMenuIndex, setOsScreen]);
 
 	const handleNowPlayingCenterClick = useCallback(() => {
-		dispatch({ type: "TOGGLE_OS_NOW_PLAYING_EDITABLE" });
+		dispatch({ type: 'TOGGLE_OS_NOW_PLAYING_EDITABLE' });
 	}, [dispatch]);
 
 	const handleMenuButtonPress = useCallback(() => {
 		if (!isAuthenticInteraction) {
 			// Direct mode: toggle between menu and now-playing
-			setOsScreen(osScreen === "menu" ? "now-playing" : "menu");
+			setOsScreen(osScreen === 'menu' ? 'now-playing' : 'menu');
 			return;
 		}
-		dispatch({ type: "SET_OS_NOW_PLAYING_EDITABLE", payload: false });
-		setOsScreen("menu");
+		dispatch({ type: 'SET_OS_NOW_PLAYING_EDITABLE', payload: false });
+		setOsScreen('menu');
 	}, [dispatch, isAuthenticInteraction, osScreen, setOsScreen]);
 
 	const handlePreviousButtonPress = useCallback(() => {
-		if (osScreen === "menu") {
+		if (osScreen === 'menu') {
 			cycleOsMenu(-1);
 			return;
 		}
@@ -173,7 +173,7 @@ export function useIpodClickWheelControls({
 	}, [cycleOsMenu, handleSeek, osScreen]);
 
 	const handleNextButtonPress = useCallback(() => {
-		if (osScreen === "menu") {
+		if (osScreen === 'menu') {
 			cycleOsMenu(1);
 			return;
 		}
@@ -181,16 +181,16 @@ export function useIpodClickWheelControls({
 	}, [cycleOsMenu, handleSeek, osScreen]);
 
 	const handlePlayPauseButtonPress = useCallback(() => {
-		if (osScreen === "menu") {
-			setOsScreen("now-playing");
+		if (osScreen === 'menu') {
+			setOsScreen('now-playing');
 			return;
 		}
 
-		dispatch({ type: "TOGGLE_IS_PLAYING" });
+		dispatch({ type: 'TOGGLE_IS_PLAYING' });
 		playClick();
 
 		const nextIsPlaying = !isPlaying;
-		onNotice?.(nextIsPlaying ? "Playing" : "Paused");
+		onNotice?.(nextIsPlaying ? 'Playing' : 'Paused');
 	}, [dispatch, isPlaying, onNotice, osScreen, playClick, setOsScreen]);
 
 	return {

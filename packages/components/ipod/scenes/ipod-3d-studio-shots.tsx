@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState, type Dispatch } from "react";
-
-import type { IpodCameraFocus, ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
-import type { IpodPresentationState } from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
-import type { StudioPose } from "@ipod/lib/studio-camera";
+import type { IpodCameraFocus, ThreeDIpodHandle } from '@ipod/components/three/three-d-ipod';
+import type { IpodPresentationState } from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
+import type { StudioPose } from '@ipod/lib/studio-camera';
+import { type Dispatch, useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * The /3d bottom bar — one strip that owns *orientation* and *saved studio shots*.
@@ -22,7 +21,7 @@ import type { StudioPose } from "@ipod/lib/studio-camera";
  * a phone camera flips between saved filters.
  */
 
-const SHOTS_STORAGE_KEY = "ipod-3d-studio-shots";
+const SHOTS_STORAGE_KEY = 'ipod-3d-studio-shots';
 
 // The slice of presentation a studio shot restores — the body finish, not the
 // hardware preset or view mode (orientation is carried by the pose).
@@ -43,9 +42,9 @@ interface StudioShot {
 }
 
 const FOCI: readonly { id: IpodCameraFocus; label: string }[] = [
-	{ id: "product", label: "Product" },
-	{ id: "front", label: "Front" },
-	{ id: "back", label: "Back" },
+	{ id: 'product', label: 'Product' },
+	{ id: 'front', label: 'Front' },
+	{ id: 'back', label: 'Back' },
 ] as const;
 
 interface Ipod3DStudioShotsProps {
@@ -108,21 +107,24 @@ export function Ipod3DStudioShots({
 			bgColor: presentation.bgColor,
 		};
 		persist([...shots, { id: `S${counter.current++}`, pose, look }]);
-		onNotice?.("Studio shot saved");
+		onNotice?.('Studio shot saved');
 	}, [apiRef, persist, presentation, shots, onNotice]);
 
 	const recallShot = useCallback(
 		(shot: StudioShot) => {
 			// Repaint the body, then fly the camera. Colors are React state; the pose
 			// eases through the orbit rig — both land together as one composed look.
-			dispatch({ type: "SET_SKIN_COLOR", payload: shot.look.skinColor });
-			dispatch({ type: "SET_RING_COLOR", payload: shot.look.ringColor });
-			dispatch({ type: "SET_CENTER_COLOR", payload: shot.look.centerColor });
-			dispatch({ type: "SET_BACK_COLOR", payload: shot.look.backColor });
+			dispatch({ type: 'SET_SKIN_COLOR', payload: shot.look.skinColor });
+			dispatch({ type: 'SET_RING_COLOR', payload: shot.look.ringColor });
+			dispatch({ type: 'SET_CENTER_COLOR', payload: shot.look.centerColor });
+			dispatch({ type: 'SET_BACK_COLOR', payload: shot.look.backColor });
 			// Legacy shots predate the edge zone — fall back to back so they recall unchanged.
-			dispatch({ type: "SET_EDGE_COLOR", payload: shot.look.edgeColor ?? shot.look.backColor });
-			dispatch({ type: "SET_BEZEL_COLOR", payload: shot.look.bezelColor });
-			dispatch({ type: "SET_BG_COLOR", payload: shot.look.bgColor });
+			dispatch({
+				type: 'SET_EDGE_COLOR',
+				payload: shot.look.edgeColor ?? shot.look.backColor,
+			});
+			dispatch({ type: 'SET_BEZEL_COLOR', payload: shot.look.bezelColor });
+			dispatch({ type: 'SET_BG_COLOR', payload: shot.look.bgColor });
 			apiRef.current?.setCameraGoal({
 				azimuth: shot.pose.azimuth,
 				elevation: shot.pose.elevation,
@@ -141,8 +143,8 @@ export function Ipod3DStudioShots({
 		<div
 			className={`pointer-events-auto fixed z-30 flex items-center gap-1 rounded-full border border-black/10 bg-white/90 p-1 shadow-sm backdrop-blur-md ${
 				landscape
-					? "bottom-3 left-3 max-w-[58vw]"
-					: "bottom-6 left-1/2 max-w-[calc(100vw-1.5rem)] -translate-x-1/2"
+					? 'bottom-3 left-3 max-w-[58vw]'
+					: 'bottom-6 left-1/2 max-w-[calc(100vw-1.5rem)] -translate-x-1/2'
 			}`}
 		>
 			{/* Orientation — the Product / Front / Back snaps */}
@@ -152,7 +154,9 @@ export function Ipod3DStudioShots({
 					type="button"
 					onClick={() => onFocus(f.id)}
 					className={`rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight transition-colors ${
-						focus === f.id ? "bg-black text-white" : "text-black/50 hover:text-black"
+						focus === f.id
+							? 'bg-black text-white'
+							: 'text-black/50 hover:text-black'
 					}`}
 				>
 					{f.label}
@@ -177,7 +181,9 @@ export function Ipod3DStudioShots({
 					>
 						<span
 							className="h-2.5 w-2.5 rounded-full border border-black/15"
-							style={{ backgroundColor: s.look.skinColor }}
+							style={{
+								backgroundColor: s.look.skinColor,
+							}}
 						/>
 						{s.id}
 					</button>

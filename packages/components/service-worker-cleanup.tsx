@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 interface ServiceWorkerCleanupProps {
 	deployVersion?: string;
@@ -13,12 +13,12 @@ type NextDataCarrier = Window & {
 };
 
 function resolveDeployVersion(explicitDeployVersion?: string): string {
-	if (explicitDeployVersion && explicitDeployVersion !== "dev") {
+	if (explicitDeployVersion && explicitDeployVersion !== 'dev') {
 		return explicitDeployVersion;
 	}
 
-	if (typeof window === "undefined") {
-		return explicitDeployVersion ?? "dev";
+	if (typeof window === 'undefined') {
+		return explicitDeployVersion ?? 'dev';
 	}
 
 	const runtimeBuildId = (window as NextDataCarrier).__NEXT_DATA__?.buildId;
@@ -26,12 +26,12 @@ function resolveDeployVersion(explicitDeployVersion?: string): string {
 		return runtimeBuildId;
 	}
 
-	return explicitDeployVersion ?? "dev";
+	return explicitDeployVersion ?? 'dev';
 }
 
 export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProps) {
 	useEffect(() => {
-		if (typeof window === "undefined") {
+		if (typeof window === 'undefined') {
 			return;
 		}
 
@@ -44,7 +44,7 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 			const effectiveDeployVersion = resolveDeployVersion(deployVersion);
 
 			try {
-				const storageKey = "ipodSnapshotDeployVersion";
+				const storageKey = 'ipodSnapshotDeployVersion';
 				const previousVersion = localStorage.getItem(storageKey);
 				versionChanged =
 					!!previousVersion &&
@@ -53,7 +53,7 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 			} catch {}
 
 			try {
-				if ("serviceWorker" in navigator) {
+				if ('serviceWorker' in navigator) {
 					const registrations =
 						await navigator.serviceWorker.getRegistrations();
 					hadRegistrations = registrations.length > 0;
@@ -71,7 +71,7 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 				}
 			} catch {}
 
-			if ("caches" in window) {
+			if ('caches' in window) {
 				try {
 					const keys = await caches.keys();
 					hadCaches = keys.length > 0;
@@ -82,9 +82,9 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 			if (!cancelled && (hadRegistrations || hadCaches || versionChanged)) {
 				const reloadFlag = `ipodSnapshotCacheResetDone:${effectiveDeployVersion}`;
 				if (!sessionStorage.getItem(reloadFlag)) {
-					sessionStorage.setItem(reloadFlag, "1");
+					sessionStorage.setItem(reloadFlag, '1');
 					const nextUrl = new URL(window.location.href);
-					nextUrl.searchParams.set("__v", effectiveDeployVersion);
+					nextUrl.searchParams.set('__v', effectiveDeployVersion);
 					window.location.replace(nextUrl.toString());
 				}
 				return;
@@ -92,9 +92,9 @@ export function ServiceWorkerCleanup({ deployVersion }: ServiceWorkerCleanupProp
 
 			if (!cancelled) {
 				const cleanUrl = new URL(window.location.href);
-				if (cleanUrl.searchParams.has("__v")) {
-					cleanUrl.searchParams.delete("__v");
-					window.history.replaceState(null, "", cleanUrl.toString());
+				if (cleanUrl.searchParams.has('__v')) {
+					cleanUrl.searchParams.delete('__v');
+					window.history.replaceState(null, '', cleanUrl.toString());
 				}
 			}
 		};

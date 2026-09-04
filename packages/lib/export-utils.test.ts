@@ -1,13 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import {
-	resolveMobileExportDelivery,
-	type ExportCapabilities,
-} from "./export-delivery";
+import { type ExportCapabilities, resolveMobileExportDelivery } from './export-delivery';
 
-function createCapabilities(
-	overrides: Partial<ExportCapabilities> = {},
-): ExportCapabilities {
+function createCapabilities(overrides: Partial<ExportCapabilities> = {}): ExportCapabilities {
 	return {
 		canShare: false,
 		canShareFiles: false,
@@ -20,12 +15,12 @@ function createCapabilities(
 	};
 }
 
-describe("resolveMobileExportDelivery", () => {
-	it("uses direct downloads on desktop", () => {
-		expect(resolveMobileExportDelivery(createCapabilities())).toBe("auto-download");
+describe('resolveMobileExportDelivery', () => {
+	it('uses direct downloads on desktop', () => {
+		expect(resolveMobileExportDelivery(createCapabilities())).toBe('auto-download');
 	});
 
-	it("shows share prompt on mobile (re-acquires user activation)", () => {
+	it('shows share prompt on mobile (re-acquires user activation)', () => {
 		expect(
 			resolveMobileExportDelivery(
 				createCapabilities({
@@ -35,10 +30,10 @@ describe("resolveMobileExportDelivery", () => {
 					isMobile: true,
 				}),
 			),
-		).toBe("prompt-share");
+		).toBe('prompt-share');
 	});
 
-	it("switches to a second-tap share prompt after activation has expired", () => {
+	it('switches to a second-tap share prompt after activation has expired', () => {
 		expect(
 			resolveMobileExportDelivery(
 				createCapabilities({
@@ -48,10 +43,10 @@ describe("resolveMobileExportDelivery", () => {
 					isMobile: true,
 				}),
 			),
-		).toBe("prompt-share");
+		).toBe('prompt-share');
 	});
 
-	it("prefers the save picker on mobile Chromium when file sharing is unavailable", () => {
+	it('prefers the save picker on mobile Chromium when file sharing is unavailable', () => {
 		expect(
 			resolveMobileExportDelivery(
 				createCapabilities({
@@ -59,10 +54,10 @@ describe("resolveMobileExportDelivery", () => {
 					isMobile: true,
 				}),
 			),
-		).toBe("prompt-save");
+		).toBe('prompt-save');
 	});
 
-	it("falls back to an in-browser preview prompt on mobile browsers without share or save pickers", () => {
+	it('falls back to an in-browser preview prompt on mobile browsers without share or save pickers', () => {
 		expect(
 			resolveMobileExportDelivery(
 				createCapabilities({
@@ -70,6 +65,6 @@ describe("resolveMobileExportDelivery", () => {
 					isMobile: true,
 				}),
 			),
-		).toBe("prompt-preview");
+		).toBe('prompt-preview');
 	});
 });

@@ -1,4 +1,4 @@
-import manifestData from "@scripts/color-manifest.json";
+import manifestData from '@scripts/color-manifest.json';
 
 export interface AuthenticCaseColor {
 	label: string;
@@ -13,7 +13,7 @@ export interface AuthenticFinish {
 	generation: string;
 	year: number;
 	hex: string;
-	wheelVariant: "light" | "dark";
+	wheelVariant: 'light' | 'dark';
 	notes: string;
 }
 
@@ -23,7 +23,7 @@ export interface AuthenticFinish {
  * - `anodized-aluminum`: 6G/7G/RED. Dyed metal, low metalness, brushed roughness.
  * (The polished-steel back is shared by every generation; it is not a finish.)
  */
-export type FinishMaterialClass = "polycarbonate" | "anodized-aluminum";
+export type FinishMaterialClass = 'polycarbonate' | 'anodized-aluminum';
 
 /**
  * Construction history, encoded: Apple switched the Classic line from
@@ -31,20 +31,20 @@ export type FinishMaterialClass = "polycarbonate" | "anodized-aluminum";
  * edition was 4G/5G-era polycarbonate; (PRODUCT)RED is anodized.
  */
 const MATERIAL_CLASS_BY_FINISH_ID: Record<string, FinishMaterialClass> = {
-	"white-1g": "polycarbonate",
-	"white-4g": "polycarbonate",
-	"white-5g": "polycarbonate",
-	"black-5g": "polycarbonate",
-	"u2-special": "polycarbonate",
-	"silver-6g": "anodized-aluminum",
-	"black-6g": "anodized-aluminum",
-	"charcoal-7g": "anodized-aluminum",
-	"black-7g": "anodized-aluminum",
-	"product-red": "anodized-aluminum",
+	'white-1g': 'polycarbonate',
+	'white-4g': 'polycarbonate',
+	'white-5g': 'polycarbonate',
+	'black-5g': 'polycarbonate',
+	'u2-special': 'polycarbonate',
+	'silver-6g': 'anodized-aluminum',
+	'black-6g': 'anodized-aluminum',
+	'charcoal-7g': 'anodized-aluminum',
+	'black-7g': 'anodized-aluminum',
+	'product-red': 'anodized-aluminum',
 };
 
 export function getFinishMaterialClass(finishId: string): FinishMaterialClass {
-	return MATERIAL_CLASS_BY_FINISH_ID[finishId] ?? "anodized-aluminum";
+	return MATERIAL_CLASS_BY_FINISH_ID[finishId] ?? 'anodized-aluminum';
 }
 
 export interface SurfaceToken {
@@ -127,19 +127,19 @@ export function getAuthenticFinishes(): AuthenticFinishGroup[] {
 
 // iPod Classic 6th Generation Colors
 // Based on reference image: Silver & Black variants
-export const DEFAULT_SHELL_COLOR = "#F2F2F2"; // White iPod case — 1st gen light theme
-export const DEFAULT_BACKDROP_COLOR = "#FFFFFF"; // Stage background
+export const DEFAULT_SHELL_COLOR = '#F2F2F2'; // White iPod case — 1st gen light theme
+export const DEFAULT_BACKDROP_COLOR = '#FFFFFF'; // Stage background
 
 // Authentic iPod 6G colors
-export const IPOD_6G_BLACK = "#1b1818"; // Black case — warm undertone
-export const IPOD_6G_SILVER = "#C8C9CB"; // Silver case
-export const IPOD_6G_BACKGROUND = "#FFFFFF"; // White background
+export const IPOD_6G_BLACK = '#1b1818'; // Black case — warm undertone
+export const IPOD_6G_SILVER = '#C8C9CB'; // Silver case
+export const IPOD_6G_BACKGROUND = '#FFFFFF'; // White background
 
 // Click wheel colors
-export const WHEEL_DARK_SURFACE = "#1c1a1b"; // Black iPod wheel — warm
-export const WHEEL_DARK_LABEL = "#FFFFFF"; // Black iPod labels
-export const WHEEL_LIGHT_SURFACE = "#F5F5F7"; // Silver iPod wheel
-export const WHEEL_LIGHT_LABEL = "#8E8E93"; // Silver iPod labels
+export const WHEEL_DARK_SURFACE = '#1c1a1b'; // Black iPod wheel — warm
+export const WHEEL_DARK_LABEL = '#FFFFFF'; // Black iPod labels
+export const WHEEL_LIGHT_SURFACE = '#F5F5F7'; // Silver iPod wheel
+export const WHEEL_LIGHT_LABEL = '#8E8E93'; // Silver iPod labels
 
 export const CASE_OKLCH_CONFIG = colorManifest.oklchPalettes.case;
 export const BACKGROUND_OKLCH_CONFIG = colorManifest.oklchPalettes.background;
@@ -156,20 +156,20 @@ export const BACKGROUND_CURATED_FAVORITES = colorManifest.curatedFavorites.backg
 	}),
 );
 
-export function getSurfaceToken(name: keyof ColorManifest["surfaceTokens"] | string): string {
+export function getSurfaceToken(name: keyof ColorManifest['surfaceTokens'] | string): string {
 	const token = colorManifest.surfaceTokens[name];
 	if (!token) {
 		console.warn(`[color-manifest] Missing surface token: "${name}"`);
-		return "#808080"; // Fallback grey
+		return '#808080'; // Fallback grey
 	}
 	return token.hex;
 }
 
-export function getTextToken(name: keyof ColorManifest["textTokens"] | string): TextToken {
+export function getTextToken(name: keyof ColorManifest['textTokens'] | string): TextToken {
 	return colorManifest.textTokens[name];
 }
 
-export function getTextTokenCss(name: keyof ColorManifest["textTokens"] | string): string {
+export function getTextTokenCss(name: keyof ColorManifest['textTokens'] | string): string {
 	const token = getTextToken(name);
 	if (token.opacity === undefined || token.opacity >= 1) {
 		return token.hex;
@@ -180,7 +180,7 @@ export function getTextTokenCss(name: keyof ColorManifest["textTokens"] | string
 }
 
 function hexToRgb(hex: string): [number, number, number] {
-	const normalized = hex.replace("#", "");
+	const normalized = hex.replace('#', '');
 	const value = Number.parseInt(normalized, 16);
 	return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
 }
@@ -256,28 +256,28 @@ export const WHEEL_LUMINANCE_BANDS = {
 } as const;
 
 export const WHEEL_COLORWAY_DARK: DerivedWheelColors = {
-	gradient: { from: "#1C1C1E", via: "#202022", to: "#252527" },
-	border: "#2C2C2E",
-	labelColor: "#FFFFFF",
-	centerBorder: "#3A3A3C",
-	centerGradient: { from: "#1C1C1E", via: "#202022", to: "#252527" },
+	gradient: { from: '#1C1C1E', via: '#202022', to: '#252527' },
+	border: '#2C2C2E',
+	labelColor: '#FFFFFF',
+	centerBorder: '#3A3A3C',
+	centerGradient: { from: '#1C1C1E', via: '#202022', to: '#252527' },
 };
 
 export const WHEEL_COLORWAY_MID: DerivedWheelColors = {
-	gradient: { from: "#4A4A4E", via: "#424246", to: "#3A3A3E" },
-	border: "#555558",
-	labelColor: "#E0E0E0",
-	centerBorder: "#505054",
-	centerGradient: { from: "#4E4E52", via: "#46464A", to: "#3E3E42" },
+	gradient: { from: '#4A4A4E', via: '#424246', to: '#3A3A3E' },
+	border: '#555558',
+	labelColor: '#E0E0E0',
+	centerBorder: '#505054',
+	centerGradient: { from: '#4E4E52', via: '#46464A', to: '#3E3E42' },
 };
 
 /** iPod 6G Silver assembly — the light-case wheel colorway. */
 export const WHEEL_COLORWAY_LIGHT: DerivedWheelColors = {
-	gradient: { from: "#F5F5F7", via: "#E8E8EA", to: "#DCDCDC" },
-	border: "#D1D1D6",
-	labelColor: "#8E8E93",
-	centerBorder: "#D1D1D6",
-	centerGradient: { from: "#FFFFFF", via: "#F0F0F2", to: "#E5E5EA" },
+	gradient: { from: '#F5F5F7', via: '#E8E8EA', to: '#DCDCDC' },
+	border: '#D1D1D6',
+	labelColor: '#8E8E93',
+	centerBorder: '#D1D1D6',
+	centerGradient: { from: '#FFFFFF', via: '#F0F0F2', to: '#E5E5EA' },
 };
 
 /** Pick the authentic banded wheel colorway for a case's relative luminance. */
@@ -293,7 +293,7 @@ export function wheelColorwayForLuminance(luminance: number): DerivedWheelColors
 function relativeLuminance(hex: string): number {
 	const [r, g, b] = hexToRgb(hex).map((c) => {
 		const s = c / 255;
-		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+		return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 	});
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -342,8 +342,7 @@ export function deriveWheelColors(caseHex: string): DerivedWheelColors {
 	const centerBorderL = Math.min(centerTopL + 0.01, 1);
 
 	// Labels: white for dark wheels, dark grey for light wheels
-	const labelColor =
-		wheelMidL < 0.38 ? "#FFFFFF" : wheelMidL < 0.6 ? "#B0B0B0" : "#787880";
+	const labelColor = wheelMidL < 0.38 ? '#FFFFFF' : wheelMidL < 0.6 ? '#B0B0B0' : '#787880';
 
 	return {
 		gradient: {
@@ -377,16 +376,16 @@ export function deriveScreenSurround(caseHex: string): {
 	if (L >= 0.45) {
 		// Light case — default dark surround
 		return {
-			top: getSurfaceToken("screen.surround.top"),
-			mid: getSurfaceToken("screen.surround.mid"),
-			bottom: getSurfaceToken("screen.surround.bottom"),
+			top: getSurfaceToken('screen.surround.top'),
+			mid: getSurfaceToken('screen.surround.mid'),
+			bottom: getSurfaceToken('screen.surround.bottom'),
 		};
 	}
 
 	// Dark case — lighter surround matching progress bar visual weight
 	return {
-		top: "#5A5A5D",
-		mid: "#6A6A6E",
-		bottom: "#505054",
+		top: '#5A5A5D',
+		mid: '#6A6A6E',
+		bottom: '#505054',
 	};
 }

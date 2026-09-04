@@ -1,10 +1,10 @@
-import figma from "@figma/code-connect";
+import figma from '@figma/code-connect';
 
-import { EditableTrackNumber } from "@ipod/components/ipod/editable-track-number";
+import { EditableTrackNumber } from '@ipod/components/ipod/editable-track-number';
 
 figma.connect(
 	EditableTrackNumber,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		example: () => (
 			<EditableTrackNumber

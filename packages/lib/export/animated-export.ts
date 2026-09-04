@@ -1,11 +1,11 @@
-export type AnimatedExportFormat = "gif" | "mp4";
+export type AnimatedExportFormat = 'gif' | 'mp4';
 /**
  * Quality tiers. `cinema` is the new high-water mark: 60fps with a fat bitrate for
  * buttery, long-form exports. `standard`/`pro` are unchanged so existing flows and
  * tests keep their exact behaviour.
  */
-export type AnimatedExportQuality = "standard" | "pro" | "cinema";
-export type AnimatedExportLayout = "original" | "ig-story";
+export type AnimatedExportQuality = 'standard' | 'pro' | 'cinema';
+export type AnimatedExportLayout = 'original' | 'ig-story';
 
 export const MIN_ANIMATED_EXPORT_DURATION_SECONDS = 2;
 /** Raised to allow long-form clips (the "long" in buttery long exports). */
@@ -99,7 +99,7 @@ export function buildAnimatedExportPlan(
 	let finalTargetWidth = safeTargetWidth;
 	let finalTargetHeight = safeTargetHeight;
 
-	if (options.layout === "ig-story") {
+	if (options.layout === 'ig-story') {
 		// Force 9:16 aspect ratio by expanding the canvas
 		const targetAspect = 9 / 16;
 		const currentAspect = safeTargetWidth / safeTargetHeight;

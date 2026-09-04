@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { getRevisionSpec } from "@ipod/lib/ipod-revision-data";
+import { getRevisionSpec } from '@ipod/lib/ipod-revision-data';
 
-import type { IpodHardwarePresetId } from "@ipod/types/ipod-state";
+import type { IpodHardwarePresetId } from '@ipod/types/ipod-state';
 
 interface RevisionSpecCardProps {
 	presetId: IpodHardwarePresetId;
@@ -13,14 +13,14 @@ export function RevisionSpecCard({ presetId }: RevisionSpecCardProps) {
 	if (!spec) return null;
 
 	const rows = [
-		{ label: "SoC", value: spec.soC },
-		{ label: "Storage", value: spec.storage },
-		{ label: "RAM", value: spec.ram },
-		{ label: "Display", value: spec.display },
-		{ label: "Audio", value: spec.audioCodec },
-		{ label: "Battery", value: spec.battery },
-		{ label: "OS", value: `${spec.initialOs} → ${spec.finalOs}` },
-		{ label: "Dimensions", value: spec.dimensions },
+		{ label: 'SoC', value: spec.soC },
+		{ label: 'Storage', value: spec.storage },
+		{ label: 'RAM', value: spec.ram },
+		{ label: 'Display', value: spec.display },
+		{ label: 'Audio', value: spec.audioCodec },
+		{ label: 'Battery', value: spec.battery },
+		{ label: 'OS', value: `${spec.initialOs} → ${spec.finalOs}` },
+		{ label: 'Dimensions', value: spec.dimensions },
 	];
 
 	return (
@@ -50,7 +50,7 @@ export function RevisionSpecCard({ presetId }: RevisionSpecCardProps) {
 				))}
 			</div>
 			<div className="mt-3 text-[9px] text-[#A8A8A8]">
-				Sources: {spec.sources.join(", ")}
+				Sources: {spec.sources.join(', ')}
 			</div>
 		</div>
 	);

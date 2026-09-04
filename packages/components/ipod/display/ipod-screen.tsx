@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef } from "react";
-import { IpodDisplay } from "@ipod/components/ipod/display/ipod-display";
-import { useIpodNowPlayingLayout } from "@ipod/components/ipod/hooks/use-ipod-now-playing-layout";
-import { IpodMenuScene } from "@ipod/components/ipod/scenes/ipod-menu-scene";
-import { IpodNowPlayingScene } from "@ipod/components/ipod/scenes/ipod-now-playing-scene";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import type { SongMetadata } from "@ipod/types/ipod";
+import { IpodDisplay } from '@ipod/components/ipod/display/ipod-display';
+import { useIpodNowPlayingLayout } from '@ipod/components/ipod/hooks/use-ipod-now-playing-layout';
+import { IpodMenuScene } from '@ipod/components/ipod/scenes/ipod-menu-scene';
+import { IpodNowPlayingScene } from '@ipod/components/ipod/scenes/ipod-now-playing-scene';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
 import type {
 	IpodInteractionModel,
 	IpodNowPlayingLayoutState,
 	IpodOsScreen,
-} from "@ipod/lib/ipod-state/model";
+} from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
+import type { SongMetadata } from '@ipod/types/ipod';
+import { useCallback, useEffect, useRef } from 'react';
 
 interface IpodScreenProps {
 	preset: IpodClassicPresetDefinition;
@@ -52,7 +52,7 @@ export function IpodScreen({
 	state,
 	dispatch: dispatchProp,
 	playClick,
-	osScreen = "now-playing",
+	osScreen = 'now-playing',
 	osMenuItems = EMPTY_OS_MENU_ITEMS,
 	osMenuIndex = 0,
 	osNowPlayingLayout = {},
@@ -69,25 +69,22 @@ export function IpodScreen({
 	const send = dispatchProp;
 	const remainingAnchorRef = useRef<number | null>(null);
 	const screenTokens = preset.screen;
-	const showOsMenu = osScreen === "menu";
+	const showOsMenu = osScreen === 'menu';
 	// Layout-drag mode (dashed bounding boxes + drag handles) is a DEV-ONLY tool,
 	// gated solely on the `layoutMode` toggle — never on the interaction model. With
 	// it off (the default), the boxes can never appear in the live view, a preview,
 	// or an export, and direct inline editing stays on in EVERY interaction model.
-	const isNowPlayingLayoutMode =
-		layoutMode && !showOsMenu && isEditable && !exportSafe;
+	const isNowPlayingLayoutMode = layoutMode && !showOsMenu && isEditable && !exportSafe;
 	// Saved element positions still render in any Now Playing view (default layout is
 	// empty, so this is a no-op until a dev actually drags something in layout mode).
 	const shouldApplyNowPlayingLayout = !showOsMenu;
 	// Tap-to-edit text/artwork works in all models; only export and the dev layout
 	// tool suppress it.
-	const isInlineEditingEnabled =
-		isEditable && !exportSafe && !isNowPlayingLayoutMode;
+	const isInlineEditingEnabled = isEditable && !exportSafe && !isNowPlayingLayoutMode;
 	// Layered "lift" so the cover reads as a physical tile sitting on the glossy
 	// screen — a tight contact shadow for the edge + a soft ambient cast for depth.
 	// This is most of the "pop": flat single shadows make album art look pasted on.
-	const artworkShadow =
-		"0 1px 2px rgba(0,0,0,0.18), 0 6px 16px rgba(0,0,0,0.20)";
+	const artworkShadow = '0 1px 2px rgba(0,0,0,0.18), 0 6px 16px rgba(0,0,0,0.20)';
 	const { frameRef, renderElement } = useIpodNowPlayingLayout({
 		isLayoutMode: isNowPlayingLayoutMode,
 		shouldApplyLayout: shouldApplyNowPlayingLayout,
@@ -107,13 +104,13 @@ export function IpodScreen({
 		(currentTime: number, preserveRemaining = false) => {
 			const safeCurrent = Math.max(0, Math.floor(currentTime));
 			if (send) {
-				send({ type: "UPDATE_CURRENT_TIME", payload: safeCurrent });
+				send({ type: 'UPDATE_CURRENT_TIME', payload: safeCurrent });
 			}
 
 			if (preserveRemaining && remainingAnchorRef.current !== null) {
 				if (send) {
 					send({
-						type: "UPDATE_DURATION",
+						type: 'UPDATE_DURATION',
 						payload: safeCurrent + remainingAnchorRef.current,
 					});
 				}
@@ -128,7 +125,7 @@ export function IpodScreen({
 			remainingAnchorRef.current = safeRemaining;
 			if (send) {
 				send({
-					type: "UPDATE_DURATION",
+					type: 'UPDATE_DURATION',
 					payload: state.currentTime + safeRemaining,
 				});
 			}
@@ -177,4 +174,3 @@ export function IpodScreen({
 		</IpodDisplay>
 	);
 }
-

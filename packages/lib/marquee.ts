@@ -4,7 +4,7 @@ export const MARQUEE_START_DELAY_MS = 2500; // 2.5s initial pause
 export const MARQUEE_END_PAUSE_MS = 1500; // 1.5s pause at the end before reset
 export const MARQUEE_STAGGER_MS = 600;
 
-export type MarqueeMode = "loop" | "reset";
+export type MarqueeMode = 'loop' | 'reset';
 
 export interface MarqueeMetrics {
 	containerWidth: number;
@@ -27,8 +27,11 @@ export function getMarqueeGapWidth(_contentWidth: number, _textLength: number): 
 	return MARQUEE_LOOP_GAP_PX;
 }
 
-export function getMarqueeScrollDistance(metrics: MarqueeMetrics, mode: MarqueeMode = "loop"): number {
-	if (mode === "reset") {
+export function getMarqueeScrollDistance(
+	metrics: MarqueeMetrics,
+	mode: MarqueeMode = 'loop',
+): number {
+	if (mode === 'reset') {
 		// In reset mode, we only scroll until the end of the text is visible
 		return Math.max(0, metrics.contentWidth - metrics.containerWidth);
 	}
@@ -36,17 +39,20 @@ export function getMarqueeScrollDistance(metrics: MarqueeMetrics, mode: MarqueeM
 	return metrics.contentWidth + MARQUEE_LOOP_GAP_PX;
 }
 
-export function getMarqueeCycleDurationMs(metrics: MarqueeMetrics, mode: MarqueeMode = "loop"): number {
+export function getMarqueeCycleDurationMs(
+	metrics: MarqueeMetrics,
+	mode: MarqueeMode = 'loop',
+): number {
 	const scrollDistance = getMarqueeScrollDistance(metrics, mode);
 	if (scrollDistance <= 0) return 0;
 
 	const scrollTime = (scrollDistance / MARQUEE_SPEED_PX_PER_SECOND) * 1000;
-	
-	if (mode === "reset") {
+
+	if (mode === 'reset') {
 		// Reset cycle: Pause -> Scroll -> Pause -> Snap
 		return MARQUEE_START_DELAY_MS + scrollTime + MARQUEE_END_PAUSE_MS;
 	}
-	
+
 	// Loop cycle: Pause -> Scroll -> (Seamless Transition)
 	return MARQUEE_START_DELAY_MS + scrollTime;
 }
@@ -55,7 +61,7 @@ export function getMarqueeFrame(
 	metrics: MarqueeMetrics,
 	elapsedMs: number,
 	staggerIndex = 0,
-	mode: MarqueeMode = "loop",
+	mode: MarqueeMode = 'loop',
 ): MarqueeFrame {
 	const overflow = hasMarqueeOverflow(metrics);
 	const scrollDistance = getMarqueeScrollDistance(metrics, mode);
@@ -81,7 +87,7 @@ export function getMarqueeFrame(
 	if (phase <= MARQUEE_START_DELAY_MS) {
 		// Initial Pause
 		translateX = 0;
-	} else if (mode === "reset" && phase > MARQUEE_START_DELAY_MS + scrollTime) {
+	} else if (mode === 'reset' && phase > MARQUEE_START_DELAY_MS + scrollTime) {
 		// Terminal Pause for reset mode
 		translateX = -scrollDistance;
 	} else {

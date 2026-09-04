@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
-import { useFixedEditor } from "./fixed-editor";
+import { useFixedEditor } from './fixed-editor';
 
 interface EditableTrackNumberProps {
 	trackNumber: number;
@@ -18,7 +18,7 @@ export function EditableTrackNumber({
 	totalTracks,
 	onTrackNumberChange,
 	onTotalTracksChange,
-	className = "",
+	className = '',
 	disabled = false,
 }: EditableTrackNumberProps) {
 	const [isEditingTrack, setIsEditingTrack] = useState(false);
@@ -81,18 +81,18 @@ export function EditableTrackNumber({
 	};
 
 	const handleTrackKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter") {
+		if (e.key === 'Enter') {
 			handleTrackBlur();
-		} else if (e.key === "Escape") {
+		} else if (e.key === 'Escape') {
 			setTrackValue(trackNumber.toString());
 			setIsEditingTrack(false);
 		}
 	};
 
 	const handleTotalKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter") {
+		if (e.key === 'Enter') {
 			handleTotalBlur();
-		} else if (e.key === "Escape") {
+		} else if (e.key === 'Escape') {
 			setTotalValue(totalTracks.toString());
 			setIsEditingTotal(false);
 		}
@@ -101,10 +101,10 @@ export function EditableTrackNumber({
 	const openTouchTrackEditor = () => {
 		if (disabled) return;
 		openEditor({
-			title: "Edit track number",
+			title: 'Edit track number',
 			value: trackNumber.toString(),
-			inputMode: "numeric",
-			pattern: "[0-9]*",
+			inputMode: 'numeric',
+			pattern: '[0-9]*',
 			onCommit: (nextValue) => {
 				const num = Number.parseInt(nextValue, 10);
 				if (!Number.isNaN(num) && num >= 1 && num <= totalTracks) {
@@ -117,10 +117,10 @@ export function EditableTrackNumber({
 	const openTouchTotalEditor = () => {
 		if (disabled) return;
 		openEditor({
-			title: "Edit total tracks",
+			title: 'Edit total tracks',
 			value: totalTracks.toString(),
-			inputMode: "numeric",
-			pattern: "[0-9]*",
+			inputMode: 'numeric',
+			pattern: '[0-9]*',
 			onCommit: (nextValue) => {
 				const num = Number.parseInt(nextValue, 10);
 				if (!Number.isNaN(num) && num >= 1 && num >= trackNumber) {
@@ -140,7 +140,7 @@ export function EditableTrackNumber({
 					ref={trackInputRef}
 					className="w-6 bg-white border border-blue-400 rounded px-0.5 text-center outline-none"
 					data-testid="track-number-input"
-					style={{ fontSize: "inherit", fontFamily: "inherit" }}
+					style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
 					type="text"
 					inputMode="numeric"
 					pattern="[0-9]*"
@@ -151,7 +151,10 @@ export function EditableTrackNumber({
 				/>
 			) : (
 				<span
-					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 -mx-0.5 transition-colors`}
+					role="button"
+					tabIndex={disabled ? -1 : 0}
+					aria-label="Edit track number"
+					className={`${disabled ? 'cursor-default' : 'cursor-pointer hover:bg-black/5'} rounded px-0.5 -mx-0.5 transition-colors`}
 					data-testid="track-number-value"
 					onClick={
 						isTouchEditingPreferred
@@ -169,6 +172,15 @@ export function EditableTrackNumber({
 							? openTouchTrackEditor
 							: undefined
 					}
+					onKeyDown={(e) => {
+						if (disabled) return;
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							if (isTouchEditingPreferred)
+								openTouchTrackEditor();
+							else if (!disabled) setIsEditingTrack(true);
+						}
+					}}
 				>
 					{trackNumber}
 				</span>
@@ -179,7 +191,7 @@ export function EditableTrackNumber({
 					ref={totalInputRef}
 					className="w-6 bg-white border border-blue-400 rounded px-0.5 text-center outline-none"
 					data-testid="total-tracks-input"
-					style={{ fontSize: "inherit", fontFamily: "inherit" }}
+					style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
 					type="text"
 					inputMode="numeric"
 					pattern="[0-9]*"
@@ -190,7 +202,10 @@ export function EditableTrackNumber({
 				/>
 			) : (
 				<span
-					className={`${disabled ? "cursor-default" : "cursor-pointer hover:bg-black/5"} rounded px-0.5 -mx-0.5 transition-colors`}
+					role="button"
+					tabIndex={disabled ? -1 : 0}
+					aria-label="Edit total tracks"
+					className={`${disabled ? 'cursor-default' : 'cursor-pointer hover:bg-black/5'} rounded px-0.5 -mx-0.5 transition-colors`}
 					data-testid="total-tracks-value"
 					onClick={
 						isTouchEditingPreferred
@@ -208,6 +223,15 @@ export function EditableTrackNumber({
 							? openTouchTotalEditor
 							: undefined
 					}
+					onKeyDown={(e) => {
+						if (disabled) return;
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							if (isTouchEditingPreferred)
+								openTouchTotalEditor();
+							else if (!disabled) setIsEditingTotal(true);
+						}
+					}}
 				>
 					{totalTracks}
 				</span>

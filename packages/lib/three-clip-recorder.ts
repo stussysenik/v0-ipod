@@ -1,7 +1,6 @@
-import { ArrayBufferTarget, Muxer } from "mp4-muxer";
-
-import type { ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
-import type { LoopStyle, StudioPose } from "@ipod/lib/studio-camera";
+import type { ThreeDIpodHandle } from '@ipod/components/three/three-d-ipod';
+import type { LoopStyle, StudioPose } from '@ipod/lib/studio-camera';
+import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 
 /**
  * Encode a high-fidelity MP4 of the 3D iPod.
@@ -53,9 +52,9 @@ export interface ClipRecorderOptions {
 
 export function isClipRecordingSupported(): boolean {
 	return (
-		typeof window !== "undefined" &&
-		typeof VideoEncoder !== "undefined" &&
-		typeof VideoFrame !== "undefined"
+		typeof window !== 'undefined' &&
+		typeof VideoEncoder !== 'undefined' &&
+		typeof VideoFrame !== 'undefined'
 	);
 }
 
@@ -71,11 +70,11 @@ async function pickH264Codec(
 	bitrate: number,
 ): Promise<string | null> {
 	const candidates = [
-		"avc1.640034", // High 5.2
-		"avc1.640033", // High 5.1
-		"avc1.64002a", // High 4.2
-		"avc1.4d0034", // Main 5.2
-		"avc1.42e01f", // Baseline 3.1
+		'avc1.640034', // High 5.2
+		'avc1.640033', // High 5.1
+		'avc1.64002a', // High 4.2
+		'avc1.4d0034', // Main 5.2
+		'avc1.42e01f', // Baseline 3.1
 	];
 	for (const codec of candidates) {
 		try {
@@ -105,9 +104,9 @@ export async function recordIpodClip(
 		width = 1080,
 		height = 1920,
 		supersample = 1,
-		move = "orbit",
+		move = 'orbit',
 		speed = 1,
-		loop = "loop",
+		loop = 'loop',
 		anchor,
 		motionBlurSamples,
 		shutterAngle,
@@ -122,8 +121,8 @@ export async function recordIpodClip(
 
 	const muxer = new Muxer({
 		target: new ArrayBufferTarget(),
-		video: { codec: "avc", width, height, frameRate: fps },
-		fastStart: "in-memory",
+		video: { codec: 'avc', width, height, frameRate: fps },
+		fastStart: 'in-memory',
 	});
 
 	let encodeError: DOMException | Error | null = null;
@@ -139,14 +138,27 @@ export async function recordIpodClip(
 		height,
 		bitrate: bitsPerSecond,
 		framerate: fps,
-		latencyMode: "quality",
+		latencyMode: 'quality',
 	});
 
 	const frameDurationUs = 1_000_000 / fps;
 
 	try {
 		await handle.renderClipFrames(
-			{ width, height, supersample, durationMs, fps, move, speed, loop, anchor, motionBlurSamples, shutterAngle, onClipProgress },
+			{
+				width,
+				height,
+				supersample,
+				durationMs,
+				fps,
+				move,
+				speed,
+				loop,
+				anchor,
+				motionBlurSamples,
+				shutterAngle,
+				onClipProgress,
+			},
 			async (frameCanvas, index, total) => {
 				if (encodeError) throw encodeError;
 
@@ -165,7 +177,9 @@ export async function recordIpodClip(
 				// Backpressure: don't let the encoder queue run away on a fast machine.
 				if (encoder.encodeQueueSize > 6) {
 					while (encoder.encodeQueueSize > 2) {
-						await new Promise((resolve) => setTimeout(resolve, 4));
+						await new Promise((resolve) =>
+							setTimeout(resolve, 4),
+						);
 						if (encodeError) throw encodeError;
 					}
 				}
@@ -177,8 +191,8 @@ export async function recordIpodClip(
 		muxer.finalize();
 
 		const { buffer } = muxer.target as ArrayBufferTarget;
-		return new Blob([buffer], { type: "video/mp4" });
+		return new Blob([buffer], { type: 'video/mp4' });
 	} finally {
-		if (encoder.state !== "closed") encoder.close();
+		if (encoder.state !== 'closed') encoder.close();
 	}
 }

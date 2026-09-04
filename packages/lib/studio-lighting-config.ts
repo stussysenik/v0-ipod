@@ -24,28 +24,28 @@
 
 /** drei `<Environment preset>` values — kept as a literal union so this file needs no drei import. */
 export type EnvironmentPreset =
-	| "apartment"
-	| "city"
-	| "dawn"
-	| "forest"
-	| "lobby"
-	| "night"
-	| "park"
-	| "studio"
-	| "sunset"
-	| "warehouse";
+	| 'apartment'
+	| 'city'
+	| 'dawn'
+	| 'forest'
+	| 'lobby'
+	| 'night'
+	| 'park'
+	| 'studio'
+	| 'sunset'
+	| 'warehouse';
 
 export const ENVIRONMENT_PRESETS: readonly EnvironmentPreset[] = [
-	"apartment",
-	"city",
-	"dawn",
-	"forest",
-	"lobby",
-	"night",
-	"park",
-	"studio",
-	"sunset",
-	"warehouse",
+	'apartment',
+	'city',
+	'dawn',
+	'forest',
+	'lobby',
+	'night',
+	'park',
+	'studio',
+	'sunset',
+	'warehouse',
 ] as const;
 
 /** A hard, shaping light (key / fill / rim). Position is a studio coordinate in device units. */
@@ -69,7 +69,7 @@ export interface SoftboxSpec {
 }
 
 /** The three named, shapeable spots of the rig. */
-export type SpotRole = "key" | "fill" | "rim";
+export type SpotRole = 'key' | 'fill' | 'rim';
 
 export interface StudioLightingConfig {
 	name: string;
@@ -96,12 +96,12 @@ export interface StudioLightingConfig {
  * panel down to rich graphite. One panel, two finishes, both correct.
  */
 export const APPLE_PRODUCT_RIG: StudioLightingConfig = {
-	name: "Apple Product",
-	ambient: { color: "#eef1f5", intensity: 0.35 },
+	name: 'Apple Product',
+	ambient: { color: '#eef1f5', intensity: 0.35 },
 	// Warm soft key, top-right. Gentle: the metal draws its brightness from the env, so a
 	// punchy key would only clip the matte aluminum to flat white.
 	key: {
-		color: "#FFF5E0",
+		color: '#FFF5E0',
 		intensity: 120,
 		position: [9, 13, 11],
 		angle: 0.35,
@@ -109,31 +109,73 @@ export const APPLE_PRODUCT_RIG: StudioLightingConfig = {
 		castShadow: true,
 	},
 	// Cool fill, left.
-	fill: { color: "#d8e8ff", intensity: 80, position: [-11, 5, 9], angle: 0.55, penumbra: 0.95 },
+	fill: {
+		color: '#d8e8ff',
+		intensity: 80,
+		position: [-11, 5, 9],
+		angle: 0.55,
+		penumbra: 0.95,
+	},
 	// Cool separation rim — raked from the upper-back-LEFT so it draws a thin bright edge down
 	// the device's left/top silhouette, the side that otherwise melts into the sweep at a 3/4
 	// hero angle. Tighter angle = a directional kicker, not a wash; cool so it reads as a studio
 	// rim rather than a second key (design D13 separation).
-	rim: { color: "#D8E8FF", intensity: 110, position: [-6, 7, -8], angle: 0.5, penumbra: 0.98 },
+	rim: {
+		color: '#D8E8FF',
+		intensity: 110,
+		position: [-6, 7, -8],
+		angle: 0.5,
+		penumbra: 0.98,
+	},
 	env: {
-		preset: "studio",
+		preset: 'studio',
 		intensity: 1.25,
 		blur: 0.4,
 		softboxes: [
 			// The big soft front fill — the panel the front face mirrors back to the lens.
 			// Wide + tall so it fills the front reflection hemisphere as an even wash.
-			{ color: "#f8fafc", intensity: 0.85, position: [0, 1.5, 9.5], scale: [30, 38, 1] },
+			{
+				color: '#f8fafc',
+				intensity: 0.85,
+				position: [0, 1.5, 9.5],
+				scale: [30, 38, 1],
+			},
 			// Top edge — a crisp horizon highlight raked across the chrome.
-			{ color: "#ffffff", intensity: 0.75, position: [0, 9, 1], scale: [14, 0.5, 1] },
+			{
+				color: '#ffffff',
+				intensity: 0.75,
+				position: [0, 9, 1],
+				scale: [14, 0.5, 1],
+			},
 			// Warm shoulder, top-right.
-			{ color: "#fff4e6", intensity: 0.65, position: [6, 4, 4], scale: [7, 4, 1] },
+			{
+				color: '#fff4e6',
+				intensity: 0.65,
+				position: [6, 4, 4],
+				scale: [7, 4, 1],
+			},
 			// Cool shoulder, left.
-			{ color: "#e6f0ff", intensity: 0.6, position: [-6, 2, 4], scale: [7, 4, 1] },
+			{
+				color: '#e6f0ff',
+				intensity: 0.6,
+				position: [-6, 2, 4],
+				scale: [7, 4, 1],
+			},
 			// Dark contrast panel — gives white/silver edges definition instead of bleeding
 			// into a white environment ("solidified product").
-			{ color: "#000000", intensity: 0.8, position: [0, -2, -10], scale: [20, 20, 1] },
+			{
+				color: '#000000',
+				intensity: 0.8,
+				position: [0, -2, -10],
+				scale: [20, 20, 1],
+			},
 			// Soft floor bounce.
-			{ color: "#f0f0f0", intensity: 0.35, position: [0, -5, 2], scale: [12, 1.5, 1] },
+			{
+				color: '#f0f0f0',
+				intensity: 0.35,
+				position: [0, -5, 2],
+				scale: [12, 1.5, 1],
+			},
 		],
 	},
 };
@@ -146,11 +188,11 @@ export const APPLE_PRODUCT_RIG: StudioLightingConfig = {
  * boundary-pushing end of the range — turn the env down, let the shadows fall.
  */
 export const DESIGNER_DARK_RIG: StudioLightingConfig = {
-	name: "Designer Dark",
-	ambient: { color: "#0a0e16", intensity: 0.16 },
+	name: 'Designer Dark',
+	ambient: { color: '#0a0e16', intensity: 0.16 },
 	// Punchy warm key raked from the side — the one source that models the form.
 	key: {
-		color: "#fff0d6",
+		color: '#fff0d6',
 		intensity: 240,
 		position: [11, 9, 8],
 		angle: 0.28,
@@ -158,22 +200,48 @@ export const DESIGNER_DARK_RIG: StudioLightingConfig = {
 		castShadow: true,
 	},
 	// Barely-there cool fill — just enough to keep the shadow side from going pure black.
-	fill: { color: "#1a2740", intensity: 34, position: [-12, 3, 7], angle: 0.6, penumbra: 1.0 },
+	fill: { color: '#1a2740', intensity: 34, position: [-12, 3, 7], angle: 0.6, penumbra: 1.0 },
 	// Hard cool rim from upper-back-left — the bright separation edge that sells the dark.
-	rim: { color: "#cfe6ff", intensity: 260, position: [-7, 6, -9], angle: 0.4, penumbra: 0.95 },
+	rim: {
+		color: '#cfe6ff',
+		intensity: 260,
+		position: [-7, 6, -9],
+		angle: 0.4,
+		penumbra: 0.95,
+	},
 	env: {
-		preset: "night",
+		preset: 'night',
 		intensity: 0.4,
 		blur: 0.5,
 		softboxes: [
 			// Dim front fill — a deep graphite the silver face mirrors as a moody sheen.
-			{ color: "#10141c", intensity: 0.45, position: [0, 1.5, 9.5], scale: [30, 38, 1] },
+			{
+				color: '#10141c',
+				intensity: 0.45,
+				position: [0, 1.5, 9.5],
+				scale: [30, 38, 1],
+			},
 			// A single crisp bright horizon edge — the highlight that rakes the chrome rim.
-			{ color: "#dbe8ff", intensity: 1.3, position: [0, 8, 2], scale: [16, 0.4, 1] },
+			{
+				color: '#dbe8ff',
+				intensity: 1.3,
+				position: [0, 8, 2],
+				scale: [16, 0.4, 1],
+			},
 			// Tight warm shoulder, top-right.
-			{ color: "#ffce9e", intensity: 0.85, position: [6, 3, 4], scale: [5, 3, 1] },
+			{
+				color: '#ffce9e',
+				intensity: 0.85,
+				position: [6, 3, 4],
+				scale: [5, 3, 1],
+			},
 			// Big dark contrast panel — solidifies the edges against the black field.
-			{ color: "#000000", intensity: 1.0, position: [0, -2, -10], scale: [22, 22, 1] },
+			{
+				color: '#000000',
+				intensity: 1.0,
+				position: [0, -2, -10],
+				scale: [22, 22, 1],
+			},
 		],
 	},
 };
@@ -188,11 +256,11 @@ export const DESIGNER_DARK_RIG: StudioLightingConfig = {
  * stage the black case keeps its depth while every edge carries a drawn highlight.
  */
 export const EDGE_NOIR_RIG: StudioLightingConfig = {
-	name: "Edge Noir",
-	ambient: { color: "#06080d", intensity: 0.1 },
+	name: 'Edge Noir',
+	ambient: { color: '#06080d', intensity: 0.1 },
 	// Restrained warm key — just enough modelling that the face isn't a void.
 	key: {
-		color: "#ffe9c4",
+		color: '#ffe9c4',
 		intensity: 150,
 		position: [10, 8, 9],
 		angle: 0.24,
@@ -201,24 +269,61 @@ export const EDGE_NOIR_RIG: StudioLightingConfig = {
 	},
 	// The "fill" is repurposed as a SECOND rim from the opposite back quarter, so
 	// both long edges of the chassis carry a drawn line — dual-kicker product noir.
-	fill: { color: "#9fc4ff", intensity: 210, position: [8, 5, -9], angle: 0.34, penumbra: 0.9 },
+	fill: {
+		color: '#9fc4ff',
+		intensity: 210,
+		position: [8, 5, -9],
+		angle: 0.34,
+		penumbra: 0.9,
+	},
 	// Primary hard cool rim, upper-back-left — the brightest stroke in the frame.
-	rim: { color: "#e3f0ff", intensity: 340, position: [-7, 7, -9], angle: 0.36, penumbra: 0.9 },
+	rim: {
+		color: '#e3f0ff',
+		intensity: 340,
+		position: [-7, 7, -9],
+		angle: 0.36,
+		penumbra: 0.9,
+	},
 	env: {
-		preset: "night",
+		preset: 'night',
 		intensity: 0.3,
 		blur: 0.45,
 		softboxes: [
 			// Whisper front fill — keeps the LCD glass alive without lifting the case.
-			{ color: "#0a0d13", intensity: 0.35, position: [0, 1.5, 9.5], scale: [30, 38, 1] },
+			{
+				color: '#0a0d13',
+				intensity: 0.35,
+				position: [0, 1.5, 9.5],
+				scale: [30, 38, 1],
+			},
 			// Twin horizon blades — thin bright lines the chrome edge mirrors on BOTH
 			// flanks, so the side band reads as a continuous drawn edge in any pose.
-			{ color: "#e8f1ff", intensity: 1.6, position: [-7, 5, 1], scale: [0.5, 18, 1] },
-			{ color: "#e8f1ff", intensity: 1.6, position: [7, 5, 1], scale: [0.5, 18, 1] },
+			{
+				color: '#e8f1ff',
+				intensity: 1.6,
+				position: [-7, 5, 1],
+				scale: [0.5, 18, 1],
+			},
+			{
+				color: '#e8f1ff',
+				intensity: 1.6,
+				position: [7, 5, 1],
+				scale: [0.5, 18, 1],
+			},
 			// Crisp top horizon — the highlight that rakes the crown.
-			{ color: "#dbe8ff", intensity: 1.2, position: [0, 8.5, 1], scale: [16, 0.4, 1] },
+			{
+				color: '#dbe8ff',
+				intensity: 1.2,
+				position: [0, 8.5, 1],
+				scale: [16, 0.4, 1],
+			},
 			// Deep contrast pit behind — solidifies the silhouette against the field.
-			{ color: "#000000", intensity: 1.0, position: [0, -2, -10], scale: [24, 24, 1] },
+			{
+				color: '#000000',
+				intensity: 1.0,
+				position: [0, -2, -10],
+				scale: [24, 24, 1],
+			},
 		],
 	},
 };
@@ -238,12 +343,12 @@ export const EDGE_NOIR_RIG: StudioLightingConfig = {
  * neutral, so anodized hues read true rather than tinted by the rig.
  */
 export const NATURAL_LIGHT_RIG: StudioLightingConfig = {
-	name: "Natural Light",
+	name: 'Natural Light',
 	// Open-room ambience — daylight scattered off walls, not a black studio void.
-	ambient: { color: "#f2f3f5", intensity: 0.5 },
+	ambient: { color: '#f2f3f5', intensity: 0.5 },
 	// The sun side of the window: warm, high, from the left — gentle modelling key.
 	key: {
-		color: "#fff3df",
+		color: '#fff3df',
 		intensity: 130,
 		position: [-9, 12, 10],
 		angle: 0.42,
@@ -251,27 +356,57 @@ export const NATURAL_LIGHT_RIG: StudioLightingConfig = {
 		castShadow: true,
 	},
 	// Skylight fill from the right — the cool half of daylight's warm/cool mix.
-	fill: { color: "#e2ecf8", intensity: 70, position: [10, 6, 8], angle: 0.6, penumbra: 1.0 },
+	fill: { color: '#e2ecf8', intensity: 70, position: [10, 6, 8], angle: 0.6, penumbra: 1.0 },
 	// Soft top-back separation so the crown doesn't merge into the bright room.
-	rim: { color: "#eef4fc", intensity: 80, position: [0, 9, -7], angle: 0.5, penumbra: 1.0 },
+	rim: { color: '#eef4fc', intensity: 80, position: [0, 9, -7], angle: 0.5, penumbra: 1.0 },
 	env: {
-		preset: "apartment",
+		preset: 'apartment',
 		intensity: 1.1,
 		blur: 0.55,
 		softboxes: [
 			// The window wall — the big bright panel the face and wheel mirror back.
 			// This is the single light source that keeps dark-wheel labels legible.
-			{ color: "#f7f4ed", intensity: 1.0, position: [-4, 3, 9], scale: [30, 38, 1] },
+			{
+				color: '#f7f4ed',
+				intensity: 1.0,
+				position: [-4, 3, 9],
+				scale: [30, 38, 1],
+			},
 			// Second window pane, warmer and tighter — the glossy highlight with shape.
-			{ color: "#fdf3e3", intensity: 0.85, position: [-8, 5, 4], scale: [9, 14, 1] },
+			{
+				color: '#fdf3e3',
+				intensity: 0.85,
+				position: [-8, 5, 4],
+				scale: [9, 14, 1],
+			},
 			// Cool sky bounce, right — fills the shadow side a stop down.
-			{ color: "#dfe9f4", intensity: 0.55, position: [8, 3, 4], scale: [8, 8, 1] },
+			{
+				color: '#dfe9f4',
+				intensity: 0.55,
+				position: [8, 3, 4],
+				scale: [8, 8, 1],
+			},
 			// Ceiling horizon — the thin crisp line that rakes the chrome rim.
-			{ color: "#ffffff", intensity: 0.6, position: [0, 9, 1], scale: [14, 0.5, 1] },
+			{
+				color: '#ffffff',
+				intensity: 0.6,
+				position: [0, 9, 1],
+				scale: [14, 0.5, 1],
+			},
 			// Soft dark room corner behind — edge definition without studio black.
-			{ color: "#3a3833", intensity: 0.6, position: [4, -1, -10], scale: [18, 18, 1] },
+			{
+				color: '#3a3833',
+				intensity: 0.6,
+				position: [4, -1, -10],
+				scale: [18, 18, 1],
+			},
 			// Warm floor/table bounce — daylight off the paper sweep.
-			{ color: "#efe9de", intensity: 0.4, position: [0, -5, 2], scale: [12, 1.5, 1] },
+			{
+				color: '#efe9de',
+				intensity: 0.4,
+				position: [0, -5, 2],
+				scale: [12, 1.5, 1],
+			},
 		],
 	},
 };
@@ -282,12 +417,12 @@ export const NATURAL_LIGHT_RIG: StudioLightingConfig = {
  * and the field calm — no shaping, no reflections competing with the flat albedo.
  */
 export const FLAT_TECHNICAL_RIG: StudioLightingConfig = {
-	name: "Technical Flat",
-	ambient: { color: "#ffffff", intensity: 1.0 },
-	key: { color: "#ffffff", intensity: 0, position: [0, 10, 10], angle: 0.4, penumbra: 1 },
-	fill: { color: "#ffffff", intensity: 0, position: [-10, 5, 9], angle: 0.5, penumbra: 1 },
-	rim: { color: "#ffffff", intensity: 0, position: [-6, 7, -8], angle: 0.5, penumbra: 1 },
-	env: { preset: "studio", intensity: 0, blur: 1, softboxes: [] },
+	name: 'Technical Flat',
+	ambient: { color: '#ffffff', intensity: 1.0 },
+	key: { color: '#ffffff', intensity: 0, position: [0, 10, 10], angle: 0.4, penumbra: 1 },
+	fill: { color: '#ffffff', intensity: 0, position: [-10, 5, 9], angle: 0.5, penumbra: 1 },
+	rim: { color: '#ffffff', intensity: 0, position: [-6, 7, -8], angle: 0.5, penumbra: 1 },
+	env: { preset: 'studio', intensity: 0, blur: 1, softboxes: [] },
 };
 
 /**
@@ -303,10 +438,10 @@ export interface RigPreset {
 }
 
 export const RIG_PRESETS: readonly RigPreset[] = [
-	{ id: "apple", label: "Apple", config: APPLE_PRODUCT_RIG, stage: "#FFFFFF" },
-	{ id: "natural", label: "Natural Light", config: NATURAL_LIGHT_RIG, stage: "#EDEAE3" },
-	{ id: "dark", label: "Designer Dark", config: DESIGNER_DARK_RIG, stage: "#0B0D12" },
-	{ id: "edge-noir", label: "Edge Noir", config: EDGE_NOIR_RIG, stage: "#050608" },
+	{ id: 'apple', label: 'Apple', config: APPLE_PRODUCT_RIG, stage: '#FFFFFF' },
+	{ id: 'natural', label: 'Natural Light', config: NATURAL_LIGHT_RIG, stage: '#EDEAE3' },
+	{ id: 'dark', label: 'Designer Dark', config: DESIGNER_DARK_RIG, stage: '#0B0D12' },
+	{ id: 'edge-noir', label: 'Edge Noir', config: EDGE_NOIR_RIG, stage: '#050608' },
 ] as const;
 
 /** Deep-clone a config so the cockpit edits a private copy, never the shared default. */
@@ -330,13 +465,10 @@ export function cloneLightingConfig(config: StudioLightingConfig): StudioLightin
 
 const HEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const num = (v: unknown, fallback: number): number =>
-	typeof v === "number" && Number.isFinite(v) ? v : fallback;
+	typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 const hex = (v: unknown, fallback: string): string =>
-	typeof v === "string" && HEX.test(v) ? v : fallback;
-const triple = (
-	v: unknown,
-	fallback: [number, number, number],
-): [number, number, number] =>
+	typeof v === 'string' && HEX.test(v) ? v : fallback;
+const triple = (v: unknown, fallback: [number, number, number]): [number, number, number] =>
 	Array.isArray(v) && v.length === 3
 		? [num(v[0], fallback[0]), num(v[1], fallback[1]), num(v[2], fallback[2])]
 		: fallback;
@@ -349,7 +481,7 @@ function sanitizeSpot(v: unknown, fallback: SpotSpec): SpotSpec {
 		position: triple(c.position, fallback.position),
 		angle: Math.min(Math.max(num(c.angle, fallback.angle), 0), Math.PI / 2),
 		penumbra: Math.min(Math.max(num(c.penumbra, fallback.penumbra), 0), 1),
-		castShadow: typeof c.castShadow === "boolean" ? c.castShadow : fallback.castShadow,
+		castShadow: typeof c.castShadow === 'boolean' ? c.castShadow : fallback.castShadow,
 	};
 }
 
@@ -360,15 +492,15 @@ function sanitizeSpot(v: unknown, fallback: SpotSpec): SpotSpec {
  */
 export function sanitizeLightingConfig(value: unknown): StudioLightingConfig {
 	const base = DESIGNER_DARK_RIG;
-	if (typeof value !== "object" || value === null) return cloneLightingConfig(base);
+	if (typeof value !== 'object' || value === null) return cloneLightingConfig(base);
 	const c = value as Partial<StudioLightingConfig>;
-	const env = (c.env ?? {}) as Partial<StudioLightingConfig["env"]>;
+	const env = (c.env ?? {}) as Partial<StudioLightingConfig['env']>;
 	const preset = ENVIRONMENT_PRESETS.includes(env.preset as EnvironmentPreset)
 		? (env.preset as EnvironmentPreset)
 		: base.env.preset;
 
 	return {
-		name: typeof c.name === "string" ? c.name : base.name,
+		name: typeof c.name === 'string' ? c.name : base.name,
 		ambient: {
 			color: hex(c.ambient?.color, base.ambient.color),
 			intensity: Math.max(0, num(c.ambient?.intensity, base.ambient.intensity)),
@@ -382,16 +514,25 @@ export function sanitizeLightingConfig(value: unknown): StudioLightingConfig {
 			blur: Math.min(Math.max(num(env.blur, base.env.blur), 0), 1),
 			softboxes: Array.isArray(env.softboxes)
 				? env.softboxes.map((s, i) => {
-						const fb = base.env.softboxes[i] ?? base.env.softboxes[0];
+						const fb =
+							base.env.softboxes[i] ??
+							base.env.softboxes[0];
 						const sb = (s ?? {}) as Partial<SoftboxSpec>;
 						return {
 							color: hex(sb.color, fb.color),
-							intensity: Math.max(0, num(sb.intensity, fb.intensity)),
+							intensity: Math.max(
+								0,
+								num(sb.intensity, fb.intensity),
+							),
 							position: triple(sb.position, fb.position),
 							scale: triple(sb.scale, fb.scale),
 						};
 					})
-				: base.env.softboxes.map((s) => ({ ...s, position: [...s.position], scale: [...s.scale] })),
+				: base.env.softboxes.map((s) => ({
+						...s,
+						position: [...s.position],
+						scale: [...s.scale],
+					})),
 		},
 	};
 }

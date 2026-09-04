@@ -1,47 +1,43 @@
-import { toBlob, toPng, toCanvas } from "html-to-image";
-
 import {
-	resolveMobileExportDelivery,
-	type ExportCapabilities,
-} from "@ipod/lib/export-delivery";
-import {
+	type AnimatedExportLayout,
+	type AnimatedExportQuality,
+	buildAnimatedExportPlan,
 	DEFAULT_GIF_EXPORT_FPS,
 	DEFAULT_MP4_EXPORT_FPS,
 	GIF_CAPTURE_SCALE_BALANCED,
 	GIF_CAPTURE_SCALE_HIGH,
+	GIF_QUALITY_CONFIG,
 	MAX_GIF_FRAME_COUNT,
 	MAX_MP4_FRAME_COUNT,
 	MP4_BITRATE_BITS_PER_SECOND,
-	GIF_QUALITY_CONFIG,
 	MP4_QUALITY_CONFIG,
-	buildAnimatedExportPlan,
-	type AnimatedExportQuality,
-	type AnimatedExportLayout,
-} from "@ipod/lib/export/animated-export";
+} from '@ipod/lib/export/animated-export';
 import type {
-	EncoderWorkerRequestPayload,
 	EncoderWorkerRequest,
+	EncoderWorkerRequestPayload,
 	EncoderWorkerResponse,
-} from "@ipod/lib/export/export-encoder-protocol";
+} from '@ipod/lib/export/export-encoder-protocol';
 import {
 	resolveMp4ExportStrategy,
 	resolveSupportedMp4EncoderConfig,
-} from "@ipod/lib/export/mp4-support";
-import { getMarqueeCycleDurationMs, getMarqueeFrame } from "@ipod/lib/marquee";
+} from '@ipod/lib/export/mp4-support';
+import { type ExportCapabilities, resolveMobileExportDelivery } from '@ipod/lib/export-delivery';
+import { getMarqueeCycleDurationMs, getMarqueeFrame } from '@ipod/lib/marquee';
+import { toBlob, toCanvas, toPng } from 'html-to-image';
 
-export type ExportStatus = "idle" | "preparing" | "encoding" | "sharing" | "success" | "error";
+export type ExportStatus = 'idle' | 'preparing' | 'encoding' | 'sharing' | 'success' | 'error';
 
 export interface ExportProgress {
 	stage:
-		| "settling"
-		| "cloning"
-		| "capturing"
-		| "encoding"
-		| "finalizing"
-		| "downloading"
-		| "sharing"
-		| "complete"
-		| "error";
+		| 'settling'
+		| 'cloning'
+		| 'capturing'
+		| 'encoding'
+		| 'finalizing'
+		| 'downloading'
+		| 'sharing'
+		| 'complete'
+		| 'error';
 	label: string;
 	detail?: string;
 	progress: number;
@@ -50,13 +46,13 @@ export interface ExportProgress {
 	etaSeconds?: number;
 }
 
-const EXPORT_ATTRIBUTE = "data-exporting";
+const EXPORT_ATTRIBUTE = 'data-exporting';
 const MAX_EXPORT_SETTLE_DELAY_MS = 900;
-const EXPORT_PIPELINE_VERSION = "2026-02-20-detached-boundary-v3";
+const EXPORT_PIPELINE_VERSION = '2026-02-20-detached-boundary-v3';
 const GIF_DELAY_QUANTUM_MS = 10;
-const EXPORT_SHELL_BORDER_COLOR = "rgba(96,102,110,0.18)";
+const EXPORT_SHELL_BORDER_COLOR = 'rgba(96,102,110,0.18)';
 const EXPORT_SHELL_CONTOUR =
-	"0 0 0 0.5px rgba(70,76,84,0.06), inset 0 0.5px 0 rgba(255,255,255,0.12)";
+	'0 0 0 0.5px rgba(70,76,84,0.06), inset 0 0.5px 0 rgba(255,255,255,0.12)';
 
 type NextDataWindow = Window & {
 	__NEXT_DATA__?: {
@@ -107,8 +103,8 @@ function roundGifDelayMs(value: number): number {
 function parseCssTimeToMs(value: string): number {
 	const trimmed = value.trim();
 	if (!trimmed) return 0;
-	if (trimmed.endsWith("ms")) return Number.parseFloat(trimmed) || 0;
-	if (trimmed.endsWith("s")) return (Number.parseFloat(trimmed) || 0) * 1000;
+	if (trimmed.endsWith('ms')) return Number.parseFloat(trimmed) || 0;
+	if (trimmed.endsWith('s')) return (Number.parseFloat(trimmed) || 0) * 1000;
 	return Number.parseFloat(trimmed) || 0;
 }
 
@@ -120,30 +116,30 @@ function longestTimelineMs(durations: string[], delays: string[]): number {
 	let maxMs = 0;
 	const count = Math.max(durations.length, delays.length || 1);
 	for (let i = 0; i < count; i += 1) {
-		const duration = parseCssTimeToMs(durations[i % durations.length] ?? "0ms");
-		const delay = parseCssTimeToMs(delays[i % (delays.length || 1)] ?? "0ms");
+		const duration = parseCssTimeToMs(durations[i % durations.length] ?? '0ms');
+		const delay = parseCssTimeToMs(delays[i % (delays.length || 1)] ?? '0ms');
 		maxMs = Math.max(maxMs, duration + delay);
 	}
 	return maxMs;
 }
 
 function getMaxVisualSettleDelayMs(element: HTMLElement): number {
-	if (typeof window === "undefined") {
+	if (typeof window === 'undefined') {
 		return 0;
 	}
 
-	const nodes = [element, ...element.querySelectorAll<HTMLElement>("*")];
+	const nodes = [element, ...element.querySelectorAll<HTMLElement>('*')];
 	let maxMs = 0;
 
 	for (const node of nodes) {
 		const style = window.getComputedStyle(node);
 		const transitionMs = longestTimelineMs(
-			style.transitionDuration.split(","),
-			style.transitionDelay.split(","),
+			style.transitionDuration.split(','),
+			style.transitionDelay.split(','),
 		);
 		const animationMs = longestTimelineMs(
-			style.animationDuration.split(","),
-			style.animationDelay.split(","),
+			style.animationDuration.split(','),
+			style.animationDelay.split(','),
 		);
 		maxMs = Math.max(maxMs, transitionMs, animationMs);
 		if (maxMs >= MAX_EXPORT_SETTLE_DELAY_MS) {
@@ -159,24 +155,24 @@ function getMaxVisualSettleDelayMs(element: HTMLElement): number {
  */
 async function imageToDataUrl(img: HTMLImageElement): Promise<string> {
 	// If already a data URL, return as-is
-	if (img.src.startsWith("data:")) {
+	if (img.src.startsWith('data:')) {
 		return img.src;
 	}
 
 	// Create canvas and draw image
-	const canvas = document.createElement("canvas");
+	const canvas = document.createElement('canvas');
 	canvas.width = img.naturalWidth || img.width;
 	canvas.height = img.naturalHeight || img.height;
-	const ctx = canvas.getContext("2d");
+	const ctx = canvas.getContext('2d');
 
 	if (!ctx) {
-		throw new Error("Failed to get canvas context");
+		throw new Error('Failed to get canvas context');
 	}
 
 	ctx.drawImage(img, 0, 0);
 
 	// Return as PNG data URL
-	return canvas.toDataURL("image/png");
+	return canvas.toDataURL('image/png');
 }
 
 /**
@@ -193,12 +189,12 @@ function waitForImageLoad(img: HTMLImageElement): Promise<void> {
 			reject(new Error(`Image load timeout: ${img.src.slice(0, 100)}`));
 		}, 5000);
 
-		img.addEventListener("load", () => {
+		img.addEventListener('load', () => {
 			clearTimeout(timeoutId);
 			resolve();
 		});
 
-		img.addEventListener("error", () => {
+		img.addEventListener('error', () => {
 			clearTimeout(timeoutId);
 			reject(new Error(`Image load failed: ${img.src.slice(0, 100)}`));
 		});
@@ -210,7 +206,7 @@ function waitForImageLoad(img: HTMLImageElement): Promise<void> {
  * This ensures html-to-image can capture them correctly
  */
 export async function preloadAndEmbedImages(element: HTMLElement): Promise<void> {
-	const images = element.querySelectorAll("img");
+	const images = element.querySelectorAll('img');
 
 	const imagePromises = [...images].map(async (img) => {
 		try {
@@ -219,17 +215,17 @@ export async function preloadAndEmbedImages(element: HTMLElement): Promise<void>
 
 			// Skip if no valid image
 			if (!img.naturalWidth || !img.naturalHeight) {
-				console.warn("Skipping invalid image:", img.src.slice(0, 100));
+				console.warn('Skipping invalid image:', img.src.slice(0, 100));
 				return;
 			}
 
 			// Convert to data URL if not already
-			if (!img.src.startsWith("data:")) {
+			if (!img.src.startsWith('data:')) {
 				const dataUrl = await imageToDataUrl(img);
 				img.src = dataUrl;
 			}
 		} catch (error) {
-			console.warn("Failed to preload image:", error);
+			console.warn('Failed to preload image:', error);
 			// Don't fail the entire export for one image
 		}
 	});
@@ -249,28 +245,28 @@ export function createDetachedExportNode(
 	const height = Math.ceil(element.offsetHeight || rect.height || 1);
 	const clone = element.cloneNode(true) as HTMLElement;
 
-	clone.setAttribute("aria-hidden", "true");
-	clone.style.position = "fixed";
+	clone.setAttribute('aria-hidden', 'true');
+	clone.style.position = 'fixed';
 	// Keep clone at viewport origin with negative stacking order so detached
 	// capture avoids off-screen shadow clipping artifacts in some renderers.
-	clone.style.left = "0";
-	clone.style.top = "0";
-	clone.style.zIndex = "-2147483647";
-	clone.style.margin = "0";
-	clone.style.pointerEvents = "none";
+	clone.style.left = '0';
+	clone.style.top = '0';
+	clone.style.zIndex = '-2147483647';
+	clone.style.margin = '0';
+	clone.style.pointerEvents = 'none';
 	clone.style.width = `${width}px`;
 	clone.style.height = `${height}px`;
-	clone.style.maxWidth = "none";
-	clone.style.maxHeight = "none";
-	clone.style.overflow = constrainedFrame ? "hidden" : "visible";
-	clone.style.transform = "none";
-	clone.style.transformOrigin = "top left";
-	clone.style.isolation = "isolate";
-	clone.setAttribute(EXPORT_ATTRIBUTE, "true");
+	clone.style.maxWidth = 'none';
+	clone.style.maxHeight = 'none';
+	clone.style.overflow = constrainedFrame ? 'hidden' : 'visible';
+	clone.style.transform = 'none';
+	clone.style.transformOrigin = 'top left';
+	clone.style.isolation = 'isolate';
+	clone.setAttribute(EXPORT_ATTRIBUTE, 'true');
 	sanitizeDetachedCloneForCapture(clone, { constrainedFrame });
 
 	// Freeze animations/transitions to avoid capturing in-between visual states.
-	const freezeStyle = document.createElement("style");
+	const freezeStyle = document.createElement('style');
 	freezeStyle.textContent = `
     *, *::before, *::after {
       animation: none !important;
@@ -297,16 +293,15 @@ function sanitizeDetachedCloneForCapture(
 	// Replaced by Vanilla Extract captureTheme
 }
 
-
 function resolveRuntimeBuildContext() {
-	if (typeof window === "undefined") {
-		return { deployVersion: "server", buildId: "server" };
+	if (typeof window === 'undefined') {
+		return { deployVersion: 'server', buildId: 'server' };
 	}
 
 	const nextData = window as NextDataWindow;
-	const buildId = nextData.__NEXT_DATA__?.buildId ?? "unknown";
+	const buildId = nextData.__NEXT_DATA__?.buildId ?? 'unknown';
 	const deployVersion =
-		document.documentElement.getAttribute("data-deploy-version") ?? "unknown";
+		document.documentElement.getAttribute('data-deploy-version') ?? 'unknown';
 	return { deployVersion, buildId };
 }
 
@@ -317,11 +312,11 @@ export function removeExportNode(node: HTMLElement | null): void {
 }
 
 function dataUrlToBlob(dataUrl: string): Blob {
-	const [meta, data] = dataUrl.split(",");
+	const [meta, data] = dataUrl.split(',');
 	const mime =
 		meta.match(/^data:(.*?);base64$/)?.[1] ??
 		meta.match(/^data:(.*?);/)?.[1] ??
-		"image/png";
+		'image/png';
 
 	const binary = atob(data);
 	const bytes = new Uint8Array(binary.length);
@@ -334,10 +329,10 @@ function dataUrlToBlob(dataUrl: string): Blob {
 export async function summarizeBlob(blob: Blob): Promise<{ blobSize: number; blobDigest: string }> {
 	try {
 		const arrayBuffer = await blob.arrayBuffer();
-		const digestBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+		const digestBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
 		const digestHex = [...new Uint8Array(digestBuffer)]
-			.map((b) => b.toString(16).padStart(2, "0"))
-			.join("");
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join('');
 		return {
 			blobSize: blob.size,
 			blobDigest: digestHex,
@@ -345,7 +340,7 @@ export async function summarizeBlob(blob: Blob): Promise<{ blobSize: number; blo
 	} catch {
 		return {
 			blobSize: blob.size,
-			blobDigest: "unavailable",
+			blobDigest: 'unavailable',
 		};
 	}
 }
@@ -399,7 +394,7 @@ function formatExportTime(seconds: number, isRemaining: boolean): string {
 	const clamped = Math.max(0, seconds);
 	const m = Math.floor(clamped / 60);
 	const s = Math.floor(clamped % 60);
-	return `${isRemaining ? "-" : ""}${m}:${s.toString().padStart(2, "0")}`;
+	return `${isRemaining ? '-' : ''}${m}:${s.toString().padStart(2, '0')}`;
 }
 
 export function flushAnimatedCloneLayout(root: HTMLElement): void {
@@ -431,10 +426,10 @@ export function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number)
 	const elapsedWrapper = root.querySelector<HTMLElement>('[data-testid="elapsed-time"]');
 	const remainingWrapper = root.querySelector<HTMLElement>('[data-testid="remaining-time"]');
 	const elapsedEl =
-		elapsedWrapper?.querySelector<HTMLElement>("[data-export-time-value]") ??
+		elapsedWrapper?.querySelector<HTMLElement>('[data-export-time-value]') ??
 		elapsedWrapper;
 	const remainingEl =
-		remainingWrapper?.querySelector<HTMLElement>("[data-export-time-value]") ??
+		remainingWrapper?.querySelector<HTMLElement>('[data-export-time-value]') ??
 		remainingWrapper;
 	const progressFill = root.querySelector<HTMLElement>('[data-testid="progress-fill"]');
 
@@ -442,7 +437,8 @@ export function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number)
 		parseNumericDataAttribute(root.dataset.exportBaseDuration) ??
 		parseNumericDataAttribute(
 			progressSection?.dataset.exportDuration ??
-				root.querySelector<HTMLElement>('[data-testid="progress-track"]')?.dataset.exportDuration ??
+				root.querySelector<HTMLElement>('[data-testid="progress-track"]')
+					?.dataset.exportDuration ??
 				root.querySelector<HTMLElement>('[data-testid="ascii-pre"]')
 					?.dataset.exportDuration,
 		);
@@ -487,7 +483,7 @@ export function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number)
 			);
 			const emptyCount = PROGRESS_COLS - filledCount;
 			const progressBar =
-				"\u2593".repeat(filledCount) + "\u2591".repeat(emptyCount);
+				'\u2593'.repeat(filledCount) + '\u2591'.repeat(emptyCount);
 			const elapsedStr = formatExportTime(simulatedTime, false);
 			const remainingStr = formatExportTime(baseDuration - simulatedTime, true);
 			const timeInner = 28;
@@ -495,13 +491,13 @@ export function applyAnimationFrameToClone(root: HTMLElement, elapsedMs: number)
 				timeInner - elapsedStr.length - remainingStr.length,
 				1,
 			);
-			const timeLine = ` ${elapsedStr}${" ".repeat(timeGap)}${remainingStr} `;
+			const timeLine = ` ${elapsedStr}${' '.repeat(timeGap)}${remainingStr} `;
 
-			const lines = asciiPre.textContent?.split("\n") ?? [];
+			const lines = asciiPre.textContent?.split('\n') ?? [];
 			if (lines.length >= 11) {
 				lines[8] = `\u2502 ${progressBar}  \u2502`;
 				lines[9] = `\u2502${timeLine}\u2502`;
-				asciiPre.textContent = lines.join("\n");
+				asciiPre.textContent = lines.join('\n');
 			}
 		}
 	}
@@ -524,10 +520,10 @@ export async function captureGifFrameCanvas(
 		cacheBust: true,
 		skipFonts: false,
 		style: {
-			transform: "scale(1)",
+			transform: 'scale(1)',
 		},
 		filter: (node: Node) => {
-			if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
+			if (node instanceof HTMLElement && node.tagName === 'SCRIPT') {
 				return false;
 			}
 			return true;
@@ -541,30 +537,30 @@ export async function captureGifFrameCanvas(
 		return sourceCanvas;
 	}
 
-	const normalizedCanvas = document.createElement("canvas");
+	const normalizedCanvas = document.createElement('canvas');
 	normalizedCanvas.width = options.outputWidth;
 	normalizedCanvas.height = options.outputHeight;
-	const normalizedCtx = normalizedCanvas.getContext("2d");
+	const normalizedCtx = normalizedCanvas.getContext('2d');
 	if (!normalizedCtx) {
-		throw new Error("Failed to get normalized GIF canvas context");
+		throw new Error('Failed to get normalized GIF canvas context');
 	}
 
 	normalizedCtx.imageSmoothingEnabled = true;
-	normalizedCtx.imageSmoothingQuality = "high";
+	normalizedCtx.imageSmoothingQuality = 'high';
 	normalizedCtx.drawImage(sourceCanvas, 0, 0, options.outputWidth, options.outputHeight);
 	return normalizedCanvas;
 }
 
 async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
-	const sampleCanvas = document.createElement("canvas");
+	const sampleCanvas = document.createElement('canvas');
 	sampleCanvas.width = 96;
 	sampleCanvas.height = 96;
-	const sampleCtx = sampleCanvas.getContext("2d");
+	const sampleCtx = sampleCanvas.getContext('2d');
 	if (!sampleCtx) {
-		throw new Error("Failed to get sample canvas context");
+		throw new Error('Failed to get sample canvas context');
 	}
 
-	if ("createImageBitmap" in window) {
+	if ('createImageBitmap' in window) {
 		const bitmap = await createImageBitmap(blob);
 		try {
 			sampleCtx.drawImage(bitmap, 0, 0, sampleCanvas.width, sampleCanvas.height);
@@ -576,9 +572,9 @@ async function decodeBlobToImageData(blob: Blob): Promise<ImageData> {
 		try {
 			const img = await new Promise<HTMLImageElement>((resolve, reject) => {
 				const image = new Image();
-				image.addEventListener("load", () => resolve(image));
-				image.addEventListener("error", () =>
-					reject(new Error("Failed to decode exported blob")),
+				image.addEventListener('load', () => resolve(image));
+				image.addEventListener('error', () =>
+					reject(new Error('Failed to decode exported blob')),
 				);
 				image.src = url;
 			});
@@ -717,7 +713,7 @@ async function isLikelyBlankCapture(blob: Blob): Promise<boolean> {
 
 export interface ExportResult {
 	success: boolean;
-	method: "share" | "download" | "dataurl" | "manual" | "prompt";
+	method: 'share' | 'download' | 'dataurl' | 'manual' | 'prompt';
 	capturePath?: string;
 	blobSize?: number;
 	blobDigest?: string;
@@ -749,11 +745,11 @@ function triggerDownloadLinkWithOptions(
 	}
 
 	try {
-		const link = document.createElement("a");
+		const link = document.createElement('a');
 		link.download = filename;
 		link.href = href;
-		link.rel = "noopener noreferrer";
-		link.style.display = "none";
+		link.rel = 'noopener noreferrer';
+		link.style.display = 'none';
 		document.body.appendChild(link);
 		link.click();
 		requestAnimationFrame(() => {
@@ -766,9 +762,8 @@ function triggerDownloadLinkWithOptions(
 }
 
 function buildSavePickerTypes(filename: string, mimeType: string) {
-	const extensionIndex = filename.lastIndexOf(".");
-	const extension =
-		extensionIndex >= 0 ? filename.slice(extensionIndex).toLowerCase() : "";
+	const extensionIndex = filename.lastIndexOf('.');
+	const extension = extensionIndex >= 0 ? filename.slice(extensionIndex).toLowerCase() : '';
 	const accept =
 		extension && mimeType
 			? {
@@ -776,55 +771,51 @@ function buildSavePickerTypes(filename: string, mimeType: string) {
 				}
 			: mimeType
 				? {
-						[mimeType]: [".bin"],
+						[mimeType]: ['.bin'],
 					}
 				: {
-						"application/octet-stream": extension ? [extension] : [".bin"],
+						'application/octet-stream': extension
+							? [extension]
+							: ['.bin'],
 					};
 
 	return [
 		{
-			description: mimeType || "Exported file",
+			description: mimeType || 'Exported file',
 			accept,
 		},
 	];
 }
 
 function supportsInlinePreview(mimeType: string): boolean {
-	return mimeType.startsWith("image/") || mimeType.startsWith("video/");
+	return mimeType.startsWith('image/') || mimeType.startsWith('video/');
 }
 
-function getMobilePromptCopy(
-	filename: string,
-	mimeType: string,
-	capabilities: ExportCapabilities,
-) {
+function getMobilePromptCopy(filename: string, mimeType: string, capabilities: ExportCapabilities) {
 	if (capabilities.canShareFiles) {
 		return {
-			title: "File ready",
+			title: 'File ready',
 			detail: `Tap Share / Save to hand off ${filename} to your device.`,
 		};
 	}
 
 	if (capabilities.canSaveWithPicker) {
 		return {
-			title: "File ready",
+			title: 'File ready',
 			detail: `Tap Save to choose where ${filename} should go on your device.`,
 		};
 	}
 
-	if (mimeType.startsWith("image/")) {
+	if (mimeType.startsWith('image/')) {
 		return {
-			title: "Image ready",
-			detail:
-				"Long-press the preview and choose Save Image if your browser does not show a save action.",
+			title: 'Image ready',
+			detail: 'Long-press the preview and choose Save Image if your browser does not show a save action.',
 		};
 	}
 
 	return {
-		title: "File ready",
-		detail:
-			"Open the file, then use your browser's share or download controls to save it.",
+		title: 'File ready',
+		detail: "Open the file, then use your browser's share or download controls to save it.",
 	};
 }
 
@@ -833,12 +824,12 @@ async function saveBlobWithPicker(
 	filename: string,
 	mimeType: string,
 ): Promise<boolean> {
-	if (typeof window === "undefined") {
+	if (typeof window === 'undefined') {
 		return false;
 	}
 
 	const savePickerWindow = window as SavePickerWindow;
-	if (typeof savePickerWindow.showSaveFilePicker !== "function") {
+	if (typeof savePickerWindow.showSaveFilePicker !== 'function') {
 		return false;
 	}
 
@@ -859,7 +850,7 @@ async function presentMobileExportPrompt(
 		mimeType: string;
 		capabilities: ExportCapabilities;
 	},
-): Promise<"share" | "download" | "prompt"> {
+): Promise<'share' | 'download' | 'prompt'> {
 	const { filename, mimeType, capabilities } = options;
 	const shareNavigator = navigator as ShareCapableNavigator;
 	const objectUrl = URL.createObjectURL(blob);
@@ -870,20 +861,20 @@ async function presentMobileExportPrompt(
 		const hasExplicitSaveAction =
 			capabilities.canShareFiles || capabilities.canSaveWithPicker;
 		const file = new File([blob], filename, { type: mimeType });
-		const overlay = document.createElement("div");
-		const card = document.createElement("div");
-		const title = document.createElement("h2");
-		const detail = document.createElement("p");
-		const actions = document.createElement("div");
+		const overlay = document.createElement('div');
+		const card = document.createElement('div');
+		const title = document.createElement('h2');
+		const detail = document.createElement('p');
+		const actions = document.createElement('div');
 		const preview = supportsInlinePreview(mimeType)
-			? document.createElement(mimeType.startsWith("video/") ? "video" : "img")
+			? document.createElement(mimeType.startsWith('video/') ? 'video' : 'img')
 			: null;
 		const cleanup = () => {
 			overlay.remove();
 			URL.revokeObjectURL(objectUrl);
 		};
 
-		const finish = (result: "share" | "download" | "prompt") => {
+		const finish = (result: 'share' | 'download' | 'prompt') => {
 			if (settled) {
 				return;
 			}
@@ -906,31 +897,34 @@ async function presentMobileExportPrompt(
 		};
 
 		const createButton = (label: string) => {
-			const button = document.createElement("button");
-			button.type = "button";
+			const button = document.createElement('button');
+			button.type = 'button';
 			button.textContent = label;
 			button.style.cssText =
-				"border:0;border-radius:999px;padding:12px 16px;background:#111827;color:#fff;" +
-				"font:600 14px/1.2 system-ui,sans-serif;cursor:pointer";
+				'border:0;border-radius:999px;padding:12px 16px;background:#111827;color:#fff;' +
+				'font:600 14px/1.2 system-ui,sans-serif;cursor:pointer';
 			return button;
 		};
 
 		overlay.style.cssText =
-			"position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.4);" +
-			"backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);" +
-			"display:flex;align-items:flex-end;justify-content:center;padding:0;transition:opacity 0.3s ease";
+			'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.4);' +
+			'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
+			'display:flex;align-items:flex-end;justify-content:center;padding:0;transition:opacity 0.3s ease';
 		card.style.cssText =
-			"width:100%;max-width:540px;max-height:92vh;overflow:hidden;border-radius:24px 24px 0 0;" +
-			"background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(20px);" +
-			"-webkit-backdrop-filter:saturate(180%) blur(20px);" +
-			"color:#000;padding:24px 20px env(safe-area-inset-bottom, 20px);box-shadow:0 -8px 32px rgba(0,0,0,0.12);" +
-			"display:flex;flex-direction:column;gap:20px;transform:translateY(0);transition:transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)";
-		
-		const header = document.createElement("div");
-		header.style.cssText = "display:flex;flex-direction:column;gap:4px;text-align:center";
-		
-		title.style.cssText = "margin:0;font:600 17px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:-0.01em";
-		detail.style.cssText = "margin:0;font:400 13px/1.4 system-ui,-apple-system,sans-serif;color:#666";
+			'width:100%;max-width:540px;max-height:92vh;overflow:hidden;border-radius:24px 24px 0 0;' +
+			'background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(20px);' +
+			'-webkit-backdrop-filter:saturate(180%) blur(20px);' +
+			'color:#000;padding:24px 20px env(safe-area-inset-bottom, 20px);box-shadow:0 -8px 32px rgba(0,0,0,0.12);' +
+			'display:flex;flex-direction:column;gap:20px;transform:translateY(0);transition:transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+
+		const header = document.createElement('div');
+		header.style.cssText =
+			'display:flex;flex-direction:column;gap:4px;text-align:center';
+
+		title.style.cssText =
+			'margin:0;font:600 17px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:-0.01em';
+		detail.style.cssText =
+			'margin:0;font:400 13px/1.4 system-ui,-apple-system,sans-serif;color:#666';
 
 		header.append(title, detail);
 		card.appendChild(header);
@@ -939,104 +933,111 @@ async function presentMobileExportPrompt(
 			preview.src = objectUrl;
 			preview.alt = filename;
 			preview.style.cssText =
-				"display:block;width:100%;max-height:40vh;object-fit:contain;" +
-				"border-radius:14px;background:rgba(0,0,0,0.03);box-shadow:0 4px 12px rgba(0,0,0,0.08)";
+				'display:block;width:100%;max-height:40vh;object-fit:contain;' +
+				'border-radius:14px;background:rgba(0,0,0,0.03);box-shadow:0 4px 12px rgba(0,0,0,0.08)';
 		} else if (preview instanceof HTMLVideoElement) {
 			preview.src = objectUrl;
 			preview.controls = true;
 			preview.playsInline = true;
 			preview.style.cssText =
-				"display:block;width:100%;max-height:40vh;object-fit:contain;" +
-				"border-radius:14px;background:#000;box-shadow:0 4px 12px rgba(0,0,0,0.15)";
+				'display:block;width:100%;max-height:40vh;object-fit:contain;' +
+				'border-radius:14px;background:#000;box-shadow:0 4px 12px rgba(0,0,0,0.15)';
 		}
-		
+
 		if (preview) {
 			card.appendChild(preview);
 		}
 
-		actions.style.cssText = "display:flex;flex-direction:column;gap:10px;width:100%";
+		actions.style.cssText = 'display:flex;flex-direction:column;gap:10px;width:100%';
 
 		const createIosButton = (label: string, primary = false) => {
-			const button = document.createElement("button");
-			button.type = "button";
+			const button = document.createElement('button');
+			button.type = 'button';
 			button.textContent = label;
 			button.style.cssText = primary
-				? "border:0;border-radius:12px;padding:14px;background:#007AFF;color:#fff;" +
-				  "font:600 17px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer;width:100%"
-				: "border:0;border-radius:12px;padding:14px;background:rgba(0,0,0,0.05);color:#007AFF;" +
-				  "font:500 17px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer;width:100%";
+				? 'border:0;border-radius:12px;padding:14px;background:#007AFF;color:#fff;' +
+					'font:600 17px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer;width:100%'
+				: 'border:0;border-radius:12px;padding:14px;background:rgba(0,0,0,0.05);color:#007AFF;' +
+					'font:500 17px/1.2 system-ui,-apple-system,sans-serif;cursor:pointer;width:100%';
 			return button;
 		};
 
 		if (capabilities.canShareFiles) {
-			const shareButton = createIosButton("Share / Save", true);
-			shareButton.addEventListener("click", async () => {
+			const shareButton = createIosButton('Share / Save', true);
+			shareButton.addEventListener('click', async () => {
 				try {
 					await shareNavigator.share?.({ files: [file] });
-					finish("share");
+					finish('share');
 				} catch (error) {
-					if (error instanceof Error && error.name === "AbortError") {
+					if (error instanceof Error && error.name === 'AbortError') {
 						return;
 					}
-					setDetail("Share failed. Please use another option.");
+					setDetail('Share failed. Please use another option.');
 				}
 			});
 			actions.appendChild(shareButton);
 		}
 
 		if (capabilities.canSaveWithPicker) {
-			const saveButton = createIosButton("Save to Files", !capabilities.canShareFiles);
-			saveButton.addEventListener("click", async () => {
+			const saveButton = createIosButton(
+				'Save to Files',
+				!capabilities.canShareFiles,
+			);
+			saveButton.addEventListener('click', async () => {
 				try {
 					await saveBlobWithPicker(blob, filename, mimeType);
-					finish("download");
+					finish('download');
 				} catch (error) {
-					if (error instanceof Error && error.name === "AbortError") {
+					if (error instanceof Error && error.name === 'AbortError') {
 						return;
 					}
-					setDetail("Save failed. Try opening the file instead.");
+					setDetail('Save failed. Try opening the file instead.');
 				}
 			});
 			actions.appendChild(saveButton);
 		}
 
 		if (!hasExplicitSaveAction || !preview) {
-			const openButton = createIosButton("Open File", true);
-			openButton.addEventListener("click", () => {
-				const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+			const openButton = createIosButton('Open File', true);
+			openButton.addEventListener('click', () => {
+				const opened = window.open(
+					objectUrl,
+					'_blank',
+					'noopener,noreferrer',
+				);
 				if (opened) {
-					finish("download");
+					finish('download');
 					return;
 				}
-				setDetail("Popup blocked. Please allow popups and try again.");
+				setDetail('Popup blocked. Please allow popups and try again.');
 			});
 			actions.appendChild(openButton);
 		}
 
-		const closeButton = createIosButton("Cancel");
-		closeButton.style.background = "rgba(0,0,0,0.05)";
-		closeButton.style.color = "#FF3B30";
-		closeButton.addEventListener("click", () => {
+		const closeButton = createIosButton('Cancel');
+		closeButton.style.background = 'rgba(0,0,0,0.05)';
+		closeButton.style.color = '#FF3B30';
+		closeButton.addEventListener('click', () => {
 			if (settled) {
 				cleanup();
 				return;
 			}
-			fail(new Error("Export cancelled."));
+			fail(new Error('Export cancelled.'));
 		});
 		actions.appendChild(closeButton);
 
 		card.appendChild(actions);
 		overlay.appendChild(card);
 		document.body.appendChild(overlay);
-		
+
 		// Animate in
 		requestAnimationFrame(() => {
-			card.style.transform = "translateY(0)";
+			card.style.transform = 'translateY(0)';
 		});
 
 		if (!hasExplicitSaveAction && preview) {
 			settled = true;
-			resolve("prompt");
+			resolve('prompt');
 		}
 	});
 }
@@ -1045,9 +1046,11 @@ async function presentMobileExportPrompt(
  * Detect platform capabilities for export
  */
 export function detectExportCapabilities(): ExportCapabilities {
-	const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-	const shareNavigator = typeof navigator !== "undefined" ? (navigator as ShareCapableNavigator) : null;
-	const savePickerWindow = typeof window !== "undefined" ? (window as SavePickerWindow) : null;
+	const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+	const shareNavigator =
+		typeof navigator !== 'undefined' ? (navigator as ShareCapableNavigator) : null;
+	const savePickerWindow =
+		typeof window !== 'undefined' ? (window as SavePickerWindow) : null;
 	const isIOS =
 		/iPad|iPhone|iPod/.test(userAgent) &&
 		!(window as unknown as { MSStream?: unknown }).MSStream;
@@ -1061,18 +1064,18 @@ export function detectExportCapabilities(): ExportCapabilities {
 	if (shareNavigator?.canShare) {
 		try {
 			// Test with a dummy file to see if files are supported
-			const testFile = new File(["test"], "test.png", { type: "image/png" });
+			const testFile = new File(['test'], 'test.png', { type: 'image/png' });
 			canShareFiles = shareNavigator.canShare({ files: [testFile] });
 		} catch {
 			canShareFiles = false;
 		}
 	}
-	const canSaveWithPicker = typeof savePickerWindow?.showSaveFilePicker === "function";
+	const canSaveWithPicker = typeof savePickerWindow?.showSaveFilePicker === 'function';
 
 	const canEncodeMp4 =
-		typeof VideoEncoder !== "undefined" &&
-		typeof OffscreenCanvas !== "undefined" &&
-		typeof Worker !== "undefined";
+		typeof VideoEncoder !== 'undefined' &&
+		typeof OffscreenCanvas !== 'undefined' &&
+		typeof Worker !== 'undefined';
 
 	const hasTransientUserActivation = !!shareNavigator?.userActivation?.isActive;
 
@@ -1092,7 +1095,7 @@ export function supportsAnimatedMp4Export(): boolean {
 }
 
 export async function probeAnimatedMp4ExportSupport(): Promise<boolean> {
-	if (!supportsAnimatedMp4Export() || typeof VideoEncoder === "undefined") {
+	if (!supportsAnimatedMp4Export() || typeof VideoEncoder === 'undefined') {
 		return false;
 	}
 
@@ -1110,7 +1113,7 @@ export async function probeAnimatedMp4ExportSupport(): Promise<boolean> {
 }
 
 interface EncoderWorkerSuccessResponse {
-	type: "ok" | "finalized";
+	type: 'ok' | 'finalized';
 	buffer?: ArrayBuffer;
 	mimeType?: string;
 }
@@ -1122,9 +1125,11 @@ function createExportProgress(progress: ExportProgress): ExportProgress {
 	};
 }
 
-export function createEncoderWorkerClient(onProgress?: (progress: number, detail?: string) => void) {
-	const worker = new Worker(new URL("./export/export-encoder.worker.ts", import.meta.url), {
-		type: "module",
+export function createEncoderWorkerClient(
+	onProgress?: (progress: number, detail?: string) => void,
+) {
+	const worker = new Worker(new URL('./export/export-encoder.worker.ts', import.meta.url), {
+		type: 'module',
 	});
 	let nextId = 0;
 	const pending = new Map<
@@ -1145,7 +1150,7 @@ export function createEncoderWorkerClient(onProgress?: (progress: number, detail
 	worker.onmessage = (event: MessageEvent<EncoderWorkerResponse>) => {
 		const response = event.data;
 
-		if (response.type === "progress") {
+		if (response.type === 'progress') {
 			onProgress?.(response.progress, response.detail);
 			return;
 		}
@@ -1156,7 +1161,7 @@ export function createEncoderWorkerClient(onProgress?: (progress: number, detail
 		}
 		pending.delete(response.id);
 
-		if (response.type === "error") {
+		if (response.type === 'error') {
 			request.reject(new Error(response.error));
 			return;
 		}
@@ -1165,7 +1170,7 @@ export function createEncoderWorkerClient(onProgress?: (progress: number, detail
 	};
 
 	worker.onerror = (event) => {
-		rejectAll(new Error(event.message || "Animated export worker crashed"));
+		rejectAll(new Error(event.message || 'Animated export worker crashed'));
 	};
 
 	const call = (message: EncoderWorkerRequestPayload, transfer?: Transferable[]) =>
@@ -1180,7 +1185,7 @@ export function createEncoderWorkerClient(onProgress?: (progress: number, detail
 	return {
 		call,
 		close() {
-			rejectAll(new Error("Animated export worker closed"));
+			rejectAll(new Error('Animated export worker closed'));
 			worker.terminate();
 		},
 	};
@@ -1208,14 +1213,14 @@ export async function captureToBlob(
 				skipFonts: false,
 				includeQueryParams: true,
 				style: {
-					transform: "scale(1)",
+					transform: 'scale(1)',
 				},
 				// Filter function to ensure images are properly handled
 				filter: (node: Node) => {
 					// Include all nodes except script tags
 					if (
 						node instanceof HTMLElement &&
-						node.tagName === "SCRIPT"
+						node.tagName === 'SCRIPT'
 					) {
 						return false;
 					}
@@ -1241,7 +1246,7 @@ export async function captureToBlob(
 		}
 	}
 
-	throw new Error("Failed to capture image after retries");
+	throw new Error('Failed to capture image after retries');
 }
 
 /**
@@ -1254,7 +1259,7 @@ async function captureToBlobWithHtml2Canvas(
 		pixelRatio?: number;
 	},
 ): Promise<Blob> {
-	const { default: html2canvas } = await import("html2canvas");
+	const { default: html2canvas } = await import('html2canvas');
 	const canvas = await html2canvas(element, {
 		backgroundColor: options.backgroundColor ?? null,
 		scale: Math.min(Math.max(options.pixelRatio ?? 2, 1), 2.5),
@@ -1266,11 +1271,11 @@ async function captureToBlobWithHtml2Canvas(
 	});
 
 	const blob = await new Promise<Blob | null>((resolve) => {
-		canvas.toBlob(resolve, "image/png", 1);
+		canvas.toBlob(resolve, 'image/png', 1);
 	});
 
 	if (!blob || blob.size <= 1000) {
-		throw new Error("html2canvas fallback produced invalid blob");
+		throw new Error('html2canvas fallback produced invalid blob');
 	}
 
 	return blob;
@@ -1293,10 +1298,10 @@ export async function captureToDataUrl(
 		skipFonts: false,
 		includeQueryParams: true,
 		style: {
-			transform: "scale(1)",
+			transform: 'scale(1)',
 		},
 		filter: (node: Node) => {
-			if (node instanceof HTMLElement && node.tagName === "SCRIPT") {
+			if (node instanceof HTMLElement && node.tagName === 'SCRIPT') {
 				return false;
 			}
 			return true;
@@ -1310,7 +1315,7 @@ export async function captureToDataUrl(
 export async function shareBlobFile(
 	blob: Blob,
 	filename: string,
-	mimeType = blob.type || "application/octet-stream",
+	mimeType = blob.type || 'application/octet-stream',
 ): Promise<boolean> {
 	const file = new File([blob], filename, { type: mimeType });
 
@@ -1323,7 +1328,7 @@ export async function shareBlobFile(
 		return true;
 	} catch (error) {
 		// If share was cancelled, allow download fallback.
-		if (error instanceof Error && error.name === "AbortError") {
+		if (error instanceof Error && error.name === 'AbortError') {
 			return false;
 		}
 		throw error;
@@ -1363,7 +1368,7 @@ export function downloadImageBlobWithOptions(
 				options.popupWindow.focus();
 				opened = true;
 			} else {
-				opened = !!window.open(url, "_blank");
+				opened = !!window.open(url, '_blank');
 			}
 		}
 
@@ -1415,7 +1420,7 @@ function downloadImageDataUrlWithOptions(
 				options.popupWindow.focus();
 				opened = true;
 			} else {
-				opened = !!window.open(dataUrl, "_blank");
+				opened = !!window.open(dataUrl, '_blank');
 			}
 		}
 		return {
@@ -1444,8 +1449,8 @@ export async function exportAnimatedGif(
 		filename,
 		backgroundColor,
 		constrainedFrame = false,
-		quality = "pro",
-		layout = "original",
+		quality = 'pro',
+		layout = 'original',
 		durationSeconds,
 		onStatusChange,
 		onProgressChange,
@@ -1453,16 +1458,16 @@ export async function exportAnimatedGif(
 	const config = GIF_QUALITY_CONFIG[quality];
 	const fps = config.fps;
 	const captureScale = config.scale;
-    // ... rest of implementation stays similar but uses config ...
+	// ... rest of implementation stays similar but uses config ...
 	const capabilities = detectExportCapabilities();
 	const mobileDelivery = resolveMobileExportDelivery(capabilities);
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
-	element.setAttribute(EXPORT_ATTRIBUTE, "true");
+	element.setAttribute(EXPORT_ATTRIBUTE, 'true');
 	let exportNode: HTMLElement | null = null;
 
-	console.info("[gif-export:diagnostics] start", {
+	console.info('[gif-export:diagnostics] start', {
 		filename,
 		pipelineVersion: EXPORT_PIPELINE_VERSION,
 		constrainedFrame,
@@ -1472,12 +1477,12 @@ export async function exportAnimatedGif(
 		...runtimeBuildContext,
 	});
 
-	onStatusChange?.("preparing");
+	onStatusChange?.('preparing');
 	onProgressChange?.(
 		createExportProgress({
-			stage: "settling",
-			label: "Preparing animated GIF",
-			detail: "Waiting for the current UI state to settle",
+			stage: 'settling',
+			label: 'Preparing animated GIF',
+			detail: 'Waiting for the current UI state to settle',
 			progress: 0.03,
 		}),
 	);
@@ -1498,9 +1503,9 @@ export async function exportAnimatedGif(
 	try {
 		onProgressChange?.(
 			createExportProgress({
-				stage: "cloning",
-				label: "Preparing animated GIF",
-				detail: "Cloning the export scene and embedding images",
+				stage: 'cloning',
+				label: 'Preparing animated GIF',
+				detail: 'Cloning the export scene and embedding images',
 				progress: 0.12,
 			}),
 		);
@@ -1523,11 +1528,11 @@ export async function exportAnimatedGif(
 		const frameDelayMs =
 			plan.frameCount === 1 ? 1000 : roundGifDelayMs(plan.frameDelayMs);
 
-		onStatusChange?.("encoding");
+		onStatusChange?.('encoding');
 		onProgressChange?.(
 			createExportProgress({
-				stage: "encoding",
-				label: "Starting GIF encoder",
+				stage: 'encoding',
+				label: 'Starting GIF encoder',
 				detail: `${plan.frameCount} frames queued for export`,
 				progress: 0.2,
 				currentFrame: 0,
@@ -1538,9 +1543,11 @@ export async function exportAnimatedGif(
 		const worker = createEncoderWorkerClient((workerProgress, workerDetail) => {
 			onProgressChange?.(
 				createExportProgress({
-					stage: "finalizing",
-					label: "Finalizing GIF",
-					detail: workerDetail ?? "Assembling frames and writing the file",
+					stage: 'finalizing',
+					label: 'Finalizing GIF',
+					detail:
+						workerDetail ??
+						'Assembling frames and writing the file',
 					progress: 0.84 + workerProgress * 0.06,
 					currentFrame: plan.frameCount,
 					totalFrames: plan.frameCount,
@@ -1549,7 +1556,7 @@ export async function exportAnimatedGif(
 		});
 		try {
 			await worker.call({
-				type: "start-gif",
+				type: 'start-gif',
 				width: plan.captureWidth,
 				height: plan.captureHeight,
 			});
@@ -1587,12 +1594,14 @@ export async function exportAnimatedGif(
 				const totalElapsed = now - captureStartTime;
 				const msPerFrame = totalElapsed / (frameIndex + 1);
 				const remainingFrames = plan.frameCount - (frameIndex + 1);
-				const etaSeconds = Math.round((remainingFrames * msPerFrame) / 1000);
+				const etaSeconds = Math.round(
+					(remainingFrames * msPerFrame) / 1000,
+				);
 
 				onProgressChange?.(
 					createExportProgress({
-						stage: "capturing",
-						label: "Capturing GIF frames",
+						stage: 'capturing',
+						label: 'Capturing GIF frames',
 						detail: `Frame ${frameIndex + 1} of ${plan.frameCount}`,
 						progress:
 							0.2 +
@@ -1606,7 +1615,7 @@ export async function exportAnimatedGif(
 				// Pipeline: Don't await the worker call immediately to allow next frame capture to start
 				const workerTask = worker.call(
 					{
-						type: "append-gif-frame",
+						type: 'append-gif-frame',
 						frameIndex,
 						width: plan.captureWidth,
 						height: plan.captureHeight,
@@ -1626,21 +1635,21 @@ export async function exportAnimatedGif(
 			// Ensure all frames are processed before finalizing
 			await Promise.all(pendingWorkerTasks);
 
-			const finalized = await worker.call({ type: "finalize" });
-			if (finalized.type !== "finalized" || !finalized.buffer) {
-				throw new Error("GIF encoder did not return output");
+			const finalized = await worker.call({ type: 'finalize' });
+			if (finalized.type !== 'finalized' || !finalized.buffer) {
+				throw new Error('GIF encoder did not return output');
 			}
 
 			const blob = new Blob([finalized.buffer], {
-				type: finalized.mimeType ?? "image/gif",
+				type: finalized.mimeType ?? 'image/gif',
 			});
 			if (capabilities.isMobile) {
-				onStatusChange?.("sharing");
+				onStatusChange?.('sharing');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "sharing",
-						label: "Ready to save GIF",
-						detail: "Choose how to hand the file off to your device",
+						stage: 'sharing',
+						label: 'Ready to save GIF',
+						detail: 'Choose how to hand the file off to your device',
 						progress: 0.92,
 						currentFrame: plan.frameCount,
 						totalFrames: plan.frameCount,
@@ -1648,14 +1657,14 @@ export async function exportAnimatedGif(
 				);
 				const promptMethod = await presentMobileExportPrompt(blob, {
 					filename,
-					mimeType: "image/gif",
+					mimeType: 'image/gif',
 					capabilities,
 				});
 				const blobSummary = await summarizeBlob(blob);
-				console.info("[gif-export:diagnostics] success", {
+				console.info('[gif-export:diagnostics] success', {
 					filename,
 					method: promptMethod,
-					capturePath: "detached-html-to-image-gif",
+					capturePath: 'detached-html-to-image-gif',
 					frameCount: plan.frameCount,
 					frameDelayMs,
 					captureScale,
@@ -1666,11 +1675,11 @@ export async function exportAnimatedGif(
 					pipelineVersion: EXPORT_PIPELINE_VERSION,
 					...runtimeBuildContext,
 				});
-				onStatusChange?.("success");
+				onStatusChange?.('success');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "complete",
-						label: "GIF export complete",
+						stage: 'complete',
+						label: 'GIF export complete',
 						detail: filename,
 						progress: 1,
 						currentFrame: plan.frameCount,
@@ -1680,15 +1689,15 @@ export async function exportAnimatedGif(
 				return {
 					success: true,
 					method: promptMethod,
-					capturePath: "detached-html-to-image-gif",
+					capturePath: 'detached-html-to-image-gif',
 					...blobSummary,
 				};
 			}
 			onProgressChange?.(
 				createExportProgress({
-					stage: "downloading",
-					label: "Downloading GIF",
-					detail: "Handing the finished file to the browser",
+					stage: 'downloading',
+					label: 'Downloading GIF',
+					detail: 'Handing the finished file to the browser',
 					progress: 0.94,
 					currentFrame: plan.frameCount,
 					totalFrames: plan.frameCount,
@@ -1699,20 +1708,20 @@ export async function exportAnimatedGif(
 			});
 
 			if (!downloadResult.success) {
-				onStatusChange?.("error");
+				onStatusChange?.('error');
 				return {
 					success: false,
-					method: "manual",
-					capturePath: "detached-html-to-image-gif",
-					error: "Browser blocked the GIF download. Try retrying on desktop Chrome.",
+					method: 'manual',
+					capturePath: 'detached-html-to-image-gif',
+					error: 'Browser blocked the GIF download. Try retrying on desktop Chrome.',
 				};
 			}
 
 			const blobSummary = await summarizeBlob(blob);
-			console.info("[gif-export:diagnostics] success", {
+			console.info('[gif-export:diagnostics] success', {
 				filename,
-				method: "download",
-				capturePath: "detached-html-to-image-gif",
+				method: 'download',
+				capturePath: 'detached-html-to-image-gif',
 				frameCount: plan.frameCount,
 				frameDelayMs,
 				captureScale,
@@ -1723,11 +1732,11 @@ export async function exportAnimatedGif(
 				pipelineVersion: EXPORT_PIPELINE_VERSION,
 				...runtimeBuildContext,
 			});
-			onStatusChange?.("success");
+			onStatusChange?.('success');
 			onProgressChange?.(
 				createExportProgress({
-					stage: "complete",
-					label: "GIF export complete",
+					stage: 'complete',
+					label: 'GIF export complete',
 					detail: filename,
 					progress: 1,
 					currentFrame: plan.frameCount,
@@ -1736,39 +1745,39 @@ export async function exportAnimatedGif(
 			);
 			return {
 				success: true,
-				method: "download",
-				capturePath: "detached-html-to-image-gif",
+				method: 'download',
+				capturePath: 'detached-html-to-image-gif',
 				...blobSummary,
 			};
 		} finally {
 			worker.close();
 		}
 	} catch (error) {
-		console.error("[gif-export:diagnostics] failure", {
+		console.error('[gif-export:diagnostics] failure', {
 			filename,
-			method: "manual",
-			capturePath: "detached-html-to-image-gif",
+			method: 'manual',
+			capturePath: 'detached-html-to-image-gif',
 			pipelineVersion: EXPORT_PIPELINE_VERSION,
 			...runtimeBuildContext,
-			error: error instanceof Error ? error.message : "Unknown error occurred",
+			error: error instanceof Error ? error.message : 'Unknown error occurred',
 		});
-		onStatusChange?.("error");
+		onStatusChange?.('error');
 		onProgressChange?.(
 			createExportProgress({
-				stage: "error",
-				label: "GIF export failed",
+				stage: 'error',
+				label: 'GIF export failed',
 				detail:
 					error instanceof Error
 						? error.message
-						: "Unknown error occurred",
+						: 'Unknown error occurred',
 				progress: 1,
 			}),
 		);
 		return {
 			success: false,
-			method: "manual",
-			capturePath: "detached-html-to-image-gif",
-			error: error instanceof Error ? error.message : "Unknown error occurred",
+			method: 'manual',
+			capturePath: 'detached-html-to-image-gif',
+			error: error instanceof Error ? error.message : 'Unknown error occurred',
 		};
 	} finally {
 		removeExportNode(exportNode);
@@ -1797,8 +1806,8 @@ export async function exportAnimatedMp4(
 		filename,
 		backgroundColor,
 		constrainedFrame = false,
-		quality = "pro",
-		layout = "original",
+		quality = 'pro',
+		layout = 'original',
 		durationSeconds,
 		onStatusChange,
 		onProgressChange,
@@ -1813,10 +1822,10 @@ export async function exportAnimatedMp4(
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
-	element.setAttribute(EXPORT_ATTRIBUTE, "true");
+	element.setAttribute(EXPORT_ATTRIBUTE, 'true');
 	let exportNode: HTMLElement | null = null;
 
-	console.info("[mp4-export:diagnostics] start", {
+	console.info('[mp4-export:diagnostics] start', {
 		filename,
 		pipelineVersion: EXPORT_PIPELINE_VERSION,
 		constrainedFrame,
@@ -1831,18 +1840,18 @@ export async function exportAnimatedMp4(
 	if (!capabilities.canEncodeMp4) {
 		return {
 			success: false,
-			method: "manual",
-			capturePath: "detached-html-to-image-mp4",
-			error: "This browser does not support H.264 MP4 export yet.",
+			method: 'manual',
+			capturePath: 'detached-html-to-image-mp4',
+			error: 'This browser does not support H.264 MP4 export yet.',
 		};
 	}
 
-	onStatusChange?.("preparing");
+	onStatusChange?.('preparing');
 	onProgressChange?.(
 		createExportProgress({
-			stage: "settling",
-			label: "Preparing MP4 export",
-			detail: "Waiting for the current UI state to settle",
+			stage: 'settling',
+			label: 'Preparing MP4 export',
+			detail: 'Waiting for the current UI state to settle',
 			progress: 0.03,
 		}),
 	);
@@ -1863,9 +1872,9 @@ export async function exportAnimatedMp4(
 	try {
 		onProgressChange?.(
 			createExportProgress({
-				stage: "cloning",
-				label: "Preparing MP4 export",
-				detail: "Cloning the export scene and embedding images",
+				stage: 'cloning',
+				label: 'Preparing MP4 export',
+				detail: 'Cloning the export scene and embedding images',
 				progress: 0.12,
 			}),
 		);
@@ -1874,7 +1883,7 @@ export async function exportAnimatedMp4(
 		await waitForMs(100);
 		await waitForNextPaint();
 		applyAnimationFrameToClone(exportNode, 0);
-		
+
 		const plan = buildAnimatedExportPlan(
 			exportNode.offsetWidth || exportNode.clientWidth || 1,
 			exportNode.offsetHeight || exportNode.clientHeight || 1,
@@ -1896,16 +1905,16 @@ export async function exportAnimatedMp4(
 
 		if (!support) {
 			throw new Error(
-				"This browser does not support H.264 MP4 export for the current capture size",
+				'This browser does not support H.264 MP4 export for the current capture size',
 			);
 		}
 		const frameDurationUs = Math.round(plan.frameDelayMs * 1000);
 
-		onStatusChange?.("encoding");
+		onStatusChange?.('encoding');
 		onProgressChange?.(
 			createExportProgress({
-				stage: "encoding",
-				label: "Starting MP4 encoder",
+				stage: 'encoding',
+				label: 'Starting MP4 encoder',
 				detail: `${plan.frameCount} frames queued for H.264 export`,
 				progress: 0.2,
 				currentFrame: 0,
@@ -1916,7 +1925,7 @@ export async function exportAnimatedMp4(
 		const worker = createEncoderWorkerClient();
 		try {
 			await worker.call({
-				type: "start-mp4",
+				type: 'start-mp4',
 				width: plan.captureWidth,
 				height: plan.captureHeight,
 				frameRate: fps,
@@ -1957,12 +1966,14 @@ export async function exportAnimatedMp4(
 				const totalElapsed = now - captureStartTime;
 				const msPerFrame = totalElapsed / (frameIndex + 1);
 				const remainingFrames = plan.frameCount - (frameIndex + 1);
-				const etaSeconds = Math.round((remainingFrames * msPerFrame) / 1000);
+				const etaSeconds = Math.round(
+					(remainingFrames * msPerFrame) / 1000,
+				);
 
 				onProgressChange?.(
 					createExportProgress({
-						stage: "capturing",
-						label: "Encoding MP4 frames",
+						stage: 'capturing',
+						label: 'Encoding MP4 frames',
 						detail: `Frame ${frameIndex + 1} of ${plan.frameCount}`,
 						progress:
 							0.2 +
@@ -1975,7 +1986,7 @@ export async function exportAnimatedMp4(
 
 				const workerTask = worker.call(
 					{
-						type: "append-mp4-frame",
+						type: 'append-mp4-frame',
 						frameIndex,
 						timestampUs: frameIndex * frameDurationUs,
 						durationUs: frameDurationUs,
@@ -1996,29 +2007,29 @@ export async function exportAnimatedMp4(
 
 			onProgressChange?.(
 				createExportProgress({
-					stage: "finalizing",
-					label: "Finalizing MP4",
-					detail: "Flushing the encoder and muxing the file",
+					stage: 'finalizing',
+					label: 'Finalizing MP4',
+					detail: 'Flushing the encoder and muxing the file',
 					progress: 0.84,
 					currentFrame: plan.frameCount,
 					totalFrames: plan.frameCount,
 				}),
 			);
-			const finalized = await worker.call({ type: "finalize" });
-			if (finalized.type !== "finalized" || !finalized.buffer) {
-				throw new Error("MP4 encoder did not return output");
+			const finalized = await worker.call({ type: 'finalize' });
+			if (finalized.type !== 'finalized' || !finalized.buffer) {
+				throw new Error('MP4 encoder did not return output');
 			}
 
 			const blob = new Blob([finalized.buffer], {
-				type: finalized.mimeType ?? "video/mp4",
+				type: finalized.mimeType ?? 'video/mp4',
 			});
 			if (capabilities.isMobile) {
-				onStatusChange?.("sharing");
+				onStatusChange?.('sharing');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "sharing",
-						label: "Ready to save MP4",
-						detail: "Choose how to hand the file off to your device",
+						stage: 'sharing',
+						label: 'Ready to save MP4',
+						detail: 'Choose how to hand the file off to your device',
 						progress: 0.92,
 						currentFrame: plan.frameCount,
 						totalFrames: plan.frameCount,
@@ -2026,14 +2037,14 @@ export async function exportAnimatedMp4(
 				);
 				const promptMethod = await presentMobileExportPrompt(blob, {
 					filename,
-					mimeType: "video/mp4",
+					mimeType: 'video/mp4',
 					capabilities,
 				});
 				const blobSummary = await summarizeBlob(blob);
-				console.info("[mp4-export:diagnostics] success", {
+				console.info('[mp4-export:diagnostics] success', {
 					filename,
 					method: promptMethod,
-					capturePath: "detached-html-to-image-mp4",
+					capturePath: 'detached-html-to-image-mp4',
 					frameCount: plan.frameCount,
 					frameDurationUs,
 					codec: support.codec,
@@ -2045,11 +2056,11 @@ export async function exportAnimatedMp4(
 					pipelineVersion: EXPORT_PIPELINE_VERSION,
 					...runtimeBuildContext,
 				});
-				onStatusChange?.("success");
+				onStatusChange?.('success');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "complete",
-						label: "MP4 export complete",
+						stage: 'complete',
+						label: 'MP4 export complete',
 						detail: filename,
 						progress: 1,
 						currentFrame: plan.frameCount,
@@ -2059,15 +2070,15 @@ export async function exportAnimatedMp4(
 				return {
 					success: true,
 					method: promptMethod,
-					capturePath: "detached-html-to-image-mp4",
+					capturePath: 'detached-html-to-image-mp4',
 					...blobSummary,
 				};
 			}
 			onProgressChange?.(
 				createExportProgress({
-					stage: "downloading",
-					label: "Downloading MP4",
-					detail: "Handing the finished file to the browser",
+					stage: 'downloading',
+					label: 'Downloading MP4',
+					detail: 'Handing the finished file to the browser',
 					progress: 0.94,
 					currentFrame: plan.frameCount,
 					totalFrames: plan.frameCount,
@@ -2077,20 +2088,20 @@ export async function exportAnimatedMp4(
 				allowSyntheticClick: useSyntheticDownload,
 			});
 			if (!downloadResult.success) {
-				onStatusChange?.("error");
+				onStatusChange?.('error');
 				return {
 					success: false,
-					method: "manual",
-					capturePath: "detached-html-to-image-mp4",
-					error: "Browser blocked the MP4 download. Try retrying on desktop Chrome.",
+					method: 'manual',
+					capturePath: 'detached-html-to-image-mp4',
+					error: 'Browser blocked the MP4 download. Try retrying on desktop Chrome.',
 				};
 			}
 
 			const blobSummary = await summarizeBlob(blob);
-			console.info("[mp4-export:diagnostics] success", {
+			console.info('[mp4-export:diagnostics] success', {
 				filename,
-				method: "download",
-				capturePath: "detached-html-to-image-mp4",
+				method: 'download',
+				capturePath: 'detached-html-to-image-mp4',
 				frameCount: plan.frameCount,
 				frameDurationUs,
 				codec: support.codec,
@@ -2102,11 +2113,11 @@ export async function exportAnimatedMp4(
 				pipelineVersion: EXPORT_PIPELINE_VERSION,
 				...runtimeBuildContext,
 			});
-			onStatusChange?.("success");
+			onStatusChange?.('success');
 			onProgressChange?.(
 				createExportProgress({
-					stage: "complete",
-					label: "MP4 export complete",
+					stage: 'complete',
+					label: 'MP4 export complete',
 					detail: filename,
 					progress: 1,
 					currentFrame: plan.frameCount,
@@ -2115,39 +2126,39 @@ export async function exportAnimatedMp4(
 			);
 			return {
 				success: true,
-				method: "download",
-				capturePath: "detached-html-to-image-mp4",
+				method: 'download',
+				capturePath: 'detached-html-to-image-mp4',
 				...blobSummary,
 			};
 		} finally {
 			worker.close();
 		}
 	} catch (error) {
-		console.error("[mp4-export:diagnostics] failure", {
+		console.error('[mp4-export:diagnostics] failure', {
 			filename,
-			method: "manual",
-			capturePath: "detached-html-to-image-mp4",
+			method: 'manual',
+			capturePath: 'detached-html-to-image-mp4',
 			pipelineVersion: EXPORT_PIPELINE_VERSION,
 			...runtimeBuildContext,
-			error: error instanceof Error ? error.message : "Unknown error occurred",
+			error: error instanceof Error ? error.message : 'Unknown error occurred',
 		});
-		onStatusChange?.("error");
+		onStatusChange?.('error');
 		onProgressChange?.(
 			createExportProgress({
-				stage: "error",
-				label: "MP4 export failed",
+				stage: 'error',
+				label: 'MP4 export failed',
 				detail:
 					error instanceof Error
 						? error.message
-						: "Unknown error occurred",
+						: 'Unknown error occurred',
 				progress: 1,
 			}),
 		);
 		return {
 			success: false,
-			method: "manual",
-			capturePath: "detached-html-to-image-mp4",
-			error: error instanceof Error ? error.message : "Unknown error occurred",
+			method: 'manual',
+			capturePath: 'detached-html-to-image-mp4',
+			error: error instanceof Error ? error.message : 'Unknown error occurred',
 		};
 	} finally {
 		removeExportNode(exportNode);
@@ -2183,10 +2194,10 @@ export async function exportImage(
 	const runtimeBuildContext = resolveRuntimeBuildContext();
 	const useSyntheticDownload = !(capabilities.isIOS && capabilities.isMobile);
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
-	element.setAttribute(EXPORT_ATTRIBUTE, "true");
-	let capturePath = "none";
+	element.setAttribute(EXPORT_ATTRIBUTE, 'true');
+	let capturePath = 'none';
 
-	console.info("[export:diagnostics] start", {
+	console.info('[export:diagnostics] start', {
 		filename,
 		pipelineVersion: EXPORT_PIPELINE_VERSION,
 		constrainedFrame,
@@ -2194,12 +2205,12 @@ export async function exportImage(
 		...runtimeBuildContext,
 	});
 
-	onStatusChange?.("preparing");
+	onStatusChange?.('preparing');
 	onProgressChange?.(
 		createExportProgress({
-			stage: "settling",
-			label: "Preparing image export",
-			detail: "Waiting for the current UI state to settle",
+			stage: 'settling',
+			label: 'Preparing image export',
+			detail: 'Waiting for the current UI state to settle',
 			progress: 0.05,
 		}),
 	);
@@ -2224,9 +2235,9 @@ export async function exportImage(
 		if (!exportNode) {
 			onProgressChange?.(
 				createExportProgress({
-					stage: "cloning",
-					label: "Preparing image export",
-					detail: "Cloning the export scene and embedding images",
+					stage: 'cloning',
+					label: 'Preparing image export',
+					detail: 'Cloning the export scene and embedding images',
 					progress: 0.18,
 				}),
 			);
@@ -2244,9 +2255,9 @@ export async function exportImage(
 		let blob: Blob | null = null;
 		onProgressChange?.(
 			createExportProgress({
-				stage: "capturing",
-				label: "Capturing image",
-				detail: "Rendering the export frame",
+				stage: 'capturing',
+				label: 'Capturing image',
+				detail: 'Rendering the export frame',
 				progress: 0.44,
 			}),
 		);
@@ -2258,13 +2269,13 @@ export async function exportImage(
 				capabilities,
 			);
 			if (blob && (await isLikelyBlankCapture(blob))) {
-				console.warn("Detached capture looked blank, trying live element");
+				console.warn('Detached capture looked blank, trying live element');
 				blob = null;
 			} else if (blob) {
-				capturePath = "detached-html-to-image";
+				capturePath = 'detached-html-to-image';
 			}
 		} catch (error) {
-			console.warn("Detached blob capture failed, trying live element:", error);
+			console.warn('Detached blob capture failed, trying live element:', error);
 		}
 
 		// Fallback to live element capture if detached capture failed.
@@ -2276,14 +2287,14 @@ export async function exportImage(
 					capabilities,
 				);
 				if (blob && (await isLikelyBlankCapture(blob))) {
-					console.warn("Live-element capture looked blank");
+					console.warn('Live-element capture looked blank');
 					blob = null;
 				} else if (blob) {
-					capturePath = "live-html-to-image";
+					capturePath = 'live-html-to-image';
 				}
 			} catch (error) {
 				console.warn(
-					"Live blob capture failed, will try renderer fallback:",
+					'Live blob capture failed, will try renderer fallback:',
 					error,
 				);
 			}
@@ -2298,13 +2309,13 @@ export async function exportImage(
 					pixelRatio: Math.min(pixelRatio ?? 4, 3),
 				});
 				if (blob && (await isLikelyBlankCapture(blob))) {
-					console.warn("Detached html2canvas fallback looked blank");
+					console.warn('Detached html2canvas fallback looked blank');
 					blob = null;
 				} else if (blob) {
-					capturePath = "detached-html2canvas";
+					capturePath = 'detached-html2canvas';
 				}
 			} catch (error) {
-				console.warn("Detached html2canvas fallback failed:", error);
+				console.warn('Detached html2canvas fallback failed:', error);
 			}
 		}
 
@@ -2315,13 +2326,13 @@ export async function exportImage(
 					pixelRatio: Math.min(pixelRatio ?? 4, 3),
 				});
 				if (blob && (await isLikelyBlankCapture(blob))) {
-					console.warn("Live html2canvas fallback looked blank");
+					console.warn('Live html2canvas fallback looked blank');
 					blob = null;
 				} else if (blob) {
-					capturePath = "live-html2canvas";
+					capturePath = 'live-html2canvas';
 				}
 			} catch (error) {
-				console.warn("Live html2canvas fallback failed:", error);
+				console.warn('Live html2canvas fallback failed:', error);
 			}
 		}
 
@@ -2338,33 +2349,33 @@ export async function exportImage(
 					capabilities,
 				);
 				if (blob && (await isLikelyBlankCapture(blob))) {
-					console.warn("Low-ratio detached retry looked blank");
+					console.warn('Low-ratio detached retry looked blank');
 					blob = null;
 				} else if (blob) {
-					capturePath = "detached-html-to-image-low-ratio";
+					capturePath = 'detached-html-to-image-low-ratio';
 				}
 			} catch (error) {
-				console.warn("Low-ratio detached retry failed:", error);
+				console.warn('Low-ratio detached retry failed:', error);
 			}
 		}
 
 		if (blob && capabilities.isMobile) {
-			onStatusChange?.("sharing");
+			onStatusChange?.('sharing');
 			onProgressChange?.(
 				createExportProgress({
-					stage: "sharing",
-					label: "Ready to save image",
-					detail: "Choose how to hand the file off to your device",
+					stage: 'sharing',
+					label: 'Ready to save image',
+					detail: 'Choose how to hand the file off to your device',
 					progress: 0.88,
 				}),
 			);
 			const promptMethod = await presentMobileExportPrompt(blob, {
 				filename,
-				mimeType: "image/png",
+				mimeType: 'image/png',
 				capabilities,
 			});
 			const blobSummary = await summarizeBlob(blob);
-			console.info("[export:diagnostics] success", {
+			console.info('[export:diagnostics] success', {
 				filename,
 				method: promptMethod,
 				capturePath,
@@ -2372,11 +2383,11 @@ export async function exportImage(
 				pipelineVersion: EXPORT_PIPELINE_VERSION,
 				...runtimeBuildContext,
 			});
-			onStatusChange?.("success");
+			onStatusChange?.('success');
 			onProgressChange?.(
 				createExportProgress({
-					stage: "complete",
-					label: "Image export complete",
+					stage: 'complete',
+					label: 'Image export complete',
 					detail: filename,
 					progress: 1,
 				}),
@@ -2393,9 +2404,9 @@ export async function exportImage(
 		if (blob) {
 			onProgressChange?.(
 				createExportProgress({
-					stage: "downloading",
-					label: "Downloading image",
-					detail: "Handing the finished file to the browser",
+					stage: 'downloading',
+					label: 'Downloading image',
+					detail: 'Handing the finished file to the browser',
 					progress: 0.9,
 				}),
 			);
@@ -2404,26 +2415,26 @@ export async function exportImage(
 			});
 			if (downloadResult.success) {
 				const blobSummary = await summarizeBlob(blob);
-				console.info("[export:diagnostics] success", {
+				console.info('[export:diagnostics] success', {
 					filename,
-					method: "download",
+					method: 'download',
 					capturePath,
 					...blobSummary,
 					pipelineVersion: EXPORT_PIPELINE_VERSION,
 					...runtimeBuildContext,
 				});
-				onStatusChange?.("success");
+				onStatusChange?.('success');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "complete",
-						label: "Image export complete",
+						stage: 'complete',
+						label: 'Image export complete',
 						detail: filename,
 						progress: 1,
 					}),
 				);
 				return {
 					success: true,
-					method: "download",
+					method: 'download',
 					capturePath,
 					...blobSummary,
 				};
@@ -2435,9 +2446,9 @@ export async function exportImage(
 			const dataUrlNode = exportNode ?? element;
 			onProgressChange?.(
 				createExportProgress({
-					stage: "finalizing",
-					label: "Trying compatibility fallback",
-					detail: "Switching to a data URL export path",
+					stage: 'finalizing',
+					label: 'Trying compatibility fallback',
+					detail: 'Switching to a data URL export path',
 					progress: 0.74,
 				}),
 			);
@@ -2447,41 +2458,41 @@ export async function exportImage(
 			});
 			const dataUrlBlob = dataUrlToBlob(dataUrl);
 			if (await isLikelyBlankCapture(dataUrlBlob)) {
-				throw new Error("Data URL fallback looked blank");
+				throw new Error('Data URL fallback looked blank');
 			}
 			const downloadResult = downloadImageDataUrlWithOptions(dataUrl, filename, {
 				allowSyntheticClick: useSyntheticDownload,
 			});
 			if (downloadResult.success) {
 				const blobSummary = await summarizeBlob(dataUrlBlob);
-				console.info("[export:diagnostics] success", {
+				console.info('[export:diagnostics] success', {
 					filename,
-					method: "dataurl",
+					method: 'dataurl',
 					capturePath:
-						capturePath === "none" ? "data-url" : capturePath,
+						capturePath === 'none' ? 'data-url' : capturePath,
 					...blobSummary,
 					pipelineVersion: EXPORT_PIPELINE_VERSION,
 					...runtimeBuildContext,
 				});
-				onStatusChange?.("success");
+				onStatusChange?.('success');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "complete",
-						label: "Image export complete",
+						stage: 'complete',
+						label: 'Image export complete',
 						detail: filename,
 						progress: 1,
 					}),
 				);
 				return {
 					success: true,
-					method: "dataurl",
+					method: 'dataurl',
 					capturePath:
-						capturePath === "none" ? "data-url" : capturePath,
+						capturePath === 'none' ? 'data-url' : capturePath,
 					...blobSummary,
 				};
 			}
 		} catch (error) {
-			console.error("Data URL fallback failed:", error);
+			console.error('Data URL fallback failed:', error);
 		}
 
 		// Method 4: iOS long-press fallback — show the image in a full-screen
@@ -2490,113 +2501,113 @@ export async function exportImage(
 			try {
 				const blobSummary = await summarizeBlob(blob);
 				const url = URL.createObjectURL(blob);
-				const overlay = document.createElement("div");
+				const overlay = document.createElement('div');
 				overlay.style.cssText =
-					"position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);" +
-					"display:flex;flex-direction:column;align-items:center;justify-content:center;" +
-					"padding:16px;-webkit-tap-highlight-color:transparent";
+					'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);' +
+					'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+					'padding:16px;-webkit-tap-highlight-color:transparent';
 				overlay.innerHTML =
 					`<p style="color:#fff;font:600 15px/1.4 system-ui;margin:0 0 12px;text-align:center">` +
 					`Long-press the image and tap <b>Save Image</b></p>` +
 					`<img src="${url}" style="max-width:100%;max-height:75vh;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.5)" alt="Export">` +
 					`<button style="margin-top:16px;padding:10px 28px;border:none;border-radius:20px;` +
 					`background:#fff;color:#000;font:600 15px system-ui;cursor:pointer">Close</button>`;
-				overlay.querySelector("button")!.addEventListener("click", () => {
+				overlay.querySelector('button')!.addEventListener('click', () => {
 					overlay.remove();
 					URL.revokeObjectURL(url);
 				});
-				overlay.addEventListener("click", (e) => {
+				overlay.addEventListener('click', (e) => {
 					if (e.target === overlay) {
 						overlay.remove();
 						URL.revokeObjectURL(url);
 					}
 				});
 				document.body.appendChild(overlay);
-				console.info("[export:diagnostics] success", {
+				console.info('[export:diagnostics] success', {
 					filename,
-					method: "dataurl",
+					method: 'dataurl',
 					capturePath:
-						capturePath === "none"
-							? "ios-inline-overlay"
+						capturePath === 'none'
+							? 'ios-inline-overlay'
 							: capturePath,
 					...blobSummary,
 					pipelineVersion: EXPORT_PIPELINE_VERSION,
 					...runtimeBuildContext,
 				});
-				onStatusChange?.("success");
+				onStatusChange?.('success');
 				onProgressChange?.(
 					createExportProgress({
-						stage: "complete",
-						label: "Image export complete",
+						stage: 'complete',
+						label: 'Image export complete',
 						detail: filename,
 						progress: 1,
 					}),
 				);
 				return {
 					success: true,
-					method: "dataurl",
+					method: 'dataurl',
 					capturePath:
-						capturePath === "none"
-							? "ios-inline-overlay"
+						capturePath === 'none'
+							? 'ios-inline-overlay'
 							: capturePath,
 					...blobSummary,
 				};
 			} catch (error) {
-				console.warn("iOS inline image fallback failed:", error);
+				console.warn('iOS inline image fallback failed:', error);
 			}
 		}
 
 		// Method 5: Manual instructions (ultimate fallback)
-		onStatusChange?.("error");
+		onStatusChange?.('error');
 		onProgressChange?.(
 			createExportProgress({
-				stage: "error",
-				label: "Image export failed",
-				detail: "Export failed. Try taking a screenshot manually.",
+				stage: 'error',
+				label: 'Image export failed',
+				detail: 'Export failed. Try taking a screenshot manually.',
 				progress: 1,
 			}),
 		);
-		console.error("[export:diagnostics] failure", {
+		console.error('[export:diagnostics] failure', {
 			filename,
-			method: "manual",
+			method: 'manual',
 			capturePath,
 			pipelineVersion: EXPORT_PIPELINE_VERSION,
 			...runtimeBuildContext,
-			error: "Export failed. Try taking a screenshot manually.",
+			error: 'Export failed. Try taking a screenshot manually.',
 		});
 		return {
 			success: false,
-			method: "manual",
+			method: 'manual',
 			capturePath,
-			error: "Export failed. Try taking a screenshot manually.",
+			error: 'Export failed. Try taking a screenshot manually.',
 		};
 	} catch (error) {
-		console.error("Export failed:", error);
-		console.error("[export:diagnostics] failure", {
+		console.error('Export failed:', error);
+		console.error('[export:diagnostics] failure', {
 			filename,
-			method: "manual",
+			method: 'manual',
 			capturePath,
 			pipelineVersion: EXPORT_PIPELINE_VERSION,
 			...runtimeBuildContext,
-			error: error instanceof Error ? error.message : "Unknown error occurred",
+			error: error instanceof Error ? error.message : 'Unknown error occurred',
 		});
-		onStatusChange?.("error");
+		onStatusChange?.('error');
 		onProgressChange?.(
 			createExportProgress({
-				stage: "error",
-				label: "Image export failed",
+				stage: 'error',
+				label: 'Image export failed',
 				detail:
 					error instanceof Error
 						? error.message
-						: "Unknown error occurred",
+						: 'Unknown error occurred',
 				progress: 1,
 			}),
 		);
 		return {
 			success: false,
-			method: "manual",
+			method: 'manual',
 			capturePath,
-			error: error instanceof Error ? error.message : "Unknown error occurred",
+			error: error instanceof Error ? error.message : 'Unknown error occurred',
 		};
 	} finally {
 		removeExportNode(exportNode);

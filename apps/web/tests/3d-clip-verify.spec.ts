@@ -1,9 +1,9 @@
-import { execFileSync, execSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { execFileSync, execSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from '@playwright/test';
 
 /**
  * Keyframe-diff verification for the /3d export — the "own the render function" guarantee.
@@ -27,13 +27,13 @@ import { expect, test, type Page } from "@playwright/test";
  * follow-up; not silently claimed here.
  */
 
-const OUT_DIR = path.join(os.tmpdir(), "ipod-3d-clip-verify");
+const OUT_DIR = path.join(os.tmpdir(), 'ipod-3d-clip-verify');
 
 // ffmpeg prints filter stats to stderr; merge it into stdout via the shell.
 function ssim(a: string, b: string): number {
 	const out = execSync(
 		`ffmpeg -i ${JSON.stringify(a)} -i ${JSON.stringify(b)} -filter_complex ssim -f null - 2>&1`,
-		{ encoding: "utf8" },
+		{ encoding: 'utf8' },
 	);
 	const m = out.match(/All:([0-9.]+)/);
 	return m ? Number(m[1]) : NaN;
@@ -43,7 +43,7 @@ function ssim(a: string, b: string): number {
 function maxConsecutiveJump(mp4: string): number {
 	const out = execSync(
 		`ffmpeg -i ${JSON.stringify(mp4)} -vf "tblend=all_mode=difference,signalstats,metadata=print" -f null - 2>&1`,
-		{ encoding: "utf8" },
+		{ encoding: 'utf8' },
 	);
 	const vals = [...out.matchAll(/YAVG=([0-9.]+)/g)].map((m) => Number(m[1]));
 	return vals.length ? Math.max(...vals) : NaN;
@@ -58,7 +58,7 @@ function maxConsecutiveJump(mp4: string): number {
 function maxCenterCrawl(mp4: string): number {
 	const out = execSync(
 		`ffmpeg -i ${JSON.stringify(mp4)} -vf "crop=iw/3:ih/3:iw/3:ih/3,tblend=all_mode=difference,signalstats,metadata=print" -f null - 2>&1`,
-		{ encoding: "utf8" },
+		{ encoding: 'utf8' },
 	);
 	const vals = [...out.matchAll(/YMAX=([0-9.]+)/g)].map((m) => Number(m[1]));
 	return vals.length ? Math.max(...vals) : NaN;
@@ -69,11 +69,11 @@ function maxCenterCrawl(mp4: string): number {
  * pixels ≥254 (blow-out), `mode="black"` masks ≤1 (crush); the mask's mean luma / 255 is the
  * fraction. Excludes nothing — the flat backdrop counts too, so thresholds are generous.
  */
-function clipFraction(mp4: string, mode: "white" | "black"): number {
-	const expr = mode === "white" ? "if(gte(lum(X,Y),254),255,0)" : "if(lte(lum(X,Y),1),255,0)";
+function clipFraction(mp4: string, mode: 'white' | 'black'): number {
+	const expr = mode === 'white' ? 'if(gte(lum(X,Y),254),255,0)' : 'if(lte(lum(X,Y),1),255,0)';
 	const out = execSync(
 		`ffmpeg -i ${JSON.stringify(mp4)} -vf "format=gray,geq=lum='${expr}',signalstats,metadata=print" -f null - 2>&1`,
-		{ encoding: "utf8" },
+		{ encoding: 'utf8' },
 	);
 	const vals = [...out.matchAll(/YAVG=([0-9.]+)/g)].map((m) => Number(m[1]));
 	if (!vals.length) return NaN;
@@ -81,12 +81,15 @@ function clipFraction(mp4: string, mode: "white" | "black"): number {
 	return mean / 255;
 }
 
-async function captureClip(page: Page, move: "Orbit" | "Turntable" | "Sweep" | "Robo"): Promise<string> {
+async function captureClip(
+	page: Page,
+	move: 'Orbit' | 'Turntable' | 'Sweep' | 'Robo',
+): Promise<string> {
 	// Select the move in the picker, then fire the single Export clip button.
-	await page.getByRole("button", { name: move, exact: true }).click();
-	const clipButton = page.getByRole("button", { name: /Export clip/i });
+	await page.getByRole('button', { name: move, exact: true }).click();
+	const clipButton = page.getByRole('button', { name: /Export clip/i });
 	await expect(clipButton).toBeEnabled();
-	const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
+	const downloadPromise = page.waitForEvent('download', { timeout: 120_000 });
 	await clipButton.click();
 	const download = await downloadPromise;
 	const mp4Path = path.join(OUT_DIR, `${move.toLowerCase()}.mp4`);
@@ -99,36 +102,62 @@ function analyze(label: string, mp4: string) {
 	const framesDir = path.join(OUT_DIR, `${label}-frames`);
 	fs.rmSync(framesDir, { force: true, recursive: true });
 	fs.mkdirSync(framesDir, { recursive: true });
-	execFileSync("ffmpeg", ["-y", "-i", mp4, "-vsync", "0", path.join(framesDir, "f-%03d.png")], {
-		stdio: "ignore",
-	});
-	const frames = fs.readdirSync(framesDir).filter((f) => f.endsWith(".png")).sort();
+	execFileSync(
+		'ffmpeg',
+		['-y', '-i', mp4, '-vsync', '0', path.join(framesDir, 'f-%03d.png')],
+		{
+			stdio: 'ignore',
+		},
+	);
+	const frames = fs
+		.readdirSync(framesDir)
+		.filter((f) => f.endsWith('.png'))
+		.sort();
 	const n = frames.length;
-	const loopSeam = ssim(path.join(framesDir, frames[0]!), path.join(framesDir, frames[n - 1]!));
-	const adjacentSeam = ssim(path.join(framesDir, frames[n - 2]!), path.join(framesDir, frames[n - 1]!));
+	const loopSeam = ssim(
+		path.join(framesDir, frames[0]!),
+		path.join(framesDir, frames[n - 1]!),
+	);
+	const adjacentSeam = ssim(
+		path.join(framesDir, frames[n - 2]!),
+		path.join(framesDir, frames[n - 1]!),
+	);
 	const maxJump = maxConsecutiveJump(mp4);
 	const crawl = maxCenterCrawl(mp4);
-	const whiteClip = clipFraction(mp4, "white");
-	const blackClip = clipFraction(mp4, "black");
+	const whiteClip = clipFraction(mp4, 'white');
+	const blackClip = clipFraction(mp4, 'black');
 
 	// contact sheet for eyeballing
-	execFileSync("ffmpeg", [
-		"-y", "-i", mp4,
-		"-vf", "scale=216:384,tile=10x15:padding=4:color=white",
-		path.join(OUT_DIR, `${label}-contact.png`),
-	], { stdio: "ignore" });
+	execFileSync(
+		'ffmpeg',
+		[
+			'-y',
+			'-i',
+			mp4,
+			'-vf',
+			'scale=216:384,tile=10x15:padding=4:color=white',
+			path.join(OUT_DIR, `${label}-contact.png`),
+		],
+		{ stdio: 'ignore' },
+	);
 
 	console.log(`\n=== ${label.toUpperCase()} ===`);
 	console.log(`frames=${n}`);
-	console.log(`loop-seam SSIM(last,first)=${loopSeam.toFixed(4)}  adjacent=${adjacentSeam.toFixed(4)}  (want seam ≈ adjacent)`);
+	console.log(
+		`loop-seam SSIM(last,first)=${loopSeam.toFixed(4)}  adjacent=${adjacentSeam.toFixed(4)}  (want seam ≈ adjacent)`,
+	);
 	console.log(`max consecutive jump=${maxJump.toFixed(2)}  (whole-frame avg; pop guard)`);
-	console.log(`max centre crawl=${crawl.toFixed(2)}  (peak Δ in centre third; de-strobe guard)`);
-	console.log(`clip fraction  white=${(whiteClip * 100).toFixed(2)}%  black=${(blackClip * 100).toFixed(2)}%`);
+	console.log(
+		`max centre crawl=${crawl.toFixed(2)}  (peak Δ in centre third; de-strobe guard)`,
+	);
+	console.log(
+		`clip fraction  white=${(whiteClip * 100).toFixed(2)}%  black=${(blackClip * 100).toFixed(2)}%`,
+	);
 	console.log(`contact: ${path.join(OUT_DIR, `${label}-contact.png`)}`);
 	return { n, loopSeam, adjacentSeam, maxJump, crawl, whiteClip, blackClip };
 }
 
-test("owned-finish keyframe invariants — Orbit + Turntable", async ({ page }) => {
+test('owned-finish keyframe invariants — Orbit + Turntable', async ({ page }) => {
 	fs.rmSync(OUT_DIR, { force: true, recursive: true });
 	fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -140,22 +169,22 @@ test("owned-finish keyframe invariants — Orbit + Turntable", async ({ page }) 
 	// click after load (it also sets the white stage).
 	await page.addInitScript(() => {
 		localStorage.setItem(
-			"ipodSnapshotUiState",
-			JSON.stringify({ skinColor: "#E8E8E8", bgColor: "#FFFFFF" }),
+			'ipodSnapshotUiState',
+			JSON.stringify({ skinColor: '#E8E8E8', bgColor: '#FFFFFF' }),
 		);
 	});
-	await page.goto("/3d", { waitUntil: "domcontentloaded" });
-	await page.locator("canvas").first().waitFor({ state: "visible", timeout: 60_000 });
-	await page.getByRole("button", { name: "Apple", exact: true }).click();
+	await page.goto('/3d', { waitUntil: 'domcontentloaded' });
+	await page.locator('canvas').first().waitFor({ state: 'visible', timeout: 60_000 });
+	await page.getByRole('button', { name: 'Apple', exact: true }).click();
 	await page.waitForTimeout(2500);
 
-	const orbitMp4 = await captureClip(page, "Orbit");
-	const turntableMp4 = await captureClip(page, "Turntable");
+	const orbitMp4 = await captureClip(page, 'Orbit');
+	const turntableMp4 = await captureClip(page, 'Turntable');
 	await page.close();
 
-	const orbit = analyze("orbit", orbitMp4);
-	const turntable = analyze("turntable", turntableMp4);
-	console.log("\nOUTDIR:", OUT_DIR);
+	const orbit = analyze('orbit', orbitMp4);
+	const turntable = analyze('turntable', turntableMp4);
+	console.log('\nOUTDIR:', OUT_DIR);
 
 	// Seamless loops, no opening pop (both moves close on the hero seam).
 	for (const clip of [orbit, turntable]) {

@@ -54,5 +54,5 @@ export const EASING_NAMES = Object.keys(EASINGS) as EasingName[];
 
 /** Resolve a named easing, or pass a raw `[c1x,c1y,c2x,c2y]` tuple straight through. */
 export function easingHandles(easing: EasingName | CubicBezierHandles): CubicBezierHandles {
-	return typeof easing === "string" ? EASINGS[easing] : easing;
+	return typeof easing === 'string' ? EASINGS[easing] : easing;
 }

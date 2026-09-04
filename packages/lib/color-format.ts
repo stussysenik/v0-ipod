@@ -20,7 +20,7 @@ function clampInt(value: number, min: number, max: number): number {
 }
 
 function channelToHex(value: number): string {
-	return clampInt(value, 0, 255).toString(16).padStart(2, "0");
+	return clampInt(value, 0, 255).toString(16).padStart(2, '0');
 }
 
 /** Canonical `#RRGGBB`, uppercase — the one form the colour pipeline stores. */
@@ -34,9 +34,9 @@ function parseHex(input: string): string | null {
 	let clean = match[1];
 	if (clean.length === 3) {
 		clean = clean
-			.split("")
+			.split('')
 			.map((c) => c + c)
-			.join("");
+			.join('');
 	}
 	return `#${clean}`.toUpperCase();
 }
@@ -48,7 +48,7 @@ function parseRgb(input: string): string | null {
 	if (parts.length < 3) return null;
 	const channels = parts.slice(0, 3).map((p) => {
 		// Support percentage channels (rgb(50%, ...)) as well as 0–255.
-		if (p.endsWith("%")) {
+		if (p.endsWith('%')) {
 			const pct = Number.parseFloat(p);
 			return Number.isFinite(pct) ? (pct / 100) * 255 : Number.NaN;
 		}
@@ -114,16 +114,16 @@ function parseHsl(input: string): string | null {
  * caller can reject bad input without mutating state.
  */
 export function parseColor(input: string): string | null {
-	if (typeof input !== "string") return null;
+	if (typeof input !== 'string') return null;
 	const trimmed = input.trim();
 	if (!trimmed) return null;
 	const lower = trimmed.toLowerCase();
-	if (lower.startsWith("rgb")) return parseRgb(trimmed);
-	if (lower.startsWith("hsl")) return parseHsl(trimmed);
+	if (lower.startsWith('rgb')) return parseRgb(trimmed);
+	if (lower.startsWith('hsl')) return parseHsl(trimmed);
 	return parseHex(trimmed);
 }
 
-export type ColorFormat = "hex" | "rgb" | "hsl";
+export type ColorFormat = 'hex' | 'rgb' | 'hsl';
 
 function hexToChannels(hex: string): [number, number, number] | null {
 	const canonical = parseHex(hex);
@@ -143,8 +143,8 @@ export function formatColor(hex: string, format: ColorFormat): string {
 	const channels = hexToChannels(hex);
 	if (!channels) return hex;
 	const [r, g, b] = channels;
-	if (format === "rgb") return `rgb(${r}, ${g}, ${b})`;
-	if (format === "hsl") {
+	if (format === 'rgb') return `rgb(${r}, ${g}, ${b})`;
+	if (format === 'hsl') {
 		const [h, s, l] = rgbToHsl(r, g, b);
 		return `hsl(${Math.round(h) % 360}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
 	}

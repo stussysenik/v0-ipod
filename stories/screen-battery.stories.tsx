@@ -1,17 +1,15 @@
-import { ScreenBattery } from "@ipod/components/ipod/screen-battery";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
+import { ScreenBattery } from '@ipod/components/ipod/screen-battery';
+import type { Meta, StoryObj } from '@storybook/react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Fields/Screen Battery",
+	title: 'iPod/Fields/Screen Battery',
 	component: ScreenBattery,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: { level: 0.72 },
 	argTypes: {
-		level: { control: { type: "range", min: 0, max: 1, step: 0.05 } },
+		level: { control: { type: 'range', min: 0, max: 1, step: 0.05 } },
 	},
 } satisfies Meta<typeof ScreenBattery>;
 

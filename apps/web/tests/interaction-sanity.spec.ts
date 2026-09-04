@@ -1,18 +1,18 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from '@playwright/test';
 
-test.describe("Hardware Interaction Sanity", () => {
+test.describe('Hardware Interaction Sanity', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto("/");
+		await page.goto('/');
 		// Wait for the screen to be visible
 		await page.waitForSelector('[data-testid="ipod-screen"]');
 	});
 
-	test("Click Wheel buttons are interactive and not blocked by overlays", async ({
+	test('Click Wheel buttons are interactive and not blocked by overlays', async ({
 		page,
 	}) => {
-		const menuButton = page.getByTestId("click-wheel-menu-button");
-		const playPauseButton = page.getByTestId("click-wheel-playpause-button");
-		const centerButton = page.getByTestId("click-wheel-center");
+		const menuButton = page.getByTestId('click-wheel-menu-button');
+		const playPauseButton = page.getByTestId('click-wheel-playpause-button');
+		const centerButton = page.getByTestId('click-wheel-center');
 
 		// Check visibility and clickability
 		await expect(menuButton).toBeVisible();
@@ -25,7 +25,7 @@ test.describe("Hardware Interaction Sanity", () => {
 			const elementAtPoint = await page.evaluate(
 				({ x, y }) => {
 					const el = document.elementFromPoint(x, y);
-					return el ? el.outerHTML.substring(0, 100) : "null";
+					return el ? el.outerHTML.substring(0, 100) : 'null';
 				},
 				{
 					x: menuBox.x + menuBox.width / 2,
@@ -34,7 +34,7 @@ test.describe("Hardware Interaction Sanity", () => {
 			);
 
 			// If blocked, this would return the overlay's HTML
-			console.log("Element at menu button center:", elementAtPoint);
+			console.log('Element at menu button center:', elementAtPoint);
 		}
 
 		// Try clicking - if blocked by a non-pointer-events:none element, this will fail or timeout
@@ -43,14 +43,14 @@ test.describe("Hardware Interaction Sanity", () => {
 		await centerButton.click();
 	});
 
-	test("Screen editable elements are reachable", async ({ page }) => {
+	test('Screen editable elements are reachable', async ({ page }) => {
 		// In default "ipod-os" mode with "menu", elements might not be editable.
 		// The Direct Edit toggle lives in the Theme & Controls panel now.
-		await page.getByTestId("theme-button").click();
-		await page.getByRole("button", { name: "Direct Edit" }).click();
-		await page.getByTestId("theme-button").click(); // close the panel
+		await page.getByTestId('theme-button').click();
+		await page.getByRole('button', { name: 'Direct Edit' }).click();
+		await page.getByTestId('theme-button').click(); // close the panel
 
-		const trackTitle = page.getByTestId("track-title-text");
+		const trackTitle = page.getByTestId('track-title-text');
 		await expect(trackTitle).toBeVisible();
 
 		// Attempt to click to trigger edit mode

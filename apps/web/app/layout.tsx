@@ -1,15 +1,13 @@
-import { Analytics } from "@vercel/analytics/next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
+import { BuildVersionBadge } from '@ipod/components/build-version-badge';
+import { ServiceWorkerCleanup } from '@ipod/components/service-worker-cleanup';
+import { Analytics } from '@vercel/analytics/next';
+import type { Metadata, Viewport } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { Toaster } from 'sonner';
+import './globals.css';
 
-import { BuildVersionBadge } from "@ipod/components/build-version-badge";
-import { ServiceWorkerCleanup } from "@ipod/components/service-worker-cleanup";
-
-import type { Metadata, Viewport } from "next";
-import "./globals.css";
-
-const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
+const geistSans = Geist({ subsets: ['latin'], variable: '--font-geist-sans' });
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' });
 
 function resolveDeployVersion(): string {
 	const explicitVersion = process.env.NEXT_PUBLIC_DEPLOY_VERSION?.trim();
@@ -19,8 +17,8 @@ function resolveDeployVersion(): string {
 
 	const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
 	const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.slice(-6);
-	const deploymentUrlToken = process.env.VERCEL_URL?.replace(/\.vercel\.app$/i, "")
-		.split("-")
+	const deploymentUrlToken = process.env.VERCEL_URL?.replace(/\.vercel\.app$/i, '')
+		.split('-')
 		.at(-1);
 	const deploymentStamp = deploymentId ?? deploymentUrlToken;
 
@@ -29,18 +27,18 @@ function resolveDeployVersion(): string {
 	);
 
 	if (parts.length === 0) {
-		return "dev";
+		return 'dev';
 	}
 
-	return parts.join("-");
+	return parts.join('-');
 }
 
 const deployVersion = resolveDeployVersion();
-const shouldRenderAnalytics = process.env.NODE_ENV === "production" && process.env.VERCEL === "1";
+const shouldRenderAnalytics = process.env.NODE_ENV === 'production' && process.env.VERCEL === '1';
 
 export const viewport: Viewport = {
-	themeColor: "#000000",
-	width: "device-width",
+	themeColor: '#000000',
+	width: 'device-width',
 	initialScale: 1,
 	// Pinch-zoom stays enabled (WCAG 1.4.4). The click wheel and 3D canvas set
 	// `touch-action: none` on their own surfaces, so re-enabling page zoom does
@@ -50,32 +48,32 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-	title: "iPod Snapshot",
-	description: "iPod Snapshot - Classic simulator and export studio",
-	manifest: "/manifest.webmanifest",
-	generator: "v0.app",
+	title: 'iPod Snapshot',
+	description: 'iPod Snapshot - Classic simulator and export studio',
+	manifest: '/manifest.webmanifest',
+	generator: 'v0.app',
 	appleWebApp: {
 		capable: true,
-		statusBarStyle: "black-translucent",
-		title: "iPod Snapshot",
+		statusBarStyle: 'black-translucent',
+		title: 'iPod Snapshot',
 	},
 	icons: {
 		icon: [
 			{
 				url: `/icon.svg?v=${deployVersion}`,
-				type: "image/svg+xml",
+				type: 'image/svg+xml',
 			},
 			{
 				url: `/icon-192x192.png?v=${deployVersion}`,
-				sizes: "192x192",
-				type: "image/png",
+				sizes: '192x192',
+				type: 'image/png',
 			},
 		],
 		apple: `/apple-icon.png?v=${deployVersion}`,
 	},
 };
 
-import { IpodStoreProvider } from "@ipod/lib/xstate/store";
+import { IpodStoreProvider } from '@ipod/lib/xstate/store';
 
 export default function RootLayout({
 	children,
@@ -89,24 +87,24 @@ export default function RootLayout({
 			>
 				<IpodStoreProvider>
 					<ServiceWorkerCleanup deployVersion={deployVersion} />
-						{children}
-						<BuildVersionBadge initialVersion={deployVersion} />
-						<Toaster
-							position="bottom-center"
-							richColors={false}
-							closeButton={false}
-							visibleToasts={2}
-							duration={2200}
-							toastOptions={{
-								style: {
-									border: "1px solid rgba(0,0,0,0.14)",
-									background: "rgba(247,247,245,0.94)",
-									color: "rgba(0,0,0,0.82)",
-									boxShadow: "0 10px 22px rgba(0,0,0,0.14)",
-									backdropFilter: "blur(8px)",
-								},
-							}}
-						/>
+					{children}
+					<BuildVersionBadge initialVersion={deployVersion} />
+					<Toaster
+						position="bottom-center"
+						richColors={false}
+						closeButton={false}
+						visibleToasts={2}
+						duration={2200}
+						toastOptions={{
+							style: {
+								border: '1px solid rgba(0,0,0,0.14)',
+								background: 'rgba(247,247,245,0.94)',
+								color: 'rgba(0,0,0,0.82)',
+								boxShadow: '0 10px 22px rgba(0,0,0,0.14)',
+								backdropFilter: 'blur(8px)',
+							},
+						}}
+					/>
 					{shouldRenderAnalytics ? <Analytics /> : null}
 				</IpodStoreProvider>
 			</body>

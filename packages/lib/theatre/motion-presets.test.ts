@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { ELEVATION_RANGE, REACH_RANGE, type StudioPose } from "../studio-camera";
-import { createStateSampler } from "./keyframe-sampler";
-import { buildPresetState, MOTION_PRESETS, type MotionPreset } from "./motion-presets";
-import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from "./studio-project";
+import { ELEVATION_RANGE, REACH_RANGE, type StudioPose } from '../studio-camera';
+import { createStateSampler } from './keyframe-sampler';
+import { buildPresetState, MOTION_PRESETS, type MotionPreset } from './motion-presets';
+import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from './studio-project';
 
 const HERO: StudioPose = { azimuth: 18, elevation: 14, reach: 13, target: [0, 0, 0] };
 const CYCLE = 6;
@@ -20,8 +20,8 @@ function poseAt(preset: MotionPreset, position: number): StudioPose {
 	return studioValuesToPose(sampler.sampleObject(CAMERA_OBJECT_KEY, position));
 }
 
-describe("motion presets (moment cards)", () => {
-	it("offers a rich catalogue with unique ids", () => {
+describe('motion presets (moment cards)', () => {
+	it('offers a rich catalogue with unique ids', () => {
 		expect(MOTION_PRESETS.length).toBeGreaterThanOrEqual(6);
 		const ids = MOTION_PRESETS.map((p) => p.id);
 		expect(new Set(ids).size).toBe(ids.length);
@@ -49,8 +49,12 @@ describe("motion presets (moment cards)", () => {
 				const pose = poseAt(preset, (i / 12) * CYCLE);
 				expect(pose.reach).toBeGreaterThanOrEqual(REACH_RANGE[0] - 1e-6);
 				expect(pose.reach).toBeLessThanOrEqual(REACH_RANGE[1] + 1e-6);
-				expect(pose.elevation).toBeGreaterThanOrEqual(ELEVATION_RANGE[0] - 1e-6);
-				expect(pose.elevation).toBeLessThanOrEqual(ELEVATION_RANGE[1] + 1e-6);
+				expect(pose.elevation).toBeGreaterThanOrEqual(
+					ELEVATION_RANGE[0] - 1e-6,
+				);
+				expect(pose.elevation).toBeLessThanOrEqual(
+					ELEVATION_RANGE[1] + 1e-6,
+				);
 			}
 		});
 
@@ -65,7 +69,7 @@ describe("motion presets (moment cards)", () => {
 		}
 	}
 
-	it("at least one preset actually moves the camera mid-cycle", () => {
+	it('at least one preset actually moves the camera mid-cycle', () => {
 		const movers = MOTION_PRESETS.filter((p) => {
 			const mid = poseAt(p, CYCLE / 2);
 			return (

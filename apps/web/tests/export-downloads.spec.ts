@@ -1,21 +1,21 @@
-import crypto from "node:crypto";
-import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { execFileSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from '@playwright/test';
 
-const downloadsDir = path.join(os.homedir(), "Downloads");
-const METADATA_STORAGE_KEY = "ipodSnapshotMetadata";
-const UI_STORAGE_KEY = "ipodSnapshotUiState";
-const SNAPSHOT_STORAGE_KEY = "ipodSnapshotSongSnapshot";
-const EXPORT_COUNTER_STORAGE_KEY = "ipodSnapshotExportCounter";
+const downloadsDir = path.join(os.homedir(), 'Downloads');
+const METADATA_STORAGE_KEY = 'ipodSnapshotMetadata';
+const UI_STORAGE_KEY = 'ipodSnapshotUiState';
+const SNAPSHOT_STORAGE_KEY = 'ipodSnapshotSongSnapshot';
+const EXPORT_COUNTER_STORAGE_KEY = 'ipodSnapshotExportCounter';
 
 async function allowDownloadsToHomeDirectory(page: Page) {
 	const client = await page.context().newCDPSession(page);
-	await client.send("Page.setDownloadBehavior", {
-		behavior: "allow",
+	await client.send('Page.setDownloadBehavior', {
+		behavior: 'allow',
 		downloadPath: downloadsDir,
 	});
 }
@@ -40,20 +40,20 @@ async function waitForDownloadedFile(filePath: string, timeoutMs = 90_000): Prom
 function getExtractedFrameHashes(filePath: string): [string, string] {
 	const frameCount = Number.parseInt(
 		execFileSync(
-			"ffprobe",
+			'ffprobe',
 			[
-				"-v",
-				"error",
-				"-count_frames",
-				"-select_streams",
-				"v:0",
-				"-show_entries",
-				"stream=nb_read_frames",
-				"-of",
-				"default=nokey=1:noprint_wrappers=1",
+				'-v',
+				'error',
+				'-count_frames',
+				'-select_streams',
+				'v:0',
+				'-show_entries',
+				'stream=nb_read_frames',
+				'-of',
+				'default=nokey=1:noprint_wrappers=1',
 				filePath,
 			],
-			{ encoding: "utf8" },
+			{ encoding: 'utf8' },
 		).trim(),
 		10,
 	);
@@ -62,29 +62,29 @@ function getExtractedFrameHashes(filePath: string): [string, string] {
 	}
 
 	const middleFrameIndex = Math.max(1, Math.floor(frameCount / 2));
-	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ipod-export-frames-"));
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ipod-export-frames-'));
 
 	try {
 		execFileSync(
-			"ffmpeg",
+			'ffmpeg',
 			[
-				"-y",
-				"-i",
+				'-y',
+				'-i',
 				filePath,
-				"-vf",
+				'-vf',
 				`select='eq(n,0)+eq(n,${middleFrameIndex})'`,
-				"-vsync",
-				"0",
-				path.join(tmpDir, "frame-%03d.png"),
+				'-vsync',
+				'0',
+				path.join(tmpDir, 'frame-%03d.png'),
 			],
-			{ stdio: "ignore" },
+			{ stdio: 'ignore' },
 		);
 
-		const firstFrame = fs.readFileSync(path.join(tmpDir, "frame-001.png"));
-		const middleFrame = fs.readFileSync(path.join(tmpDir, "frame-002.png"));
+		const firstFrame = fs.readFileSync(path.join(tmpDir, 'frame-001.png'));
+		const middleFrame = fs.readFileSync(path.join(tmpDir, 'frame-002.png'));
 		return [
-			crypto.createHash("sha256").update(firstFrame).digest("hex"),
-			crypto.createHash("sha256").update(middleFrame).digest("hex"),
+			crypto.createHash('sha256').update(firstFrame).digest('hex'),
+			crypto.createHash('sha256').update(middleFrame).digest('hex'),
 		];
 	} finally {
 		fs.rmSync(tmpDir, { force: true, recursive: true });
@@ -97,11 +97,11 @@ function getExtractedFrameHashes(filePath: string): [string, string] {
  * ArrowRight steps 1s at a time.
  */
 async function setCaptureDurationSeconds(page: Page, seconds: number) {
-	const thumb = page.getByRole("dialog").getByRole("slider");
+	const thumb = page.getByRole('dialog').getByRole('slider');
 	await thumb.focus();
-	await page.keyboard.press("Home");
+	await page.keyboard.press('Home');
 	for (let step = 2; step < seconds; step += 1) {
-		await page.keyboard.press("ArrowRight");
+		await page.keyboard.press('ArrowRight');
 	}
 	await expect(thumb).toHaveValue(String(seconds));
 }
@@ -114,38 +114,38 @@ async function prepareExportSurface(page: Page) {
 			snapshotStorageKey,
 			uiStorageKey,
 		}) => {
-		localStorage.removeItem("ipod-workbench-model");
-		localStorage.removeItem("ipod-song-snapshot");
-		localStorage.removeItem("ipod-export-counter");
-		localStorage.removeItem(metadataStorageKey);
-		localStorage.removeItem(uiStorageKey);
-		localStorage.removeItem(snapshotStorageKey);
-		localStorage.removeItem(exportCounterStorageKey);
-		localStorage.setItem(
-			metadataStorageKey,
-			JSON.stringify({
-				title: "Doesn't Just Happen",
-				artist: "James Blake",
-				album: "Playing Robots Into Heaven",
-				artwork: "/default-artwork.png",
-				duration: 252,
-				currentTime: 47,
-				rating: 4,
-				trackNumber: 2,
-				totalTracks: 12,
-			}),
-		);
-		localStorage.setItem(
-			uiStorageKey,
-			JSON.stringify({
-				viewMode: "preview",
-				interactionModel: "direct",
-				osScreen: "now-playing",
-				isPlaying: true,
-			}),
-		);
-		localStorage.setItem(exportCounterStorageKey, "0");
-	},
+			localStorage.removeItem('ipod-workbench-model');
+			localStorage.removeItem('ipod-song-snapshot');
+			localStorage.removeItem('ipod-export-counter');
+			localStorage.removeItem(metadataStorageKey);
+			localStorage.removeItem(uiStorageKey);
+			localStorage.removeItem(snapshotStorageKey);
+			localStorage.removeItem(exportCounterStorageKey);
+			localStorage.setItem(
+				metadataStorageKey,
+				JSON.stringify({
+					title: "Doesn't Just Happen",
+					artist: 'James Blake',
+					album: 'Playing Robots Into Heaven',
+					artwork: '/default-artwork.png',
+					duration: 252,
+					currentTime: 47,
+					rating: 4,
+					trackNumber: 2,
+					totalTracks: 12,
+				}),
+			);
+			localStorage.setItem(
+				uiStorageKey,
+				JSON.stringify({
+					viewMode: 'preview',
+					interactionModel: 'direct',
+					osScreen: 'now-playing',
+					isPlaying: true,
+				}),
+			);
+			localStorage.setItem(exportCounterStorageKey, '0');
+		},
 		{
 			exportCounterStorageKey: EXPORT_COUNTER_STORAGE_KEY,
 			metadataStorageKey: METADATA_STORAGE_KEY,
@@ -153,36 +153,36 @@ async function prepareExportSurface(page: Page) {
 			uiStorageKey: UI_STORAGE_KEY,
 		},
 	);
-	await page.goto("/", { waitUntil: "domcontentloaded" });
-	await page.getByTestId("screen-progress").waitFor({ state: "visible" });
+	await page.goto('/', { waitUntil: 'domcontentloaded' });
+	await page.getByTestId('screen-progress').waitFor({ state: 'visible' });
 	await page.waitForTimeout(800);
 }
 
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: 'serial' });
 
-test.describe("Export downloads", () => {
-	test("GIF export lands in ~/Downloads", async ({ page }) => {
+test.describe('Export downloads', () => {
+	test('GIF export lands in ~/Downloads', async ({ page }) => {
 		await allowDownloadsToHomeDirectory(page);
 		await prepareExportSurface(page);
 
 		const filePath = path.join(
 			downloadsDir,
-			"ipod-0000-james-blake-doesn-t-just-happen.gif",
+			'ipod-0000-james-blake-doesn-t-just-happen.gif',
 		);
 		fs.rmSync(filePath, { force: true });
 
-		const downloadPromise = page.waitForEvent("download", {
+		const downloadPromise = page.waitForEvent('download', {
 			timeout: 120_000,
 		});
-		await page.getByTestId("gif-export-button").click();
+		await page.getByTestId('gif-export-button').click();
 		// Pin Standard quality — the dialog defaults to Ultra Fidelity, whose
 		// render time blows past any sane e2e budget on a dev server.
-		await page.getByTestId("quality-standard-button").click();
+		await page.getByTestId('quality-standard-button').click();
 		await setCaptureDurationSeconds(page, 3);
-		await page.getByTestId("start-rendering-button").click();
+		await page.getByTestId('start-rendering-button').click();
 		const download = await downloadPromise;
 		expect(download.suggestedFilename()).toBe(
-			"ipod-0000-james-blake-doesn-t-just-happen.gif",
+			'ipod-0000-james-blake-doesn-t-just-happen.gif',
 		);
 		await page.close();
 
@@ -192,29 +192,29 @@ test.describe("Export downloads", () => {
 		expect(firstFrameHash).not.toBe(middleFrameHash);
 	});
 
-	test("MP4 export lands in ~/Downloads", async ({ page }) => {
+	test('MP4 export lands in ~/Downloads', async ({ page }) => {
 		await allowDownloadsToHomeDirectory(page);
 		await prepareExportSurface(page);
 
-		const mp4Button = page.getByTestId("mp4-export-button");
+		const mp4Button = page.getByTestId('mp4-export-button');
 		await expect(mp4Button).toBeEnabled();
 
 		const filePath = path.join(
 			downloadsDir,
-			"ipod-0000-james-blake-doesn-t-just-happen.mp4",
+			'ipod-0000-james-blake-doesn-t-just-happen.mp4',
 		);
 		fs.rmSync(filePath, { force: true });
 
-		const downloadPromise = page.waitForEvent("download", {
+		const downloadPromise = page.waitForEvent('download', {
 			timeout: 120_000,
 		});
 		await mp4Button.click();
-		await page.getByTestId("quality-standard-button").click();
+		await page.getByTestId('quality-standard-button').click();
 		await setCaptureDurationSeconds(page, 3);
-		await page.getByTestId("start-rendering-button").click();
+		await page.getByTestId('start-rendering-button').click();
 		const download = await downloadPromise;
 		expect(download.suggestedFilename()).toBe(
-			"ipod-0000-james-blake-doesn-t-just-happen.mp4",
+			'ipod-0000-james-blake-doesn-t-just-happen.mp4',
 		);
 		await page.close();
 

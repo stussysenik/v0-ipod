@@ -1,7 +1,7 @@
-import { GIFEncoder, type GifPalette, applyPalette, quantize } from "gifenc";
-import { toPng } from "html-to-image";
+import { applyPalette, GIFEncoder, type GifPalette, quantize } from 'gifenc';
+import { toPng } from 'html-to-image';
 
-const EXPORT_ATTRIBUTE = "data-exporting";
+const EXPORT_ATTRIBUTE = 'data-exporting';
 
 /** Default capture scale — 2x for Instagram-quality output */
 const GIF_CAPTURE_SCALE_HIGH = 2;
@@ -23,7 +23,7 @@ async function waitForAnimationsReady(): Promise<void> {
 }
 
 async function waitForImages(element: HTMLElement) {
-	const images = [...element.querySelectorAll<HTMLImageElement>("img")];
+	const images = [...element.querySelectorAll<HTMLImageElement>('img')];
 
 	await Promise.all(
 		images.map(
@@ -42,11 +42,11 @@ async function waitForImages(element: HTMLElement) {
 						);
 					}, 5000);
 
-					image.addEventListener("load", () => {
+					image.addEventListener('load', () => {
 						window.clearTimeout(timeoutId);
 						resolve();
 					});
-					image.addEventListener("error", () => {
+					image.addEventListener('error', () => {
 						window.clearTimeout(timeoutId);
 						reject(
 							new Error(
@@ -62,21 +62,21 @@ async function waitForImages(element: HTMLElement) {
 const loadImage = (src: string) =>
 	new Promise<HTMLImageElement>((resolve, reject) => {
 		const img = new Image();
-		img.addEventListener("load", () => resolve(img));
-		img.addEventListener("error", () =>
-			reject(new Error("Failed to decode GIF frame")),
+		img.addEventListener('load', () => resolve(img));
+		img.addEventListener('error', () =>
+			reject(new Error('Failed to decode GIF frame')),
 		);
 		img.src = src;
 	});
 
 const drawImageToCanvas = async (src: string) => {
 	const img = await loadImage(src);
-	const canvas = document.createElement("canvas");
+	const canvas = document.createElement('canvas');
 	canvas.width = img.naturalWidth || img.width;
 	canvas.height = img.naturalHeight || img.height;
-	const ctx = canvas.getContext("2d");
+	const ctx = canvas.getContext('2d');
 	if (!ctx) {
-		throw new Error("Missing canvas context");
+		throw new Error('Missing canvas context');
 	}
 	ctx.drawImage(img, 0, 0);
 	return ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -209,7 +209,7 @@ export async function captureGifFrames({
 	onFrame,
 }: GifCaptureOptions): Promise<GifCapturedFrames> {
 	const existingExportAttribute = element.getAttribute(EXPORT_ATTRIBUTE);
-	element.setAttribute(EXPORT_ATTRIBUTE, "true");
+	element.setAttribute(EXPORT_ATTRIBUTE, 'true');
 
 	try {
 		await waitForImages(element);
@@ -231,7 +231,7 @@ export async function captureGifFrames({
 				skipFonts: false,
 				includeQueryParams: true,
 				style: {
-					transform: "scale(1)",
+					transform: 'scale(1)',
 				},
 			});
 
@@ -278,7 +278,7 @@ function buildGlobalPalette(frames: ImageData[]): GifPalette {
 
 export async function encodeGifFrames(frameDataUrls: string[], delayMs: number): Promise<Blob> {
 	if (frameDataUrls.length === 0) {
-		throw new Error("GIF preview did not generate any frames");
+		throw new Error('GIF preview did not generate any frames');
 	}
 
 	// Decode all frames first
@@ -302,7 +302,7 @@ export async function encodeGifFrames(frameDataUrls: string[], delayMs: number):
 	// If all frames are identical, log a warning (the pre-capture delay
 	// should prevent this, but we detect it as a safety net)
 	if (!hasMotion && allFrames.length >= 2) {
-		console.warn("[gif-export] Static frames detected — animation may not be visible");
+		console.warn('[gif-export] Static frames detected — animation may not be visible');
 	}
 
 	// 1.5.3: Build a single global palette from sample frames
@@ -333,7 +333,7 @@ export async function encodeGifFrames(frameDataUrls: string[], delayMs: number):
 
 	gif.finish();
 	const output = Uint8Array.from(gif.bytes());
-	return new Blob([output], { type: "image/gif" });
+	return new Blob([output], { type: 'image/gif' });
 }
 
 export async function exportGif({
@@ -368,7 +368,7 @@ export async function exportGif({
 	} catch (error) {
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : "GIF export failed",
+			error: error instanceof Error ? error.message : 'GIF export failed',
 		};
 	}
 }

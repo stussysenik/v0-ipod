@@ -15,42 +15,42 @@ interface StaticImageData {
 	blurHeight?: number;
 }
 
-declare module "*.png" {
+declare module '*.png' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.jpg" {
+declare module '*.jpg' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.jpeg" {
+declare module '*.jpeg' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.gif" {
+declare module '*.gif' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.webp" {
+declare module '*.webp' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.avif" {
+declare module '*.avif' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.ico" {
+declare module '*.ico' {
 	const content: StaticImageData;
 	export default content;
 }
 
-declare module "*.svg" {
+declare module '*.svg' {
 	const content: string;
 	export default content;
 }

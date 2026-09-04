@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import type React from "react";
+import type React from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface EditableDurationProps {
 	value: number;
@@ -10,11 +9,11 @@ interface EditableDurationProps {
 	className?: string;
 }
 
-export function EditableDuration({ value, onChange, className = "" }: EditableDurationProps) {
+export function EditableDuration({ value, onChange, className = '' }: EditableDurationProps) {
 	const formatTime = useCallback((seconds: number) => {
 		const minutes = Math.floor(seconds / 60);
 		const remainingSeconds = Math.floor(seconds % 60);
-		return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+		return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 	}, []);
 
 	const displayValue = useMemo(() => formatTime(value), [formatTime, value]);
@@ -36,7 +35,7 @@ export function EditableDuration({ value, onChange, className = "" }: EditableDu
 	}, [isEditing]);
 
 	const parseTime = (timeStr: string): number => {
-		const [minutes, seconds] = timeStr.split(":").map(Number);
+		const [minutes, seconds] = timeStr.split(':').map(Number);
 		if (Number.isNaN(minutes) || Number.isNaN(seconds)) return value;
 		return minutes * 60 + seconds;
 	};
@@ -56,9 +55,9 @@ export function EditableDuration({ value, onChange, className = "" }: EditableDu
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter") {
+		if (e.key === 'Enter') {
 			handleBlur();
-		} else if (e.key === "Escape") {
+		} else if (e.key === 'Escape') {
 			setIsEditing(false);
 			setLocalValue(displayValue);
 		}
@@ -89,11 +88,13 @@ export function EditableDuration({ value, onChange, className = "" }: EditableDu
 	}
 
 	return (
-		<span
+		<button
+			type="button"
+			aria-label={`Edit duration, current value ${displayValue}`}
 			className={`cursor-text hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors ${className}`}
 			onDoubleClick={handleDoubleClick}
 		>
 			{displayValue}
-		</span>
+		</button>
 	);
 }

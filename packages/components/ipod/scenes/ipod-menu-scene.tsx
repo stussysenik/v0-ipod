@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { PLACEHOLDER_LOGO_SRC } from "@ipod/lib/ipod-assets";
-import type { SongMetadata } from "@ipod/types/ipod";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
+import { PLACEHOLDER_LOGO_SRC } from '@ipod/lib/ipod-assets';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import type { SongMetadata } from '@ipod/types/ipod';
 
 const SCREEN_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
 interface IpodMenuSceneProps {
-	screenTokens: IpodClassicPresetDefinition["screen"];
+	screenTokens: IpodClassicPresetDefinition['screen'];
 	state: SongMetadata;
 	osMenuItems: readonly { id: string; label: string }[];
 	osMenuIndex: number;
@@ -28,7 +28,7 @@ export function IpodMenuScene({
 			className="grid animate-in slide-in-from-left-2 duration-200"
 			style={{
 				height: screenTokens.frameHeight - screenTokens.statusBarHeight - 2,
-				gridTemplateColumns: "minmax(0, 1.08fr) minmax(0, 0.92fr)",
+				gridTemplateColumns: 'minmax(0, 1.08fr) minmax(0, 0.92fr)',
 			}}
 			data-testid="ipod-os-menu"
 		>
@@ -42,16 +42,16 @@ export function IpodMenuScene({
 							className="flex items-center justify-between gap-2 px-[8px] py-[3.5px] text-[10px] font-semibold leading-[1.15]"
 							data-testid={
 								isActive
-									? "ipod-os-selected-menu-item"
+									? 'ipod-os-selected-menu-item'
 									: undefined
 							}
 							style={{
 								color: isActive
-									? "#FFFFFF"
-									: "#111111",
+									? '#FFFFFF'
+									: '#111111',
 								background: isActive
-									? "linear-gradient(180deg, rgba(104,181,242,1) 0%, rgba(49,137,211,1) 100%)"
-									: "transparent",
+									? 'linear-gradient(180deg, rgba(104,181,242,1) 0%, rgba(49,137,211,1) 100%)'
+									: 'transparent',
 							}}
 						>
 							<span>{item.label}</span>
@@ -65,7 +65,7 @@ export function IpodMenuScene({
 				})}
 			</div>
 			<div className="flex items-center justify-center bg-[#F4F4F0] p-[8px]">
-				{osMenuItems[osMenuIndex]?.id === "about" ? (
+				{osMenuItems[osMenuIndex]?.id === 'about' ? (
 					<div
 						className="flex flex-col items-center justify-center text-center"
 						style={{ fontFamily: SCREEN_FONT_FAMILY }}
@@ -81,7 +81,7 @@ export function IpodMenuScene({
 							&copy; 2026
 						</div>
 					</div>
-				) : osMenuItems[osMenuIndex]?.id === "now-playing" ? (
+				) : osMenuItems[osMenuIndex]?.id === 'now-playing' ? (
 					<div
 						className="flex w-full flex-col items-center gap-[4px]"
 						style={{ fontFamily: SCREEN_FONT_FAMILY }}

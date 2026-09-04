@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { getCaptureElapsedMs, subscribeCaptureClock } from '@ipod/lib/capture-clock';
 import {
 	getMarqueeCycleDurationMs,
 	getMarqueeFrame,
 	getMarqueeGapWidth,
 	type MarqueeMode,
-} from "@ipod/lib/marquee";
-import { getCaptureElapsedMs, subscribeCaptureClock } from "@ipod/lib/capture-clock";
+} from '@ipod/lib/marquee';
+import { useEffect, useRef, useState } from 'react';
 
 interface MarqueeTextProps {
 	text: string;
@@ -34,13 +34,13 @@ const EMPTY_MEASUREMENTS: MarqueeMeasurements = {
 
 export function MarqueeText({
 	text,
-	className = "",
+	className = '',
 	dataTestId,
 	preview = false,
 	captureReady = false,
 	onOverflowChange,
 	staggerIndex = 0,
-	mode = "reset",
+	mode = 'reset',
 }: MarqueeTextProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const trackRef = useRef<HTMLDivElement>(null);
@@ -50,7 +50,9 @@ export function MarqueeText({
 	// True while a clip export is driving the capture clock. We track it in state only
 	// to *gate* the wall-clock rAF loop below — the actual frame-accurate positioning
 	// happens imperatively in the subscription effect, with no render in the path.
-	const [captureActive, setCaptureActive] = useState<boolean>(() => getCaptureElapsedMs() !== null);
+	const [captureActive, setCaptureActive] = useState<boolean>(
+		() => getCaptureElapsedMs() !== null,
+	);
 	useEffect(
 		() => subscribeCaptureClock((elapsedMs) => setCaptureActive(elapsedMs !== null)),
 		[],
@@ -71,17 +73,17 @@ export function MarqueeText({
 		measure();
 
 		const resizeObserver =
-			typeof ResizeObserver !== "undefined"
+			typeof ResizeObserver !== 'undefined'
 				? new ResizeObserver(() => measure())
 				: null;
 
 		resizeObserver?.observe(container);
 		resizeObserver?.observe(measurementCopy);
-		window.addEventListener("resize", measure);
+		window.addEventListener('resize', measure);
 
 		return () => {
 			resizeObserver?.disconnect();
-			window.removeEventListener("resize", measure);
+			window.removeEventListener('resize', measure);
 		};
 	}, [text, preview, captureReady]);
 
@@ -96,7 +98,7 @@ export function MarqueeText({
 			black calc(100% - ${edgeFadeWidth}px),
 			rgba(0, 0, 0, 0.15) 100%
 		)`
-		: "none";
+		: 'none';
 
 	useEffect(() => {
 		onOverflowChange?.(overflow);
@@ -109,7 +111,7 @@ export function MarqueeText({
 		if (!container) return;
 
 		if (!shouldAnimate) {
-			track.style.transform = "translateX(0px)";
+			track.style.transform = 'translateX(0px)';
 			delete container.dataset.marqueeElapsedMs;
 			if (animationFrameRef.current !== null) {
 				cancelAnimationFrame(animationFrameRef.current);
@@ -147,7 +149,7 @@ export function MarqueeText({
 				animationFrameRef.current = null;
 			}
 			delete container.dataset.marqueeElapsedMs;
-			track.style.transform = "translateX(0px)";
+			track.style.transform = 'translateX(0px)';
 		};
 	}, [measurements, shouldAnimate, mode, staggerIndex, captureActive]);
 
@@ -165,7 +167,9 @@ export function MarqueeText({
 			if (elapsedMs === null || !shouldAnimate) return;
 			const frame = getMarqueeFrame(measurements, elapsedMs, staggerIndex, mode);
 			track.style.transform = `translateX(${frame.translateX}px)`;
-			container.dataset.marqueeElapsedMs = String(Math.max(0, Math.round(elapsedMs)));
+			container.dataset.marqueeElapsedMs = String(
+				Math.max(0, Math.round(elapsedMs)),
+			);
 		};
 
 		apply(getCaptureElapsedMs()); // position immediately if an export is already running
@@ -182,13 +186,15 @@ export function MarqueeText({
 			}}
 			data-testid={dataTestId}
 			data-marquee-container="true"
-			data-marquee-active={shouldAnimate ? "true" : "false"}
-			data-marquee-overflow={overflow ? "true" : "false"}
-			data-marquee-mode={shouldAnimate ? "overflow" : undefined}
+			data-marquee-active={shouldAnimate ? 'true' : 'false'}
+			data-marquee-overflow={overflow ? 'true' : 'false'}
+			data-marquee-mode={shouldAnimate ? 'overflow' : undefined}
 			data-marquee-viewport-width={measurements.containerWidth || undefined}
 			data-marquee-content-width={measurements.contentWidth || undefined}
 			data-marquee-cycle-duration-ms={
-				shouldAnimate ? getMarqueeCycleDurationMs(measurements, mode) : undefined
+				shouldAnimate
+					? getMarqueeCycleDurationMs(measurements, mode)
+					: undefined
 			}
 		>
 			<span
@@ -201,16 +207,16 @@ export function MarqueeText({
 			<div
 				ref={trackRef}
 				className={`flex w-max items-center whitespace-nowrap will-change-transform ${
-					!overflow ? "w-full" : ""
+					!overflow ? 'w-full' : ''
 				}`}
-				style={{ transform: "translateX(0px)" }}
+				style={{ transform: 'translateX(0px)' }}
 				data-marquee-track="true"
 			>
 				<span
 					className={`inline-block whitespace-nowrap ${
 						!overflow && !shouldAnimate
-							? "w-full min-w-0 max-w-full truncate"
-							: ""
+							? 'w-full min-w-0 max-w-full truncate'
+							: ''
 					}`}
 				>
 					{text}
@@ -219,7 +225,9 @@ export function MarqueeText({
 					<span
 						className="inline-block whitespace-nowrap"
 						aria-hidden="true"
-						style={{ paddingLeft: `${getMarqueeGapWidth(measurements.contentWidth, text.length)}px` }}
+						style={{
+							paddingLeft: `${getMarqueeGapWidth(measurements.contentWidth, text.length)}px`,
+						}}
 					>
 						{text}
 					</span>

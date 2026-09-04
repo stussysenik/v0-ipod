@@ -1,14 +1,14 @@
-import figma from "@figma/code-connect";
+import figma from '@figma/code-connect';
 
-import { IpodScreen } from "@ipod/components/ipod/ipod-screen";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
+import { IpodScreen } from '@ipod/components/ipod/ipod-screen';
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
 
-const preset = getIpodClassicPreset("classic-2008-black");
+const preset = getIpodClassicPreset('classic-2008-black');
 const fallbackState = {
-	title: "Such Great Heights",
-	artist: "The Postal Service",
-	album: "Give Up",
-	artwork: "",
+	title: 'Such Great Heights',
+	artist: 'The Postal Service',
+	album: 'Give Up',
+	artwork: '',
 	duration: 264,
 	currentTime: 72,
 	rating: 4,
@@ -18,16 +18,16 @@ const fallbackState = {
 
 figma.connect(
 	IpodScreen,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		props: {
-			interactionModel: figma.enum("interactionModel", {
-				direct: "direct",
-				"ipod-os": "ipod-os",
+			interactionModel: figma.enum('interactionModel', {
+				direct: 'direct',
+				'ipod-os': 'ipod-os',
 			}),
-			osScreen: figma.enum("osScreen", {
-				menu: "menu",
-				"now-playing": "now-playing",
+			osScreen: figma.enum('osScreen', {
+				menu: 'menu',
+				'now-playing': 'now-playing',
 			}),
 		},
 		example: ({ interactionModel, osScreen }) => (

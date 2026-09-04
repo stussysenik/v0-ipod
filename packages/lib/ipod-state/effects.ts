@@ -1,4 +1,5 @@
-import type { MutableRefObject } from "react";
+import type { AnimatedExportLayout, AnimatedExportQuality } from '@ipod/lib/export/animated-export';
+import type { ExportProgress, ExportStatus } from '@ipod/lib/export-utils';
 import {
 	loadExportCounter,
 	loadLastExportedBatteryLevel,
@@ -15,14 +16,10 @@ import {
 	saveSongSnapshot,
 	saveStudioState,
 	saveUiState,
-} from "@ipod/lib/ipod-state/storage";
-import type { ExportProgress, ExportStatus } from "@ipod/lib/export-utils";
-import {
-	type AnimatedExportQuality,
-	type AnimatedExportLayout,
-} from "@ipod/lib/export/animated-export";
-import type { IpodWorkbenchModel, SongSnapshot } from "./model";
-import { buildPersistedUiState, buildSongSnapshot } from "./update";
+} from '@ipod/lib/ipod-state/storage';
+import type { MutableRefObject } from 'react';
+import type { IpodWorkbenchModel, SongSnapshot } from './model';
+import { buildPersistedUiState, buildSongSnapshot } from './update';
 
 function waitForFrameBoundary(): Promise<void> {
 	return new Promise((resolve) =>
@@ -60,7 +57,9 @@ export function loadPersistedWorkbenchModel(fallback: IpodWorkbenchModel): IpodW
 			centerColor: savedUi?.centerColor ?? fallback.presentation.centerColor,
 			backColor: savedUi?.backColor ?? fallback.presentation.backColor,
 			edgeColor:
-				savedUi?.edgeColor ?? savedUi?.backColor ?? fallback.presentation.edgeColor,
+				savedUi?.edgeColor ??
+				savedUi?.backColor ??
+				fallback.presentation.edgeColor,
 			bezelColor: savedUi?.bezelColor ?? fallback.presentation.bezelColor,
 			viewMode: savedUi?.viewMode ?? fallback.presentation.viewMode,
 			hardwarePreset:
@@ -129,7 +128,7 @@ export function saveWorkbenchSnapshot(model: IpodWorkbenchModel): SongSnapshot {
 
 export function playClickAudio(audioRef: MutableRefObject<HTMLAudioElement | null>): void {
 	if (!audioRef.current) {
-		audioRef.current = new Audio("/click.mp3");
+		audioRef.current = new Audio('/click.mp3');
 	}
 
 	audioRef.current.currentTime = 0;
@@ -151,7 +150,7 @@ export function playMechanicalClick(): void {
 		const noise = ctx.createBufferSource();
 		noise.buffer = buffer;
 		const filter = ctx.createBiquadFilter();
-		filter.type = "highpass";
+		filter.type = 'highpass';
 		filter.frequency.setValueAtTime(2400, now);
 		const gain = ctx.createGain();
 		gain.gain.setValueAtTime(0.18, now);
@@ -161,7 +160,9 @@ export function playMechanicalClick(): void {
 		gain.connect(ctx.destination);
 		noise.start(now);
 		noise.stop(now + duration);
-	} catch { /* suppress autoplay-policy errors */ }
+	} catch {
+		/* suppress autoplay-policy errors */
+	}
 }
 
 export async function exportWorkbenchPng(
@@ -175,19 +176,23 @@ export async function exportWorkbenchPng(
 	},
 ) {
 	if (options.threeDIpodHandle) {
-		options.onStatusChange("encoding");
+		options.onStatusChange('encoding');
 		const blob = await options.threeDIpodHandle.captureHighRes();
 		if (blob) {
-			const { downloadImageBlobWithOptions, summarizeBlob } = await import("@ipod/lib/export-utils");
+			const { downloadImageBlobWithOptions, summarizeBlob } = await import(
+				'@ipod/lib/export-utils'
+			);
 			const summary = await summarizeBlob(blob);
-			downloadImageBlobWithOptions(blob, options.filename, { allowSyntheticClick: true });
-			options.onStatusChange("success");
+			downloadImageBlobWithOptions(blob, options.filename, {
+				allowSyntheticClick: true,
+			});
+			options.onStatusChange('success');
 			return { success: true, ...summary };
 		}
 	}
 
 	await waitForFrameBoundary();
-	const { exportImage } = await import("@ipod/lib/export-utils");
+	const { exportImage } = await import('@ipod/lib/export-utils');
 
 	return exportImage(element, {
 		filename: options.filename,
@@ -199,7 +204,7 @@ export async function exportWorkbenchPng(
 	});
 }
 
-import type { ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
+import type { ThreeDIpodHandle } from '@ipod/components/three/three-d-ipod';
 
 export async function exportWorkbenchGif(
 	element: HTMLElement,
@@ -214,16 +219,16 @@ export async function exportWorkbenchGif(
 		threeDIpodHandle?: ThreeDIpodHandle | null;
 	},
 ) {
-	const { runExportPipeline } = await import("@ipod/lib/export/effect-pipeline");
-	const { Effect } = await import("effect");
+	const { runExportPipeline } = await import('@ipod/lib/export/effect-pipeline');
+	const { Effect } = await import('effect');
 
 	const program = runExportPipeline(element, {
 		filename: options.filename,
 		backgroundColor: options.backgroundColor,
-		format: "gif",
+		format: 'gif',
 		durationSeconds: options.durationSeconds ?? 4,
-		quality: options.quality ?? "standard",
-		layout: options.layout ?? "original",
+		quality: options.quality ?? 'standard',
+		layout: options.layout ?? 'original',
 		onStatusChange: options.onStatusChange,
 		onProgress: options.onProgressChange || (() => {}),
 		threeDIpodHandle: options.threeDIpodHandle,
@@ -245,16 +250,16 @@ export async function exportWorkbenchMp4(
 		threeDIpodHandle?: ThreeDIpodHandle | null;
 	},
 ) {
-	const { runExportPipeline } = await import("@ipod/lib/export/effect-pipeline");
-	const { Effect, Runtime } = await import("effect");
+	const { runExportPipeline } = await import('@ipod/lib/export/effect-pipeline');
+	const { Effect } = await import('effect');
 
 	const program = runExportPipeline(element, {
 		filename: options.filename,
 		backgroundColor: options.backgroundColor,
-		format: "mp4",
+		format: 'mp4',
 		durationSeconds: options.durationSeconds ?? 4,
-		quality: options.quality ?? "standard",
-		layout: options.layout ?? "original",
+		quality: options.quality ?? 'standard',
+		layout: options.layout ?? 'original',
 		onStatusChange: options.onStatusChange,
 		onProgress: options.onProgressChange || (() => {}),
 		threeDIpodHandle: options.threeDIpodHandle,

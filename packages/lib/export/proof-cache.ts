@@ -12,7 +12,7 @@
  * frame — persistence across reloads is correct by construction, not a guess.
  */
 
-import type { ExportSnapshot, ProofInputs } from "./export-fingerprint";
+import type { ExportSnapshot, ProofInputs } from './export-fingerprint';
 
 export interface ProofEntry {
 	fingerprint: string;
@@ -31,7 +31,7 @@ export class ProofLru {
 	private readonly map = new Map<string, ProofEntry>();
 
 	constructor(private readonly max: number) {
-		if (max < 1) throw new Error("ProofLru max must be >= 1");
+		if (max < 1) throw new Error('ProofLru max must be >= 1');
 	}
 
 	get size(): number {
@@ -128,7 +128,9 @@ export function createProofStore(options: {
 			if (persist) {
 				await persist.save(entry).catch(() => {});
 				// Mirror memory eviction into persistence (best-effort; bounded there too).
-				await Promise.all(evicted.map((fp) => persist.delete(fp).catch(() => {})));
+				await Promise.all(
+					evicted.map((fp) => persist.delete(fp).catch(() => {})),
+				);
 			}
 		},
 	};

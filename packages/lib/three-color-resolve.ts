@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from 'three';
 
 /**
  * WYSIWYG export resolve — make an offscreen render match the live canvas.

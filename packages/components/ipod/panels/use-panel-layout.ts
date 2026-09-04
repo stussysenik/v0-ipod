@@ -1,17 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
-
-import type { PanelFrame } from "@ipod/lib/ipod-state/model";
+import type { PanelFrame } from '@ipod/lib/ipod-state/model';
 import {
 	clampFrameToViewport,
 	computeSafeInsets,
 	resolveFrame,
 	type SafeInsets,
-} from "@ipod/lib/ipod-state/panel-layout";
-import { loadPanelLayout, savePanelLayout } from "@ipod/lib/ipod-state/storage";
-import { IpodStoreContext } from "@ipod/lib/xstate/store";
-import { PANEL_REGISTRY, type PanelSpec } from "./panel-registry";
+} from '@ipod/lib/ipod-state/panel-layout';
+import { loadPanelLayout, savePanelLayout } from '@ipod/lib/ipod-state/storage';
+import { IpodStoreContext } from '@ipod/lib/xstate/store';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { PANEL_REGISTRY, type PanelSpec } from './panel-registry';
 
 /** Below this width the floating panels degrade to the docked/sheet fallback. */
 export const COMPACT_BREAKPOINT = 768;
@@ -29,13 +28,14 @@ export interface ViewportSize {
 export function useViewportSize(): ViewportSize {
 	const [size, setSize] = useState<ViewportSize>({ width: 0, height: 0 });
 	useEffect(() => {
-		const read = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+		const read = () =>
+			setSize({ width: window.innerWidth, height: window.innerHeight });
 		read();
-		window.addEventListener("resize", read, { passive: true });
-		window.addEventListener("orientationchange", read, { passive: true });
+		window.addEventListener('resize', read, { passive: true });
+		window.addEventListener('orientationchange', read, { passive: true });
 		return () => {
-			window.removeEventListener("resize", read);
-			window.removeEventListener("orientationchange", read);
+			window.removeEventListener('resize', read);
+			window.removeEventListener('orientationchange', read);
 		};
 	}, []);
 	return size;
@@ -61,7 +61,7 @@ export function usePanelLayoutSync(): void {
 	useEffect(() => {
 		const stored = loadPanelLayout();
 		if (Object.keys(stored).length > 0) {
-			send({ type: "HYDRATE_PANEL_LAYOUT", payload: stored });
+			send({ type: 'HYDRATE_PANEL_LAYOUT', payload: stored });
 		}
 		// Hydrate exactly once on mount.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,7 +97,10 @@ export function useResolvedPanels(viewport: ViewportSize): ResolvedPanel[] {
 		for (const spec of Object.values(PANEL_REGISTRY)) {
 			const frame = resolveFrame(layout[spec.id], spec.defaultFrame);
 			if (!frame.visible) continue;
-			panels.push({ spec, frame: clampFrameToViewport(frame, viewport.width, viewport.height) });
+			panels.push({
+				spec,
+				frame: clampFrameToViewport(frame, viewport.width, viewport.height),
+			});
 		}
 		return panels.sort((a, b) => a.frame.z - b.frame.z);
 	}, [modeLayout, viewport.width, viewport.height]);

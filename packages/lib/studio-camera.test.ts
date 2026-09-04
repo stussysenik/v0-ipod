@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { CAMERA_MOVES, type StudioPose, poseForMove } from "./studio-camera";
+import { CAMERA_MOVES, poseForMove, type StudioPose } from './studio-camera';
 
 const HERO: StudioPose = { azimuth: 20, elevation: 12, reach: 14, target: [0, 0, 0] };
 
@@ -10,7 +10,7 @@ function azGap(a: number, b: number): number {
 	return Math.min(d, 360 - d);
 }
 
-describe("camera moves — seamless loop", () => {
+describe('camera moves — seamless loop', () => {
 	// Every move is built from whole-turn sin/cos of φ = 2πt, so pose(1) must
 	// equal pose(0): the export loops back onto the hero seam with no pop.
 	// (Azimuth is compared modulo 360 since the turntable advances a full turn.)
@@ -24,12 +24,12 @@ describe("camera moves — seamless loop", () => {
 		});
 	}
 
-	it("includes the MKBHD-style crane move", () => {
-		expect(CAMERA_MOVES.some((m) => m.id === "crane")).toBe(true);
+	it('includes the MKBHD-style crane move', () => {
+		expect(CAMERA_MOVES.some((m) => m.id === 'crane')).toBe(true);
 	});
 
-	it("crane actually moves through the loop (not a static hold)", () => {
-		const mid = poseForMove("crane", 0.25, HERO);
+	it('crane actually moves through the loop (not a static hold)', () => {
+		const mid = poseForMove('crane', 0.25, HERO);
 		expect(Math.abs(mid.azimuth - HERO.azimuth)).toBeGreaterThan(1);
 		expect(Math.abs(mid.elevation - HERO.elevation)).toBeGreaterThan(1);
 	});

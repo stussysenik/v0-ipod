@@ -1,10 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import type { ProofEntry } from '@ipod/lib/export/proof-cache';
+import { useEffect, useRef, useState } from 'react';
 
-import type { ProofEntry } from "@ipod/lib/export/proof-cache";
-
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * The proof panel — the guarantee made visible.
@@ -73,9 +72,12 @@ export function Ipod3DExportProofPanel({
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [hit, version]);
-	useEffect(() => () => {
-		if (shownUrl) URL.revokeObjectURL(shownUrl);
-	}, [shownUrl]);
+	useEffect(
+		() => () => {
+			if (shownUrl) URL.revokeObjectURL(shownUrl);
+		},
+		[shownUrl],
+	);
 
 	const pending = !hit && fingerprint !== null;
 	const empty = !shownUrl;
@@ -94,7 +96,9 @@ export function Ipod3DExportProofPanel({
 							src={shownUrl}
 							alt="Export proof"
 							className={`h-full w-full object-contain transition-opacity duration-300 ${
-								pending ? "opacity-40" : "opacity-100"
+								pending
+									? 'opacity-40'
+									: 'opacity-100'
 							}`}
 						/>
 					) : (
@@ -135,7 +139,7 @@ export function Ipod3DExportProofPanel({
 				<span className="text-black/15">·</span>
 				<span>{durationSec}s</span>
 				<span className="text-black/15">·</span>
-				<span>{hold ? "still = whole clip" : `${frameCount} frames`}</span>
+				<span>{hold ? 'still = whole clip' : `${frameCount} frames`}</span>
 			</div>
 
 			{/* Docked Export action — ship from the surface that shows what you'll get. */}
@@ -147,10 +151,10 @@ export function Ipod3DExportProofPanel({
 					className="flex w-full items-center justify-between rounded-lg border border-black/80 bg-black px-3.5 py-2.5 text-left text-white transition-colors hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					<span className="text-[12.5px] font-medium">
-						{exportBusy ? "Capturing…" : "Export this proof"}
+						{exportBusy ? 'Capturing…' : 'Export this proof'}
 					</span>
 					<span className="font-mono text-[10px] uppercase tracking-tight text-white/55">
-						{hold ? "hold" : moveLabel}
+						{hold ? 'hold' : moveLabel}
 					</span>
 				</button>
 			</div>

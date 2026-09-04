@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { Backdrop, Environment, Lightformer } from "@react-three/drei";
-
-import { APPLE_PRODUCT_RIG, type StudioLightingConfig } from "@ipod/lib/studio-lighting-config";
+import { APPLE_PRODUCT_RIG, type StudioLightingConfig } from '@ipod/lib/studio-lighting-config';
+import { Backdrop, Environment, Lightformer } from '@react-three/drei';
 
 /**
  * studio-lighting — the *render* half of the `/3d` rig.
@@ -32,9 +31,15 @@ export { APPLE_PRODUCT_RIG, type StudioLightingConfig };
  * shadow-catcher, not from any backdrop gradient. The Stage colour still drives it, so the
  * colour cockpit keeps full control — it just drives a uniform field now, not a gradient.
  */
-export function StudioBackdrop({ stageColor = "#ffffff" }: { stageColor?: string }) {
+export function StudioBackdrop({ stageColor = '#ffffff' }: { stageColor?: string }) {
 	return (
-		<Backdrop floor={1.5} position={[0, -3.55, -7]} receiveShadow={false} scale={[46, 26, 14]} segments={24}>
+		<Backdrop
+			floor={1.5}
+			position={[0, -3.55, -7]}
+			receiveShadow={false}
+			scale={[46, 26, 14]}
+			segments={24}
+		>
 			<meshBasicMaterial color={stageColor} toneMapped={false} />
 		</Backdrop>
 	);
@@ -59,11 +64,35 @@ export function StudioLighting({ config = APPLE_PRODUCT_RIG }: { config?: Studio
 				shadow-bias={-0.0001}
 				shadow-mapSize={[1024, 1024]}
 			/>
-			<spotLight angle={fill.angle} color={fill.color} intensity={fill.intensity} penumbra={fill.penumbra} position={fill.position} />
-			<spotLight angle={rim.angle} color={rim.color} intensity={rim.intensity} penumbra={rim.penumbra} position={rim.position} />
-			<Environment background={false} blur={env.blur} environmentIntensity={env.intensity} frames={1} preset={env.preset}>
+			<spotLight
+				angle={fill.angle}
+				color={fill.color}
+				intensity={fill.intensity}
+				penumbra={fill.penumbra}
+				position={fill.position}
+			/>
+			<spotLight
+				angle={rim.angle}
+				color={rim.color}
+				intensity={rim.intensity}
+				penumbra={rim.penumbra}
+				position={rim.position}
+			/>
+			<Environment
+				background={false}
+				blur={env.blur}
+				environmentIntensity={env.intensity}
+				frames={1}
+				preset={env.preset}
+			>
 				{env.softboxes.map((s, i) => (
-					<Lightformer key={i} color={s.color} intensity={s.intensity} position={s.position} scale={s.scale} />
+					<Lightformer
+						key={i}
+						color={s.color}
+						intensity={s.intensity}
+						position={s.position}
+						scale={s.scale}
+					/>
 				))}
 			</Environment>
 		</>

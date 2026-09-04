@@ -1,34 +1,38 @@
-import { DEFAULT_BACKDROP_COLOR, DEFAULT_SHELL_COLOR, deriveWheelColors } from "@ipod/lib/color-manifest";
-import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
 import {
-	DESIGNER_DARK_RIG,
+	DEFAULT_BACKDROP_COLOR,
+	DEFAULT_SHELL_COLOR,
+	deriveWheelColors,
+} from '@ipod/lib/color-manifest';
+import { DEFAULT_HARDWARE_PRESET_ID, getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import {
 	cloneLightingConfig,
+	DESIGNER_DARK_RIG,
 	type StudioLightingConfig,
-} from "@ipod/lib/studio-lighting-config";
-import type { SongMetadata } from "@ipod/types/ipod";
+} from '@ipod/lib/studio-lighting-config';
+import type { SongMetadata } from '@ipod/types/ipod';
 
-export type IpodViewMode = "flat" | "3d" | "focus" | "preview" | "ascii";
-export type IpodInteractionModel = "direct" | "ipod-os" | "ipod-os-original";
+export type IpodViewMode = 'flat' | '3d' | 'focus' | 'preview' | 'ascii';
+export type IpodInteractionModel = 'direct' | 'ipod-os' | 'ipod-os-original';
 export type IpodHardwarePresetId =
-	| "classic-2007"
-	| "classic-2008"
-	| "classic-2009"
-	| "classic-2008-black"
-	| "classic-2008-silver";
-export type SnapshotSelectionKind = "moment" | "range";
-export type IpodOsScreen = "menu" | "now-playing";
-export type BatteryMode = "manual" | "solar";
+	| 'classic-2007'
+	| 'classic-2008'
+	| 'classic-2009'
+	| 'classic-2008-black'
+	| 'classic-2008-silver';
+export type SnapshotSelectionKind = 'moment' | 'range';
+export type IpodOsScreen = 'menu' | 'now-playing';
+export type BatteryMode = 'manual' | 'solar';
 
 export const NOW_PLAYING_LAYOUT_ELEMENT_IDS = [
-	"artwork",
-	"title",
-	"artist",
-	"album",
-	"rating",
-	"track-info",
-	"progress",
-	"elapsed-time",
-	"remaining-time",
+	'artwork',
+	'title',
+	'artist',
+	'album',
+	'rating',
+	'track-info',
+	'progress',
+	'elapsed-time',
+	'remaining-time',
 ] as const;
 
 export type IpodNowPlayingLayoutElementId = (typeof NOW_PLAYING_LAYOUT_ELEMENT_IDS)[number];
@@ -77,13 +81,13 @@ export const DEFAULT_PANEL_LAYOUT: PanelLayoutState = {};
  * matching presentation field. Kept as a closed union so the reducer + persistence
  * can key the saved-color history without stringly-typed lookups.
  */
-export type ColorTarget = "case" | "bg" | "ring" | "center";
+export type ColorTarget = 'case' | 'bg' | 'ring' | 'center';
 
 /** Per-target "Recent Custom" swatch history (most-recent first, capped). Lifted out of
  *  workbench-local state into the model so a global Colors panel can read/write it too. */
 export type SavedColorHistory = Record<ColorTarget, string[]>;
 
-export const COLOR_TARGETS: readonly ColorTarget[] = ["case", "bg", "ring", "center"];
+export const COLOR_TARGETS: readonly ColorTarget[] = ['case', 'bg', 'ring', 'center'];
 
 /** Cap on remembered custom colors per target (shared by dock + panel). */
 export const MAX_SAVED_COLORS = 6;
@@ -91,18 +95,18 @@ export const MAX_SAVED_COLORS = 6;
 export const DEFAULT_SAVED_COLORS: SavedColorHistory = { case: [], bg: [], ring: [], center: [] };
 
 export const SONG_SNAPSHOT_SCHEMA_VERSION = 2 as const;
-export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = "direct";
-export const DEFAULT_SELECTION_KIND: SnapshotSelectionKind = "moment";
-export const DEFAULT_OS_SCREEN: IpodOsScreen = "now-playing";
+export const DEFAULT_INTERACTION_MODEL: IpodInteractionModel = 'direct';
+export const DEFAULT_SELECTION_KIND: SnapshotSelectionKind = 'moment';
+export const DEFAULT_OS_SCREEN: IpodOsScreen = 'now-playing';
 export const DEFAULT_MENU_INDEX = 0;
 export const DEFAULT_OS_ORIGINAL_MENU_SPLIT = 0.54;
 export const DEFAULT_OS_NOW_PLAYING_LAYOUT: IpodNowPlayingLayoutState = {};
 
 export const INITIAL_SONG_METADATA: SongMetadata = {
-	title: "Chamakay",
-	artist: "Blood Orange",
-	album: "Cupid Deluxe",
-	artwork: "/default-artwork.png",
+	title: 'Chamakay',
+	artist: 'Blood Orange',
+	album: 'Cupid Deluxe',
+	artwork: '/default-artwork.png',
 	duration: 252,
 	currentTime: 47,
 	rating: 4,
@@ -128,8 +132,8 @@ export interface IpodPresentationState {
 
 /** Factory defaults for the steel back and screen bezel — the two body parts that
  *  were previously hardcoded in the 3D renderer and are now part of the model. */
-export const DEFAULT_BACK_COLOR = "#cfd3d7";
-export const DEFAULT_BEZEL_COLOR = "#0a0a0a";
+export const DEFAULT_BACK_COLOR = '#cfd3d7';
+export const DEFAULT_BEZEL_COLOR = '#0a0a0a';
 
 export interface IpodInteractionState {
 	interactionModel: IpodInteractionModel;
@@ -191,7 +195,7 @@ export interface IpodStudioState {
 // Camera framing already survives reload through the camera-lock persistence
 // (LOCKED_POSE_KEY in the stage), so it deliberately does NOT live in this slice.
 
-export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, "lighting"> = {
+export const DEFAULT_STUDIO_STATE: Omit<IpodStudioState, 'lighting'> = {
 	technicalFlat: false,
 	interactionLocked: false,
 	marquee: true,
@@ -254,7 +258,7 @@ export interface SongSnapshot {
 
 export interface LegacySongSnapshot {
 	metadata: SongMetadata;
-	ui: Pick<IpodUiState, "skinColor" | "bgColor" | "viewMode">;
+	ui: Pick<IpodUiState, 'skinColor' | 'bgColor' | 'viewMode'>;
 }
 
 export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
@@ -262,7 +266,9 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 	// Wheel colours: a preset's curated overrides win; otherwise derive from the
 	// case so first-load matches what clicking the matching finish produces — no
 	// flat hardcoded ring that merges into a dark anodized case.
-	const defaultWheel = deriveWheelColors(defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR);
+	const defaultWheel = deriveWheelColors(
+		defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR,
+	);
 
 	return {
 		metadata: INITIAL_SONG_METADATA,
@@ -277,11 +283,12 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			skinColor: defaultPreset.defaultShellColor ?? DEFAULT_SHELL_COLOR,
 			bgColor: defaultPreset.defaultBackdropColor ?? DEFAULT_BACKDROP_COLOR,
 			ringColor: defaultPreset.defaultRingColor ?? defaultWheel.gradient.via,
-			centerColor: defaultPreset.defaultCenterColor ?? defaultWheel.centerGradient.via,
+			centerColor:
+				defaultPreset.defaultCenterColor ?? defaultWheel.centerGradient.via,
 			backColor: DEFAULT_BACK_COLOR,
 			edgeColor: DEFAULT_BACK_COLOR,
 			bezelColor: DEFAULT_BEZEL_COLOR,
-			viewMode: "flat",
+			viewMode: 'flat',
 			hardwarePreset: DEFAULT_HARDWARE_PRESET_ID,
 		},
 		interaction: {
@@ -293,7 +300,7 @@ export function createInitialIpodWorkbenchModel(): IpodWorkbenchModel {
 			isNowPlayingEditable: false,
 			isPlaying: false,
 			batteryLevel: 1.0,
-			batteryMode: "manual",
+			batteryMode: 'manual',
 		},
 		studio: createInitialStudioState(),
 		panelLayout: { ...DEFAULT_PANEL_LAYOUT },

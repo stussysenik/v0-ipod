@@ -1,10 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import { useFixedEditor } from "./fixed-editor";
-
-import type React from "react";
+import type React from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFixedEditor } from './fixed-editor';
 
 interface EditableTimeProps {
 	value: number;
@@ -18,16 +16,16 @@ interface EditableTimeProps {
 export function EditableTime({
 	value,
 	onChange,
-	className = "",
+	className = '',
 	disabled = false,
 	isRemaining = false,
-	editLabel = "Edit time",
+	editLabel = 'Edit time',
 }: EditableTimeProps) {
 	const formatTime = useCallback(
 		(seconds: number) => {
 			const minutes = Math.floor(seconds / 60);
 			const remainingSeconds = Math.floor(seconds % 60);
-			return `${isRemaining ? "-" : ""}${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+			return `${isRemaining ? '-' : ''}${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 		},
 		[isRemaining],
 	);
@@ -52,8 +50,8 @@ export function EditableTime({
 	}, [isEditing]);
 
 	const parseTime = (timeStr: string): number => {
-		const cleanStr = timeStr.replace("-", "");
-		const [minutes, seconds] = cleanStr.split(":").map(Number);
+		const cleanStr = timeStr.replace('-', '');
+		const [minutes, seconds] = cleanStr.split(':').map(Number);
 		if (Number.isNaN(minutes) || Number.isNaN(seconds)) return value;
 		const totalSeconds = minutes * 60 + seconds;
 		return Math.max(0, totalSeconds);
@@ -70,9 +68,9 @@ export function EditableTime({
 		openEditor({
 			title: editLabel,
 			value: displayValue,
-			placeholder: "0:00",
-			inputMode: "numeric",
-			pattern: "[-0-9:]*",
+			placeholder: '0:00',
+			inputMode: 'numeric',
+			pattern: '[-0-9:]*',
 			onCommit: (nextValue) => {
 				const newSeconds = parseTime(nextValue);
 				if (Number.isFinite(newSeconds) && newSeconds >= 0) {
@@ -93,9 +91,9 @@ export function EditableTime({
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter") {
+		if (e.key === 'Enter') {
 			handleBlur();
-		} else if (e.key === "Escape") {
+		} else if (e.key === 'Escape') {
 			setIsEditing(false);
 			setLocalValue(displayValue);
 		}
@@ -127,10 +125,21 @@ export function EditableTime({
 
 	return (
 		<span
+			role="button"
+			tabIndex={disabled ? -1 : 0}
+			aria-label={editLabel}
 			onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
 			onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
 			data-export-time-value={value}
-			className={`cursor-text ${disabled ? "" : "hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors"} ${className}`}
+			className={`cursor-text ${disabled ? '' : 'hover:text-blue-600 hover:bg-black/5 px-1 rounded transition-colors'} ${className}`}
+			onKeyDown={(e) => {
+				if (disabled) return;
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					if (isTouchEditingPreferred) handleTouchActivate();
+					else handleDesktopActivate();
+				}
+			}}
 		>
 			{displayValue}
 		</span>

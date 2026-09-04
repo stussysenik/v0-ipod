@@ -1,7 +1,7 @@
-import { poseForMove, type CameraMove, type LoopStyle, type StudioPose } from "./studio-camera";
-import { createStateSampler } from "./theatre/keyframe-sampler";
-import { buildPresetState, type MotionPreset } from "./theatre/motion-presets";
-import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from "./theatre/studio-project";
+import { type CameraMove, type LoopStyle, poseForMove, type StudioPose } from './studio-camera';
+import { createStateSampler } from './theatre/keyframe-sampler';
+import { buildPresetState, type MotionPreset } from './theatre/motion-presets';
+import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from './theatre/studio-project';
 
 /**
  * The unified CLIP abstraction.
@@ -20,7 +20,7 @@ import { CAMERA_OBJECT_KEY, CAMERA_SHEET_ID, studioValuesToPose } from "./theatr
  */
 
 export interface ProceduralClip {
-	kind: "procedural";
+	kind: 'procedural';
 	id: string;
 	label: string;
 	hint: string;
@@ -31,7 +31,7 @@ export interface ProceduralClip {
 }
 
 export interface TheatreClip {
-	kind: "theatre";
+	kind: 'theatre';
 	id: string;
 	label: string;
 	hint: string;
@@ -43,7 +43,7 @@ export interface TheatreClip {
 export type StudioClip = ProceduralClip | TheatreClip;
 
 export function isTheatreClip(clip: StudioClip): clip is TheatreClip {
-	return clip.kind === "theatre";
+	return clip.kind === 'theatre';
 }
 
 /**
@@ -56,7 +56,7 @@ export function createClipPoseSampler(
 	clip: StudioClip,
 	hero: StudioPose,
 ): (phase: number) => StudioPose {
-	if (clip.kind === "procedural") {
+	if (clip.kind === 'procedural') {
 		return (phase: number) => poseForMove(clip.move, phase, hero);
 	}
 
@@ -83,8 +83,8 @@ export function clipCyclesForDuration(
 	clip: StudioClip,
 	durationSec: number,
 	speed = 1,
-	loop: LoopStyle = "loop",
+	loop: LoopStyle = 'loop',
 ): number {
 	const raw = (durationSec * speed) / clip.naturalCycleSeconds;
-	return Math.max(1, Math.round(loop === "boomerang" ? raw / 2 : raw));
+	return Math.max(1, Math.round(loop === 'boomerang' ? raw / 2 : raw));
 }

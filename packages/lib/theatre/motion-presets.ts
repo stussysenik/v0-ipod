@@ -1,13 +1,13 @@
-import type { StudioPose } from "../studio-camera";
-import { buildTheatreState, type KeyframeSpec, type SheetSpec } from "./build-state";
-import type { EasingName } from "./easings";
-import type { TheatreProjectState } from "./keyframe-sampler";
+import type { StudioPose } from '../studio-camera';
+import { buildTheatreState, type KeyframeSpec, type SheetSpec } from './build-state';
+import type { EasingName } from './easings';
+import type { TheatreProjectState } from './keyframe-sampler';
 import {
 	CAMERA_OBJECT_KEY,
 	CAMERA_SHEET_ID,
-	poseToStudioValues,
 	type CameraPropName,
-} from "./studio-project";
+	poseToStudioValues,
+} from './studio-project';
 
 /**
  * MOMENT CARDS — the parametric, shareable motion vocabulary.
@@ -52,16 +52,16 @@ export interface MotionPreset {
 	keyframes: PresetKeyframe[];
 }
 
-const DEFAULT_PRESET_EASING: EasingName = "easeInOutSine";
+const DEFAULT_PRESET_EASING: EasingName = 'easeInOutSine';
 
 /** Map a camera prop name to the matching per-keyframe offset field. */
 const OFFSET_FIELD: Record<CameraPropName, keyof PresetKeyframe> = {
-	azimuth: "dAzimuth",
-	elevation: "dElevation",
-	reach: "dReach",
-	targetX: "dTargetX",
-	targetY: "dTargetY",
-	targetZ: "dTargetZ",
+	azimuth: 'dAzimuth',
+	elevation: 'dElevation',
+	reach: 'dReach',
+	targetX: 'dTargetX',
+	targetY: 'dTargetY',
+	targetZ: 'dTargetZ',
 };
 
 /**
@@ -98,9 +98,9 @@ export function buildPresetState(
 
 export const MOTION_PRESETS: readonly MotionPreset[] = [
 	{
-		id: "float-bob",
-		label: "Float & Bob",
-		hint: "weightless vertical breath",
+		id: 'float-bob',
+		label: 'Float & Bob',
+		hint: 'weightless vertical breath',
 		naturalCycleSeconds: 6,
 		loopable: true,
 		keyframes: [
@@ -112,21 +112,21 @@ export const MOTION_PRESETS: readonly MotionPreset[] = [
 		],
 	},
 	{
-		id: "parallax-push",
-		label: "Parallax Push-In",
-		hint: "dolly dives in and returns",
+		id: 'parallax-push',
+		label: 'Parallax Push-In',
+		hint: 'dolly dives in and returns',
 		naturalCycleSeconds: 5,
 		loopable: true,
 		keyframes: [
-			{ at: 0, easing: "easeInOutCubic" },
-			{ at: 0.5, dReach: -4, easing: "easeInOutCubic" },
+			{ at: 0, easing: 'easeInOutCubic' },
+			{ at: 0.5, dReach: -4, easing: 'easeInOutCubic' },
 			{ at: 1 },
 		],
 	},
 	{
-		id: "pendulum",
-		label: "Pendulum Sway",
-		hint: "wide left-right arc",
+		id: 'pendulum',
+		label: 'Pendulum Sway',
+		hint: 'wide left-right arc',
 		naturalCycleSeconds: 7,
 		loopable: true,
 		keyframes: [
@@ -138,33 +138,33 @@ export const MOTION_PRESETS: readonly MotionPreset[] = [
 		],
 	},
 	{
-		id: "crane-reveal",
-		label: "Crane Reveal",
-		hint: "lift overhead and settle",
+		id: 'crane-reveal',
+		label: 'Crane Reveal',
+		hint: 'lift overhead and settle',
 		naturalCycleSeconds: 8,
 		loopable: true,
 		keyframes: [
-			{ at: 0, easing: "easeInOutCubic" },
-			{ at: 0.5, dElevation: 24, dReach: 1.5, easing: "easeInOutCubic" },
+			{ at: 0, easing: 'easeInOutCubic' },
+			{ at: 0.5, dElevation: 24, dReach: 1.5, easing: 'easeInOutCubic' },
 			{ at: 1 },
 		],
 	},
 	{
-		id: "grand-turntable",
-		label: "Grand Turntable",
-		hint: "constant 360° jewel-case spin",
+		id: 'grand-turntable',
+		label: 'Grand Turntable',
+		hint: 'constant 360° jewel-case spin',
 		naturalCycleSeconds: 6,
 		loopable: true,
 		keyframes: [
-			{ at: 0, easing: "linear" },
-			{ at: 0.5, dAzimuth: 180, dElevation: 3, easing: "linear" },
+			{ at: 0, easing: 'linear' },
+			{ at: 0.5, dAzimuth: 180, dElevation: 3, easing: 'linear' },
 			{ at: 1, dAzimuth: 360 },
 		],
 	},
 	{
-		id: "boom-drift",
-		label: "Boom Drift",
-		hint: "diagonal cinebot glide",
+		id: 'boom-drift',
+		label: 'Boom Drift',
+		hint: 'diagonal cinebot glide',
 		naturalCycleSeconds: 6,
 		loopable: true,
 		keyframes: [
@@ -174,9 +174,9 @@ export const MOTION_PRESETS: readonly MotionPreset[] = [
 		],
 	},
 	{
-		id: "halo-sweep",
-		label: "Halo Sweep",
-		hint: "cresting arc that lifts and eases in",
+		id: 'halo-sweep',
+		label: 'Halo Sweep',
+		hint: 'cresting arc that lifts and eases in',
 		// Slow + luxurious: the camera sways a wide shallow arc across the front
 		// while cresting up and pushing gently in at the apex, then unwinds — three
 		// axes moving in concert for a beauty-shot feel. Quarter keyframes + the
@@ -193,13 +193,13 @@ export const MOTION_PRESETS: readonly MotionPreset[] = [
 		],
 	},
 	{
-		id: "dolly-out-reveal",
-		label: "Dolly-Out Reveal",
-		hint: "one-shot pull back to a wide",
+		id: 'dolly-out-reveal',
+		label: 'Dolly-Out Reveal',
+		hint: 'one-shot pull back to a wide',
 		naturalCycleSeconds: 5,
 		loopable: false,
 		keyframes: [
-			{ at: 0, easing: "easeOutCubic" },
+			{ at: 0, easing: 'easeOutCubic' },
 			{ at: 1, dReach: 5, dAzimuth: 15 },
 		],
 	},

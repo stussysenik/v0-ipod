@@ -1,4 +1,4 @@
-import type { IpodViewMode, PanelFrame, PanelId, PanelLayoutState } from "./model";
+import type { IpodViewMode, PanelFrame, PanelId, PanelLayoutState } from './model';
 
 /**
  * Pure layout operations for the floating-panel system (spec: floating-panel-system).
@@ -84,10 +84,7 @@ export function resetModeLayout(layout: PanelLayoutState, mode: IpodViewMode): P
  * Resolve a sparse stored frame against the registry default. Any field the user
  * never touched (or any field missing from an old snapshot) falls back cleanly.
  */
-export function resolveFrame(
-	stored: Partial<PanelFrame> | undefined,
-	def: PanelFrame,
-): PanelFrame {
+export function resolveFrame(stored: Partial<PanelFrame> | undefined, def: PanelFrame): PanelFrame {
 	return {
 		x: stored?.x ?? def.x,
 		y: stored?.y ?? def.y,

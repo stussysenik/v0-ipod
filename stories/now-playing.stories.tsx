@@ -1,21 +1,18 @@
-import { fn } from "@storybook/test";
+import { ClickWheel } from '@ipod/components/ipod/click-wheel';
+import { IPodDeviceShell } from '@ipod/components/ipod/ipod-device-shell';
+import { IpodScreen } from '@ipod/components/ipod/ipod-screen';
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import type { Meta, StoryObj } from '@storybook/react';
+import { fn } from '@storybook/test';
+import { compatParameters } from '../.storybook/shared';
 
-import { ClickWheel } from "@ipod/components/ipod/click-wheel";
-import { IPodDeviceShell } from "@ipod/components/ipod/ipod-device-shell";
-import { IpodScreen } from "@ipod/components/ipod/ipod-screen";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
-
-const preset = getIpodClassicPreset("classic-2008-black");
+const preset = getIpodClassicPreset('classic-2008-black');
 
 const baseState = {
-	title: "Such Great Heights",
-	artist: "The Postal Service",
-	album: "Give Up",
-	artwork: "",
+	title: 'Such Great Heights',
+	artist: 'The Postal Service',
+	album: 'Give Up',
+	artwork: '',
 	duration: 264,
 	currentTime: 72,
 	rating: 4,
@@ -61,25 +58,25 @@ function NowPlayingComposition({ skinColor, exportSafe }: NowPlayingArgs) {
 }
 
 const meta = {
-	title: "iPod/Now Playing",
+	title: 'iPod/Now Playing',
 	component: NowPlayingComposition,
-	tags: ["autodocs"],
+	tags: ['autodocs'],
 	parameters: {
-		layout: "fullscreen",
-		...compatParameters("satori"),
+		layout: 'fullscreen',
+		...compatParameters('satori'),
 		docs: {
 			description: {
-				component: "Full device composition: shell + screen + wheel. This is the canonical Phase-1 frame that the Figma push treats as the product surface.",
+				component: 'Full device composition: shell + screen + wheel. This is the canonical Phase-1 frame that the Figma push treats as the product surface.',
 			},
 		},
 	},
 	args: {
-		skinColor: "#1A1A1A",
+		skinColor: '#1A1A1A',
 		exportSafe: true,
 	},
 	argTypes: {
-		skinColor: { control: "color" },
-		exportSafe: { control: "boolean" },
+		skinColor: { control: 'color' },
+		exportSafe: { control: 'boolean' },
 	},
 } satisfies Meta<typeof NowPlayingComposition>;
 
@@ -90,5 +87,5 @@ type Story = StoryObj<typeof meta>;
 export const Black: Story = {};
 
 export const Silver: Story = {
-	args: { skinColor: "#C8C9CB" },
+	args: { skinColor: '#C8C9CB' },
 };

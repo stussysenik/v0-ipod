@@ -1,19 +1,18 @@
-"use client";
+'use client';
 
-import { type Dispatch } from "react";
-
-import type { IpodStudioState } from "@ipod/lib/ipod-state/model";
-import type { IpodWorkbenchAction } from "@ipod/lib/ipod-state/update";
+import type { IpodStudioState } from '@ipod/lib/ipod-state/model';
+import type { IpodWorkbenchAction } from '@ipod/lib/ipod-state/update';
 import {
-	ENVIRONMENT_PRESETS,
-	RIG_PRESETS,
 	cloneLightingConfig,
+	ENVIRONMENT_PRESETS,
 	type EnvironmentPreset,
+	RIG_PRESETS,
 	type SpotRole,
 	type SpotSpec,
-} from "@ipod/lib/studio-lighting-config";
+} from '@ipod/lib/studio-lighting-config';
+import type { Dispatch } from 'react';
 
-import { Ipod3DCockpitHeader } from "./ipod-3d-cockpit-header";
+import { Ipod3DCockpitHeader } from './ipod-3d-cockpit-header';
 
 /**
  * The lighting cockpit for the /3d studio — the "Phase 3 dev panel" the rig was always
@@ -48,9 +47,9 @@ const BACK_FINISH_DEFAULT = 0.13;
 const BACK_FINISH_MIRROR = 0.05;
 
 const SPOTS: readonly { role: SpotRole; label: string; hint: string }[] = [
-	{ role: "key", label: "Key", hint: "Warm soft top-right" },
-	{ role: "fill", label: "Fill", hint: "Cool, opens the shadows" },
-	{ role: "rim", label: "Rim", hint: "Separation edge from behind" },
+	{ role: 'key', label: 'Key', hint: 'Warm soft top-right' },
+	{ role: 'fill', label: 'Fill', hint: 'Cool, opens the shadows' },
+	{ role: 'rim', label: 'Rim', hint: 'Separation edge from behind' },
 ] as const;
 
 export function Ipod3DLightingCockpit({
@@ -64,7 +63,9 @@ export function Ipod3DLightingCockpit({
 	const dimmed = technicalFlat;
 
 	// The named rig this config is based on — the source of truth for per-section "reset".
-	const defaults = RIG_PRESETS.find((p) => p.config.name === lighting.name)?.config ?? RIG_PRESETS[0].config;
+	const defaults =
+		RIG_PRESETS.find((p) => p.config.name === lighting.name)?.config ??
+		RIG_PRESETS[0].config;
 
 	return (
 		<div className="pointer-events-auto w-full select-none rounded-[14px] border border-black/[0.09] bg-white/95 backdrop-blur-sm">
@@ -75,28 +76,32 @@ export function Ipod3DLightingCockpit({
 				right={
 					<button
 						type="button"
-						onClick={() => dispatch({ type: "TOGGLE_TECHNICAL_FLAT" })}
+						onClick={() =>
+							dispatch({ type: 'TOGGLE_TECHNICAL_FLAT' })
+						}
 						aria-pressed={technicalFlat}
 						title="Flat, unlit technical view — no reflections or shadows"
 						className={`flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-all duration-300 active:scale-[0.96] ${
 							technicalFlat
-								? "border-black/80 bg-black text-white"
-								: "border-black/10 text-black/55 hover:border-black/30 hover:text-black/80"
+								? 'border-black/80 bg-black text-white'
+								: 'border-black/10 text-black/55 hover:border-black/30 hover:text-black/80'
 						}`}
 					>
 						<span
 							className={`h-1.5 w-1.5 rounded-full transition-colors ${
-								technicalFlat ? "bg-white/90" : "bg-amber-400"
+								technicalFlat
+									? 'bg-white/90'
+									: 'bg-amber-400'
 							}`}
 						/>
-						{technicalFlat ? "Lights Off" : "Lights On"}
+						{technicalFlat ? 'Lights Off' : 'Lights On'}
 					</button>
 				}
 			/>
 
 			{/* Body — dimmed while flat/technical, since the rig is bypassed there */}
 			<div
-				className={`transition-opacity duration-300 ${dimmed ? "pointer-events-none opacity-40" : "opacity-100"}`}
+				className={`transition-opacity duration-300 ${dimmed ? 'pointer-events-none opacity-40' : 'opacity-100'}`}
 				aria-hidden={dimmed}
 			>
 				{/* Rig presets — the named ends of the range, from clean Apple to Designer Dark */}
@@ -104,20 +109,31 @@ export function Ipod3DLightingCockpit({
 					<Label>Rig</Label>
 					<div className="mt-2 flex gap-1">
 						{RIG_PRESETS.map((preset) => {
-							const active = lighting.name === preset.config.name;
+							const active =
+								lighting.name ===
+								preset.config.name;
 							return (
 								<button
 									key={preset.id}
 									type="button"
 									onClick={() => {
-										dispatch({ type: "SET_LIGHTING", payload: cloneLightingConfig(preset.config) });
-										if (preset.stage) dispatch({ type: "SET_BG_COLOR", payload: preset.stage });
+										dispatch({
+											type: 'SET_LIGHTING',
+											payload: cloneLightingConfig(
+												preset.config,
+											),
+										});
+										if (preset.stage)
+											dispatch({
+												type: 'SET_BG_COLOR',
+												payload: preset.stage,
+											});
 									}}
 									aria-pressed={active}
 									className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
 										active
-											? "border-black/80 text-black"
-											: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+											? 'border-black/80 text-black'
+											: 'border-black/10 text-black/55 hover:border-black/25 hover:text-black/80'
 									}`}
 								>
 									{preset.label}
@@ -136,27 +152,46 @@ export function Ipod3DLightingCockpit({
 						hint="Mirror ↔ brushed steel"
 						onReset={
 							backRoughness !== BACK_FINISH_DEFAULT
-								? () => onBackRoughnessChange(BACK_FINISH_DEFAULT)
+								? () =>
+										onBackRoughnessChange(
+											BACK_FINISH_DEFAULT,
+										)
 								: undefined
 						}
 					>
 						<div className="mb-1 flex gap-1">
 							{[
-								{ label: "Mirror", value: BACK_FINISH_MIRROR },
-								{ label: "Default", value: BACK_FINISH_DEFAULT },
-								{ label: "Brushed", value: 0.24 },
+								{
+									label: 'Mirror',
+									value: BACK_FINISH_MIRROR,
+								},
+								{
+									label: 'Default',
+									value: BACK_FINISH_DEFAULT,
+								},
+								{ label: 'Brushed', value: 0.24 },
 							].map((opt) => {
-								const active = Math.abs(backRoughness - opt.value) < 0.005;
+								const active =
+									Math.abs(
+										backRoughness -
+											opt.value,
+									) < 0.005;
 								return (
 									<button
 										key={opt.label}
 										type="button"
-										onClick={() => onBackRoughnessChange(opt.value)}
-										aria-pressed={active}
+										onClick={() =>
+											onBackRoughnessChange(
+												opt.value,
+											)
+										}
+										aria-pressed={
+											active
+										}
 										className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
 											active
-												? "border-black/80 text-black"
-												: "border-black/10 text-black/55 hover:border-black/25 hover:text-black/80"
+												? 'border-black/80 text-black'
+												: 'border-black/10 text-black/55 hover:border-black/25 hover:text-black/80'
 										}`}
 									>
 										{opt.label}
@@ -181,7 +216,7 @@ export function Ipod3DLightingCockpit({
 					hint="The wall the metal reflects — master brightness"
 					onReset={() =>
 						dispatch({
-							type: "PATCH_ENV",
+							type: 'PATCH_ENV',
 							payload: {
 								preset: defaults.env.preset,
 								intensity: defaults.env.intensity,
@@ -192,7 +227,12 @@ export function Ipod3DLightingCockpit({
 				>
 					<PresetRow
 						value={lighting.env.preset}
-						onChange={(preset) => dispatch({ type: "PATCH_ENV", payload: { preset } })}
+						onChange={(preset) =>
+							dispatch({
+								type: 'PATCH_ENV',
+								payload: { preset },
+							})
+						}
 					/>
 					<Slider
 						label="Intensity"
@@ -200,7 +240,12 @@ export function Ipod3DLightingCockpit({
 						min={0}
 						max={5}
 						step={0.05}
-						onChange={(intensity) => dispatch({ type: "PATCH_ENV", payload: { intensity } })}
+						onChange={(intensity) =>
+							dispatch({
+								type: 'PATCH_ENV',
+								payload: { intensity },
+							})
+						}
 					/>
 					<Slider
 						label="Blur"
@@ -208,7 +253,12 @@ export function Ipod3DLightingCockpit({
 						min={0}
 						max={1}
 						step={0.01}
-						onChange={(blur) => dispatch({ type: "PATCH_ENV", payload: { blur } })}
+						onChange={(blur) =>
+							dispatch({
+								type: 'PATCH_ENV',
+								payload: { blur },
+							})
+						}
 					/>
 				</Section>
 
@@ -218,15 +268,24 @@ export function Ipod3DLightingCockpit({
 					hint="Flat base fill"
 					onReset={() =>
 						dispatch({
-							type: "PATCH_AMBIENT",
-							payload: { color: defaults.ambient.color, intensity: defaults.ambient.intensity },
+							type: 'PATCH_AMBIENT',
+							payload: {
+								color: defaults.ambient.color,
+								intensity: defaults.ambient
+									.intensity,
+							},
 						})
 					}
 				>
 					<ColorRow
 						label="Colour"
 						value={lighting.ambient.color}
-						onChange={(color) => dispatch({ type: "PATCH_AMBIENT", payload: { color } })}
+						onChange={(color) =>
+							dispatch({
+								type: 'PATCH_AMBIENT',
+								payload: { color },
+							})
+						}
 					/>
 					<Slider
 						label="Intensity"
@@ -234,7 +293,12 @@ export function Ipod3DLightingCockpit({
 						min={0}
 						max={3}
 						step={0.01}
-						onChange={(intensity) => dispatch({ type: "PATCH_AMBIENT", payload: { intensity } })}
+						onChange={(intensity) =>
+							dispatch({
+								type: 'PATCH_AMBIENT',
+								payload: { intensity },
+							})
+						}
 					/>
 				</Section>
 
@@ -246,17 +310,24 @@ export function Ipod3DLightingCockpit({
 						hint={hint}
 						spot={lighting[role]}
 						defaultSpot={defaults[role]}
-						onPatch={(patch) => dispatch({ type: "PATCH_LIGHT", payload: { role, patch } })}
+						onPatch={(patch) =>
+							dispatch({
+								type: 'PATCH_LIGHT',
+								payload: { role, patch },
+							})
+						}
 					/>
 				))}
 			</div>
 
 			{/* Reset to the named default rig */}
 			<div className="flex items-center justify-between border-t border-black/[0.06] px-3.5 py-2.5">
-				<span className="text-[10px] font-medium text-black/35">{lighting.name}</span>
+				<span className="text-[10px] font-medium text-black/35">
+					{lighting.name}
+				</span>
 				<button
 					type="button"
-					onClick={() => dispatch({ type: "RESET_LIGHTING" })}
+					onClick={() => dispatch({ type: 'RESET_LIGHTING' })}
 					className="text-[11px] font-medium text-black/55 transition-colors hover:text-black"
 				>
 					Reset rig
@@ -311,7 +382,12 @@ function LightSection({
 			}
 		>
 			<div className="flex items-center justify-between">
-				<ColorRow label="Colour" value={spot.color} onChange={(color) => onPatch({ color })} inline />
+				<ColorRow
+					label="Colour"
+					value={spot.color}
+					onChange={(color) => onPatch({ color })}
+					inline
+				/>
 			</div>
 			<Slider
 				label="Intensity"
@@ -323,7 +399,9 @@ function LightSection({
 			/>
 			<details className="group/shape mt-0.5">
 				<summary className="flex cursor-pointer list-none items-center gap-1 py-1 text-[10px] font-medium text-black/35 hover:text-black/60">
-					<span className="transition-transform group-open/shape:rotate-90">›</span>
+					<span className="transition-transform group-open/shape:rotate-90">
+						›
+					</span>
 					Shape · position
 					<button
 						type="button"
@@ -338,9 +416,30 @@ function LightSection({
 					</button>
 				</summary>
 				<div className="pl-2">
-					<Slider label="X" value={x} min={-30} max={30} step={0.1} onChange={(v) => setAxis(0, v)} />
-					<Slider label="Y" value={y} min={-30} max={30} step={0.1} onChange={(v) => setAxis(1, v)} />
-					<Slider label="Z" value={z} min={-30} max={30} step={0.1} onChange={(v) => setAxis(2, v)} />
+					<Slider
+						label="X"
+						value={x}
+						min={-30}
+						max={30}
+						step={0.1}
+						onChange={(v) => setAxis(0, v)}
+					/>
+					<Slider
+						label="Y"
+						value={y}
+						min={-30}
+						max={30}
+						step={0.1}
+						onChange={(v) => setAxis(1, v)}
+					/>
+					<Slider
+						label="Z"
+						value={z}
+						min={-30}
+						max={30}
+						step={0.1}
+						onChange={(v) => setAxis(2, v)}
+					/>
 					<Slider
 						label="Cone"
 						value={spot.angle}
@@ -393,7 +492,9 @@ function Section({
 				</span>
 				<span className="flex items-baseline gap-1.5">
 					{hint ? (
-						<span className="hidden text-[9px] text-black/25 group-open/section:inline">{hint}</span>
+						<span className="hidden text-[9px] text-black/25 group-open/section:inline">
+							{hint}
+						</span>
 					) : null}
 					{onReset ? (
 						<button
@@ -464,8 +565,12 @@ function ColorRow({
 	inline?: boolean;
 }) {
 	return (
-		<label className={`group flex ${inline ? "h-7" : "h-8"} cursor-pointer items-center justify-between`}>
-			<span className="text-[11px] font-medium text-black/55 group-hover:text-black/80">{label}</span>
+		<label
+			className={`group flex ${inline ? 'h-7' : 'h-8'} cursor-pointer items-center justify-between`}
+		>
+			<span className="text-[11px] font-medium text-black/55 group-hover:text-black/80">
+				{label}
+			</span>
 			<span className="flex items-center gap-2">
 				<span className="font-mono text-[10px] uppercase tracking-tight text-black/35 group-hover:text-black/55">
 					{value}
@@ -496,7 +601,9 @@ function PresetRow({
 }) {
 	return (
 		<label className="group flex h-8 items-center justify-between">
-			<span className="text-[11px] font-medium text-black/55 group-hover:text-black/80">Preset</span>
+			<span className="text-[11px] font-medium text-black/55 group-hover:text-black/80">
+				Preset
+			</span>
 			<select
 				value={value}
 				onChange={(e) => onChange(e.target.value as EnvironmentPreset)}

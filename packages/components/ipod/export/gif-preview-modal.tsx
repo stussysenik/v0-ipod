@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Loader2, MonitorUp, Pause, Play, Repeat, RotateCcw, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getExportPreset, type ExportPresetId } from "@ipod/lib/export/export-scene";
+import { type ExportPresetId, getExportPreset } from '@ipod/lib/export/export-scene';
+import { Loader2, MonitorUp, Pause, Play, Repeat, RotateCcw, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 declare global {
 	interface Window {
@@ -18,7 +18,7 @@ declare global {
 }
 
 function ensureGifPreviewPerf() {
-	if (typeof window === "undefined") {
+	if (typeof window === 'undefined') {
 		return null;
 	}
 
@@ -28,18 +28,18 @@ function ensureGifPreviewPerf() {
 		start() {
 			this.pendingAt = performance.now();
 			this.lastDeltaMs = null;
-			performance.clearMarks("gif-preview-control-start");
-			performance.clearMarks("gif-preview-visual-ready");
-			performance.clearMeasures("gif-preview-control-latency");
-			performance.mark("gif-preview-control-start");
+			performance.clearMarks('gif-preview-control-start');
+			performance.clearMarks('gif-preview-visual-ready');
+			performance.clearMeasures('gif-preview-control-latency');
+			performance.mark('gif-preview-control-start');
 		},
 		complete() {
 			if (this.pendingAt === null) return;
-			performance.mark("gif-preview-visual-ready");
+			performance.mark('gif-preview-visual-ready');
 			performance.measure(
-				"gif-preview-control-latency",
-				"gif-preview-control-start",
-				"gif-preview-visual-ready",
+				'gif-preview-control-latency',
+				'gif-preview-control-start',
+				'gif-preview-visual-ready',
 			);
 			this.lastDeltaMs = performance.now() - this.pendingAt;
 			this.pendingAt = null;
@@ -47,9 +47,9 @@ function ensureGifPreviewPerf() {
 		reset() {
 			this.pendingAt = null;
 			this.lastDeltaMs = null;
-			performance.clearMarks("gif-preview-control-start");
-			performance.clearMarks("gif-preview-visual-ready");
-			performance.clearMeasures("gif-preview-control-latency");
+			performance.clearMarks('gif-preview-control-start');
+			performance.clearMarks('gif-preview-visual-ready');
+			performance.clearMeasures('gif-preview-control-latency');
 		},
 		getLastDelta() {
 			return this.lastDeltaMs;
@@ -179,7 +179,7 @@ export function GifPreviewModal({
 							<div className="flex flex-col items-center gap-3 text-[#111827]">
 								<Loader2 className="h-8 w-8 animate-spin" />
 								<p className="text-sm font-semibold">
-									Preparing preview{" "}
+									Preparing preview{' '}
 									{progressPercent}%
 								</p>
 							</div>
@@ -250,7 +250,7 @@ export function GifPreviewModal({
 							) : (
 								<Play className="h-4 w-4" />
 							)}
-							{isPlaying ? "Pause" : "Play"}
+							{isPlaying ? 'Pause' : 'Play'}
 						</button>
 						<button
 							className="flex items-center justify-center gap-2 rounded-2xl border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition-colors hover:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:opacity-60"
@@ -269,8 +269,8 @@ export function GifPreviewModal({
 						<button
 							className={`flex items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
 								isLooping
-									? "border-[#111827] bg-[#111827] text-white"
-									: "border-[#D1D5DB] bg-white text-[#111827] hover:bg-[#F9FAFB]"
+									? 'border-[#111827] bg-[#111827] text-white'
+									: 'border-[#D1D5DB] bg-white text-[#111827] hover:bg-[#F9FAFB]'
 							} disabled:cursor-not-allowed disabled:opacity-60`}
 							data-testid="gif-preview-loop-toggle"
 							disabled={isPreparing || totalFrames === 0}
@@ -281,7 +281,7 @@ export function GifPreviewModal({
 							}}
 						>
 							<Repeat className="h-4 w-4" />
-							{isLooping ? "Looping" : "Loop Off"}
+							{isLooping ? 'Looping' : 'Loop Off'}
 						</button>
 						<button
 							className="flex items-center justify-center gap-2 rounded-2xl border border-[#D1D5DB] bg-white px-3 py-2 text-sm font-semibold text-[#111827] transition-colors hover:bg-[#F9FAFB] disabled:cursor-not-allowed disabled:opacity-60"
@@ -300,7 +300,7 @@ export function GifPreviewModal({
 							<span>Frame</span>
 							<span data-testid="gif-preview-frame-readout">
 								{totalFrames === 0
-									? "0 / 0"
+									? '0 / 0'
 									: `${currentFrameIndex + 1} / ${totalFrames}`}
 							</span>
 						</div>

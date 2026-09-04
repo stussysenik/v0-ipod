@@ -1,4 +1,4 @@
-export type ExportPresetId = "product" | "square" | "portrait" | "story" | "landscape";
+export type ExportPresetId = 'product' | 'square' | 'portrait' | 'story' | 'landscape';
 
 export interface ExportPresetConfig {
 	id: ExportPresetId;
@@ -18,40 +18,40 @@ const PRODUCT_HEIGHT = Math.round(
 
 const EXPORT_PRESET_CONFIGS: Record<ExportPresetId, ExportPresetConfig> = {
 	product: {
-		id: "product",
-		label: "Product",
+		id: 'product',
+		label: 'Product',
 		width: PRODUCT_WIDTH,
 		height: PRODUCT_HEIGHT,
 		padding: 42,
 		offsetY: -18,
 	},
 	square: {
-		id: "square",
-		label: "Square",
+		id: 'square',
+		label: 'Square',
 		width: 1080,
 		height: 1080,
 		padding: 82,
 		offsetY: -36,
 	},
 	portrait: {
-		id: "portrait",
-		label: "Portrait",
+		id: 'portrait',
+		label: 'Portrait',
 		width: 1080,
 		height: 1350,
 		padding: 74,
 		offsetY: -20,
 	},
 	story: {
-		id: "story",
-		label: "Story",
+		id: 'story',
+		label: 'Story',
 		width: 1080,
 		height: 1920,
 		padding: 104,
 		offsetY: -54,
 	},
 	landscape: {
-		id: "landscape",
-		label: "Landscape",
+		id: 'landscape',
+		label: 'Landscape',
 		width: 1920,
 		height: 1080,
 		padding: 88,
@@ -60,11 +60,11 @@ const EXPORT_PRESET_CONFIGS: Record<ExportPresetId, ExportPresetConfig> = {
 };
 
 export const EXPORT_PRESET_ORDER: ExportPresetId[] = [
-	"product",
-	"square",
-	"portrait",
-	"story",
-	"landscape",
+	'product',
+	'square',
+	'portrait',
+	'story',
+	'landscape',
 ];
 
 export function getExportPreset(presetId: ExportPresetId): ExportPresetConfig {

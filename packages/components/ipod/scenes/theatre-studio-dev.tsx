@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 /**
  * Bridges the React `enabled` flag (the cockpit toggle, persisted in studio state)
@@ -15,11 +15,11 @@ import { useEffect } from "react";
  */
 export function TheatreStudioDev({ enabled }: { enabled: boolean }) {
 	useEffect(() => {
-		if (process.env.NODE_ENV === "production") {
+		if (process.env.NODE_ENV === 'production') {
 			return;
 		}
 		let cancelled = false;
-		void import("@ipod/lib/theatre/theatre-runtime").then((m) => {
+		void import('@ipod/lib/theatre/theatre-runtime').then((m) => {
 			if (!cancelled) {
 				void m.setTheatreStudioVisible(enabled);
 			}

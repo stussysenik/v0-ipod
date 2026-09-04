@@ -22,33 +22,33 @@
  * `figma.ui.postMessage` and `onmessage`.
  */
 
-const STORY_ID_KEY = "storyId";
-const BRIDGE_NAMESPACE = "ipod-dev-bridge";
+const STORY_ID_KEY = 'storyId';
+const BRIDGE_NAMESPACE = 'ipod-dev-bridge';
 const SNAPSHOT_DEPTH = 10;
 
 type ServerMessage =
 	| {
-			type: "story-updated";
+			type: 'story-updated';
 			payload: { storyId: string; svg: string; renderedAt: number };
 	  }
 	| {
-			type: "story-error";
+			type: 'story-error';
 			payload: { storyId: string; error: string };
 	  }
 	| {
-			type: "tokens-sync";
+			type: 'tokens-sync';
 			payload: Record<string, unknown>;
 	  }
 	| {
-			type: "token-ack";
+			type: 'token-ack';
 			payload: Record<string, unknown>;
 	  };
 
 type UiMessage =
-	| { type: "server-message"; message: ServerMessage }
-	| { type: "connect-state"; connected: boolean }
-	| { type: "bind-selected"; storyId: string }
-	| { type: "undo-restore"; nodeId: string };
+	| { type: 'server-message'; message: ServerMessage }
+	| { type: 'connect-state'; connected: boolean }
+	| { type: 'bind-selected'; storyId: string }
+	| { type: 'undo-restore'; nodeId: string };
 
 type SnapshotStack = Record<string, SceneNode[][]>;
 
@@ -59,7 +59,7 @@ figma.showUI(__html__, { width: 320, height: 480, themeColors: true });
 async function findFrameByStoryId(storyId: string): Promise<FrameNode | null> {
 	await figma.loadAllPagesAsync();
 	for (const page of figma.root.children) {
-		for (const node of page.findAll((n) => n.type === "FRAME")) {
+		for (const node of page.findAll((n) => n.type === 'FRAME')) {
 			const data = node.getSharedPluginData(BRIDGE_NAMESPACE, STORY_ID_KEY);
 			if (data === storyId) {
 				return node as FrameNode;
@@ -109,15 +109,15 @@ async function handleStoryUpdated(payload: {
 	const frame = await findFrameByStoryId(payload.storyId);
 	if (!frame) {
 		postToUi({
-			type: "update-skipped",
+			type: 'update-skipped',
 			storyId: payload.storyId,
-			reason: "no-bound-frame",
+			reason: 'no-bound-frame',
 		});
 		return;
 	}
 	replaceInterior(frame, payload.svg);
 	postToUi({
-		type: "update-applied",
+		type: 'update-applied',
 		storyId: payload.storyId,
 		nodeId: frame.id,
 		renderedAt: payload.renderedAt,
@@ -131,7 +131,7 @@ async function handleTokensSync(payload: Record<string, unknown>): Promise<void>
 	// and mirror the collection structure — in this scaffold we emit a
 	// progress message so the UI can show it.
 	postToUi({
-		type: "tokens-sync-progress",
+		type: 'tokens-sync-progress',
 		collections: Object.keys((payload.tokens as Record<string, unknown>) ?? {}),
 		deleteOrphans: Boolean(payload.deleteOrphans),
 	});
@@ -139,45 +139,45 @@ async function handleTokensSync(payload: Record<string, unknown>): Promise<void>
 
 function handleServerMessage(message: ServerMessage): void {
 	switch (message.type) {
-		case "story-updated":
+		case 'story-updated':
 			void handleStoryUpdated(message.payload);
 			break;
-		case "story-error":
+		case 'story-error':
 			postToUi({
-				type: "story-error",
+				type: 'story-error',
 				storyId: message.payload.storyId,
 				error: message.payload.error,
 			});
 			break;
-		case "tokens-sync":
+		case 'tokens-sync':
 			void handleTokensSync(message.payload);
 			break;
-		case "token-ack":
-			postToUi({ type: "token-ack", ...message.payload });
+		case 'token-ack':
+			postToUi({ type: 'token-ack', ...message.payload });
 			break;
 	}
 }
 
 async function bindSelectedFrame(storyId: string): Promise<void> {
 	const [selected] = figma.currentPage.selection;
-	if (selected?.type !== "FRAME") {
-		postToUi({ type: "bind-error", reason: "select-a-frame" });
+	if (selected?.type !== 'FRAME') {
+		postToUi({ type: 'bind-error', reason: 'select-a-frame' });
 		return;
 	}
 	selected.setSharedPluginData(BRIDGE_NAMESPACE, STORY_ID_KEY, storyId);
-	postToUi({ type: "bind-applied", nodeId: selected.id, storyId });
+	postToUi({ type: 'bind-applied', nodeId: selected.id, storyId });
 }
 
 async function undoRestore(nodeId: string): Promise<void> {
 	const stack = snapshotStacks[nodeId];
 	if (!stack || stack.length === 0) {
-		postToUi({ type: "undo-empty" });
+		postToUi({ type: 'undo-empty' });
 		return;
 	}
 	const snapshot = stack.pop();
 	if (!snapshot) return;
 	const node = await figma.getNodeByIdAsync(nodeId);
-	if (node?.type !== "FRAME") return;
+	if (node?.type !== 'FRAME') return;
 	const frame = node as FrameNode;
 	for (const child of frame.children) {
 		child.remove();
@@ -186,36 +186,36 @@ async function undoRestore(nodeId: string): Promise<void> {
 		frame.appendChild(child);
 	}
 	snapshotStacks[nodeId] = stack;
-	postToUi({ type: "undo-applied", nodeId });
+	postToUi({ type: 'undo-applied', nodeId });
 }
 
 // eslint-disable-next-line unicorn/prefer-add-event-listener
 figma.ui.onmessage = (message: UiMessage) => {
 	switch (message.type) {
-		case "server-message":
+		case 'server-message':
 			handleServerMessage(message.message);
 			break;
-		case "connect-state":
-			postToUi({ type: "connect-state-ack", connected: message.connected });
+		case 'connect-state':
+			postToUi({ type: 'connect-state-ack', connected: message.connected });
 			break;
-		case "bind-selected":
+		case 'bind-selected':
 			void bindSelectedFrame(message.storyId);
 			break;
-		case "undo-restore":
+		case 'undo-restore':
 			void undoRestore(message.nodeId);
 			break;
 	}
 };
 
 // Variable change listener — Phase 3 token round-trip.
-figma.on("documentchange", (event) => {
+figma.on('documentchange', (event) => {
 	for (const change of event.documentChanges) {
-		if (change.type !== "PROPERTY_CHANGE") continue;
+		if (change.type !== 'PROPERTY_CHANGE') continue;
 		const node = change.node as unknown as { type?: string; id?: string };
-		if (!("type" in node)) continue;
-		if (node.type !== "VARIABLE") continue;
+		if (!('type' in node)) continue;
+		if (node.type !== 'VARIABLE') continue;
 		postToUi({
-			type: "variable-changed",
+			type: 'variable-changed',
 			id: node.id,
 			properties: change.properties,
 		});

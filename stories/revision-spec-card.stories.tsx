@@ -1,17 +1,15 @@
-import { RevisionSpecCard } from "@ipod/components/ipod/revision-spec-card";
-
-import { compatParameters } from "../.storybook/shared";
-
-import type { Meta, StoryObj } from "@storybook/react";
-import type { ComponentType } from "react";
+import { RevisionSpecCard } from '@ipod/components/ipod/revision-spec-card';
+import type { Meta, StoryObj } from '@storybook/react';
+import type { ComponentType } from 'react';
+import { compatParameters } from '../.storybook/shared';
 
 const meta = {
-	title: "iPod/Docs/Revision Spec Card",
+	title: 'iPod/Docs/Revision Spec Card',
 	component: RevisionSpecCard,
-	tags: ["autodocs"],
-	parameters: compatParameters("satori"),
+	tags: ['autodocs'],
+	parameters: compatParameters('satori'),
 	args: {
-		presetId: "classic-2008-black",
+		presetId: 'classic-2008-black',
 	},
 	decorators: [
 		(Story: ComponentType) => (
@@ -29,9 +27,9 @@ type Story = StoryObj<typeof meta>;
 export const Black2008: Story = {};
 
 export const Silver2008: Story = {
-	args: { presetId: "classic-2008-silver" },
+	args: { presetId: 'classic-2008-silver' },
 };
 
 export const Classic2007: Story = {
-	args: { presetId: "classic-2007" },
+	args: { presetId: 'classic-2007' },
 };

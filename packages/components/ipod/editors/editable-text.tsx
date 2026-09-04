@@ -1,10 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-
-import { useDebouncedCallback } from "./use-debounced-callback";
-import { useFixedEditor } from "./fixed-editor";
-import { MarqueeText } from "@ipod/components/ui/marquee-text";
+import { MarqueeText } from '@ipod/components/ui/marquee-text';
+import { useEffect, useRef, useState } from 'react';
+import { useFixedEditor } from './fixed-editor';
+import { useDebouncedCallback } from './use-debounced-callback';
 
 /**
  * How long typing must pause before a keystroke is committed to the reducer (which
@@ -14,8 +13,8 @@ import { MarqueeText } from "@ipod/components/ui/marquee-text";
  */
 const LIVE_COMMIT_DEBOUNCE_MS = 200;
 
-import type React from "react";
-import type { MarqueeMode } from "@ipod/lib/marquee";
+import type { MarqueeMode } from '@ipod/lib/marquee';
+import type React from 'react';
 
 interface EditableTextProps {
 	value: string;
@@ -36,9 +35,9 @@ interface EditableTextProps {
 export function EditableText({
 	value,
 	onChange,
-	className = "",
+	className = '',
 	disabled = false,
-	editLabel = "Edit text",
+	editLabel = 'Edit text',
 	dataTestId,
 	animate = false,
 	preview = false,
@@ -88,8 +87,8 @@ export function EditableText({
 		openEditor({
 			title: editLabel,
 			value,
-			placeholder: "Type text",
-			inputMode: "text",
+			placeholder: 'Type text',
+			inputMode: 'text',
 			// Live preview on the device while typing in the bottom sheet; the provider
 			// debounces these, and onCommit lands the authoritative final value.
 			onPreview: (nextValue) => onChange(nextValue),
@@ -106,9 +105,9 @@ export function EditableText({
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter") {
+		if (e.key === 'Enter') {
 			handleBlur();
-		} else if (e.key === "Escape") {
+		} else if (e.key === 'Escape') {
 			liveCommit.cancel();
 			setIsEditing(false);
 			setLocalValue(value);
@@ -145,14 +144,25 @@ export function EditableText({
 
 	return (
 		<span
+			role="button"
+			tabIndex={disabled ? -1 : 0}
+			aria-label={editLabel}
 			className={`block w-full min-w-0 max-w-full rounded px-0.5 -mx-0.5 transition-colors [overflow-wrap:anywhere] [hyphens:auto] ${
 				disabled
-					? "cursor-default"
-					: "cursor-text hover:bg-black/5 hover:text-blue-900"
+					? 'cursor-default'
+					: 'cursor-text hover:bg-black/5 hover:text-blue-900'
 			} ${className}`}
 			data-testid={animate || captureReady ? undefined : dataTestId}
 			onDoubleClick={isTouchEditingPreferred ? undefined : handleDesktopActivate}
 			onPointerUp={isTouchEditingPreferred ? handleTouchActivate : undefined}
+			onKeyDown={(e) => {
+				if (disabled) return;
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					if (isTouchEditingPreferred) handleTouchActivate();
+					else handleDesktopActivate();
+				}
+			}}
 		>
 			{animate || captureReady ? (
 				<MarqueeText
@@ -169,8 +179,8 @@ export function EditableText({
 				<span
 					className={`block w-full ${
 						singleLine
-							? "overflow-hidden whitespace-nowrap [text-overflow:clip] pr-1"
-							: "whitespace-normal break-words [overflow-wrap:anywhere] [hyphens:auto]"
+							? 'overflow-hidden whitespace-nowrap [text-overflow:clip] pr-1'
+							: 'whitespace-normal break-words [overflow-wrap:anywhere] [hyphens:auto]'
 					}`}
 				>
 					{value}

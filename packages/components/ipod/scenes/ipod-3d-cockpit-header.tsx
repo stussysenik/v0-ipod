@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 /**
  * The numbered header every /3d cockpit wears.
@@ -34,7 +34,7 @@ export function Ipod3DCockpitHeader({ index, title, right }: Ipod3DCockpitHeader
 		<div className="flex items-center justify-between border-b border-black/[0.06] px-3.5 pb-2.5 pt-3">
 			<span className="flex items-baseline gap-1.5">
 				<span className="font-mono text-[9px] font-semibold tabular-nums text-black/25">
-					{String(index).padStart(2, "0")}
+					{String(index).padStart(2, '0')}
 				</span>
 				<span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-black/40">
 					{title}

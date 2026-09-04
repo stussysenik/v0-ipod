@@ -106,10 +106,10 @@ export async function probeDataUrlBlank(dataUrl: string): Promise<boolean> {
 		const probe = new Image();
 		probe.src = dataUrl;
 		await probe.decode();
-		const canvas = document.createElement("canvas");
+		const canvas = document.createElement('canvas');
 		canvas.width = 64;
 		canvas.height = 64;
-		const ctx = canvas.getContext("2d");
+		const ctx = canvas.getContext('2d');
 		if (!ctx) return false;
 		ctx.drawImage(probe, 0, 0, 64, 64);
 		const region = ctx.getImageData(8, 16, 48, 32).data;

@@ -1,5 +1,6 @@
-"use client";
+'use client';
 
+import type React from 'react';
 import {
 	createContext,
 	useCallback,
@@ -8,13 +9,10 @@ import {
 	useMemo,
 	useRef,
 	useState,
-} from "react";
+} from 'react';
+import { useDebouncedCallback } from './use-debounced-callback';
 
-import { useDebouncedCallback } from "./use-debounced-callback";
-
-import type React from "react";
-
-type EditorInputMode = React.HTMLAttributes<HTMLInputElement>["inputMode"];
+type EditorInputMode = React.HTMLAttributes<HTMLInputElement>['inputMode'];
 
 /** Matches EditableText's inline debounce so the two paths feel identical. */
 const LIVE_PREVIEW_DEBOUNCE_MS = 200;
@@ -44,10 +42,10 @@ interface FixedEditorContextValue {
 const FixedEditorContext = createContext<FixedEditorContextValue | null>(null);
 
 function detectCoarsePointer(): boolean {
-	if (typeof window === "undefined") return false;
+	if (typeof window === 'undefined') return false;
 	return (
-		window.matchMedia("(pointer: coarse)").matches ||
-		window.matchMedia("(hover: none)").matches ||
+		window.matchMedia('(pointer: coarse)').matches ||
+		window.matchMedia('(hover: none)').matches ||
 		navigator.maxTouchPoints > 0
 	);
 }
@@ -60,7 +58,7 @@ export function FixedEditorProvider({
 	resetKey?: number;
 }) {
 	const [request, setRequest] = useState<FixedEditorRequest | null>(null);
-	const [draftValue, setDraftValue] = useState("");
+	const [draftValue, setDraftValue] = useState('');
 	const [isTouchEditingPreferred, setIsTouchEditingPreferred] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	// Mirror the live request + a "did we push a preview?" flag into refs so the
@@ -83,13 +81,13 @@ export function FixedEditorProvider({
 		};
 
 		syncTouchPreference();
-		window.addEventListener("resize", syncTouchPreference, { passive: true });
-		window.addEventListener("orientationchange", syncTouchPreference, {
+		window.addEventListener('resize', syncTouchPreference, { passive: true });
+		window.addEventListener('orientationchange', syncTouchPreference, {
 			passive: true,
 		});
 		return () => {
-			window.removeEventListener("resize", syncTouchPreference);
-			window.removeEventListener("orientationchange", syncTouchPreference);
+			window.removeEventListener('resize', syncTouchPreference);
+			window.removeEventListener('orientationchange', syncTouchPreference);
 		};
 	}, []);
 
@@ -194,16 +192,18 @@ export function FixedEditorProvider({
 								enterKeyHint="done"
 								value={draftValue}
 								onChange={(event) =>
-									handleDraftChange(event.target.value)
+									handleDraftChange(
+										event.target.value,
+									)
 								}
 								onKeyDown={(event) => {
-									if (event.key === "Enter") {
+									if (event.key === 'Enter') {
 										event.preventDefault();
 										commitEditor();
 									}
 									if (
 										event.key ===
-										"Escape"
+										'Escape'
 									) {
 										event.preventDefault();
 										closeEditor();

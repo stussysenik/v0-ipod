@@ -1,8 +1,7 @@
-"use client";
+'use client';
 
-import { useId } from "react";
-
-import { screenChromeTokens } from "@ipod/lib/design-system";
+import { screenChromeTokens } from '@ipod/lib/design-system';
+import { useId } from 'react';
 
 interface ScreenBatteryProps {
 	level?: number;
@@ -11,7 +10,7 @@ interface ScreenBatteryProps {
 export function ScreenBattery({
 	level = screenChromeTokens.statusBar.battery.fillWidthRatio,
 }: ScreenBatteryProps) {
-	const id = useId().replace(/:/g, "");
+	const id = useId().replace(/:/g, '');
 	const t = screenChromeTokens.statusBar.battery;
 	const safe = Math.min(Math.max(level, 0), 1);
 
@@ -55,8 +54,8 @@ export function ScreenBattery({
 		`Q 0.5 ${bodyBottom} 0.5 ${bodyBottom - rx}`,
 		`L 0.5 ${1.5 + rx}`,
 		`Q 0.5 1.5 ${0.5 + rx} 1.5`,
-		"Z",
-	].join(" ");
+		'Z',
+	].join(' ');
 
 	return (
 		<svg

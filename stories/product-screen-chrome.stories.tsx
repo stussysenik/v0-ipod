@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { screenChromeTokens } from "@ipod/lib/design-system";
+import { screenChromeTokens } from '@ipod/lib/design-system';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 function TokenLine({ label, value }: { label: string; value: string | number }) {
 	return (
@@ -118,10 +118,10 @@ function ScreenChromeBoard() {
 }
 
 const meta = {
-	title: "scripts/design-system/ScreenChrome",
+	title: 'scripts/design-system/ScreenChrome',
 	component: ScreenChromeBoard,
 	parameters: {
-		layout: "padded",
+		layout: 'padded',
 	},
 } satisfies Meta<typeof ScreenChromeBoard>;
 

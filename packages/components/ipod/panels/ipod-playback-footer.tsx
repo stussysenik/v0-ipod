@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { IpodProgressBar } from "@ipod/components/ipod/controls/ipod-progress-bar";
-import { EditableTime } from "@ipod/components/ipod/editors/editable-time";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
-import { screenChromeTokens } from "@ipod/lib/design-system";
-import type { SongMetadata } from "@ipod/types/ipod";
-import type { RenderNowPlayingElement } from "@ipod/components/ipod/scenes/ipod-scene-types";
+import { IpodProgressBar } from '@ipod/components/ipod/controls/ipod-progress-bar';
+import { EditableTime } from '@ipod/components/ipod/editors/editable-time';
+import type { RenderNowPlayingElement } from '@ipod/components/ipod/scenes/ipod-scene-types';
+import { screenChromeTokens } from '@ipod/lib/design-system';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import type { SongMetadata } from '@ipod/types/ipod';
 
 interface IpodPlaybackFooterProps {
-	screenTokens: IpodClassicPresetDefinition["screen"];
+	screenTokens: IpodClassicPresetDefinition['screen'];
 	state: SongMetadata;
 	renderElement: RenderNowPlayingElement;
 	isInlineEditingEnabled: boolean;
@@ -32,19 +32,19 @@ export function IpodPlaybackFooter({
 	const timeWidth = Math.max(28, Math.round(timeFontSize * 1.8));
 
 	return renderElement(
-		"progress",
+		'progress',
 		<div
 			className="flex w-full items-center justify-between font-bold leading-none text-black"
 			style={{
-				fontVariantNumeric: "tabular-nums",
+				fontVariantNumeric: 'tabular-nums',
 				fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
 				fontSize: timeFontSize,
-				letterSpacing: "-0.01em",
+				letterSpacing: '-0.01em',
 			}}
 		>
-		<div style={{ flexShrink: 0, width: timeWidth, textAlign: "left" }}>
-			{renderElement(
-					"elapsed-time",
+			<div style={{ flexShrink: 0, width: timeWidth, textAlign: 'left' }}>
+				{renderElement(
+					'elapsed-time',
 					<EditableTime
 						value={state.currentTime}
 						onChange={onElapsedTimeChange}
@@ -53,7 +53,7 @@ export function IpodPlaybackFooter({
 						className="block w-full text-left"
 					/>,
 					{
-						testId: "elapsed-time",
+						testId: 'elapsed-time',
 						style: { zIndex: 1 },
 					},
 				)}
@@ -82,9 +82,9 @@ export function IpodPlaybackFooter({
 					)}
 				/>
 			</div>
-		<div style={{ flexShrink: 0, width: timeWidth, textAlign: "right" }}>
-			{renderElement(
-					"remaining-time",
+			<div style={{ flexShrink: 0, width: timeWidth, textAlign: 'right' }}>
+				{renderElement(
+					'remaining-time',
 					<div className="flex items-center justify-end text-black">
 						<EditableTime
 							value={Math.max(
@@ -99,25 +99,25 @@ export function IpodPlaybackFooter({
 						/>
 					</div>,
 					{
-						testId: "remaining-time",
+						testId: 'remaining-time',
 						style: { zIndex: 1 },
 					},
 				)}
 			</div>
 		</div>,
 		{
-			className: "absolute 				left-0 right-0",
+			className: 'absolute 				left-0 right-0',
 			style: {
 				bottom: screenTokens.progressBottom,
 				height: screenTokens.progressHeight,
-			paddingLeft: screenTokens.statusBarPaddingX,
-			paddingRight: screenTokens.statusBarPaddingX,
+				paddingLeft: screenTokens.statusBarPaddingX,
+				paddingRight: screenTokens.statusBarPaddingX,
 				paddingTop: screenTokens.progressPaddingTop,
 				background: screenChromeTokens.progress.footerBackground,
-				display: "flex",
-				alignItems: "center",
+				display: 'flex',
+				alignItems: 'center',
 			},
-			testId: "screen-progress",
+			testId: 'screen-progress',
 		},
 	);
 }

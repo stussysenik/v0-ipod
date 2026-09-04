@@ -11,10 +11,10 @@
  * a snapshot re-derives the SAME fingerprint as the original export.
  */
 
-import type { StudioLightingConfig } from "@ipod/lib/studio-lighting-config";
-import type { IpodOsScreen, IpodWorkbenchModel } from "@ipod/lib/ipod-state/model";
+import type { IpodOsScreen, IpodWorkbenchModel } from '@ipod/lib/ipod-state/model';
+import type { StudioLightingConfig } from '@ipod/lib/studio-lighting-config';
 
-import type { ExportSnapshot } from "./export-fingerprint";
+import type { ExportSnapshot } from './export-fingerprint';
 
 export function snapshotToModel(
 	current: IpodWorkbenchModel,
@@ -41,7 +41,7 @@ export function snapshotToModel(
 			bezelColor: snapshot.presentation.bezelColor,
 			// hardwarePreset is a string union upstream; the snapshot widens it to string.
 			hardwarePreset: snapshot.presentation
-				.hardwarePreset as IpodWorkbenchModel["presentation"]["hardwarePreset"],
+				.hardwarePreset as IpodWorkbenchModel['presentation']['hardwarePreset'],
 		},
 		interaction: {
 			...current.interaction,

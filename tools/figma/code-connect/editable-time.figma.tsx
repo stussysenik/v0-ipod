@@ -1,14 +1,14 @@
-import figma from "@figma/code-connect";
+import figma from '@figma/code-connect';
 
-import { EditableTime } from "@ipod/components/ipod/editable-time";
+import { EditableTime } from '@ipod/components/ipod/editable-time';
 
 figma.connect(
 	EditableTime,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		props: {
-			isRemaining: figma.boolean("isRemaining"),
-			disabled: figma.boolean("disabled"),
+			isRemaining: figma.boolean('isRemaining'),
+			disabled: figma.boolean('disabled'),
 		},
 		example: ({ isRemaining, disabled }) => (
 			<EditableTime

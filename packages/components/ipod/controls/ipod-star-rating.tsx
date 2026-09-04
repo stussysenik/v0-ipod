@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { getTextTokenCss } from "@ipod/lib/color-manifest";
+import { getTextTokenCss } from '@ipod/lib/color-manifest';
 
 interface IpodStarRatingProps {
 	rating: number;
@@ -9,7 +9,7 @@ interface IpodStarRatingProps {
 	fontSize?: number;
 }
 
-const INACTIVE_STAR_COLOR = "#BDBDBD";
+const INACTIVE_STAR_COLOR = '#BDBDBD';
 
 export function IpodStarRating({
 	rating,
@@ -22,6 +22,7 @@ export function IpodStarRating({
 			{[1, 2, 3, 4, 5].map((star) => (
 				<button
 					key={star}
+					type="button"
 					onClick={() => onChange(star)}
 					disabled={disabled}
 					className="appearance-none p-0 leading-none focus:outline-none focus-visible:ring-1 focus-visible:ring-black/30"
@@ -29,7 +30,7 @@ export function IpodStarRating({
 						fontSize,
 						color:
 							star <= rating
-								? getTextTokenCss("screen.artist")
+								? getTextTokenCss('screen.artist')
 								: INACTIVE_STAR_COLOR,
 					}}
 				>

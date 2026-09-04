@@ -1,4 +1,4 @@
-import { getProject, types } from "@theatre/core";
+import { getProject, types } from '@theatre/core';
 
 import {
 	CAMERA_OBJECT_KEY,
@@ -6,7 +6,7 @@ import {
 	CAMERA_SHEET_ID,
 	defaultCameraProps,
 	THEATRE_PROJECT_ID,
-} from "./studio-project";
+} from './studio-project';
 
 /**
  * Browser-side Theatre.js wiring.
@@ -32,12 +32,12 @@ export function cameraObjectProps() {
 		CAMERA_PROP_RANGES[name].max,
 	];
 	return {
-		azimuth: types.number(d.azimuth, { range: range("azimuth") }),
-		elevation: types.number(d.elevation, { range: range("elevation") }),
-		reach: types.number(d.reach, { range: range("reach") }),
-		targetX: types.number(d.targetX, { range: range("targetX") }),
-		targetY: types.number(d.targetY, { range: range("targetY") }),
-		targetZ: types.number(d.targetZ, { range: range("targetZ") }),
+		azimuth: types.number(d.azimuth, { range: range('azimuth') }),
+		elevation: types.number(d.elevation, { range: range('elevation') }),
+		reach: types.number(d.reach, { range: range('reach') }),
+		targetX: types.number(d.targetX, { range: range('targetX') }),
+		targetY: types.number(d.targetY, { range: range('targetY') }),
+		targetZ: types.number(d.targetZ, { range: range('targetZ') }),
 	};
 }
 
@@ -54,7 +54,7 @@ export function getCameraSheet() {
  * full-screen overlay), so the toggle never re-initializes — it flips visibility via
  * `studio.ui.hide()` / `studio.ui.restore()` on this same instance.
  */
-type TheatreStudio = Awaited<typeof import("@theatre/studio")>["default"];
+type TheatreStudio = Awaited<typeof import('@theatre/studio')>['default'];
 let studioInstance: TheatreStudio | null = null;
 let initPromise: Promise<TheatreStudio | null> | null = null;
 
@@ -65,19 +65,19 @@ let initPromise: Promise<TheatreStudio | null> | null = null;
  * crashing the app) since the studio is an optional authoring aid.
  */
 export async function initTheatreStudioDev(): Promise<TheatreStudio | null> {
-	if (typeof window === "undefined") return null;
+	if (typeof window === 'undefined') return null;
 	if (studioInstance) return studioInstance;
 	if (initPromise) return initPromise;
 	initPromise = (async () => {
 		try {
-			const studio = (await import("@theatre/studio")).default;
+			const studio = (await import('@theatre/studio')).default;
 			studio.initialize();
 			// Register the camera object so it appears in the studio outline + timeline.
 			getCameraSheet();
 			studioInstance = studio;
 			return studio;
 		} catch (error) {
-			console.warn("[theatre] studio init skipped:", error);
+			console.warn('[theatre] studio init skipped:', error);
 			initPromise = null; // allow a later retry
 			return null;
 		}
@@ -93,7 +93,7 @@ export async function initTheatreStudioDev(): Promise<TheatreStudio | null> {
  * rendered frame or steals pointer/keyboard focus mid-capture).
  */
 export async function setTheatreStudioVisible(visible: boolean): Promise<void> {
-	if (typeof window === "undefined") return;
+	if (typeof window === 'undefined') return;
 	if (!visible && !studioInstance) return; // nothing to hide; don't pay init cost
 	const studio = await initTheatreStudioDev();
 	if (!studio) return;
@@ -104,6 +104,6 @@ export async function setTheatreStudioVisible(visible: boolean): Promise<void> {
 			studio.ui.hide();
 		}
 	} catch (error) {
-		console.warn("[theatre] studio visibility toggle skipped:", error);
+		console.warn('[theatre] studio visibility toggle skipped:', error);
 	}
 }

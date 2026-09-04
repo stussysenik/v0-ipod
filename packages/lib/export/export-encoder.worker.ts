@@ -1,19 +1,19 @@
 /// <reference lib="webworker" />
 
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
-import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 import type {
 	AppendGifFrameMessage,
 	AppendMp4FrameMessage,
 	EncoderWorkerRequest,
 	EncoderWorkerResponse,
-} from "@ipod/lib/export/export-encoder-protocol";
-import { resolveSupportedMp4EncoderConfig } from "@ipod/lib/export/mp4-support";
+} from '@ipod/lib/export/export-encoder-protocol';
+import { resolveSupportedMp4EncoderConfig } from '@ipod/lib/export/mp4-support';
+import { applyPalette, GIFEncoder, quantize } from 'gifenc';
+import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 
 type GifEncoderPalette = [number, number, number][];
 
 type GifState = {
-	type: "gif";
+	type: 'gif';
 	encoder: ReturnType<typeof GIFEncoder>;
 	width: number;
 	height: number;
@@ -23,7 +23,7 @@ type GifState = {
 };
 
 type Mp4State = {
-	type: "mp4";
+	type: 'mp4';
 	target: ArrayBufferTarget;
 	muxer: Muxer<ArrayBufferTarget>;
 	encoder: VideoEncoder;
@@ -33,7 +33,7 @@ type Mp4State = {
 };
 
 let activeState: GifState | Mp4State | null = null;
-let messageQueue: (() => Promise<void>)[] = [];
+const messageQueue: (() => Promise<void>)[] = [];
 let processing = false;
 
 async function processQueue() {
@@ -60,8 +60,8 @@ function post(response: EncoderWorkerResponse, transfer?: Transferable[]) {
 function fail(id: number, error: unknown) {
 	post({
 		id,
-		type: "error",
-		error: error instanceof Error ? error.message : "Unknown export encoder error",
+		type: 'error',
+		error: error instanceof Error ? error.message : 'Unknown export encoder error',
 	});
 }
 
@@ -142,8 +142,14 @@ function floydSteinbergDither(
 				if (x + 1 < width) {
 					const i1 = idx + (width + 1) * 4;
 					data[i1] = Math.max(0, Math.min(255, data[i1] + r1));
-					data[i1 + 1] = Math.max(0, Math.min(255, data[i1 + 1] + g1));
-					data[i1 + 2] = Math.max(0, Math.min(255, data[i1 + 2] + b1));
+					data[i1 + 1] = Math.max(
+						0,
+						Math.min(255, data[i1 + 1] + g1),
+					);
+					data[i1 + 2] = Math.max(
+						0,
+						Math.min(255, data[i1 + 2] + b1),
+					);
 				}
 			}
 		}
@@ -151,8 +157,8 @@ function floydSteinbergDither(
 }
 
 async function handleGifFrame(message: AppendGifFrameMessage) {
-	if (!activeState || activeState.type !== "gif") {
-		throw new Error("GIF encoder has not been started");
+	if (!activeState || activeState.type !== 'gif') {
+		throw new Error('GIF encoder has not been started');
 	}
 
 	const { canvas, ctx } = activeState;
@@ -170,8 +176,8 @@ async function handleGifFrame(message: AppendGifFrameMessage) {
 }
 
 async function handleMp4Frame(message: AppendMp4FrameMessage) {
-	if (!activeState || activeState.type !== "mp4") {
-		throw new Error("MP4 encoder has not been started");
+	if (!activeState || activeState.type !== 'mp4') {
+		throw new Error('MP4 encoder has not been started');
 	}
 
 	const { canvas, ctx, encoder, frameRate } = activeState;
@@ -205,270 +211,296 @@ self.onmessage = (event: MessageEvent<EncoderWorkerRequest>) => {
 	enqueue(async () => {
 		try {
 			switch (message.type) {
-			case "start-gif": {
-				const canvas = new OffscreenCanvas(message.width, message.height);
-				const ctx = canvas.getContext("2d", {
-					willReadFrequently: true,
-				});
-				if (!ctx) {
-					throw new Error("Failed to create GIF offscreen canvas context");
-				}
-
-				activeState = {
-					type: "gif",
-					encoder: GIFEncoder(),
-					width: message.width,
-					height: message.height,
-					frames: [],
-					canvas,
-					ctx,
-				};
-				post({ id: message.id, type: "ok" });
-				return;
-			}
-			case "append-gif-frame": {
-				await handleGifFrame(message);
-				post({ id: message.id, type: "ok" });
-				return;
-			}
-			case "start-mp4": {
-				if (
-					typeof OffscreenCanvas === "undefined" ||
-					typeof VideoEncoder === "undefined"
-				) {
-					throw new Error("This browser does not support MP4 export");
-				}
-
-				const support = await resolveSupportedMp4EncoderConfig({
-					codecCandidates: message.codec
-						? [message.codec]
-						: undefined,
-					width: message.width,
-					height: message.height,
-					bitrate: message.bitrate,
-					framerate: message.frameRate,
-				});
-				if (!support) {
-					throw new Error(
-						"H.264 MP4 export is not supported in this browser",
+				case 'start-gif': {
+					const canvas = new OffscreenCanvas(
+						message.width,
+						message.height,
 					);
-				}
-
-				const target = new ArrayBufferTarget();
-				const muxer = new Muxer({
-					target,
-					fastStart: "in-memory",
-					video: {
-						codec: "avc",
-						width: message.width,
-						height: message.height,
-						frameRate: message.frameRate,
-					},
-				});
-				const canvas = new OffscreenCanvas(message.width, message.height);
-				const ctx = canvas.getContext("2d", {
-					alpha: false,
-					desynchronized: true,
-				});
-				if (!ctx) {
-					throw new Error(
-						"Failed to create MP4 offscreen canvas context",
-					);
-				}
-
-				const encoder = new VideoEncoder({
-					output(chunk, metadata) {
-						muxer.addVideoChunk(chunk, metadata);
-					},
-					error(error) {
-						throw error;
-					},
-				});
-
-				encoder.configure({
-					...support.config,
-				});
-
-				activeState = {
-					type: "mp4",
-					target,
-					muxer,
-					encoder,
-					canvas,
-					ctx,
-					frameRate: message.frameRate,
-				};
-				post({ id: message.id, type: "ok" });
-				return;
-			}
-			case "append-mp4-frame": {
-				await handleMp4Frame(message);
-				post({ id: message.id, type: "ok" });
-				return;
-			}
-			case "finalize": {
-				if (!activeState) {
-					throw new Error("No active export encoder");
-				}
-
-				if (activeState.type === "gif") {
-					const { frames, width, height, encoder } = activeState;
-
-					if (frames.length === 0) {
-						throw new Error("No GIF frames to finalize");
+					const ctx = canvas.getContext('2d', {
+						willReadFrequently: true,
+					});
+					if (!ctx) {
+						throw new Error(
+							'Failed to create GIF offscreen canvas context',
+						);
 					}
 
-					post({
-						id: message.id,
-						type: "progress",
-						progress: 0.02,
-						detail: "Preparing color optimization",
-					});
-					await yieldWorker();
-
-					// Build global palette from sample frames
-					const samplePixels: number[] = [];
-					// Increase sample count for better color fidelity
-					const sampleCount = Math.min(frames.length, 32);
-					for (let i = 0; i < sampleCount; i++) {
-						const idx = Math.floor(
-							(i / (sampleCount - 1 || 1)) *
-								(frames.length - 1),
+					activeState = {
+						type: 'gif',
+						encoder: GIFEncoder(),
+						width: message.width,
+						height: message.height,
+						frames: [],
+						canvas,
+						ctx,
+					};
+					post({ id: message.id, type: 'ok' });
+					return;
+				}
+				case 'append-gif-frame': {
+					await handleGifFrame(message);
+					post({ id: message.id, type: 'ok' });
+					return;
+				}
+				case 'start-mp4': {
+					if (
+						typeof OffscreenCanvas === 'undefined' ||
+						typeof VideoEncoder === 'undefined'
+					) {
+						throw new Error(
+							'This browser does not support MP4 export',
 						);
-						const frame = frames[idx];
+					}
+
+					const support = await resolveSupportedMp4EncoderConfig({
+						codecCandidates: message.codec
+							? [message.codec]
+							: undefined,
+						width: message.width,
+						height: message.height,
+						bitrate: message.bitrate,
+						framerate: message.frameRate,
+					});
+					if (!support) {
+						throw new Error(
+							'H.264 MP4 export is not supported in this browser',
+						);
+					}
+
+					const target = new ArrayBufferTarget();
+					const muxer = new Muxer({
+						target,
+						fastStart: 'in-memory',
+						video: {
+							codec: 'avc',
+							width: message.width,
+							height: message.height,
+							frameRate: message.frameRate,
+						},
+					});
+					const canvas = new OffscreenCanvas(
+						message.width,
+						message.height,
+					);
+					const ctx = canvas.getContext('2d', {
+						alpha: false,
+						desynchronized: true,
+					});
+					if (!ctx) {
+						throw new Error(
+							'Failed to create MP4 offscreen canvas context',
+						);
+					}
+
+					const encoder = new VideoEncoder({
+						output(chunk, metadata) {
+							muxer.addVideoChunk(chunk, metadata);
+						},
+						error(error) {
+							throw error;
+						},
+					});
+
+					encoder.configure({
+						...support.config,
+					});
+
+					activeState = {
+						type: 'mp4',
+						target,
+						muxer,
+						encoder,
+						canvas,
+						ctx,
+						frameRate: message.frameRate,
+					};
+					post({ id: message.id, type: 'ok' });
+					return;
+				}
+				case 'append-mp4-frame': {
+					await handleMp4Frame(message);
+					post({ id: message.id, type: 'ok' });
+					return;
+				}
+				case 'finalize': {
+					if (!activeState) {
+						throw new Error('No active export encoder');
+					}
+
+					if (activeState.type === 'gif') {
+						const { frames, width, height, encoder } =
+							activeState;
+
+						if (frames.length === 0) {
+							throw new Error(
+								'No GIF frames to finalize',
+							);
+						}
 
 						post({
 							id: message.id,
-							type: "progress",
-							progress: 0.02 + (i / sampleCount) * 0.08,
-							detail: `Sampling frame ${idx + 1} for palette`,
+							type: 'progress',
+							progress: 0.02,
+							detail: 'Preparing color optimization',
 						});
 						await yieldWorker();
 
-						// Sample pixels (every 4th pixel to keep sample size manageable)
-						for (let p = 0; p < frame.rgba.length; p += 16) {
-							samplePixels.push(
-								frame.rgba[p],
-								frame.rgba[p + 1],
-								frame.rgba[p + 2],
-								frame.rgba[p + 3],
+						// Build global palette from sample frames
+						const samplePixels: number[] = [];
+						// Increase sample count for better color fidelity
+						const sampleCount = Math.min(frames.length, 32);
+						for (let i = 0; i < sampleCount; i++) {
+							const idx = Math.floor(
+								(i / (sampleCount - 1 || 1)) *
+									(frames.length - 1),
 							);
-						}
-					}
+							const frame = frames[idx];
 
-					post({
-						id: message.id,
-						type: "progress",
-						progress: 0.12,
-						detail: "Generating optimal 256-color palette",
-					});
-					await yieldWorker();
-
-					const globalPalette = quantize(
-						new Uint8Array(samplePixels),
-						256,
-					) as GifEncoderPalette;
-
-					// Write frames with dithering and global palette
-					for (let i = 0; i < frames.length; i++) {
-						const frame = frames[i];
-						// Work on a copy for dithering as it's destructive
-						const ditherBuffer = new Uint8Array(frame.rgba);
-						floydSteinbergDither(
-							ditherBuffer,
-							width,
-							height,
-							globalPalette,
-						);
-						const indexed = applyPalette(
-							ditherBuffer,
-							globalPalette,
-						);
-
-						encoder.writeFrame(indexed, width, height, {
-							palette: globalPalette,
-							delay: frame.delayMs,
-							repeat: i === 0 ? 0 : undefined,
-						});
-
-						if (i % 2 === 0 || i === frames.length - 1) {
 							post({
 								id: message.id,
-								type: "progress",
-								progress: 0.15 + (i / frames.length) * 0.82,
-								detail: `Encoding frame ${i + 1} of ${frames.length}`,
+								type: 'progress',
+								progress:
+									0.02 +
+									(i / sampleCount) * 0.08,
+								detail: `Sampling frame ${idx + 1} for palette`,
 							});
 							await yieldWorker();
+
+							// Sample pixels (every 4th pixel to keep sample size manageable)
+							for (
+								let p = 0;
+								p < frame.rgba.length;
+								p += 16
+							) {
+								samplePixels.push(
+									frame.rgba[p],
+									frame.rgba[p + 1],
+									frame.rgba[p + 2],
+									frame.rgba[p + 3],
+								);
+							}
 						}
+
+						post({
+							id: message.id,
+							type: 'progress',
+							progress: 0.12,
+							detail: 'Generating optimal 256-color palette',
+						});
+						await yieldWorker();
+
+						const globalPalette = quantize(
+							new Uint8Array(samplePixels),
+							256,
+						) as GifEncoderPalette;
+
+						// Write frames with dithering and global palette
+						for (let i = 0; i < frames.length; i++) {
+							const frame = frames[i];
+							// Work on a copy for dithering as it's destructive
+							const ditherBuffer = new Uint8Array(
+								frame.rgba,
+							);
+							floydSteinbergDither(
+								ditherBuffer,
+								width,
+								height,
+								globalPalette,
+							);
+							const indexed = applyPalette(
+								ditherBuffer,
+								globalPalette,
+							);
+
+							encoder.writeFrame(indexed, width, height, {
+								palette: globalPalette,
+								delay: frame.delayMs,
+								repeat: i === 0 ? 0 : undefined,
+							});
+
+							if (
+								i % 2 === 0 ||
+								i === frames.length - 1
+							) {
+								post({
+									id: message.id,
+									type: 'progress',
+									progress:
+										0.15 +
+										(i /
+											frames.length) *
+											0.82,
+									detail: `Encoding frame ${i + 1} of ${frames.length}`,
+								});
+								await yieldWorker();
+							}
+						}
+
+						post({
+							id: message.id,
+							type: 'progress',
+							progress: 0.98,
+							detail: 'Packaging GIF',
+						});
+						await yieldWorker();
+
+						encoder.finish();
+						const bytes = encoder.bytesView();
+						const buffer = bytes.buffer.slice(
+							bytes.byteOffset,
+							bytes.byteOffset + bytes.byteLength,
+						);
+						activeState = null;
+						post(
+							{
+								id: message.id,
+								type: 'finalized',
+								buffer,
+								mimeType: 'image/gif',
+							},
+							[buffer],
+						);
+						return;
 					}
 
 					post({
 						id: message.id,
-						type: "progress",
-						progress: 0.98,
-						detail: "Packaging GIF",
+						type: 'progress',
+						progress: 0.92,
+						detail: 'Finalizing H.264 stream',
 					});
-					await yieldWorker();
+					await activeState.encoder.flush();
+					activeState.encoder.close();
 
-					encoder.finish();
-					const bytes = encoder.bytesView();
-					const buffer = bytes.buffer.slice(
-						bytes.byteOffset,
-						bytes.byteOffset + bytes.byteLength,
-					);
+					post({
+						id: message.id,
+						type: 'progress',
+						progress: 0.98,
+						detail: 'Packaging MP4 container',
+					});
+					activeState.muxer.finalize();
+					const buffer = activeState.target.buffer;
 					activeState = null;
 					post(
 						{
 							id: message.id,
-							type: "finalized",
+							type: 'finalized',
 							buffer,
-							mimeType: "image/gif",
+							mimeType: 'video/mp4',
 						},
 						[buffer],
 					);
 					return;
 				}
-
-				post({
-					id: message.id,
-					type: "progress",
-					progress: 0.92,
-					detail: "Finalizing H.264 stream",
-				});
-				await activeState.encoder.flush();
-				activeState.encoder.close();
-
-				post({
-					id: message.id,
-					type: "progress",
-					progress: 0.98,
-					detail: "Packaging MP4 container",
-				});
-				activeState.muxer.finalize();
-				const buffer = activeState.target.buffer;
-				activeState = null;
-				post(
-					{
-						id: message.id,
-						type: "finalized",
-						buffer,
-						mimeType: "video/mp4",
-					},
-					[buffer],
-				);
-				return;
+				default: {
+					const exhaustive: never = message;
+					throw new Error(
+						`Unsupported encoder message: ${String(exhaustive)}`,
+					);
+				}
 			}
-			default: {
-				const exhaustive: never = message;
-				throw new Error(
-					`Unsupported encoder message: ${String(exhaustive)}`,
-				);
-			}
+		} catch (error) {
+			fail(message.id, error);
 		}
-	} catch (error) {
-		fail(message.id, error);
-	}
 	});
 };
-
-export {};

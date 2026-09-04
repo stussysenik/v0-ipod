@@ -1,16 +1,15 @@
-import figma from "@figma/code-connect";
-import { Camera } from "lucide-react";
-
-import { IconButton } from "@ipod/components/ui/icon-button";
+import figma from '@figma/code-connect';
+import { IconButton } from '@ipod/components/ui/icon-button';
+import { Camera } from 'lucide-react';
 
 figma.connect(
 	IconButton,
-	"https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1",
+	'https://www.figma.com/design/PLACEHOLDER_FILE_KEY/iPod-Dev-Mode-Bridge?node-id=0%3A1',
 	{
 		props: {
-			label: figma.string("label"),
-			isActive: figma.boolean("isActive"),
-			contrast: figma.boolean("contrast"),
+			label: figma.string('label'),
+			isActive: figma.boolean('isActive'),
+			contrast: figma.boolean('contrast'),
 		},
 		example: ({ label, isActive, contrast }) => (
 			<IconButton
