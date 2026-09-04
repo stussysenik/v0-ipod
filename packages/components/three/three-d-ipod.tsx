@@ -1,33 +1,10 @@
-"use client";
+'use client';
 
-import {
-	ContactShadows,
-	Html,
-	PerspectiveCamera,
-} from "@react-three/drei";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import * as htmlToImage from "html-to-image";
-import React, {
-	createContext,
-	forwardRef,
-	useCallback,
-	useContext,
-	useEffect,
-	useImperativeHandle,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
-import * as THREE from "three";
-
-import { deriveWheelColors } from "@ipod/lib/color-manifest";
-import { probeDataUrlBlank, rasterizeWithBlankRetry } from "@ipod/lib/screen-bake-guard";
-import { ColorResolvePass } from "@ipod/lib/three-color-resolve";
-import {
-	deriveIpod3DDimensions,
-	type Ipod3DDimensions,
-} from "@ipod/lib/ipod-3d-dimensions";
-import type { IpodClassicPresetDefinition } from "@ipod/lib/ipod-classic-presets";
+import { deriveWheelColors } from '@ipod/lib/color-manifest';
+import { FrameAccumulator, subFrameOffsets } from '@ipod/lib/export/motion-blur';
+import { deriveIpod3DDimensions, type Ipod3DDimensions } from '@ipod/lib/ipod-3d-dimensions';
+import type { IpodClassicPresetDefinition } from '@ipod/lib/ipod-classic-presets';
+import { probeDataUrlBlank, rasterizeWithBlankRetry } from '@ipod/lib/screen-bake-guard';
 import {
 	clampPose,
 	DEFAULT_TARGET,
@@ -38,22 +15,38 @@ import {
 	positionToPose,
 	REACH_RANGE,
 	type StudioPose,
-} from "@ipod/lib/studio-camera";
+} from '@ipod/lib/studio-camera';
 import {
 	clipCyclesForDuration,
 	createClipPoseSampler,
 	findStudioClip,
 	type StudioClip,
-} from "@ipod/lib/studio-clip-presets";
-import { FrameAccumulator, subFrameOffsets } from "@ipod/lib/export/motion-blur";
-
-import { StudioBackdrop, StudioLighting } from "./studio-lighting";
+} from '@ipod/lib/studio-clip-presets';
 import {
 	APPLE_PRODUCT_RIG,
 	FLAT_TECHNICAL_RIG,
 	type StudioLightingConfig,
-} from "@ipod/lib/studio-lighting-config";
-import { STEEL_ROUGHNESS_FLOOR, deriveOwnedRig } from "@ipod/lib/studio-owned-finish";
+} from '@ipod/lib/studio-lighting-config';
+import { deriveOwnedRig, STEEL_ROUGHNESS_FLOOR } from '@ipod/lib/studio-owned-finish';
+import { ColorResolvePass } from '@ipod/lib/three-color-resolve';
+import { ContactShadows, Html, PerspectiveCamera } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import * as htmlToImage from 'html-to-image';
+import type React from 'react';
+import {
+	createContext,
+	forwardRef,
+	useCallback,
+	useContext,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
+import * as THREE from 'three';
+import { SceneInspectorCore } from './scene-inspector/SceneInspectorCore';
+import { StudioBackdrop, StudioLighting } from './studio-lighting';
 
 // ─── Technical-Flat ("Lights Off") material mode ───────────────────────────────────
 
@@ -100,7 +93,7 @@ const useTechnicalFlat = () => useContext(TechnicalFlatContext);
  * └──────────────────────────────────────────────────────────────────────────────────┘
  */
 function FlatFinish({
-	color = "#ffffff",
+	color = '#ffffff',
 	map = null,
 	transparent = false,
 	opacity = 1,
@@ -137,11 +130,11 @@ function FlatFinish({
  * - `hero`:  the composed 3/4 angle (the user's locked/composed perspective), reframed to fill
  *   the 9:16 portrait — the dimensional "hero" shot the flat 2D export cannot show (design D13).
  */
-export type ExportFraming = "front" | "hero";
+export type ExportFraming = 'front' | 'hero';
 
 /** Resolve a clip id to a `StudioClip`, falling back to the gentle orbit. */
 function resolveClip(id: string): StudioClip {
-	return findStudioClip(id) ?? findStudioClip("orbit")!;
+	return findStudioClip(id) ?? findStudioClip('orbit')!;
 }
 
 /**
@@ -166,7 +159,12 @@ export interface CameraPreviewState {
 }
 
 export interface ThreeDIpodHandle {
-	captureHighRes: (width?: number, height?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>;
+	captureHighRes: (
+		width?: number,
+		height?: number,
+		framing?: ExportFraming,
+		heroPose?: StudioPose | null,
+	) => Promise<Blob | null>;
 	captureFrame: (width: number, height: number) => Promise<ImageBitmap | null>;
 	/** The live WebGL canvas — used by the clip recorder's captureStream(). */
 	getCanvas: () => HTMLCanvasElement | null;
@@ -192,12 +190,16 @@ export interface ThreeDIpodHandle {
 	 */
 	renderClipFrames: (
 		opts: ClipRenderOptions,
-		onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
+		onFrame: (
+			frame: HTMLCanvasElement,
+			index: number,
+			total: number,
+		) => Promise<void> | void,
 	) => Promise<void>;
 	/** Current composed camera pose in studio coordinates (null before the rig mounts). */
 	getCameraPose: () => StudioPose | null;
 	/** Ease the live camera toward a studio pose (partial — omitted dials hold). */
-	setCameraGoal: (pose: Partial<Omit<StudioPose, "target">>) => void;
+	setCameraGoal: (pose: Partial<Omit<StudioPose, 'target'>>) => void;
 	/** Snap the live camera back to the current focus's default framing ("home"). */
 	resetCamera: () => void;
 }
@@ -248,7 +250,7 @@ interface CaptureHooks {
 	refreshScreen: () => Promise<void>;
 }
 
-export type IpodCameraFocus = "product" | "front" | "back";
+export type IpodCameraFocus = 'product' | 'front' | 'back';
 
 export interface ThreeDIpodProps {
 	preset: IpodClassicPresetDefinition;
@@ -462,9 +464,9 @@ const MECHANICAL = {
 } as const;
 
 /** Matte opening of a machined port recess — near-black, light-absorbing. */
-const PORT_RECESS_COLOR = "#0a0b0c";
+const PORT_RECESS_COLOR = '#0a0b0c';
 /** The hold switch's slider, the one bright part seated inside its slot. */
-const PORT_SLIDER_COLOR = "#c9cdd1";
+const PORT_SLIDER_COLOR = '#c9cdd1';
 
 // ─── Z-Layer Stack (datum-referenced) ──────────────────────────────────────────────
 
@@ -495,12 +497,12 @@ function zLayers(depth: number) {
 
 function createBrushedMetalTexture(): THREE.CanvasTexture {
 	const size = 1024;
-	const canvas = document.createElement("canvas");
+	const canvas = document.createElement('canvas');
 	canvas.width = size;
 	canvas.height = size;
-	const ctx = canvas.getContext("2d")!;
+	const ctx = canvas.getContext('2d')!;
 
-	ctx.fillStyle = "#7c7c7c";
+	ctx.fillStyle = '#7c7c7c';
 	ctx.fillRect(0, 0, size, size);
 
 	// Directional anodized grain
@@ -540,25 +542,25 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 	// High-resolution (1536x2560) — legible at 25–35 cm viewing distance
 	const w = 1536;
 	const h = 2560;
-	const canvas = document.createElement("canvas");
+	const canvas = document.createElement('canvas');
 	canvas.width = w;
 	canvas.height = h;
-	const ctx = canvas.getContext("2d")!;
+	const ctx = canvas.getContext('2d')!;
 	ctx.clearRect(0, 0, w, h);
 
 	// CNC Tool Mark Pattern — subtle horizontal milling grain to mimic the CNC process
-	const pCanvas = document.createElement("canvas");
+	const pCanvas = document.createElement('canvas');
 	pCanvas.width = 4;
 	pCanvas.height = 2;
-	const pCtx = pCanvas.getContext("2d")!;
-	pCtx.fillStyle = "rgba(0,0,0,0.15)";
+	const pCtx = pCanvas.getContext('2d')!;
+	pCtx.fillStyle = 'rgba(0,0,0,0.15)';
 	pCtx.fillRect(0, 0, 4, 1);
-	const cncPattern = ctx.createPattern(pCanvas, "repeat")!;
+	const cncPattern = ctx.createPattern(pCanvas, 'repeat')!;
 
 	const etch = (draw: () => void) => {
 		// 1. Deep Milled Shadow — pure black for maximum contrast
 		ctx.save();
-		ctx.fillStyle = "rgba(0,0,0,0.92)";
+		ctx.fillStyle = 'rgba(0,0,0,0.92)';
 		draw();
 		ctx.restore();
 
@@ -571,12 +573,12 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 		// 3. Shining CNC Bevel — sharp, high-intensity white to catch the environment
 		ctx.save();
 		ctx.translate(0, -1.8);
-		ctx.fillStyle = "rgba(255,255,255,0.72)";
+		ctx.fillStyle = 'rgba(255,255,255,0.72)';
 		draw();
 		ctx.restore();
 	};
 
-	ctx.textAlign = "center";
+	ctx.textAlign = 'center';
 
 	// Carrot maker's-mark (drawn vector) — scaled up for presence
 	const cx = w / 2;
@@ -588,8 +590,22 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 		const halfW = s * 0.34;
 		ctx.beginPath();
 		ctx.moveTo(cx - halfW, topY);
-		ctx.bezierCurveTo(cx - halfW * 0.92, topY + s * 0.42, cx - halfW * 0.32, topY + s * 0.82, cx, tipY);
-		ctx.bezierCurveTo(cx + halfW * 0.32, topY + s * 0.82, cx + halfW * 0.92, topY + s * 0.42, cx + halfW, topY);
+		ctx.bezierCurveTo(
+			cx - halfW * 0.92,
+			topY + s * 0.42,
+			cx - halfW * 0.32,
+			topY + s * 0.82,
+			cx,
+			tipY,
+		);
+		ctx.bezierCurveTo(
+			cx + halfW * 0.32,
+			topY + s * 0.82,
+			cx + halfW * 0.92,
+			topY + s * 0.42,
+			cx + halfW,
+			topY,
+		);
 		ctx.quadraticCurveTo(cx, topY - s * 0.2, cx - halfW, topY);
 		ctx.closePath();
 		ctx.fill();
@@ -614,47 +630,49 @@ function createBackEngravingTexture(capacity: string): THREE.CanvasTexture {
 	};
 	etch(carrot);
 
-	const sansDisplay = "-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif";
-	const sansText = "-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+	const sansDisplay =
+		"-apple-system, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+	const sansText =
+		"-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 	// iPod wordmark — bold, legible at distance
 	etch(() => {
 		ctx.font = `600 176px ${sansDisplay}`;
-		ctx.letterSpacing = "-5px";
-		ctx.fillText("iPod", cx, h * 0.435);
-		ctx.letterSpacing = "0px";
+		ctx.letterSpacing = '-5px';
+		ctx.fillText('iPod', cx, h * 0.435);
+		ctx.letterSpacing = '0px';
 	});
 
 	// Designer attribution — the personal mark, prominent like a fashion label
 	etch(() => {
 		ctx.font = `600 52px ${sansText}`;
-		ctx.letterSpacing = "1.2px";
-		ctx.fillText("DESIGNED BY STÜSSY SENIK", cx, h * 0.505);
-		ctx.letterSpacing = "0px";
+		ctx.letterSpacing = '1.2px';
+		ctx.fillText('DESIGNED BY STÜSSY SENIK', cx, h * 0.505);
+		ctx.letterSpacing = '0px';
 	});
 
 	// Capacity — spec line under the attribution
 	etch(() => {
 		ctx.font = `500 46px ${sansText}`;
-		ctx.letterSpacing = "0.8px";
+		ctx.letterSpacing = '0.8px';
 		ctx.fillText(capacity, cx, h * 0.555);
-		ctx.letterSpacing = "0px";
+		ctx.letterSpacing = '0px';
 	});
 
 	// Regulatory fine print — raised and enlarged for real legibility at arm's-length
 	const fineLines = [
-		"Manufactured in Czech Republic · Model No. A1238",
-		"EMC No. 2151 · IC: 579C-A1238",
+		'Manufactured in Czech Republic · Model No. A1238',
+		'EMC No. 2151 · IC: 579C-A1238',
 		`⎓ Rated 5–30V · Capacity ${capacity} · © 2026 Stüssy Senik`,
 	];
 	etch(() => {
 		ctx.font = `600 36px ${sansText}`;
-		ctx.letterSpacing = "0.6px";
+		ctx.letterSpacing = '0.6px';
 		const baseY = h * 0.87;
 		fineLines.forEach((line, i) => {
 			ctx.fillText(line, cx, baseY + i * 50);
 		});
-		ctx.letterSpacing = "0px";
+		ctx.letterSpacing = '0px';
 	});
 
 	const texture = new THREE.CanvasTexture(canvas);
@@ -670,7 +688,7 @@ function useLcdShader() {
 		return new THREE.ShaderMaterial({
 			uniforms: {
 				time: { value: 0 },
-				color: { value: new THREE.Color("#c8d4c0") },
+				color: { value: new THREE.Color('#c8d4c0') },
 				brightness: { value: 0.78 },
 			},
 			vertexShader: /* glsl */ `
@@ -699,7 +717,15 @@ function useLcdShader() {
 
 // ─── Screen Bezel ────────────────────────────────────────────────────────────────
 
-function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; color?: string }) {
+function ScreenBezel({
+	dims,
+	z,
+	color = '#0a0a0a',
+}: {
+	dims: Ipod3DDimensions;
+	z: ReturnType<typeof zLayers>;
+	color?: string;
+}) {
 	const flat = useTechnicalFlat();
 	const bezelGeo = useMemo(() => {
 		// Concentric with the screen: the mask extends a fixed reveal beyond the
@@ -720,7 +746,13 @@ function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z
 		shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
 		shape.lineTo(-w / 2, -h / 2 + r);
 		shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
-		return new THREE.ExtrudeGeometry(shape, { depth: 0.015, bevelEnabled: true, bevelThickness: MECHANICAL.bezelEdgeBreak, bevelSize: MECHANICAL.bezelEdgeBreak, bevelSegments: 2 });
+		return new THREE.ExtrudeGeometry(shape, {
+			depth: 0.015,
+			bevelEnabled: true,
+			bevelThickness: MECHANICAL.bezelEdgeBreak,
+			bevelSize: MECHANICAL.bezelEdgeBreak,
+			bevelSegments: 2,
+		});
 	}, [dims.screenW, dims.screenH, dims.screenRadius]);
 
 	return (
@@ -731,7 +763,11 @@ function ScreenBezel({ dims, z, color = "#0a0a0a" }: { dims: Ipod3DDimensions; z
 				{flat ? (
 					<FlatFinish color={color} />
 				) : (
-					<meshStandardMaterial color={color} metalness={0.0} roughness={0.62} />
+					<meshStandardMaterial
+						color={color}
+						metalness={0.0}
+						roughness={0.62}
+					/>
 				)}
 			</mesh>
 		</group>
@@ -796,7 +832,11 @@ function ClickWheel3D({
 				{flat ? (
 					<FlatFinish color={ringPlastic} />
 				) : (
-					<meshStandardMaterial color={ringPlastic} metalness={0.0} roughness={0.9} />
+					<meshStandardMaterial
+						color={ringPlastic}
+						metalness={0.0}
+						roughness={0.9}
+					/>
 				)}
 			</mesh>
 
@@ -850,20 +890,24 @@ function ClickWheel3D({
 				style={{
 					width: `${dims.wheelHtmlPx.width}px`,
 					height: `${dims.wheelHtmlPx.height}px`,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
 				}}
 				zIndexRange={[100, 0]}
 			>
-				<div ref={domRef} style={{ pointerEvents: "auto" }}>{wheelHtml}</div>
+				<div ref={domRef} style={{ pointerEvents: 'auto' }}>
+					{wheelHtml}
+				</div>
 			</Html>
 
 			{/* Capture-only glyph plane — the baked MENU + transport icons, sized
 			   1:1 with the wheel diameter (wheelHtmlPx · unit = 2·wheelOuterR) so
 			   they land exactly on the annulus. Hidden until a capture turns it on. */}
 			<mesh ref={glyphMeshRef} position={[0, 0, z.wheelHtml]} visible={false}>
-				<planeGeometry args={[dims.wheelOuterR * 2, dims.wheelOuterR * 2]} />
+				<planeGeometry
+					args={[dims.wheelOuterR * 2, dims.wheelOuterR * 2]}
+				/>
 			</mesh>
 		</group>
 	);
@@ -909,7 +953,11 @@ function IpodPorts({ dims, visible = true }: { dims: Ipod3DDimensions; visible?:
 	// stays visible around it, exactly how the real part seats.
 	const sliderLength = hold.length * 0.42;
 	const sliderGeo = useMemo(
-		() => new THREE.ShapeGeometry(makeStadiumShape(sliderLength, hold.width * 0.72), 24),
+		() =>
+			new THREE.ShapeGeometry(
+				makeStadiumShape(sliderLength, hold.width * 0.72),
+				24,
+			),
 		[sliderLength, hold.width],
 	);
 	const sliderX = -(hold.length - sliderLength) / 2;
@@ -923,14 +971,21 @@ function IpodPorts({ dims, visible = true }: { dims: Ipod3DDimensions; visible?:
 	return (
 		<group visible={visible}>
 			{/* 3.5mm jack bore — top-left. */}
-			<mesh position={[jack.centerX, wallOffset + lift, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+			<mesh
+				position={[jack.centerX, wallOffset + lift, 0]}
+				rotation={[-Math.PI / 2, 0, 0]}
+			>
 				<circleGeometry args={[jack.radius, 48]} />
 				{recessMaterial}
 			</mesh>
 
 			{/* Hold-switch slot — top, right of centre. */}
 			<group position={[hold.centerX, 0, 0]}>
-				<mesh geometry={holdGeo} position={[0, wallOffset + lift, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+				<mesh
+					geometry={holdGeo}
+					position={[0, wallOffset + lift, 0]}
+					rotation={[-Math.PI / 2, 0, 0]}
+				>
 					{recessMaterial}
 				</mesh>
 				<mesh
@@ -941,13 +996,21 @@ function IpodPorts({ dims, visible = true }: { dims: Ipod3DDimensions; visible?:
 					{flat ? (
 						<FlatFinish color={PORT_SLIDER_COLOR} />
 					) : (
-						<meshStandardMaterial color={PORT_SLIDER_COLOR} metalness={0.6} roughness={0.45} />
+						<meshStandardMaterial
+							color={PORT_SLIDER_COLOR}
+							metalness={0.6}
+							roughness={0.45}
+						/>
 					)}
 				</mesh>
 			</group>
 
 			{/* 30-pin dock opening — bottom, centred. */}
-			<mesh geometry={dockGeo} position={[0, -(wallOffset + lift), 0]} rotation={[Math.PI / 2, 0, 0]}>
+			<mesh
+				geometry={dockGeo}
+				position={[0, -(wallOffset + lift), 0]}
+				rotation={[Math.PI / 2, 0, 0]}
+			>
 				{recessMaterial}
 			</mesh>
 		</group>
@@ -956,7 +1019,15 @@ function IpodPorts({ dims, visible = true }: { dims: Ipod3DDimensions; visible?:
 
 // ─── Polished Steel Back ─────────────────────────────────────────────────────────
 
-function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: ReturnType<typeof zLayers>; capacityLabel: string }) {
+function IpodBack({
+	dims,
+	z,
+	capacityLabel,
+}: {
+	dims: Ipod3DDimensions;
+	z: ReturnType<typeof zLayers>;
+	capacityLabel: string;
+}) {
 	const flat = useTechnicalFlat();
 	const engraving = useMemo(() => createBackEngravingTexture(capacityLabel), [capacityLabel]);
 
@@ -992,7 +1063,22 @@ function IpodBack({ dims, z, capacityLabel }: { dims: Ipod3DDimensions; z: Retur
 
 // ─── Ipod Model ──────────────────────────────────────────────────────────────────
 
-function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, backColor = "#cfd3d7", edgeColor, bezelColor = "#0a0a0a", capacityLabel, backRoughness = STEEL_ROUGHNESS_FLOOR, technicalFlat = false, showPorts = true, onRegisterCapture }: IpodModelProps) {
+function IpodModel({
+	preset,
+	screen,
+	wheel,
+	skinColor,
+	ringColor,
+	centerColor,
+	backColor = '#cfd3d7',
+	edgeColor,
+	bezelColor = '#0a0a0a',
+	capacityLabel,
+	backRoughness = STEEL_ROUGHNESS_FLOOR,
+	technicalFlat = false,
+	showPorts = true,
+	onRegisterCapture,
+}: IpodModelProps) {
 	// Edge defaults to the back colour so an un-edited device is pixel-identical
 	// to the single-material chassis (edge == back until the user sets it).
 	const resolvedEdgeColor = edgeColor ?? backColor;
@@ -1015,7 +1101,13 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 	const wheelDomRef = useRef<HTMLDivElement>(null);
 	// Materials/visibility to restore after a capture, one entry per baked plane.
 	const captureRestores = useRef<
-		Array<{ mesh: THREE.Mesh; material: THREE.Material | THREE.Material[]; visible: boolean; tex: THREE.Texture; mat: THREE.MeshBasicMaterial }>
+		Array<{
+			mesh: THREE.Mesh;
+			material: THREE.Material | THREE.Material[];
+			visible: boolean;
+			tex: THREE.Texture;
+			mat: THREE.MeshBasicMaterial;
+		}>
 	>([]);
 	const lcdMaterial = useLcdShader();
 
@@ -1042,7 +1134,10 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		// radius and meets the aluminum face at a crisp seam. A large bevel here
 		// balloons the silhouette into a fat chrome band that clips to white —
 		// the real chassis edge is a fraction of the body depth.
-		const bevelT = Math.min(MECHANICAL.bodyFilletMax, dims.depth * MECHANICAL.bodyFilletDepthRatio);
+		const bevelT = Math.min(
+			MECHANICAL.bodyFilletMax,
+			dims.depth * MECHANICAL.bodyFilletDepthRatio,
+		);
 		const bevelS = MECHANICAL.bodyFillet;
 		const shape = new THREE.Shape();
 		drawRoundedRect(shape, 0, 0, dims.width, dims.height, dims.radius);
@@ -1098,7 +1193,14 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 
 		// Cut the wheel bore concentric to DATUM B, with its own clearance fit.
 		const wheelHole = new THREE.Path();
-		wheelHole.absarc(0, dims.wheelCenterY, dims.wheelOuterR + MECHANICAL.wheelBoreClearance, 0, Math.PI * 2, false);
+		wheelHole.absarc(
+			0,
+			dims.wheelCenterY,
+			dims.wheelOuterR + MECHANICAL.wheelBoreClearance,
+			0,
+			Math.PI * 2,
+			false,
+		);
 		shape.holes.push(wheelHole);
 
 		// Hairline CHAMFER only. A fat bevel here rounds the screen aperture and
@@ -1152,7 +1254,13 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		const bakeNodeOnto = async (
 			node: HTMLElement | null,
 			mesh: THREE.Mesh | null,
-			opts: { transparent?: boolean; showMesh?: boolean; width?: number; height?: number; cacheBust?: boolean } = {},
+			opts: {
+				transparent?: boolean;
+				showMesh?: boolean;
+				width?: number;
+				height?: number;
+				cacheBust?: boolean;
+			} = {},
 		) => {
 			if (!node || !mesh) return;
 			// drei `<Html occlude>` sets `display:none` on a wrapper whenever the
@@ -1162,10 +1270,14 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			// still always reframes to the FRONT, so force any hidden ancestor
 			// measurable for the rasterize, then restore drei's value.
 			const rehidden: Array<[HTMLElement, string]> = [];
-			for (let a: HTMLElement | null = node, i = 0; a && i < 8; a = a.parentElement, i++) {
-				if (a.style.display === "none") {
+			for (
+				let a: HTMLElement | null = node, i = 0;
+				a && i < 8;
+				a = a.parentElement, i++
+			) {
+				if (a.style.display === 'none') {
 					rehidden.push([a, a.style.display]);
-					a.style.display = "";
+					a.style.display = '';
 				}
 			}
 			try {
@@ -1183,10 +1295,14 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				// fully shown" bug. Await fonts + decode every image (and any CSS background
 				// image) under the node first.
 				if (document.fonts?.ready) {
-					try { await document.fonts.ready; } catch { /* fonts API best-effort */ }
+					try {
+						await document.fonts.ready;
+					} catch {
+						/* fonts API best-effort */
+					}
 				}
 				await Promise.all(
-					[...node.querySelectorAll("img")].map((img) =>
+					[...node.querySelectorAll('img')].map((img) =>
 						img.decode().catch(() => undefined),
 					),
 				);
@@ -1219,13 +1335,18 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 									height,
 								}),
 							probeDataUrlBlank,
-							{ firstAttemptBustsCache: opts.cacheBust ?? true },
+							{
+								firstAttemptBustsCache:
+									opts.cacheBust ?? true,
+							},
 						);
 				if (dataUrl == null) {
 					// Every attempt rasterized blank — keep whatever texture is already on the
 					// mesh (last good bake or the live material). A held frame is invisible in
 					// the clip; a blank "dead iPod OS" frame is the bug this guards against.
-					console.warn("[3d-export] screen bake blank after retries; holding last texture");
+					console.warn(
+						'[3d-export] screen bake blank after retries; holding last texture',
+					);
 					return;
 				}
 				const img = new Image();
@@ -1246,14 +1367,22 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				// to animate the screen. Reuse the mesh's existing restore entry (keeping the
 				// ORIGINAL material/visible) and dispose the previous baked tex/mat, so repeat
 				// bakes neither leak GPU resources nor capture a baked material as the "original".
-				const existing = captureRestores.current.find((r) => r.mesh === mesh);
+				const existing = captureRestores.current.find(
+					(r) => r.mesh === mesh,
+				);
 				if (existing) {
 					existing.tex.dispose();
 					existing.mat.dispose();
 					existing.tex = tex;
 					existing.mat = mat;
 				} else {
-					captureRestores.current.push({ mesh, material: mesh.material, visible: mesh.visible, tex, mat });
+					captureRestores.current.push({
+						mesh,
+						material: mesh.material,
+						visible: mesh.visible,
+						tex,
+						mat,
+					});
 				}
 				mesh.material = mat;
 				if (opts.showMesh) mesh.visible = true;
@@ -1268,7 +1397,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 		// the moment the capture buffer switches to a portrait aspect — the exact
 		// duplicate-screen artifact seen mid-capture. Hide them for the duration.
 		const setOverlaysHidden = (hidden: boolean) => {
-			const v = hidden ? "hidden" : "";
+			const v = hidden ? 'hidden' : '';
 			if (screenDomRef.current) screenDomRef.current.style.visibility = v;
 			if (wheelDomRef.current) wheelDomRef.current.style.visibility = v;
 		};
@@ -1289,7 +1418,10 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 				});
 				setOverlaysHidden(true);
 			} catch (error) {
-				console.warn("[3d-export] screen/wheel bake failed; capturing live materials", error);
+				console.warn(
+					'[3d-export] screen/wheel bake failed; capturing live materials',
+					error,
+				);
 			}
 		};
 
@@ -1301,7 +1433,7 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 			const node = screenDomRef.current;
 			if (!node) return;
 			const prevVisibility = node.style.visibility;
-			node.style.visibility = "";
+			node.style.visibility = '';
 			try {
 				await bakeNodeOnto(node, lcdMeshRef.current, {
 					width: dims.screenHtmlPx.width,
@@ -1309,7 +1441,10 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					cacheBust: false,
 				});
 			} catch (error) {
-				console.warn("[3d-export] screen re-bake failed; holding last frame", error);
+				console.warn(
+					'[3d-export] screen re-bake failed; holding last frame',
+					error,
+				);
 			} finally {
 				node.style.visibility = prevVisibility;
 			}
@@ -1350,13 +1485,13 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 
 	return (
 		<TechnicalFlatContext.Provider value={technicalFlat}>
-		<group ref={groupRef}>
-			{/* No ambient <Float>: a continuous bob never lets the device rest, and during an
+			<group ref={groupRef}>
+				{/* No ambient <Float>: a continuous bob never lets the device rest, and during an
 			   offline capture (frameloop "never") it freezes at a RANDOM phase — baking a stray
 			   tilt that the live preview never shows, so the export never matched the preview.
 			   The device rests dead still; the one-shot `settle` drop gives life on load/finish,
 			   and the camera move supplies any intentional motion. Capture is now deterministic. */}
-			<group>
+				<group>
 					{/* ── BODY / BACK SHELL (Deep-drawn, mirror-polished stainless steel) ──
 					   One subtractive part: flat front cap, pillowed back + sides. */}
 					{/* ExtrudeGeometry emits two groups: index 0 = the flat front/back caps,
@@ -1368,8 +1503,14 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 					<mesh ref={bodyRef} geometry={bodyGeo}>
 						{technicalFlat ? (
 							<>
-								<FlatFinish attach="material-0" color={backColor} />
-								<FlatFinish attach="material-1" color={resolvedEdgeColor} />
+								<FlatFinish
+									attach="material-0"
+									color={backColor}
+								/>
+								<FlatFinish
+									attach="material-1"
+									color={resolvedEdgeColor}
+								/>
 							</>
 						) : (
 							// Polished stainless, NOT chrome. A near-mirror back (roughness ~0.05)
@@ -1414,7 +1555,10 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						 A flat panel inset by the parting seam, with the screen
 						 aperture and wheel bore cut clean through it — the screen and
 						 wheel seat into these pockets. */}
-					<mesh geometry={faceGeo} position={[0, 0, dims.depth / 2 - 0.002]}>
+					<mesh
+						geometry={faceGeo}
+						position={[0, 0, dims.depth / 2 - 0.002]}
+					>
 						{/* Anodized aluminum is a DYED surface over metal — so the picked color
 							must read TRUE (a designer who sets the case to #FFFFFF expects white,
 							not the gray a fully-metallic face mirrors back from the studio env).
@@ -1453,7 +1597,15 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						 the glass, so the lit screen reads inside the bezel frame in the
 						 WebGL render — not occluded by the bezel. In the live view the
 						 DOM `Html` portal floats over the canvas and covers this plane. */}
-					<mesh ref={attachLcdMesh} geometry={screenPlaneGeo} position={[0, dims.screenCenterY, z.screenGlass - 0.006]} />
+					<mesh
+						ref={attachLcdMesh}
+						geometry={screenPlaneGeo}
+						position={[
+							0,
+							dims.screenCenterY,
+							z.screenGlass - 0.006,
+						]}
+					/>
 
 					{/* ── SCREEN HTML OVERLAY (1:1 with the 2D screen) ── */}
 					<Html
@@ -1465,9 +1617,9 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						style={{
 							width: `${dims.screenHtmlPx.width}px`,
 							height: `${dims.screenHtmlPx.height}px`,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
 						}}
 						zIndexRange={[100, 0]}
 					>
@@ -1475,7 +1627,12 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						   (tap title/artist/album/rating inline) — same pattern as the wheel
 						   overlay below. The wrapper stays pointer-events-none so only the
 						   screen itself, not its bounding box, intercepts the orbit drag. */}
-						<div ref={screenDomRef} style={{ pointerEvents: "auto" }}>{screen}</div>
+						<div
+							ref={screenDomRef}
+							style={{ pointerEvents: 'auto' }}
+						>
+							{screen}
+						</div>
 					</Html>
 
 					{/* ── SCREEN GLASS ──
@@ -1483,23 +1640,37 @@ function IpodModel({ preset, screen, wheel, skinColor, ringColor, centerColor, b
 						 sheen over the LCD. No transmission buffer (that pass re-renders
 						 the whole scene every frame and tanks the framerate), and a
 						 single flat plane instead of a rounded solid. */}
-			<mesh geometry={screenPlaneGeo} position={[0, dims.screenCenterY, z.screenGlass]} visible={!technicalFlat}>
-				<meshPhysicalMaterial
-					clearcoat={0.38}
-					clearcoatRoughness={0.18}
-					color="#ffffff"
-					envMapIntensity={0.12}
-					metalness={0}
-					opacity={0.05}
-					roughness={0.1}
-					transparent
-				/>
+					<mesh
+						geometry={screenPlaneGeo}
+						position={[0, dims.screenCenterY, z.screenGlass]}
+						visible={!technicalFlat}
+					>
+						<meshPhysicalMaterial
+							clearcoat={0.38}
+							clearcoatRoughness={0.18}
+							color="#ffffff"
+							envMapIntensity={0.12}
+							metalness={0}
+							opacity={0.05}
+							roughness={0.1}
+							transparent
+						/>
 					</mesh>
 
 					{/* ── CLICK WHEEL ── */}
-					<ClickWheel3D dims={dims} z={z} skinColor={skinColor} ringColor={ringColor} centerColor={centerColor} wheelHtml={wheel} bodyRef={bodyRef} domRef={wheelDomRef} glyphMeshRef={wheelGlyphMeshRef} />
+					<ClickWheel3D
+						dims={dims}
+						z={z}
+						skinColor={skinColor}
+						ringColor={ringColor}
+						centerColor={centerColor}
+						wheelHtml={wheel}
+						bodyRef={bodyRef}
+						domRef={wheelDomRef}
+						glyphMeshRef={wheelGlyphMeshRef}
+					/>
 				</group>
-		</group>
+			</group>
 		</TechnicalFlatContext.Provider>
 	);
 }
@@ -1555,7 +1726,7 @@ function focusToSpherical(focus: IpodCameraFocus): { sph: Spherical; target: THR
  */
 interface OrbitCameraApi {
 	getPose: () => StudioPose;
-	setGoal: (pose: Partial<Omit<StudioPose, "target">>) => void;
+	setGoal: (pose: Partial<Omit<StudioPose, 'target'>>) => void;
 	/** Ease the camera back to the current focus's default framing (the "home" angle). */
 	resetCamera: () => void;
 }
@@ -1591,10 +1762,14 @@ function OrbitRig({
 	// Mirror `locked` into a ref so the persistent pointer/wheel listeners read the
 	// current value without re-binding every toggle.
 	const lockedRef = useRef(locked);
-	useEffect(() => { lockedRef.current = locked; }, [locked]);
+	useEffect(() => {
+		lockedRef.current = locked;
+	}, [locked]);
 	// Mirror `focus` so resetCamera (registered once) always homes to the CURRENT framing.
 	const focusRef = useRef(focus);
-	useEffect(() => { focusRef.current = focus; }, [focus]);
+	useEffect(() => {
+		focusRef.current = focus;
+	}, [focus]);
 
 	// ── Playhead preview state ──
 	// `preview` flips the rig from "ease toward goal" to "fly the move directly".
@@ -1604,7 +1779,9 @@ function OrbitRig({
 	// hero pose captured the instant preview activates, so the sway centers on the
 	// angle the user composed. `previewVec` avoids per-frame allocation.
 	const previewRef = useRef(preview);
-	useEffect(() => { previewRef.current = preview; }, [preview]);
+	useEffect(() => {
+		previewRef.current = preview;
+	}, [preview]);
 	const previewPhase = useRef(0);
 	const previewAnchor = useRef<StudioPose | null>(null);
 	const previewVec = useRef(new THREE.Vector3());
@@ -1639,7 +1816,11 @@ function OrbitRig({
 		while (az - cur.current.az > Math.PI) az -= twoPi;
 		while (az - cur.current.az < -Math.PI) az += twoPi;
 		// Honor the responsive fit floor so a snap never crops the device on mobile.
-		goal.current = { az, pol: next.sph.pol, rad: Math.max(next.sph.rad, fitReachRef.current) };
+		goal.current = {
+			az,
+			pol: next.sph.pol,
+			rad: Math.max(next.sph.rad, fitReachRef.current),
+		};
 		target.current.copy(next.target);
 	}, [focus]);
 
@@ -1656,23 +1837,33 @@ function OrbitRig({
 			const dy = e.clientY - last.current.y;
 			last.current = { x: e.clientX, y: e.clientY };
 			goal.current.az -= dx * 0.006;
-			goal.current.pol = THREE.MathUtils.clamp(goal.current.pol - dy * 0.006, 0.18, Math.PI - 0.18);
+			goal.current.pol = THREE.MathUtils.clamp(
+				goal.current.pol - dy * 0.006,
+				0.18,
+				Math.PI - 0.18,
+			);
 		};
-		const onUp = () => { dragging.current = false; };
+		const onUp = () => {
+			dragging.current = false;
+		};
 		const onWheel = (e: WheelEvent) => {
 			if (lockedRef.current) return; // perspective locked — don't zoom-dolly
 			e.preventDefault();
-			goal.current.rad = THREE.MathUtils.clamp(goal.current.rad + e.deltaY * 0.012, 5.5, 22);
+			goal.current.rad = THREE.MathUtils.clamp(
+				goal.current.rad + e.deltaY * 0.012,
+				5.5,
+				22,
+			);
 		};
-		el.addEventListener("pointerdown", onDown);
-		window.addEventListener("pointermove", onMove);
-		window.addEventListener("pointerup", onUp);
-		el.addEventListener("wheel", onWheel, { passive: false });
+		el.addEventListener('pointerdown', onDown);
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+		el.addEventListener('wheel', onWheel, { passive: false });
 		return () => {
-			el.removeEventListener("pointerdown", onDown);
-			window.removeEventListener("pointermove", onMove);
-			window.removeEventListener("pointerup", onUp);
-			el.removeEventListener("wheel", onWheel);
+			el.removeEventListener('pointerdown', onDown);
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+			el.removeEventListener('wheel', onWheel);
 		};
 	}, [gl]);
 
@@ -1698,7 +1889,11 @@ function OrbitRig({
 					goal.current.az = az;
 				}
 				if (pose.elevation !== undefined) {
-					const el = THREE.MathUtils.clamp(pose.elevation, ELEVATION_RANGE[0], ELEVATION_RANGE[1]);
+					const el = THREE.MathUtils.clamp(
+						pose.elevation,
+						ELEVATION_RANGE[0],
+						ELEVATION_RANGE[1],
+					);
 					goal.current.pol = THREE.MathUtils.clamp(
 						Math.PI / 2 - el * THREE.MathUtils.DEG2RAD,
 						0.18,
@@ -1706,7 +1901,11 @@ function OrbitRig({
 					);
 				}
 				if (pose.reach !== undefined) {
-					goal.current.rad = THREE.MathUtils.clamp(pose.reach, REACH_RANGE[0], REACH_RANGE[1]);
+					goal.current.rad = THREE.MathUtils.clamp(
+						pose.reach,
+						REACH_RANGE[0],
+						REACH_RANGE[1],
+					);
 				}
 			},
 			resetCamera: () => {
@@ -1718,7 +1917,11 @@ function OrbitRig({
 				let az = next.sph.az;
 				while (az - cur.current.az > Math.PI) az -= twoPi;
 				while (az - cur.current.az < -Math.PI) az += twoPi;
-				goal.current = { az, pol: next.sph.pol, rad: Math.max(next.sph.rad, fitReachRef.current) };
+				goal.current = {
+					az,
+					pol: next.sph.pol,
+					rad: Math.max(next.sph.rad, fitReachRef.current),
+				};
 				target.current.copy(next.target);
 			},
 		});
@@ -1738,17 +1941,32 @@ function OrbitRig({
 			if (!previewAnchor.current) {
 				previewAnchor.current = {
 					azimuth: cur.current.az * THREE.MathUtils.RAD2DEG,
-					elevation: (Math.PI / 2 - cur.current.pol) * THREE.MathUtils.RAD2DEG,
+					elevation:
+						(Math.PI / 2 - cur.current.pol) *
+						THREE.MathUtils.RAD2DEG,
 					reach: cur.current.rad,
-					target: [target.current.x, target.current.y, target.current.z],
+					target: [
+						target.current.x,
+						target.current.y,
+						target.current.z,
+					],
 				};
 				previewPhase.current = pv.t;
 				// (Re)bake the clip sampler against the freshly captured hero anchor.
-				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move), previewAnchor.current);
+				previewClipSampler.current = createClipPoseSampler(
+					resolveClip(pv.move),
+					previewAnchor.current,
+				);
 				previewClipMove.current = pv.move;
-			} else if (previewClipMove.current !== pv.move || !previewClipSampler.current) {
+			} else if (
+				previewClipMove.current !== pv.move ||
+				!previewClipSampler.current
+			) {
 				// The user switched clips mid-preview — re-bake on the existing anchor.
-				previewClipSampler.current = createClipPoseSampler(resolveClip(pv.move), previewAnchor.current);
+				previewClipSampler.current = createClipPoseSampler(
+					resolveClip(pv.move),
+					previewAnchor.current,
+				);
 				previewClipMove.current = pv.move;
 			}
 			if (pv.playing) {
@@ -1768,13 +1986,25 @@ function OrbitRig({
 			// scrubber still advances so the transport reads, but the pose never moves).
 			// Otherwise fly the move with the SAME cadence + time map the export uses.
 			let pose: StudioPose;
-			if (pv.loop === "hold") {
+			if (pv.loop === 'hold') {
 				pose = previewAnchor.current;
 			} else {
 				const clip = resolveClip(pv.move);
-				const cycles = clipCyclesForDuration(clip, pv.durationSec, pv.speed, pv.loop);
-				const phase = phaseForProgress(previewPhase.current, cycles, pv.loop);
-				pose = (previewClipSampler.current ?? createClipPoseSampler(clip, previewAnchor.current))(phase);
+				const cycles = clipCyclesForDuration(
+					clip,
+					pv.durationSec,
+					pv.speed,
+					pv.loop,
+				);
+				const phase = phaseForProgress(
+					previewPhase.current,
+					cycles,
+					pv.loop,
+				);
+				pose = (
+					previewClipSampler.current ??
+					createClipPoseSampler(clip, previewAnchor.current)
+				)(phase);
 			}
 			const p = poseToPosition(pose, previewVec.current);
 			camera.position.copy(p);
@@ -1824,7 +2054,14 @@ function SceneCapture({
 	capturingRef,
 	captureBackground,
 }: {
-	onCapture: (fn: (w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) => void;
+	onCapture: (
+		fn: (
+			w?: number,
+			h?: number,
+			framing?: ExportFraming,
+			heroPose?: StudioPose | null,
+		) => Promise<Blob | null>,
+	) => void;
 	onFrameCapture: (fn: (w: number, h: number) => Promise<ImageBitmap | null>) => void;
 
 	onReady?: () => void;
@@ -1833,7 +2070,11 @@ function SceneCapture({
 	onRegisterClip?: (
 		fn: (
 			opts: ClipRenderOptions,
-			onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
+			onFrame: (
+				frame: HTMLCanvasElement,
+				index: number,
+				total: number,
+			) => Promise<void> | void,
 		) => Promise<void>,
 	) => void;
 	captureHooksRef?: React.MutableRefObject<CaptureHooks | null>;
@@ -1849,7 +2090,13 @@ function SceneCapture({
 	// Lazy-init with the `== null` check the react-hooks/refs rule requires (a bare
 	// `!ref.current` reads as an illegal render-time ref access and fails `next build`).
 	if (colorResolveRef.current == null) colorResolveRef.current = new ColorResolvePass();
-	useEffect(() => () => { colorResolveRef.current?.dispose(); colorResolveRef.current = null; }, []);
+	useEffect(
+		() => () => {
+			colorResolveRef.current?.dispose();
+			colorResolveRef.current = null;
+		},
+		[],
+	);
 
 	// Keep the export background current without re-registering the capture fns.
 	// Written in an effect (not during render) so we never mutate a ref mid-render.
@@ -1900,7 +2147,9 @@ function SceneCapture({
 			// composed even if the playhead is parked mid-move); otherwise read the
 			// live camera direction.
 			const dir = heroPose
-				? poseToPosition(heroPose).sub(new THREE.Vector3(...heroPose.target))
+				? poseToPosition(heroPose).sub(
+						new THREE.Vector3(...heroPose.target),
+					)
 				: camera.position.clone().sub(target);
 			if (dir.lengthSq() < 1e-6) dir.set(0.26, 0.09, 1); // fallback ≈ a gentle 3/4
 			dir.normalize();
@@ -1930,7 +2179,12 @@ function SceneCapture({
 			};
 		};
 
-		const captureHighRes = async (width = 2160, height = 3840, framing: ExportFraming = "front", heroPose?: StudioPose | null): Promise<Blob | null> => {
+		const captureHighRes = async (
+			width = 2160,
+			height = 3840,
+			framing: ExportFraming = 'front',
+			heroPose?: StudioPose | null,
+		): Promise<Blob | null> => {
 			// Snap to rest + bake the live screen onto the LCD plane.
 			await captureHooksRef?.current?.prepare();
 
@@ -1940,7 +2194,7 @@ function SceneCapture({
 			const savedAspect = cam.aspect;
 			const savedFov = cam.fov;
 
-			if (framing === "hero") frameForHero(width / height, heroPose);
+			if (framing === 'hero') frameForHero(width / height, heroPose);
 			else frameForCapture(width / height);
 
 			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
@@ -1959,13 +2213,19 @@ function SceneCapture({
 				// Resolve linear scene → sRGB bytes matching the live composer (vignette +
 				// sRGB encode). Reading the RT directly would return raw linear → dark export.
 				const buffer = new Uint8Array(width * height * 4);
-				colorResolveRef.current!.resolve(gl, renderTarget, width, height, buffer);
+				colorResolveRef.current!.resolve(
+					gl,
+					renderTarget,
+					width,
+					height,
+					buffer,
+				);
 
-				const canvas = document.createElement("canvas");
+				const canvas = document.createElement('canvas');
 				canvas.width = width;
 				canvas.height = height;
-				const ctx = canvas.getContext("2d");
-				if (!ctx) throw new Error("Failed to get canvas 2D context");
+				const ctx = canvas.getContext('2d');
+				if (!ctx) throw new Error('Failed to get canvas 2D context');
 
 				const imageData = ctx.createImageData(width, height);
 				for (let y = 0; y < height; y++) {
@@ -1981,10 +2241,16 @@ function SceneCapture({
 				ctx.putImageData(imageData, 0, 0);
 
 				return new Promise((resolve, reject) => {
-					const timeoutId = setTimeout(() => reject(new Error("Canvas toBlob timed out")), 10000);
+					const timeoutId = setTimeout(
+						() => reject(new Error('Canvas toBlob timed out')),
+						10000,
+					);
 					canvas.toBlob(
-						(blob) => { clearTimeout(timeoutId); resolve(blob); },
-						"image/png",
+						(blob) => {
+							clearTimeout(timeoutId);
+							resolve(blob);
+						},
+						'image/png',
 						1.0,
 					);
 				});
@@ -2041,9 +2307,23 @@ function SceneCapture({
 		// move (orbit or robo diagonal) anchored on the composed hero framing.
 		const renderClipFrames = async (
 			opts: ClipRenderOptions,
-			onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
+			onFrame: (
+				frame: HTMLCanvasElement,
+				index: number,
+				total: number,
+			) => Promise<void> | void,
 		) => {
-			const { width, height, supersample = 1, durationMs, fps, move = "orbit", speed = 1, loop = "loop", anchor } = opts;
+			const {
+				width,
+				height,
+				supersample = 1,
+				durationMs,
+				fps,
+				move = 'orbit',
+				speed = 1,
+				loop = 'loop',
+				anchor,
+			} = opts;
 			const ssW = Math.round(width * supersample);
 			const ssH = Math.round(height * supersample);
 			const total = Math.max(1, Math.round((durationMs / 1000) * fps));
@@ -2051,7 +2331,10 @@ function SceneCapture({
 			// Motion-blur sub-frame schedule (in frame-duration units). One sample =
 			// the legacy single-render path, byte-for-byte. >1 averages sub-frames
 			// across the shutter window for buttery camera blur.
-			const blurOffsets = subFrameOffsets(opts.motionBlurSamples ?? 1, opts.shutterAngle ?? 180);
+			const blurOffsets = subFrameOffsets(
+				opts.motionBlurSamples ?? 1,
+				opts.shutterAngle ?? 180,
+			);
 			const motionBlur = blurOffsets.length > 1;
 
 			// ── Phase 1 screen-refresh budget (animated Now Playing screen) ──
@@ -2064,7 +2347,8 @@ function SceneCapture({
 			// clip thus costs ≤ SCREEN_BAKE_CAP bakes, never ~1800.
 			const SCREEN_REFRESH_FPS_CAP = 15;
 			const SCREEN_BAKE_CAP = 120;
-			const canRefreshScreen = typeof captureHooksRef?.current?.refreshScreen === "function";
+			const canRefreshScreen =
+				typeof captureHooksRef?.current?.refreshScreen === 'function';
 			const screenRefreshFps = Math.min(fps, SCREEN_REFRESH_FPS_CAP);
 			// Stride = the WIDER of the cadence cap and "spread the bake budget across the
 			// whole clip". Without the second term a flat ~15fps stride burns all
@@ -2090,12 +2374,16 @@ function SceneCapture({
 			// ONLY thing touching the GL context. Left running, the post-processing
 			// composer's rAF render races our manual render-target reads and the first
 			// frames come back stale (the old base clip's 7-frame frozen opening + pop).
-			setFrameloop("never");
+			setFrameloop('never');
 
 			// Hero framing the move orbits. Defaults to the still's hero angle so a
 			// clip and a still read as the same product shot.
 			const hero = clampPose(
-				anchor ?? positionToPose(new THREE.Vector3(2.4, 0.6, 15.5), DEFAULT_TARGET),
+				anchor ??
+					positionToPose(
+						new THREE.Vector3(2.4, 0.6, 15.5),
+						DEFAULT_TARGET,
+					),
 			);
 
 			const restoreBackground = applyBackground();
@@ -2113,20 +2401,20 @@ function SceneCapture({
 				magFilter: THREE.LinearFilter,
 			});
 
-			const out = document.createElement("canvas");
+			const out = document.createElement('canvas');
 			out.width = width;
 			out.height = height;
-			const octx = out.getContext("2d");
+			const octx = out.getContext('2d');
 			if (octx) {
 				octx.imageSmoothingEnabled = true;
-				octx.imageSmoothingQuality = "high";
+				octx.imageSmoothingQuality = 'high';
 			}
 			// The RT pixels land here at full (supersampled) size, then get drawn down
 			// into `out` flipped — WebGL's framebuffer origin is bottom-left.
-			const raw = document.createElement("canvas");
+			const raw = document.createElement('canvas');
 			raw.width = ssW;
 			raw.height = ssH;
-			const rctx = raw.getContext("2d");
+			const rctx = raw.getContext('2d');
 			const buffer = new Uint8ClampedArray(ssW * ssH * 4);
 			const imageData = rctx ? new ImageData(buffer, ssW, ssH) : null;
 
@@ -2150,7 +2438,12 @@ function SceneCapture({
 					// cadence. The previous frame's `await onFrame` yielded the event loop, so
 					// the marquee rAF + progress interval have advanced the DOM since the last
 					// bake; this re-rasterization carries that motion into the clip.
-					if (canRefreshScreen && i > 0 && screenBakes < SCREEN_BAKE_CAP && i % screenStride === 0) {
+					if (
+						canRefreshScreen &&
+						i > 0 &&
+						screenBakes < SCREEN_BAKE_CAP &&
+						i % screenStride === 0
+					) {
 						// Pin the screen's looping elements to clip-time BEFORE rasterizing, so
 						// this bake captures the marquee + song position for exactly this frame.
 						// `i / total` is the only deterministic clock here; driving the screen off
@@ -2169,12 +2462,24 @@ function SceneCapture({
 					// clip sampler dispatches procedural moves and Theatre moment cards alike.
 					const renderProgress = (progress: number) => {
 						const pose =
-							loop === "hold"
+							loop === 'hold'
 								? hero
-								: sampleClipPose(phaseForProgress(progress, cycles, loop));
+								: sampleClipPose(
+										phaseForProgress(
+											progress,
+											cycles,
+											loop,
+										),
+									);
 						poseToPosition(pose, camPos);
 						camera.position.copy(camPos);
-						camera.lookAt(lookAt.set(pose.target[0], pose.target[1], pose.target[2]));
+						camera.lookAt(
+							lookAt.set(
+								pose.target[0],
+								pose.target[1],
+								pose.target[2],
+							),
+						);
 						// Pin the portrait projection EVERY frame. R3F's resize observer /
 						// drei's makeDefault camera otherwise reset cam.aspect back to the
 						// landscape canvas on the first event-loop yield (encoder backpressure
@@ -2192,7 +2497,13 @@ function SceneCapture({
 						// The resolve binds its own target first, which also forces three to
 						// resolve THIS frame's multisampled buffer — so we never read the
 						// previous frame's pixels (the old frozen-opening / loop-seam bug).
-						colorResolveRef.current!.resolve(gl, renderTarget, ssW, ssH, buffer);
+						colorResolveRef.current!.resolve(
+							gl,
+							renderTarget,
+							ssW,
+							ssH,
+							buffer,
+						);
 					};
 
 					if (!motionBlur || blurAccum === null) {
@@ -2202,7 +2513,10 @@ function SceneCapture({
 						// centered on this frame's instant, for buttery camera motion blur.
 						blurAccum.reset();
 						for (const offset of blurOffsets) {
-							const progress = Math.min(0.999999, Math.max(0, (i + offset) / total));
+							const progress = Math.min(
+								0.999999,
+								Math.max(0, (i + offset) / total),
+							);
 							renderProgress(progress);
 							blurAccum.add(buffer);
 						}
@@ -2214,7 +2528,17 @@ function SceneCapture({
 						octx.save();
 						octx.translate(0, height);
 						octx.scale(1, -1);
-						octx.drawImage(raw, 0, 0, ssW, ssH, 0, 0, width, height);
+						octx.drawImage(
+							raw,
+							0,
+							0,
+							ssW,
+							ssH,
+							0,
+							0,
+							width,
+							height,
+						);
 						octx.restore();
 					}
 
@@ -2229,13 +2553,16 @@ function SceneCapture({
 				restoreBackground();
 				await captureHooksRef?.current?.restore();
 				// Resume the live loop and hand the camera back to the orbit rig.
-				setFrameloop("always");
+				setFrameloop('always');
 				capturingRef.current = false;
 			}
 		};
 		onRegisterClip?.(renderClipFrames);
 
-		const captureFrame = async (width: number, height: number): Promise<ImageBitmap | null> => {
+		const captureFrame = async (
+			width: number,
+			height: number,
+		): Promise<ImageBitmap | null> => {
 			// No angle override here — capture from current camera for live interaction recording
 			const renderTarget = new THREE.WebGLRenderTarget(width, height, {
 				// Match the still/clip export's 8× MSAA so live-recorded frames get the
@@ -2250,13 +2577,20 @@ function SceneCapture({
 				gl.render(scene, camera);
 
 				const buffer = new Uint8Array(width * height * 4);
-				gl.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+				gl.readRenderTargetPixels(
+					renderTarget,
+					0,
+					0,
+					width,
+					height,
+					buffer,
+				);
 				gl.setRenderTarget(null);
 
-				const canvas = document.createElement("canvas");
+				const canvas = document.createElement('canvas');
 				canvas.width = width;
 				canvas.height = height;
-				const ctx = canvas.getContext("2d");
+				const ctx = canvas.getContext('2d');
 				if (!ctx) return null;
 
 				const imageData = ctx.createImageData(width, height);
@@ -2280,23 +2614,44 @@ function SceneCapture({
 		onCapture(captureHighRes);
 		onFrameCapture(captureFrame);
 		onReady?.();
-	}, [gl, scene, camera, setFrameloop, onCapture, onFrameCapture, onReady, onRegisterCanvas, onRegisterViewport, onRegisterClip, captureHooksRef, capturingRef]);
-
+	}, [
+		gl,
+		scene,
+		camera,
+		setFrameloop,
+		onCapture,
+		onFrameCapture,
+		onReady,
+		onRegisterCanvas,
+		onRegisterViewport,
+		onRegisterClip,
+		captureHooksRef,
+		capturingRef,
+	]);
 
 	return null;
 }
 
 // ─── Focus Controls UI ────────────────────────────────────────────────────────────
 
-function FocusControls({ focus, onFocus }: { focus: IpodCameraFocus; onFocus: (f: IpodCameraFocus) => void }) {
+function FocusControls({
+	focus,
+	onFocus,
+}: {
+	focus: IpodCameraFocus;
+	onFocus: (f: IpodCameraFocus) => void;
+}) {
 	const items: { id: IpodCameraFocus; label: string }[] = [
-		{ id: "product", label: "Product" },
-		{ id: "front", label: "Front" },
-		{ id: "back", label: "Back" },
+		{ id: 'product', label: 'Product' },
+		{ id: 'front', label: 'Front' },
+		{ id: 'back', label: 'Back' },
 	];
 	return (
-		<Html fullscreen style={{ pointerEvents: "none" }}>
-			<div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1 rounded-full border border-white/15 bg-black/35 p-1 backdrop-blur-md" style={{ pointerEvents: "auto" }}>
+		<Html fullscreen style={{ pointerEvents: 'none' }}>
+			<div
+				className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1 rounded-full border border-white/15 bg-black/35 p-1 backdrop-blur-md"
+				style={{ pointerEvents: 'auto' }}
+			>
 				{items.map((item) => (
 					<button
 						key={item.id}
@@ -2304,8 +2659,8 @@ function FocusControls({ focus, onFocus }: { focus: IpodCameraFocus; onFocus: (f
 						onClick={() => onFocus(item.id)}
 						className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
 							focus === item.id
-								? "bg-white/18 text-white shadow-[0_0_18px_rgba(255,255,255,0.12)]"
-								: "text-white/55 hover:text-white/90"
+								? 'bg-white/18 text-white shadow-[0_0_18px_rgba(255,255,255,0.12)]'
+								: 'text-white/55 hover:text-white/90'
 						}`}
 					>
 						{item.label}
@@ -2327,7 +2682,13 @@ function FocusControls({ focus, onFocus }: { focus: IpodCameraFocus; onFocus: (f
  */
 function OriginMarker() {
 	return (
-		<Html position={[0, 0, 0]} center zIndexRange={[15, 0]} pointerEvents="none" style={{ pointerEvents: "none" }}>
+		<Html
+			position={[0, 0, 0]}
+			center
+			zIndexRange={[15, 0]}
+			pointerEvents="none"
+			style={{ pointerEvents: 'none' }}
+		>
 			<div className="relative grid h-5 w-5 place-items-center" aria-hidden>
 				<span className="absolute h-5 w-px bg-black/45" />
 				<span className="absolute h-px w-5 bg-black/45" />
@@ -2340,225 +2701,286 @@ function OriginMarker() {
 	);
 }
 
-export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>(
-	(props, ref) => {
-		const { 
-			onReady, 
-			preset, 
-			capacityLabel = "160GB", 
-			stageClassName = "bg-black",
-			stageStyle,
-			apiRef,
-			captureBackground, 
-			showOrigin = false, 
-			focus: focusProp, 
-			onFocusChange, 
-			cameraLocked = false, 
-			preview = null, 
-			onPreviewTick, 
-			lighting, 
-			technicalFlat = false, 
-			...modelProps 
-		} = props;
+export const ThreeDIpod = forwardRef<ThreeDIpodHandle, ThreeDIpodProps>((props, ref) => {
+	const {
+		onReady,
+		preset,
+		capacityLabel = '160GB',
+		stageClassName = 'bg-black',
+		stageStyle,
+		apiRef,
+		captureBackground,
+		showOrigin = false,
+		focus: focusProp,
+		onFocusChange,
+		cameraLocked = false,
+		preview = null,
+		onPreviewTick,
+		lighting,
+		technicalFlat = false,
+		...modelProps
+	} = props;
 
-		// In the flat technical view the device is rendered as unlit albedo (a material swap),
-		// so the rig is a neutral one that only keeps the LCD legible — see FlatFinish.
-		// The render OWNS the finish: reshape the curated rig to the chosen colours so any
-		// colour × motion exports cleanly (separation, no crush/wash). Skipped for the flat
-		// spec-sheet view, which wants the neutral rig untouched. One derived rig drives both
-		// the live preview and the offline export → WYSIWYG. See studio-owned-finish.
-		const baseLighting = technicalFlat ? FLAT_TECHNICAL_RIG : (lighting ?? APPLE_PRODUCT_RIG);
-		const activeLighting = useMemo(
-			() =>
-				technicalFlat
-					? baseLighting
-					: deriveOwnedRig(baseLighting, {
-							skin: modelProps.skinColor,
-							back: modelProps.backColor,
-							stage: captureBackground ?? "#ffffff",
-						}),
-			[baseLighting, technicalFlat, modelProps.skinColor, modelProps.backColor, captureBackground],
-		);
+	// In the flat technical view the device is rendered as unlit albedo (a material swap),
+	// so the rig is a neutral one that only keeps the LCD legible — see FlatFinish.
+	// The render OWNS the finish: reshape the curated rig to the chosen colours so any
+	// colour × motion exports cleanly (separation, no crush/wash). Skipped for the flat
+	// spec-sheet view, which wants the neutral rig untouched. One derived rig drives both
+	// the live preview and the offline export → WYSIWYG. See studio-owned-finish.
+	const baseLighting = technicalFlat ? FLAT_TECHNICAL_RIG : (lighting ?? APPLE_PRODUCT_RIG);
+	const activeLighting = useMemo(
+		() =>
+			technicalFlat
+				? baseLighting
+				: deriveOwnedRig(baseLighting, {
+						skin: modelProps.skinColor,
+						back: modelProps.backColor,
+						stage: captureBackground ?? '#ffffff',
+					}),
+		[
+			baseLighting,
+			technicalFlat,
+			modelProps.skinColor,
+			modelProps.backColor,
+			captureBackground,
+		],
+	);
 
-		const captureRef = useRef<((w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) | null>(null);
-		const frameCaptureRef = useRef<((w: number, h: number) => Promise<ImageBitmap | null>) | null>(null);
-		const modelResetRef = useRef<(() => void) | null>(null);
-		const canvasRef = useRef<HTMLCanvasElement | null>(null);
-		const captureHooksRef = useRef<CaptureHooks | null>(null);
-		const viewportRef = useRef<((w: number, h: number) => () => void) | null>(null);
-		const clipRef = useRef<
-			| ((
-					opts: ClipRenderOptions,
-					onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
-			  ) => Promise<void>)
-			| null
-		>(null);
-		// True while an offline clip render owns the camera — read by OrbitRig.
-		const capturingRef = useRef(false);
-		// The live orbit rig's pose get/set, surfaced to the HUD + export.
-		const cameraApiRef = useRef<OrbitCameraApi | null>(null);
-		// Focus (orientation) is controllable: the /3d stage drives it from a unified
-		// bottom bar; standalone consumers fall back to the in-canvas pill.
-		const [focusState, setFocusState] = useState<IpodCameraFocus>("product");
-		const focus = focusProp ?? focusState;
-		const setFocus = onFocusChange ?? setFocusState;
-		const isFocusControlled = focusProp !== undefined;
+	const captureRef = useRef<
+		| ((
+				w?: number,
+				h?: number,
+				framing?: ExportFraming,
+				heroPose?: StudioPose | null,
+		  ) => Promise<Blob | null>)
+		| null
+	>(null);
+	const frameCaptureRef = useRef<
+		((w: number, h: number) => Promise<ImageBitmap | null>) | null
+	>(null);
+	const modelResetRef = useRef<(() => void) | null>(null);
+	const canvasRef = useRef<HTMLCanvasElement | null>(null);
+	const captureHooksRef = useRef<CaptureHooks | null>(null);
+	const viewportRef = useRef<((w: number, h: number) => () => void) | null>(null);
+	const clipRef = useRef<
+		| ((
+				opts: ClipRenderOptions,
+				onFrame: (
+					frame: HTMLCanvasElement,
+					index: number,
+					total: number,
+				) => Promise<void> | void,
+		  ) => Promise<void>)
+		| null
+	>(null);
+	// True while an offline clip render owns the camera — read by OrbitRig.
+	const capturingRef = useRef(false);
+	// The live orbit rig's pose get/set, surfaced to the HUD + export.
+	const cameraApiRef = useRef<OrbitCameraApi | null>(null);
+	// Focus (orientation) is controllable: the /3d stage drives it from a unified
+	// bottom bar; standalone consumers fall back to the in-canvas pill.
+	const [focusState, setFocusState] = useState<IpodCameraFocus>('product');
+	const focus = focusProp ?? focusState;
+	const setFocus = onFocusChange ?? setFocusState;
+	const isFocusControlled = focusProp !== undefined;
 
-		const buildHandle = useCallback(
-			(): ThreeDIpodHandle => ({
-				captureHighRes: async (width?: number, height?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => {
-					if (captureRef.current) return captureRef.current(width, height, framing, heroPose);
-					return null;
-				},
-				captureFrame: async (width: number, height: number) => {
-					if (frameCaptureRef.current) return frameCaptureRef.current(width, height);
-					return null;
-				},
-				getCanvas: () => canvasRef.current,
-				prepareForCapture: async () => {
-					await captureHooksRef.current?.prepare();
-					return () => captureHooksRef.current?.restore();
-				},
-				setCaptureViewport: (width: number, height: number) =>
-					viewportRef.current ? viewportRef.current(width, height) : () => {},
-				renderClipFrames: async (opts, onFrame) => {
-					if (clipRef.current) return clipRef.current(opts, onFrame);
-				},
-				getCameraPose: () => cameraApiRef.current?.getPose() ?? null,
-				setCameraGoal: (pose) => cameraApiRef.current?.setGoal(pose),
-				resetCamera: () => cameraApiRef.current?.resetCamera(),
-			}),
-			[],
-		);
+	const buildHandle = useCallback(
+		(): ThreeDIpodHandle => ({
+			captureHighRes: async (
+				width?: number,
+				height?: number,
+				framing?: ExportFraming,
+				heroPose?: StudioPose | null,
+			) => {
+				if (captureRef.current)
+					return captureRef.current(width, height, framing, heroPose);
+				return null;
+			},
+			captureFrame: async (width: number, height: number) => {
+				if (frameCaptureRef.current)
+					return frameCaptureRef.current(width, height);
+				return null;
+			},
+			getCanvas: () => canvasRef.current,
+			prepareForCapture: async () => {
+				await captureHooksRef.current?.prepare();
+				return () => captureHooksRef.current?.restore();
+			},
+			setCaptureViewport: (width: number, height: number) =>
+				viewportRef.current ? viewportRef.current(width, height) : () => {},
+			renderClipFrames: async (opts, onFrame) => {
+				if (clipRef.current) return clipRef.current(opts, onFrame);
+			},
+			getCameraPose: () => cameraApiRef.current?.getPose() ?? null,
+			setCameraGoal: (pose) => cameraApiRef.current?.setGoal(pose),
+			resetCamera: () => cameraApiRef.current?.resetCamera(),
+		}),
+		[],
+	);
 
-		useImperativeHandle(ref, buildHandle, [buildHandle]);
+	useImperativeHandle(ref, buildHandle, [buildHandle]);
 
-		// Mirror the handle onto the plain-prop ref for the dynamically-imported case.
-		useEffect(() => {
-			if (!apiRef) return;
-			apiRef.current = buildHandle();
-			return () => {
-				apiRef.current = null;
-			};
-		}, [apiRef, buildHandle]);
+	// Mirror the handle onto the plain-prop ref for the dynamically-imported case.
+	useEffect(() => {
+		if (!apiRef) return;
+		apiRef.current = buildHandle();
+		return () => {
+			apiRef.current = null;
+		};
+	}, [apiRef, buildHandle]);
 
-		const handleCapture = useCallback(
-			(fn: (w?: number, h?: number, framing?: ExportFraming, heroPose?: StudioPose | null) => Promise<Blob | null>) => { captureRef.current = fn; },
-			[],
-		);
+	const handleCapture = useCallback(
+		(
+			fn: (
+				w?: number,
+				h?: number,
+				framing?: ExportFraming,
+				heroPose?: StudioPose | null,
+			) => Promise<Blob | null>,
+		) => {
+			captureRef.current = fn;
+		},
+		[],
+	);
 
-		const handleFrameCapture = useCallback(
-			(fn: (w: number, h: number) => Promise<ImageBitmap | null>) => { frameCaptureRef.current = fn; },
-			[],
-		);
+	const handleFrameCapture = useCallback(
+		(fn: (w: number, h: number) => Promise<ImageBitmap | null>) => {
+			frameCaptureRef.current = fn;
+		},
+		[],
+	);
 
-		const handleRegisterCapture = useCallback(
-			(hooks: CaptureHooks) => { captureHooksRef.current = hooks; },
-			[],
-		);
+	const handleRegisterCapture = useCallback((hooks: CaptureHooks) => {
+		captureHooksRef.current = hooks;
+	}, []);
 
+	const handleRegisterCanvas = useCallback((el: HTMLCanvasElement) => {
+		canvasRef.current = el;
+	}, []);
 
-		const handleRegisterCanvas = useCallback(
-			(el: HTMLCanvasElement) => { canvasRef.current = el; },
-			[],
-		);
+	const handleRegisterViewport = useCallback((fn: (w: number, h: number) => () => void) => {
+		viewportRef.current = fn;
+	}, []);
 
-		const handleRegisterViewport = useCallback(
-			(fn: (w: number, h: number) => () => void) => { viewportRef.current = fn; },
-			[],
-		);
+	const handleRegisterCamera = useCallback((api: OrbitCameraApi) => {
+		cameraApiRef.current = api;
+	}, []);
 
-		const handleRegisterCamera = useCallback(
-			(api: OrbitCameraApi) => { cameraApiRef.current = api; },
-			[],
-		);
+	const handleRegisterClip = useCallback(
+		(
+			fn: (
+				opts: ClipRenderOptions,
+				onFrame: (
+					frame: HTMLCanvasElement,
+					index: number,
+					total: number,
+				) => Promise<void> | void,
+			) => Promise<void>,
+		) => {
+			clipRef.current = fn;
+		},
+		[],
+	);
 
-		const handleRegisterClip = useCallback(
-			(
-				fn: (
-					opts: ClipRenderOptions,
-					onFrame: (frame: HTMLCanvasElement, index: number, total: number) => Promise<void> | void,
-				) => Promise<void>,
-			) => { clipRef.current = fn; },
-			[],
-		);
+	// `z-0` (not z-auto) makes the wrapper its OWN stacking context, so the device's
+	// drei <Html> screen/wheel portals (zIndexRange up to 100) stay TRAPPED beneath it.
+	// The control surface lives in the page's root stacking context at z-10+, so the
+	// controls always take focus over the iPod — a panel overlapping the device covers
+	// it and receives the clicks, never the reverse.
+	return (
+		<div
+			className={`w-full h-full min-h-screen absolute inset-0 z-0 ${stageClassName}`}
+			style={stageStyle}
+		>
+			<Canvas
+				shadows
+				// Render at up to 2× device pixels (was 1.5×). On a retina panel this is
+				// the difference between a soft preview and a crisp one — the metal edges,
+				// the screen bezel gloss, and the drei-Html screen all sharpen. R3F still
+				// caps at 2 so we don't pay 3× fill on high-DPR displays.
+				dpr={[1, 2]}
+				gl={{
+					antialias: true,
+					// No tonemapping operator: a filmic curve rolls off highlights and
+					// desaturates, so a designer who picks #FFFFFF / #000000 never gets true
+					// white or black. NoToneMapping keeps the render literal, so the chosen
+					// hex survives to the pixel — the highest-fidelity path. (The export's
+					// ColorResolvePass matches this: linear → sRGB, no tone curve.)
+					toneMapping: THREE.NoToneMapping,
+					preserveDrawingBuffer: true,
+					outputColorSpace: THREE.SRGBColorSpace,
+				}}
+			>
+				{/* OrbitRig is the sole camera owner — intro dolly, drag-orbit, zoom. */}
+				<PerspectiveCamera makeDefault fov={32} position={[3, 1.1, 16.6]} />
 
-		// `z-0` (not z-auto) makes the wrapper its OWN stacking context, so the device's
-		// drei <Html> screen/wheel portals (zIndexRange up to 100) stay TRAPPED beneath it.
-		// The control surface lives in the page's root stacking context at z-10+, so the
-		// controls always take focus over the iPod — a panel overlapping the device covers
-		// it and receives the clicks, never the reverse.
-		return (
-			<div className={`w-full h-full min-h-screen absolute inset-0 z-0 ${stageClassName}`} style={stageStyle}>
-				<Canvas
-					shadows
-					// Render at up to 2× device pixels (was 1.5×). On a retina panel this is
-					// the difference between a soft preview and a crisp one — the metal edges,
-					// the screen bezel gloss, and the drei-Html screen all sharpen. R3F still
-					// caps at 2 so we don't pay 3× fill on high-DPR displays.
-					dpr={[1, 2]}
-					gl={{
-						antialias: true,
-						// No tonemapping operator: a filmic curve rolls off highlights and
-						// desaturates, so a designer who picks #FFFFFF / #000000 never gets true
-						// white or black. NoToneMapping keeps the render literal, so the chosen
-						// hex survives to the pixel — the highest-fidelity path. (The export's
-						// ColorResolvePass matches this: linear → sRGB, no tone curve.)
-						toneMapping: THREE.NoToneMapping,
-						preserveDrawingBuffer: true,
-						outputColorSpace: THREE.SRGBColorSpace,
-					}}
-				>
-					{/* OrbitRig is the sole camera owner — intro dolly, drag-orbit, zoom. */}
-					<PerspectiveCamera makeDefault fov={32} position={[3, 1.1, 16.6]} />
+				<OrbitRig
+					capturingRef={capturingRef}
+					focus={focus}
+					locked={cameraLocked}
+					preview={preview}
+					onPreviewTick={onPreviewTick}
+					onRegisterCamera={handleRegisterCamera}
+				/>
 
-					<OrbitRig capturingRef={capturingRef} focus={focus} locked={cameraLocked} preview={preview} onPreviewTick={onPreviewTick} onRegisterCamera={handleRegisterCamera} />
-
-					{/* Live, controllable studio rig (Lighting Cockpit). Env-first brightness so
+				{/* Live, controllable studio rig (Lighting Cockpit). Env-first brightness so
 					   the dyed metal reads true (the big front-fill softbox is what lifts Silver
 					   out of black); spots add soft shaping only. In Technical/Lights-Off mode
 					   this collapses to a neutral rig while the device renders as flat albedo. */}
-					<StudioLighting config={activeLighting} />
+				<StudioLighting config={activeLighting} />
 
-					{/* Seamless studio sweep tinted by the Stage colour — grounds the device
+				{/* Seamless studio sweep tinted by the Stage colour — grounds the device
 					   in a real cove instead of floating it on flat colour (design D13). */}
-					<StudioBackdrop stageColor={captureBackground} />
+				<StudioBackdrop stageColor={captureBackground} />
 
-					{/* Origin gizmo — a designer aid to see world centre while composing. Not
+				{/* Origin gizmo — a designer aid to see world centre while composing. Not
 					   captured: suppressed during export/preview so it never bakes into a frame. */}
-					{showOrigin && !preview && <OriginMarker />}
+				{showOrigin && !preview && <OriginMarker />}
 
-					<IpodModel
-						preset={preset}
-						capacityLabel={capacityLabel}
-						technicalFlat={technicalFlat}
-						{...modelProps}
-						onRegisterCapture={handleRegisterCapture}
-					/>
+				<IpodModel
+					preset={preset}
+					capacityLabel={capacityLabel}
+					technicalFlat={technicalFlat}
+					{...modelProps}
+					onRegisterCapture={handleRegisterCapture}
+				/>
 
-					{/* Grounding contact shadow — suppressed in the Technical view, which is a
+				{/* Grounding contact shadow — suppressed in the Technical view, which is a
 					   shadowless spec-sheet render. */}
-					{!technicalFlat && (
-						<ContactShadows
-							blur={2.4}
-							color="#000000"
-							far={10}
-							frames={1}
-							opacity={0.65}
-							position={[0, -3.52, 0]}
-							resolution={1024}
-							scale={24}
-						/>
-					)}
+				{!technicalFlat && (
+					<ContactShadows
+						blur={2.4}
+						color="#000000"
+						far={10}
+						frames={1}
+						opacity={0.65}
+						position={[0, -3.52, 0]}
+						resolution={1024}
+						scale={24}
+					/>
+				)}
 
-					{!isFocusControlled && <FocusControls focus={focus} onFocus={setFocus} />}
+				{!isFocusControlled && (
+					<FocusControls focus={focus} onFocus={setFocus} />
+				)}
 
-					<SceneCapture capturingRef={capturingRef} captureBackground={captureBackground} captureHooksRef={captureHooksRef} onCapture={handleCapture} onFrameCapture={handleFrameCapture} onRegisterCanvas={handleRegisterCanvas} onRegisterClip={handleRegisterClip} onRegisterViewport={handleRegisterViewport} onReady={onReady} />
+				<SceneCapture
+					capturingRef={capturingRef}
+					captureBackground={captureBackground}
+					captureHooksRef={captureHooksRef}
+					onCapture={handleCapture}
+					onFrameCapture={handleFrameCapture}
+					onRegisterCanvas={handleRegisterCanvas}
+					onRegisterClip={handleRegisterClip}
+					onRegisterViewport={handleRegisterViewport}
+					onReady={onReady}
+				/>
 
-				</Canvas>
-			</div>
-		);
-	},
-);
+				{/* Dev-only in-scene inspector core (stats + pick + highlight). Dead-code eliminated in prod. */}
+				{process.env.NODE_ENV === 'development' && <SceneInspectorCore />}
+			</Canvas>
+		</div>
+	);
+});
 
-ThreeDIpod.displayName = "ThreeDIpod";
+ThreeDIpod.displayName = 'ThreeDIpod';

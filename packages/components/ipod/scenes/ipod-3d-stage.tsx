@@ -1,56 +1,61 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
-import { flushSync } from "react-dom";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { useActorRef, useSelector } from "@xstate/react";
-
-import type { CameraPreviewState, ExportFraming, IpodCameraFocus, ThreeDIpodHandle } from "@ipod/components/three/three-d-ipod";
-import { setCaptureElapsedMs } from "@ipod/lib/capture-clock";
-import { clipMarqueeElapsedMs, clipSongSecond } from "@ipod/lib/export-clock";
-import { playClickAudio } from "@ipod/lib/ipod-state/effects";
-import { createInitialIpodWorkbenchModel } from "@ipod/lib/ipod-state/model";
-import { ipodWorkbenchReducer } from "@ipod/lib/ipod-state/update";
-import { getIpodClassicPreset } from "@ipod/lib/ipod-classic-presets";
-import { recordIpodClip, isClipRecordingSupported } from "@ipod/lib/three-clip-recorder";
-import { downloadBlob } from "@ipod/lib/three-export";
-import { loadWorkbenchModel, saveWorkbenchModel } from "@ipod/lib/ipod-state/storage";
-import { getExportHistory, saveExportToHistory, type ExportRecord } from "@ipod/lib/pocketbase";
-import { type LoopStyle, type StudioPose } from "@ipod/lib/studio-camera";
-import { findStudioClip, isTheatreClip, STUDIO_CLIPS } from "@ipod/lib/studio-clip-presets";
-import { STEEL_ROUGHNESS_FLOOR } from "@ipod/lib/studio-owned-finish";
-import { exportJobOf, exportMachine, exportProgressOf } from "@ipod/lib/xstate/export-machine";
-import { exportFingerprint, proofFingerprint } from "@ipod/lib/export/export-fingerprint";
-import { selectExportSnapshot } from "@ipod/lib/export/proof-inputs";
-import { snapshotToModel } from "@ipod/lib/export/proof-restore";
-import { useProofCache } from "@ipod/lib/export/use-proof-cache";
-
-import { PanelSystem } from "../panels/panel-system";
-import { useSafeInsets, useViewportSize } from "../panels/use-panel-layout";
-import { IpodClickWheel } from "../controls/ipod-click-wheel";
-import { IpodScreen } from "../display/ipod-screen";
-import { useIpodClickWheelControls } from "../hooks/use-ipod-click-wheel-controls";
-import { Ipod3DBatteryCockpit } from "./ipod-3d-battery-cockpit";
-import { Ipod3DCameraCockpit } from "./ipod-3d-camera-cockpit";
-import { Ipod3DColorCockpit } from "./ipod-3d-color-cockpit";
-import { Ipod3DLightingCockpit } from "./ipod-3d-lighting-cockpit";
-import { Ipod3DStudioCockpit } from "./ipod-3d-studio-cockpit";
+import { inspectorStore } from '@ipod/components/three/scene-inspector/inspector-store';
+import { SceneInspectorPanel } from '@ipod/components/three/scene-inspector/SceneInspectorPanel';
+import type {
+	CameraPreviewState,
+	ExportFraming,
+	IpodCameraFocus,
+	ThreeDIpodHandle,
+} from '@ipod/components/three/three-d-ipod';
+import { setCaptureElapsedMs } from '@ipod/lib/capture-clock';
+import { exportFingerprint, proofFingerprint } from '@ipod/lib/export/export-fingerprint';
+import { selectExportSnapshot } from '@ipod/lib/export/proof-inputs';
+import { snapshotToModel } from '@ipod/lib/export/proof-restore';
+import { useProofCache } from '@ipod/lib/export/use-proof-cache';
+import { clipMarqueeElapsedMs, clipSongSecond } from '@ipod/lib/export-clock';
+import { getIpodClassicPreset } from '@ipod/lib/ipod-classic-presets';
+import { playClickAudio } from '@ipod/lib/ipod-state/effects';
+import { createInitialIpodWorkbenchModel } from '@ipod/lib/ipod-state/model';
+import { loadWorkbenchModel, saveWorkbenchModel } from '@ipod/lib/ipod-state/storage';
+import { ipodWorkbenchReducer } from '@ipod/lib/ipod-state/update';
+import { type ExportRecord, getExportHistory, saveExportToHistory } from '@ipod/lib/pocketbase';
+import type { LoopStyle, StudioPose } from '@ipod/lib/studio-camera';
+import { findStudioClip, isTheatreClip, STUDIO_CLIPS } from '@ipod/lib/studio-clip-presets';
+import { STEEL_ROUGHNESS_FLOOR } from '@ipod/lib/studio-owned-finish';
+import { isClipRecordingSupported, recordIpodClip } from '@ipod/lib/three-clip-recorder';
+import { downloadBlob } from '@ipod/lib/three-export';
+import { exportJobOf, exportMachine, exportProgressOf } from '@ipod/lib/xstate/export-machine';
+import { useActorRef, useSelector } from '@xstate/react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { IpodClickWheel } from '../controls/ipod-click-wheel';
+import { IpodScreen } from '../display/ipod-screen';
+import { useIpodClickWheelControls } from '../hooks/use-ipod-click-wheel-controls';
+import { PanelSystem } from '../panels/panel-system';
+import { useSafeInsets, useViewportSize } from '../panels/use-panel-layout';
+import { Ipod3DBatteryCockpit } from './ipod-3d-battery-cockpit';
+import { Ipod3DCameraCockpit } from './ipod-3d-camera-cockpit';
+import { Ipod3DColorCockpit } from './ipod-3d-color-cockpit';
 import {
-	Ipod3DExportDock,
 	type ClipExportOptions,
 	type ExportAspect,
 	type ExportQuality,
+	Ipod3DExportDock,
 	type Ipod3DExportState,
 	type StillExportOptions,
-} from "./ipod-3d-export-dock";
-import { Ipod3DExportProofPanel } from "./ipod-3d-export-proof-panel";
-import { Ipod3DNowPlayingCockpit } from "./ipod-3d-nowplaying-cockpit";
-import { Ipod3DStudioShots } from "./ipod-3d-studio-shots";
-import { Ipod3DTouchControls } from "./ipod-3d-touch-controls";
-import { TheatreStudioDev } from "./theatre-studio-dev";
+} from './ipod-3d-export-dock';
+import { Ipod3DExportProofPanel } from './ipod-3d-export-proof-panel';
+import { Ipod3DLightingCockpit } from './ipod-3d-lighting-cockpit';
+import { Ipod3DNowPlayingCockpit } from './ipod-3d-nowplaying-cockpit';
+import { Ipod3DStudioCockpit } from './ipod-3d-studio-cockpit';
+import { Ipod3DStudioShots } from './ipod-3d-studio-shots';
+import { Ipod3DTouchControls } from './ipod-3d-touch-controls';
+import { TheatreStudioDev } from './theatre-studio-dev';
 
 /** localStorage key for the locked hero perspective (design D13). */
-const LOCKED_POSE_KEY = "ipod-3d-locked-pose";
+const LOCKED_POSE_KEY = 'ipod-3d-locked-pose';
 
 /**
  * Export dimensions per aspect — stills are 2160-wide PNGs, clips are 1080-wide MP4s.
@@ -69,7 +74,7 @@ const ASPECT_DIMS: Record<ExportAspect, { still: [number, number]; clip: [number
  * higher-fidelity, at the cost of rendering `motionBlurSamples`× the frames.
  */
 const CLIP_QUALITY: Record<
-	ClipExportOptions["quality"],
+	ClipExportOptions['quality'],
 	{ fps: number; bitsPerSecond: number; supersample: number; motionBlurSamples: number }
 > = {
 	standard: { fps: 24, bitsPerSecond: 12_000_000, supersample: 1, motionBlurSamples: 1 },
@@ -78,7 +83,10 @@ const CLIP_QUALITY: Record<
 };
 
 const ThreeDIpod = dynamic(
-	() => import("@ipod/components/three/three-d-ipod").then((m) => ({ default: m.ThreeDIpod })),
+	() =>
+		import('@ipod/components/three/three-d-ipod').then((m) => ({
+			default: m.ThreeDIpod,
+		})),
 	{
 		ssr: false,
 		loading: () => (
@@ -119,9 +127,9 @@ export function Ipod3DStage() {
 	const exportActorRef = useActorRef(exportMachine);
 	const exportSnapshot = useSelector(exportActorRef, (snapshot) => snapshot);
 	const sendExport = exportActorRef.send;
-	const exporting = !exportSnapshot.matches("idle");
-	const exportState: Ipod3DExportState =
-		(exportJobOf(exportSnapshot) ?? "idle") as Ipod3DExportState;
+	const exporting = !exportSnapshot.matches('idle');
+	const exportState: Ipod3DExportState = (exportJobOf(exportSnapshot) ??
+		'idle') as Ipod3DExportState;
 	// Export progress (0–1) for the loading veil; null = indeterminate (stills).
 	const exportProgress = exportProgressOf(exportSnapshot);
 	// Playhead — the selected move + live transport. `previewT` is the position over
@@ -134,18 +142,25 @@ export function Ipod3DStage() {
 	// Motion shaping — cadence multiplier + time map (loop / boomerang / hold). Lifted
 	// here so the live preview and the export read the SAME values (WYSIWYG parity).
 	const [speed, setSpeed] = useState(1);
-	const [loopStyle, setLoopStyle] = useState<LoopStyle>("loop");
+	const [loopStyle, setLoopStyle] = useState<LoopStyle>('loop');
 	// Aspect + quality — lifted from the export dock so the proof fingerprint, the proof
 	// panel, and the export all read one source of truth (WYSIWYG parity).
-	const [aspect, setAspect] = useState<ExportAspect>("story");
-	const [quality, setQuality] = useState<ExportQuality>("standard");
+	const [aspect, setAspect] = useState<ExportAspect>('story');
+	const [quality, setQuality] = useState<ExportQuality>('standard');
 	// The rig flies the move only when the playhead is "engaged" — playing, or
 	// scrubbed off the hero seam. At t=0 paused we hand the camera back so the user
 	// can compose freely (phase 0 ≈ the composed hero anyway).
 	const previewEngaged = previewPlaying || previewT > 0.0001;
 	const preview: CameraPreviewState | null =
 		previewEngaged && !exporting
-			? { move: previewMove, playing: previewPlaying, t: previewT, durationSec, speed, loop: loopStyle }
+			? {
+					move: previewMove,
+					playing: previewPlaying,
+					t: previewT,
+					durationSec,
+					speed,
+					loop: loopStyle,
+				}
 			: null;
 	// Canvas symbiosis (spec: floating-panel-system): inset the spatial canvas away from
 	// open floating panels so the model is never permanently occluded. Suspended during
@@ -168,8 +183,8 @@ export function Ipod3DStage() {
 	// (touch) and OFF for desktop; the cockpit toggle then overrides either way.
 	const [touchControls, setTouchControls] = useState(false);
 	useEffect(() => {
-		if (typeof window === "undefined" || !window.matchMedia) return;
-		setTouchControls(window.matchMedia("(pointer: coarse)").matches);
+		if (typeof window === 'undefined' || !window.matchMedia) return;
+		setTouchControls(window.matchMedia('(pointer: coarse)').matches);
 	}, []);
 
 	// Short-landscape phones: the floating chrome must reflow to the screen edges so
@@ -177,16 +192,16 @@ export function Ipod3DStage() {
 	// this only re-docks the always-on touch controls + studio-shots bar.
 	const [landscape, setLandscape] = useState(false);
 	useEffect(() => {
-		if (typeof window === "undefined" || !window.matchMedia) return;
-		const mq = window.matchMedia("(max-height: 540px) and (orientation: landscape)");
+		if (typeof window === 'undefined' || !window.matchMedia) return;
+		const mq = window.matchMedia('(max-height: 540px) and (orientation: landscape)');
 		const update = () => setLandscape(mq.matches);
 		update();
-		mq.addEventListener("change", update);
-		return () => mq.removeEventListener("change", update);
+		mq.addEventListener('change', update);
+		return () => mq.removeEventListener('change', update);
 	}, []);
 	// Camera orientation (Product / Front / Back) — owned here so the bottom bar can
 	// place the snaps alongside the saved studio shots.
-	const [focus, setFocus] = useState<IpodCameraFocus>("product");
+	const [focus, setFocus] = useState<IpodCameraFocus>('product');
 	// Lockable perspective (design D13): when locked, the orbit rig ignores drag/wheel
 	// so the composed angle can't be knocked off, the pose persists across reloads, and
 	// it's the angle every Hero/clip export flies. Owned here so it reaches both the
@@ -198,13 +213,33 @@ export function Ipod3DStage() {
 	// Dev "Back finish" dial — polished-back roughness (mirror ↔ brushed). Defaults to the
 	// crawl-safe floor that the owned-finish render ships; stage-local, not persisted.
 	const [backRoughness, setBackRoughness] = useState(STEEL_ROUGHNESS_FLOOR);
+	// Dev inspector overlay — auto-enabled in development, toggled with the `i` hotkey.
+	// Stage-local and never persisted; the panel is dead-code eliminated in prod.
+	const [inspectorOpen, setInspectorOpen] = useState(process.env.NODE_ENV === 'development');
+	useEffect(() => {
+		if (process.env.NODE_ENV !== 'development') return;
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'i' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+				const tag = (e.target as HTMLElement)?.tagName;
+				if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+				setInspectorOpen((o) => {
+					if (o) inspectorStore.setPickMode(false); // closing → stop grabbing clicks
+					return !o;
+				});
+			}
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, []);
 
 	// Export history from PocketBase.
 	const [exportHistory, setExportHistory] = useState<ExportRecord[]>([]);
 
 	// Hydrate history on mount.
 	useEffect(() => {
-		getExportHistory().then(setExportHistory).catch(() => {});
+		getExportHistory()
+			.then(setExportHistory)
+			.catch(() => {});
 	}, []);
 
 	// Hydrate the locked pose once; re-apply it to the rig as soon as the canvas mounts.
@@ -232,7 +267,11 @@ export function Ipod3DStage() {
 			// handle — setCameraGoal no-ops until the rig owns the camera, so setting it
 			// the instant the handle mounts silently misses and the default pose wins.
 			if (api && api.getCameraPose()) {
-				api.setCameraGoal({ azimuth: target.azimuth, elevation: target.elevation, reach: target.reach });
+				api.setCameraGoal({
+					azimuth: target.azimuth,
+					elevation: target.elevation,
+					reach: target.reach,
+				});
 				window.clearInterval(id);
 			} else if (++tries > 80) {
 				window.clearInterval(id);
@@ -248,7 +287,11 @@ export function Ipod3DStage() {
 				const pose = ipodApiRef.current?.getCameraPose() ?? null;
 				lockedPoseRef.current = pose;
 				try {
-					if (pose) localStorage.setItem(LOCKED_POSE_KEY, JSON.stringify(pose));
+					if (pose)
+						localStorage.setItem(
+							LOCKED_POSE_KEY,
+							JSON.stringify(pose),
+						);
 				} catch {
 					// ignore quota / private-mode failures
 				}
@@ -308,7 +351,10 @@ export function Ipod3DStage() {
 		if (!model.interaction.isPlaying || exporting) return;
 		const id = window.setInterval(() => {
 			const { currentTime, duration } = playbackRef.current;
-			dispatch({ type: "UPDATE_CURRENT_TIME", payload: (currentTime + 1) % (duration + 1) });
+			dispatch({
+				type: 'UPDATE_CURRENT_TIME',
+				payload: (currentTime + 1) % (duration + 1),
+			});
 		}, 1000);
 		return () => window.clearInterval(id);
 	}, [model.interaction.isPlaying, exporting, dispatch]);
@@ -324,9 +370,12 @@ export function Ipod3DStage() {
 	}, []);
 	// Clear a pending notice timer on unmount so it can't fire setState after the
 	// stage is gone (a stale-update side effect when navigating away mid-notice).
-	useEffect(() => () => {
-		if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
-	}, []);
+	useEffect(
+		() => () => {
+			if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+		},
+		[],
+	);
 
 	// ── Playhead transport ──
 	// The hero the move orbits = the pose composed the instant the playhead first
@@ -395,29 +444,45 @@ export function Ipod3DStage() {
 			const api = ipodApiRef.current;
 			// The machine also rejects EXPORT outside idle; this early return just
 			// skips the veil paint for a click that can't start anything.
-			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
+			if (!api || !exportActorRef.getSnapshot().matches('idle')) return;
 			setPreviewPlaying(false); // hand the camera back to the still framing
-			sendExport({ type: "EXPORT", job: `png:${framing}`, progress: null });
+			sendExport({ type: 'EXPORT', job: `png:${framing}`, progress: null });
 			await nextPaint(); // let the veil cover before the scene snaps for capture
 			try {
-				sendExport({ type: "PREPARED" });
+				sendExport({ type: 'PREPARED' });
 				const [w, h] = ASPECT_DIMS[options.aspect].still;
 				// Hero still anchors on the composed hero (held by the playhead) so a
 				// parked scrubber can't tilt the shot; Front ignores it.
-				const blob = await api.captureHighRes(w, h, framing, heroAnchorRef.current);
-				if (!blob) throw new Error("capture returned no image");
-				sendExport({ type: "ENCODED" });
-				downloadBlob(blob, `ipod-3d-${framing}-${options.aspect}-${Date.now()}.png`);
-				sendExport({ type: "SAVED" });
-				showNotice(framing === "hero" ? "Saved Hero PNG" : "Saved Front PNG");
+				const blob = await api.captureHighRes(
+					w,
+					h,
+					framing,
+					heroAnchorRef.current,
+				);
+				if (!blob) throw new Error('capture returned no image');
+				sendExport({ type: 'ENCODED' });
+				downloadBlob(
+					blob,
+					`ipod-3d-${framing}-${options.aspect}-${Date.now()}.png`,
+				);
+				sendExport({ type: 'SAVED' });
+				showNotice(
+					framing === 'hero' ? 'Saved Hero PNG' : 'Saved Front PNG',
+				);
 			} catch (error) {
-				console.error("[3d-export] png failed", error);
-				sendExport({ type: "FAIL", error: error instanceof Error ? error.message : String(error) });
-				showNotice("Export failed");
+				console.error('[3d-export] png failed', error);
+				sendExport({
+					type: 'FAIL',
+					error:
+						error instanceof Error
+							? error.message
+							: String(error),
+				});
+				showNotice('Export failed');
 			} finally {
 				// No-op after SAVED (machine is already idle); from error it returns to
 				// idle so the veil can never stay wedged on screen.
-				sendExport({ type: "RESET" });
+				sendExport({ type: 'RESET' });
 			}
 		},
 		[exportActorRef, sendExport, showNotice, nextPaint],
@@ -426,9 +491,9 @@ export function Ipod3DStage() {
 	const handleExportClip = useCallback(
 		async (move: string, options: ClipExportOptions) => {
 			const api = ipodApiRef.current;
-			if (!api || !exportActorRef.getSnapshot().matches("idle")) return;
+			if (!api || !exportActorRef.getSnapshot().matches('idle')) return;
 			if (!isClipRecordingSupported()) {
-				showNotice("Clips need Chrome/Edge");
+				showNotice('Clips need Chrome/Edge');
 				return;
 			}
 			setPreviewPlaying(false); // freeze the playhead; the offline render owns the camera
@@ -436,11 +501,11 @@ export function Ipod3DStage() {
 			// overlay can't appear in a frame — but force it hidden anyway so it never steals
 			// pointer/keyboard focus mid-bake. Restored in `finally` if it was on.
 			if (theatreStudioRef.current) {
-				void import("@ipod/lib/theatre/theatre-runtime").then((m) =>
+				void import('@ipod/lib/theatre/theatre-runtime').then((m) =>
 					m.setTheatreStudioVisible(false),
 				);
 			}
-			sendExport({ type: "EXPORT", job: `clip:${move}`, progress: 0 });
+			sendExport({ type: 'EXPORT', job: `clip:${move}`, progress: 0 });
 			await nextPaint(); // veil covers before snap-to-rest / screen bake / offline frames
 			// The playhead the user composed on — declared outside the try so `finally`
 			// can restore it after the clip-time drive has advanced it during the export.
@@ -452,7 +517,8 @@ export function Ipod3DStage() {
 			try {
 				// Anchor the move on the composed hero held by the playhead (so a parked
 				// scrubber can't shift it); fall back to the live pose when disengaged.
-				const anchor = heroAnchorRef.current ?? api.getCameraPose() ?? undefined;
+				const anchor =
+					heroAnchorRef.current ?? api.getCameraPose() ?? undefined;
 				const [width, height] = ASPECT_DIMS[options.aspect].clip;
 				const q = CLIP_QUALITY[options.quality];
 				// Drive EVERY looping element on the screen off one deterministic clip-clock
@@ -461,7 +527,7 @@ export function Ipod3DStage() {
 				// freeze partway through a long export. `onProgress` now only feeds the veil %.
 				// See lib/export-clock.ts for the (unit-tested) clock math.
 				let lastSecond = -1;
-				sendExport({ type: "PREPARED" });
+				sendExport({ type: 'PREPARED' });
 				const blob = await recordIpodClip(api, {
 					durationMs: Math.round(options.durationSec * 1000),
 					fps: q.fps,
@@ -474,10 +540,16 @@ export function Ipod3DStage() {
 					loop: options.loop,
 					anchor,
 					motionBlurSamples: q.motionBlurSamples,
-					onProgress: (encoded, total) => sendExport({ type: "PROGRESS", encoded, total }),
+					onProgress: (encoded, total) =>
+						sendExport({ type: 'PROGRESS', encoded, total }),
 					onClipProgress: (progress) => {
 						// Marquee: imperative + synchronous, so the very next bake captures it.
-						setCaptureElapsedMs(clipMarqueeElapsedMs(progress, options.durationSec));
+						setCaptureElapsedMs(
+							clipMarqueeElapsedMs(
+								progress,
+								options.durationSec,
+							),
+						);
 						// Song time: React state, so `flushSync` it to the DOM before the bake
 						// rasterizes the screen. Throttled to whole seconds (the display's
 						// resolution) to avoid needless re-renders.
@@ -488,15 +560,24 @@ export function Ipod3DStage() {
 						});
 						if (second !== lastSecond) {
 							lastSecond = second;
-							flushSync(() => dispatch({ type: "UPDATE_CURRENT_TIME", payload: second }));
+							flushSync(() =>
+								dispatch({
+									type: 'UPDATE_CURRENT_TIME',
+									payload: second,
+								}),
+							);
 						}
 					},
 				});
-				if (!blob) throw new Error("recorder returned no clip");
-				sendExport({ type: "ENCODED" });
+				if (!blob) throw new Error('recorder returned no clip');
+				sendExport({ type: 'ENCODED' });
 				// Name by the motion that actually played — "hold" for a motion-free angle,
 				const motionTag =
-					options.loop === "hold" ? "hold" : options.loop === "boomerang" ? `${move}-boomerang` : move;
+					options.loop === 'hold'
+						? 'hold'
+						: options.loop === 'boomerang'
+							? `${move}-boomerang`
+							: move;
 				const filename = `ipod-3d-${motionTag}-${options.aspect}-${options.durationSec}s-${Date.now()}.mp4`;
 
 				downloadBlob(blob, filename);
@@ -513,7 +594,9 @@ export function Ipod3DStage() {
 							durationSec: options.durationSec,
 						})
 					: undefined;
-				const fingerprint = snapshot ? exportFingerprint(snapshot) : undefined;
+				const fingerprint = snapshot
+					? exportFingerprint(snapshot)
+					: undefined;
 
 				// Persist to PocketBase history.
 				saveExportToHistory(blob, filename, {
@@ -527,27 +610,42 @@ export function Ipod3DStage() {
 					// Re-attach provenance locally in case PB drops unknown fields — re-open and
 					// thumbnails must work this session regardless of the backend schema.
 					if (record) {
-						setExportHistory((prev) => [{ ...record, fingerprint, snapshot }, ...prev].slice(0, 10));
+						setExportHistory((prev) =>
+							[
+								{
+									...record,
+									fingerprint,
+									snapshot,
+								},
+								...prev,
+							].slice(0, 10),
+						);
 					}
 				});
 
-				sendExport({ type: "SAVED" });
-				showNotice("Saved MP4");
+				sendExport({ type: 'SAVED' });
+				showNotice('Saved MP4');
 			} catch (error) {
-				console.error("[3d-export] clip failed", error);
-				sendExport({ type: "FAIL", error: error instanceof Error ? error.message : String(error) });
-				showNotice("Clip failed");
+				console.error('[3d-export] clip failed', error);
+				sendExport({
+					type: 'FAIL',
+					error:
+						error instanceof Error
+							? error.message
+							: String(error),
+				});
+				showNotice('Clip failed');
 			} finally {
 				// Release the marquee back to its live wall-clock rAF animation, and restore
 				// the composed playhead the clip-time drive advanced during export so the live
 				// screen returns to exactly where the user was parked. RESET returns the
 				// machine to idle from error (no-op after SAVED) — the veil cannot wedge.
 				setCaptureElapsedMs(null);
-				dispatch({ type: "UPDATE_CURRENT_TIME", payload: baseTime });
-				sendExport({ type: "RESET" });
+				dispatch({ type: 'UPDATE_CURRENT_TIME', payload: baseTime });
+				sendExport({ type: 'RESET' });
 				// Restore the studio overlay if the designer had it open before exporting.
 				if (theatreStudioRef.current) {
-					void import("@ipod/lib/theatre/theatre-runtime").then((m) =>
+					void import('@ipod/lib/theatre/theatre-runtime').then((m) =>
 						m.setTheatreStudioVisible(true),
 					);
 				}
@@ -560,7 +658,7 @@ export function Ipod3DStage() {
 		model,
 		dispatch,
 		playClick,
-		onOpenSettings: () => showNotice("Settings live in the workbench"),
+		onOpenSettings: () => showNotice('Settings live in the workbench'),
 		onNotice: showNotice,
 	});
 
@@ -586,11 +684,15 @@ export function Ipod3DStage() {
 			const [w, h] = ASPECT_DIMS[snapshot.aspect as ExportAspect].still;
 			// The proof IS the anchor frame (phase 0 = the composed hero), so we capture the
 			// hero framing at the snapshot's pose — byte-identical to an export's frame 0.
-			return api.captureHighRes(w, h, "hero", {
+			return api.captureHighRes(w, h, 'hero', {
 				azimuth: snapshot.pose.azimuth,
 				elevation: snapshot.pose.elevation,
 				reach: snapshot.pose.reach,
-				target: [snapshot.pose.target[0], snapshot.pose.target[1], snapshot.pose.target[2]],
+				target: [
+					snapshot.pose.target[0],
+					snapshot.pose.target[1],
+					snapshot.pose.target[2],
+				],
 			});
 		},
 		[],
@@ -610,7 +712,9 @@ export function Ipod3DStage() {
 	// record's thumbnail is found by re-deriving that key from its stored snapshot.
 	const peekProofBlob = useCallback(
 		(record: ExportRecord): Blob | undefined =>
-			record.snapshot ? proof.peek(proofFingerprint(record.snapshot))?.blob : undefined,
+			record.snapshot
+				? proof.peek(proofFingerprint(record.snapshot))?.blob
+				: undefined,
 		[proof],
 	);
 
@@ -620,7 +724,7 @@ export function Ipod3DStage() {
 		(record: ExportRecord) => {
 			const snap = record.snapshot;
 			if (!snap) return;
-			dispatch({ type: "RESTORE_MODEL", payload: snapshotToModel(model, snap) });
+			dispatch({ type: 'RESTORE_MODEL', payload: snapshotToModel(model, snap) });
 			setAspect(snap.aspect as ExportAspect);
 			setQuality(snap.quality as ExportQuality);
 			setLoopStyle(snap.loop as LoopStyle);
@@ -635,7 +739,7 @@ export function Ipod3DStage() {
 				elevation: snap.pose.elevation,
 				reach: snap.pose.reach,
 			});
-			showNotice("Restored export setup");
+			showNotice('Restored export setup');
 		},
 		[model, showNotice],
 	);
@@ -681,7 +785,7 @@ export function Ipod3DStage() {
 			playClick={playClick}
 			onSeek={controls.handleWheelSeek}
 			onCenterClick={
-				interaction.osScreen === "menu"
+				interaction.osScreen === 'menu'
 					? controls.handleOsMenuSelect
 					: controls.handlePlayPauseButtonPress
 			}
@@ -701,6 +805,12 @@ export function Ipod3DStage() {
 			    Toggled from the cockpit; off by default so its overlay never clutters the view. */}
 			<TheatreStudioDev enabled={studio.theatreStudio} />
 
+			{/* Dev inspector overlay — stats HUD + pick + scene tree + property editor.
+			    Auto-enabled in dev (toggle with `i`), dead-code eliminated in prod. */}
+			{process.env.NODE_ENV === 'development' && inspectorOpen && (
+				<SceneInspectorPanel />
+			)}
+
 			{/* Shell Header — a high-performance navigation bar that bounds the experience.
 			    It holds the product identity and the primary menu toggle, ensuring the flow
 			    is consistent across mobile and desktop. */}
@@ -712,19 +822,25 @@ export function Ipod3DStage() {
 							type="button"
 							onClick={() => setControlsOpen((o) => !o)}
 							className={`group relative flex h-10 items-center gap-3 rounded-full border px-4 transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) active:scale-[0.94] ${
-								controlsOpen 
-									? "border-black/20 bg-black text-white shadow-2xl" 
-									: "border-black/10 bg-white/70 text-black/80 backdrop-blur-xl hover:border-black/30 hover:bg-white/90"
+								controlsOpen
+									? 'border-black/20 bg-black text-white shadow-2xl'
+									: 'border-black/10 bg-white/70 text-black/80 backdrop-blur-xl hover:border-black/30 hover:bg-white/90'
 							}`}
 							aria-expanded={controlsOpen}
 						>
 							<span className="text-[10px] font-black uppercase tracking-[0.2em]">
-								{controlsOpen ? "Close" : "Menu"}
+								{controlsOpen ? 'Close' : 'Menu'}
 							</span>
 							<div className="relative flex h-3 w-4 flex-col justify-between overflow-hidden">
-								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "bg-white rotate-45 translate-y-[5.25px]" : "bg-current"}`} />
-								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "translate-x-6 opacity-0" : "bg-current"}`} />
-								<span className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? "bg-white -rotate-45 -translate-y-[5.25px]" : "bg-current"}`} />
+								<span
+									className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? 'bg-white rotate-45 translate-y-[5.25px]' : 'bg-current'}`}
+								/>
+								<span
+									className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? 'translate-x-6 opacity-0' : 'bg-current'}`}
+								/>
+								<span
+									className={`h-[1.5px] w-full rounded-full transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${controlsOpen ? 'bg-white -rotate-45 -translate-y-[5.25px]' : 'bg-current'}`}
+								/>
 							</div>
 						</button>
 					</span>
@@ -761,7 +877,9 @@ export function Ipod3DStage() {
 			{/* Responsive control surface — one DOM tree, two layouts. */}
 			<div
 				className={`fixed inset-x-0 bottom-0 z-30 mx-auto flex max-h-[75dvh] w-full max-w-md transform flex-col gap-3 overflow-y-auto overscroll-contain rounded-t-[32px] border-t border-black/10 bg-white/90 p-5 pb-12 backdrop-blur-2xl transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) lg:contents ${
-					controlsOpen ? "translate-y-0 shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)]" : "translate-y-full lg:translate-y-0"
+					controlsOpen
+						? 'translate-y-0 shadow-[0_-20px_80px_-10px_rgba(0,0,0,0.15)]'
+						: 'translate-y-full lg:translate-y-0'
 				}`}
 			>
 				{/* Left group — the "subject": how you interact (01), what the device looks
@@ -774,7 +892,9 @@ export function Ipod3DStage() {
 						studio={studio}
 						dispatch={dispatch}
 						touchControls={touchControls}
-						onToggleTouchControls={() => setTouchControls((v) => !v)}
+						onToggleTouchControls={() =>
+							setTouchControls((v) => !v)
+						}
 					/>
 					<Ipod3DColorCockpit
 						index={2}
@@ -782,7 +902,11 @@ export function Ipod3DStage() {
 						dispatch={dispatch}
 						lightingName={studio.lighting.name}
 					/>
-					<Ipod3DNowPlayingCockpit index={3} metadata={model.metadata} dispatch={dispatch} />
+					<Ipod3DNowPlayingCockpit
+						index={3}
+						metadata={model.metadata}
+						dispatch={dispatch}
+					/>
 					{/* Battery lives with the screen state it drives (the status-bar cell),
 					    not stranded between Light and Export as it was before. */}
 					<Ipod3DBatteryCockpit
@@ -796,7 +920,9 @@ export function Ipod3DStage() {
 						apiRef={ipodApiRef}
 						locked={cameraLocked}
 						onToggleLock={toggleCameraLock}
-						onResetCamera={() => ipodApiRef.current?.resetCamera()}
+						onResetCamera={() =>
+							ipodApiRef.current?.resetCamera()
+						}
 						showOrigin={showOrigin}
 						onToggleOrigin={() => setShowOrigin((v) => !v)}
 					/>
@@ -820,8 +946,13 @@ export function Ipod3DStage() {
 						quality={quality}
 						fps={CLIP_QUALITY[quality].fps}
 						durationSec={durationSec}
-						hold={loopStyle === "hold"}
-						moveLabel={(findStudioClip(previewMove) ?? STUDIO_CLIPS[0]).label}
+						hold={loopStyle === 'hold'}
+						moveLabel={
+							(
+								findStudioClip(previewMove) ??
+								STUDIO_CLIPS[0]
+							).label
+						}
 						onExport={() =>
 							handleExportClip(previewMove, {
 								durationSec,
@@ -877,7 +1008,9 @@ export function Ipod3DStage() {
 			{/* Mobile on-canvas camera controls — floats above the bottom bar, within
 			    one-thumb reach. Unmounted (listeners detached) when toggled off; the
 			    component is `lg:hidden` so desktop never shows it even if enabled. */}
-			{touchControls && <Ipod3DTouchControls apiRef={ipodApiRef} landscape={landscape} />}
+			{touchControls && (
+				<Ipod3DTouchControls apiRef={ipodApiRef} landscape={landscape} />
+			)}
 
 			{/* Export veil — a cinematic shutter that covers the canvas for the render.
 			    It uses 'shutter' optics: a high-speed blade snap followed by a white
@@ -899,11 +1032,13 @@ export function Ipod3DStage() {
 					<div className="relative z-[120] flex flex-col items-center gap-8 animate-in slide-in-from-bottom-6 duration-700 delay-100 fill-mode-both">
 						<div className="flex flex-col items-center gap-2">
 							<div className="text-[10px] font-black uppercase tracking-[0.45em] text-black/80">
-								{exportState.startsWith("clip:") ? "Cinematic Render" : "Optic Capture"}
+								{exportState.startsWith('clip:')
+									? 'Cinematic Render'
+									: 'Optic Capture'}
 							</div>
 							<div className="h-[2px] w-12 bg-black/30" />
 						</div>
-						
+
 						<div className="flex flex-col items-center gap-4">
 							<div className="relative h-[2px] w-80 overflow-hidden rounded-full bg-black/5">
 								{exportProgress === null ? (
@@ -911,13 +1046,23 @@ export function Ipod3DStage() {
 								) : (
 									<div
 										className="h-full bg-black/95 transition-all duration-100 ease-out"
-										style={{ width: `${Math.max(1, Math.round(exportProgress * 100))}%` }}
+										style={{
+											width: `${Math.max(1, Math.round(exportProgress * 100))}%`,
+										}}
 									/>
 								)}
 							</div>
 							<div className="flex w-full items-center justify-between px-1 font-mono text-[10px] font-black tabular-nums tracking-tighter text-black/50">
-								<span className="animate-pulse">{exportProgress === null ? "CALIBRATING" : "ENCODING"}</span>
-								<span>{exportProgress === null ? "READY" : `${Math.round(exportProgress * 100)}%`}</span>
+								<span className="animate-pulse">
+									{exportProgress === null
+										? 'CALIBRATING'
+										: 'ENCODING'}
+								</span>
+								<span>
+									{exportProgress === null
+										? 'READY'
+										: `${Math.round(exportProgress * 100)}%`}
+								</span>
 							</div>
 						</div>
 					</div>
